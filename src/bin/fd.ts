@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { Command } from 'commander';
 import { runInit } from '../commands/init.js';
+import { runList } from '../commands/list.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -44,6 +45,14 @@ program
     const target = options.target ?? (await prompt('tmux target (session:window.pane)'));
     await runInit({ name, cwd, target });
     console.log(`registered "${name}" -> ${target} (cwd ${cwd})`);
+  });
+
+program
+  .command('list')
+  .description('List registered sessions as tab-separated lines (name\\tcwd\\ttmux_target).')
+  .action(async () => {
+    const out = await runList();
+    if (out) process.stdout.write(out);
   });
 
 program.parseAsync(process.argv).catch((err: Error) => {
