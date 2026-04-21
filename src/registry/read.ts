@@ -2,8 +2,6 @@ import { readFile } from 'node:fs/promises';
 import { sessionsPath } from '../lib/paths.js';
 import { RegistrySchema, type Registry } from './schema.js';
 
-const EMPTY_REGISTRY: Registry = { version: 1, sessions: {} };
-
 /**
  * Read the registry at `path` (defaults to ~/.foxworks-dispatch/sessions.json).
  * Returns an empty registry when the file does not exist. Throws with the
@@ -17,7 +15,10 @@ export async function readRegistry(path?: string): Promise<Registry> {
     text = await readFile(target, 'utf8');
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { ...EMPTY_REGISTRY };
+      // Fresh object each call: previous impl returned a shallow clone of
+      // a module-level constant, which aliased the inner `sessions` object
+      // across calls and let callers pollute it via reference mutation.
+      return { version: 1, sessions: {} };
     }
     throw err;
   }
