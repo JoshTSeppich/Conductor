@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline/promises';
 import { Command } from 'commander';
 import { runInit } from '../commands/init.js';
 import { runList } from '../commands/list.js';
+import { runSend } from '../commands/send.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -45,6 +46,16 @@ program
     const target = options.target ?? (await prompt('tmux target (session:window.pane)'));
     await runInit({ name, cwd, target });
     console.log(`registered "${name}" -> ${target} (cwd ${cwd})`);
+  });
+
+program
+  .command('send')
+  .description('Send a prompt file to a registered session.')
+  .argument('<name>', 'registered session name (see fd list)')
+  .argument('<prompt-file>', 'path to the prompt file to deliver')
+  .action(async (name: string, promptFile: string) => {
+    await runSend({ name, promptFile });
+    console.log(`sent ${promptFile} → ${name}`);
   });
 
 program
