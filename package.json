@@ -1,0 +1,23 @@
+{
+  "name": "foxworks-dispatch",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CLI bridge between architect-chat prompts and Claude Code tmux panes.",
+  "type": "module",
+  "bin": {
+    "fd": "dist/bin/fd.js"
+  },
+  "scripts": {
+    "spike:01": "tsx spikes/01-tmux-send-keys.ts",
+    "spike:02": "tsx spikes/02-tmux-capture.ts",
+    "spike:03": "tsx spikes/03-tmux-has-session.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "@types/node": "^20.17.6"
+  }
+}
