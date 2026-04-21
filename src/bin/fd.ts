@@ -8,6 +8,7 @@ import { runInit } from '../commands/init.js';
 import { runList } from '../commands/list.js';
 import { runPull } from '../commands/pull.js';
 import { runSend } from '../commands/send.js';
+import { runStatus } from '../commands/status.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -73,6 +74,13 @@ program
   .action(async () => {
     const out = await runList();
     if (out) process.stdout.write(out);
+  });
+
+program
+  .command('status')
+  .description('Live TUI showing all sessions, their state, and age. Refreshes every 2s. Ctrl+C to exit.')
+  .action(async () => {
+    await runStatus();
   });
 
 program.parseAsync(process.argv).catch((err: Error) => {
