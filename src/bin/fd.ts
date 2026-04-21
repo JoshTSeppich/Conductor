@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline/promises';
 import { Command } from 'commander';
 import { runInit } from '../commands/init.js';
 import { runList } from '../commands/list.js';
+import { runPull } from '../commands/pull.js';
 import { runSend } from '../commands/send.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,14 @@ program
   .action(async (name: string, promptFile: string) => {
     await runSend({ name, promptFile });
     console.log(`sent ${promptFile} → ${name}`);
+  });
+
+program
+  .command('pull')
+  .description('Read HANDOFF.md from a registered session, print it, and copy it to the clipboard.')
+  .argument('<name>', 'registered session name (see fd list)')
+  .action(async (name: string) => {
+    await runPull({ name });
   });
 
 program
