@@ -1,0 +1,15 @@
+{
+  "name": "dispatch-daemon",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Conductor daemon — HTTP+WebSocket server coordinating CC sessions per CONDUCTOR_API_CONTRACT.md.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "dispatch-core": "workspace:*"
+  }
+}
