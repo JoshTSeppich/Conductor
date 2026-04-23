@@ -7,9 +7,13 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "spike:S05": "tsx spikes/DAEMON-S05-http-server.ts"
   },
   "dependencies": {
     "dispatch-core": "workspace:*"
+  },
+  "devDependencies": {
+    "fastify": "^5.0.0"
   }
 }
