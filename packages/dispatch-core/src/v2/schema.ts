@@ -335,3 +335,9 @@ export const PullHandoffResponse = z.object({
   archived_to: z.string().min(1),
 });
 export type PullHandoffResponseType = z.infer<typeof PullHandoffResponse>;
+
+export const SendPromptResponse = z.object({
+  sent_at: z.string(),
+  archived_to: z.string().optional(),
+});
+export type SendPromptResponseType = z.infer<typeof SendPromptResponse>;
