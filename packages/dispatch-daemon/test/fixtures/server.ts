@@ -17,7 +17,9 @@ export interface TestServer {
 }
 
 export async function spawnTestServer(): Promise<TestServer> {
-  const { server, port, close } = await startup({ port: 0 });
+  // logger:false silences per-request Pino output for test ergonomics.
+  // Production startup() defaults to info-level logging.
+  const { server, port, close } = await startup({ port: 0, logger: false });
   return {
     app: server,
     port,

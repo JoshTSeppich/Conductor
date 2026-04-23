@@ -15,12 +15,12 @@
     "spike:S04": "tsx spikes/DAEMON-S04-launchd.ts"
   },
   "dependencies": {
-    "dispatch-core": "workspace:*"
+    "dispatch-core": "workspace:*",
+    "fastify": "^5.0.0"
   },
   "devDependencies": {
     "@fastify/websocket": "^11.0.0",
     "@types/ws": "^8.0.0",
-    "fastify": "^5.0.0",
     "node-notifier": "^10.0.1",
     "ws": "^8.0.0"
   }
