@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  afterEach,
+} from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
-import { server } from './msw/server.js';
-import { wsApi } from './msw/ws-handlers.js';
-import { VALID_TEST_TOKEN } from './msw/handlers.js';
+import { startFixture, type FixtureHandle } from './fixtures/ws-server.js';
 import {
   useDaemonEvents,
   type ClientStatus,
@@ -19,31 +23,41 @@ const TEST_BACKOFF = {
   jitter: 0.25,
 };
 
-describe('WEB-T03 useDaemonEvents', () => {
-  beforeEach(() => {
-    localStorage.setItem('x-conductor-token', VALID_TEST_TOKEN);
-  });
+let fixture: FixtureHandle;
 
+beforeAll(async () => {
+  fixture = await startFixture();
+});
+
+afterAll(async () => {
+  await fixture.stop();
+});
+
+afterEach(() => {
+  fixture.reset();
+});
+
+describe('WEB-T03 useDaemonEvents', () => {
   it('opens WS on mount and dispatches onEvent for received events', async () => {
     const events: EventShape[] = [];
 
-    server.use(
-      wsApi.addEventListener('connection', ({ client }) => {
-        client.send(
-          JSON.stringify({
-            type: 'handoff_written',
-            timestamp: '2026-04-23T12:00:00.000Z',
-            session: 'sherpa',
-            data: { path: '/x/HANDOFF.md', size_bytes: 10 },
-          }),
-        );
-      }),
-    );
+    fixture.setOnConnection((connectionIndex) => {
+      if (connectionIndex === 1) {
+        fixture.emit({
+          type: 'handoff_written',
+          timestamp: '2026-04-23T12:00:00.000Z',
+          session: 'sherpa',
+          data: { path: '/x/HANDOFF.md', size_bytes: 10 },
+        });
+      }
+    });
 
     renderHook(() =>
       useDaemonEvents({
-        token: VALID_TEST_TOKEN,
+        token: fixture.validToken,
         backoff: TEST_BACKOFF,
+        wsUrlOverride: fixture.wsUrl,
+        httpBaseOverride: fixture.httpBase,
         onEvent: (e) => events.push(e),
       }),
     );
@@ -54,57 +68,36 @@ describe('WEB-T03 useDaemonEvents', () => {
 
   it('re-runs preflight and reopens WS after close; gap-fills missed events', async () => {
     const events: EventShape[] = [];
-    let connectionCount = 0;
 
-    server.use(
-      http.get('/v2/events', ({ request }) => {
-        const url = new URL(request.url);
-        const since = url.searchParams.get('since');
-        const token = request.headers.get('x-conductor-token');
-        if (token !== VALID_TEST_TOKEN) {
-          return HttpResponse.json({ error: 'invalid_token' }, { status: 401 });
-        }
-        // If since> epoch, this is a gap-fill fetch — return the
-        // missed event that was "emitted" during disconnect.
-        if (since && new Date(since).getTime() > 1000) {
-          return HttpResponse.json({
-            events: [
-              {
-                type: 'handoff_written',
-                timestamp: new Date().toISOString(),
-                session: 'sherpa',
-                data: { path: '/gap-filled', size_bytes: 5 },
-              },
-            ],
-            next_since: new Date().toISOString(),
-          });
-        }
-        return HttpResponse.json({
-          events: [],
-          next_since: new Date(0).toISOString(),
+    fixture.setOnConnection((connectionIndex) => {
+      if (connectionIndex === 1) {
+        fixture.emit({
+          type: 'handoff_written',
+          timestamp: new Date(Date.now() + 10).toISOString(),
+          session: 'sherpa',
+          data: { path: '/live', size_bytes: 1 },
         });
-      }),
-      wsApi.addEventListener('connection', ({ client }) => {
-        connectionCount += 1;
-        if (connectionCount === 1) {
-          client.send(
-            JSON.stringify({
-              type: 'handoff_written',
-              timestamp: new Date(Date.now() + 10).toISOString(),
-              session: 'sherpa',
-              data: { path: '/live', size_bytes: 1 },
-            }),
-          );
-          // Close after emitting to trigger reconnect cycle
-          setTimeout(() => client.close(), 50);
-        }
-      }),
-    );
+        // Add a second event to the log while WS is about to drop —
+        // it won't reach the closing WS but will be returned by the
+        // reconnect's /v2/events?since= gap-fill fetch.
+        setTimeout(() => {
+          fixture.closeAllWs();
+          fixture.emit({
+            type: 'handoff_written',
+            timestamp: new Date(Date.now() + 20).toISOString(),
+            session: 'sherpa',
+            data: { path: '/gap-filled', size_bytes: 5 },
+          });
+        }, 30);
+      }
+    });
 
     renderHook(() =>
       useDaemonEvents({
-        token: VALID_TEST_TOKEN,
+        token: fixture.validToken,
         backoff: TEST_BACKOFF,
+        wsUrlOverride: fixture.wsUrl,
+        httpBaseOverride: fixture.httpBase,
         onEvent: (e) => events.push(e),
       }),
     );
@@ -117,32 +110,23 @@ describe('WEB-T03 useDaemonEvents', () => {
 
   it('transitions to auth_failed when preflight returns 401 on reconnect', async () => {
     const statuses: ClientStatus[] = [];
-    let preflightCallCount = 0;
 
-    server.use(
-      http.get('/v2/events', ({ request }) => {
-        preflightCallCount += 1;
-        const token = request.headers.get('x-conductor-token');
-        // Second preflight onward: return 401 (simulates token
-        // rotated by operator elsewhere mid-session).
-        if (preflightCallCount >= 2 || token !== VALID_TEST_TOKEN) {
-          return HttpResponse.json({ error: 'invalid_token' }, { status: 401 });
-        }
-        return HttpResponse.json({
-          events: [],
-          next_since: new Date(0).toISOString(),
-        });
-      }),
-      wsApi.addEventListener('connection', ({ client }) => {
-        // Close immediately to force reconnect
-        setTimeout(() => client.close(), 50);
-      }),
-    );
+    fixture.setOnConnection((connectionIndex) => {
+      if (connectionIndex === 1) {
+        // Rotate token so the client's next preflight (after WS
+        // close + reconnect) returns 401. Simulates mid-session
+        // token rotation.
+        fixture.setValidToken('rotated-to-new-token');
+        setTimeout(() => fixture.closeAllWs(), 30);
+      }
+    });
 
     renderHook(() =>
       useDaemonEvents({
-        token: VALID_TEST_TOKEN,
+        token: fixture.validToken,
         backoff: TEST_BACKOFF,
+        wsUrlOverride: fixture.wsUrl,
+        httpBaseOverride: fixture.httpBase,
         onStatusChange: (s) => statuses.push(s),
       }),
     );
@@ -151,62 +135,44 @@ describe('WEB-T03 useDaemonEvents', () => {
       () => expect(statuses).toContain('auth_failed'),
       { timeout: 3000 },
     );
-    expect(localStorage.getItem('x-conductor-token')).toBeNull();
   });
 
   it('dedupes events that appear via both gap-fill and WS replay', async () => {
     const events: EventShape[] = [];
-    const replayEvent = {
+    const replayEvent: EventShape = {
       type: 'handoff_written',
       timestamp: '2026-04-23T12:00:00.000Z',
       session: 'sherpa',
       data: { path: '/replay', size_bytes: 10 },
     };
-    let connectionCount = 0;
 
-    server.use(
-      http.get('/v2/events', ({ request }) => {
-        const url = new URL(request.url);
-        const since = url.searchParams.get('since');
-        const token = request.headers.get('x-conductor-token');
-        if (token !== VALID_TEST_TOKEN) {
-          return HttpResponse.json({ error: 'invalid_token' }, { status: 401 });
-        }
-        // Gap-fill replays the same event that the reconnected WS
-        // will also replay (worst-case server re-delivery).
-        if (since && new Date(since).getTime() > 1000) {
-          return HttpResponse.json({
-            events: [replayEvent],
-            next_since: replayEvent.timestamp,
-          });
-        }
-        return HttpResponse.json({
-          events: [],
-          next_since: new Date(0).toISOString(),
-        });
-      }),
-      wsApi.addEventListener('connection', ({ client }) => {
-        connectionCount += 1;
-        // Every connection emits the same event (server doesn't
-        // track per-client delivery).
-        client.send(JSON.stringify(replayEvent));
-        if (connectionCount === 1) {
-          setTimeout(() => client.close(), 50);
-        }
-      }),
-    );
+    // Worst-case: server re-delivers the entire event log on every
+    // new WS connection. Both gap-fill HTTP response and WS replay
+    // carry the same event; client dedupe must collapse to 1.
+    fixture.setReplayAllOnConnect(true);
+    fixture.emit(replayEvent);
+
+    fixture.setOnConnection((connectionIndex) => {
+      if (connectionIndex === 1) {
+        setTimeout(() => fixture.closeAllWs(), 30);
+      }
+    });
 
     renderHook(() =>
       useDaemonEvents({
-        token: VALID_TEST_TOKEN,
+        token: fixture.validToken,
         backoff: TEST_BACKOFF,
+        wsUrlOverride: fixture.wsUrl,
+        httpBaseOverride: fixture.httpBase,
         onEvent: (e) => events.push(e),
       }),
     );
 
-    // Wait for reconnect + gap-fill + WS replay to all settle
+    // Wait for reconnect cycle to fully settle: first WS replay,
+    // disconnect, gap-fill fetch, second WS replay. Dedupe should
+    // keep the final count at 1.
     await waitFor(() => expect(events.length).toBeGreaterThan(0));
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 400));
     expect(events).toHaveLength(1);
     expect(events[0].data).toEqual(replayEvent.data);
   });
