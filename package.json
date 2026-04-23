@@ -5,10 +5,9 @@
   "description": "Foxworks Dispatch monorepo: dispatch-core (shared lib), dispatch-cli (fd CLI), dispatch-daemon (Conductor daemon).",
   "type": "module",
   "scripts": {
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "build": "pnpm -r build"
   },
   "engines": {
     "node": ">=20"
