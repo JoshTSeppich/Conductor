@@ -25,11 +25,23 @@ export interface StartupOpts {
   port?: number;
   /** Logger configuration, passed through to buildServer. */
   logger?: BuildServerOpts['logger'];
+  /**
+   * Path to the auth token file. Default `~/.foxworks-dispatch/token`.
+   * Extended in DAEMON-T02; unused until the T02 green commit wires up
+   * `getOrCreateToken` + the auth hook.
+   */
+  tokenPath?: string;
 }
 
 export interface StartupHandle {
   server: FastifyInstance;
   port: number;
+  /**
+   * Current auth token value. Populated by DAEMON-T02 green. Optional
+   * here so T01's StartupHandle consumers stay compatible during the
+   * T02 red window where the field is unpopulated.
+   */
+  token?: string;
   close: () => Promise<void>;
 }
 
