@@ -1,11 +1,11 @@
 # ADR UI-S02: Menu bar framework selection
 
-- **Status:** **PENDING OPERATOR CHOICE**
+- **Status:** **Accepted — Electron** (chosen by operator 2026-04-23)
 - **Date:** 2026-04-23
 - **Session:** B (UI)
 - **Ticket:** UI-S02
-- **Informs:** MB-T01 (framework scaffold) — scaffold contents
-  determined by the operator's framework pick.
+- **Informs:** MB-T01 (framework scaffold) — scaffolded around Electron
+  per the choice below.
 
 ## Context
 
@@ -72,14 +72,40 @@ if we commit to context-menu interaction.
 
 ## Decision
 
-**Pending operator choice.**
+**Electron.** Operator choice, 2026-04-23.
 
-Per operator direction: this spike produces evidence, operator
-arbitrates. ADR status remains `PENDING OPERATOR CHOICE` until the
-operator names the winner in MB-T01's first commit or in a direct
-reply to this ADR. On choice, this ADR's Status field is updated to
-`Accepted` naming the winner, and MB-T01 implements the framework
-scaffold.
+### Operator rationale (verbatim, for durability)
+
+> Menu bar is the smallest Phase Y surface (~7 tickets) and should
+> ship with minimal stack expansion. Electron's 278 MB runtime is a
+> real cost but absorbed by the daemon architecture — menu bar is a
+> thin status surface over daemon state, doesn't hold its own state.
+> TS/TS keeps the foxworks stack homogeneous, which compounds as
+> Cairn-tooling (next major build after Conductor v2 ships) will
+> also be TypeScript. Tauri's 2.x API flux is real friction for solo
+> founder runway. Swift's IPC design overhead isn't justified by the
+> menu bar's small surface area. Boring-and-works over
+> light-and-maturing, given solo founder maintenance horizon.
+>
+> Secondary signal: this is a pragmatic choice, not a permanent
+> commitment. If Conductor ever ships to other operators (not
+> currently planned), Electron's footprint becomes a real problem.
+> Revisit then.
+
+### Consequences of the choice
+
+- MB-T01 scaffolds Electron (not `menubar` npm — context-menu tray
+  rhythm from fd v1's `status` TUI matches raw Electron Tray better
+  than the wrapper's popover idiom).
+- UI-S03 targets osascript from Electron main process for
+  cross-app focus.
+- Electron's `tsc rootDir` spillage sidestepped at production time
+  via `workspace:*` dep on dispatch-core (hello-world surfaced it
+  because throwaway subdir isn't workspace-resolved).
+- Deferred revisit: external-operator distribution. When/if Conductor
+  ships beyond the solo founder, the 278 MB runtime is a real blocker
+  for first-run experience and auto-update size; re-open this ADR to
+  evaluate Tauri or Native Swift at that point.
 
 ### What the ADR will NOT prescribe
 
@@ -107,18 +133,15 @@ scaffold.
    Swift all do this natively) vs popover-window tray (menubar npm
    is idiomatic). If popover, menubar npm is the idiomatic pick.
 
-## Followups (per-candidate, filed this ADR)
+## Followups (per-candidate, updated for Electron choice)
 
-- **UI-F06** — MB-T01 scaffold based on chosen framework; ADR status
-  updated there.
-- **UI-F07** — UI-S03 (notification click → focus web UI) is
-  framework-scoped; its spike starts *after* this ADR resolves.
-- **UI-F08** (Tauri-specific, activate only if Tauri chosen) — Tauri
-  2.x tray API stability watch; document current version pin and
-  next review cadence.
-- **UI-F09** (Swift-specific, activate only if Swift chosen) — design
-  Swift↔Node IPC protocol (stdio JSON vs Unix socket) and Node
-  bridge's daemon-client integration.
+- **UI-F06** — **Active.** MB-T01 scaffold around Electron.
+- **UI-F07** — **Ready for planning.** UI-S03 scope now concrete
+  (Electron main-process osascript); spike plan surfaced next.
+- **UI-F08** — **Deprecated.** Tauri not chosen; no API pin/watch
+  needed.
+- **UI-F09** — **Deprecated.** Swift not chosen; no IPC design
+  needed.
 
 ## References
 
