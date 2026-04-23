@@ -21,6 +21,7 @@ import { buildServer, type BuildServerOpts } from '../server.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
 import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
+import { registerSessionsReadRoutes } from '../routes/sessions.js';
 import { shutdown } from './shutdown.js';
 
 function defaultTokenPath(): string {
@@ -86,6 +87,11 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const tokenRef: TokenRef = { value: initialToken };
   app.addHook('onRequest', createAuthHook(tokenRef));
   await registerAuthRoutes(app, { tokenRef, tokenPath });
+
+  // DAEMON-T06: GET /v2/sessions + GET /v2/sessions/:name, consuming
+  // T05's readRegistryV2. Registered after auth so the hook gates
+  // these routes (§3.1 token required).
+  await registerSessionsReadRoutes(app, { registryPath: opts.registryPath });
 
   // T04 test-only hook: register routes that need to exist before
   // listen (e.g., throwing routes for error-handler probes).

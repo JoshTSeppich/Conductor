@@ -6,6 +6,9 @@
  * plus a cleanup function. Tests should call close() in afterEach.
  */
 
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { startup } from '../../src/lifecycle/startup.js';
 
@@ -36,17 +39,35 @@ export interface SpawnTestServerOpts {
   registryPath?: string;
 }
 
+/**
+ * Ensure the fixture never routes tests at the operator's real
+ * ~/.foxworks-dispatch/token or ~/.foxworks-dispatch/sessions.json.
+ * If the caller omits a path, generate a mkdtemp-isolated default
+ * so startup's `getOrCreateToken` and `readRegistryV2` land on a
+ * per-invocation tempdir instead of production state.
+ */
+async function isolatedDefault(prefix: string, filename: string): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), prefix));
+  return join(dir, filename);
+}
+
 export async function spawnTestServer(
   opts: SpawnTestServerOpts = {},
 ): Promise<TestServer> {
+  const tokenPath =
+    opts.tokenPath ?? (await isolatedDefault('fd-fixture-tok-', 'token'));
+  const registryPath =
+    opts.registryPath ??
+    (await isolatedDefault('fd-fixture-reg-', 'sessions.json'));
+
   // logger:false silences per-request Pino output for test ergonomics.
   // Production startup() defaults to info-level logging.
   const { server, port, token, close } = await startup({
     port: 0,
     logger: false,
-    tokenPath: opts.tokenPath,
+    tokenPath,
     beforeListen: opts.beforeListen,
-    registryPath: opts.registryPath,
+    registryPath,
   });
   return {
     app: server,

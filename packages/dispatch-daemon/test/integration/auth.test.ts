@@ -71,7 +71,7 @@ describe('DAEMON-T02 — token auth onRequest hook + rotate endpoint', () => {
 
   it('P3 auth-gated path without X-Conductor-Token → 401 + JSON error body', async () => {
     ts = await spawnTestServer({ tokenPath: await mkTokenPath() });
-    const r = await fetch(`${ts.url}/v2/sessions`);
+    const r = await fetch(`${ts.url}/v2/does-not-exist`);
     expect(r.status).toBe(401);
     const body = (await r.json()) as { error?: unknown };
     expect(typeof body.error).toBe('string');
@@ -79,7 +79,7 @@ describe('DAEMON-T02 — token auth onRequest hook + rotate endpoint', () => {
 
   it('P4 auth-gated path with WRONG token → 401', async () => {
     ts = await spawnTestServer({ tokenPath: await mkTokenPath() });
-    const r = await fetch(`${ts.url}/v2/sessions`, {
+    const r = await fetch(`${ts.url}/v2/does-not-exist`, {
       headers: { 'x-conductor-token': 'wrong-token-bogus' },
     });
     expect(r.status).toBe(401);
@@ -87,7 +87,7 @@ describe('DAEMON-T02 — token auth onRequest hook + rotate endpoint', () => {
 
   it('P5 auth-gated path with CORRECT token → Fastify default 404 (hook passes through)', async () => {
     ts = await spawnTestServer({ tokenPath: await mkTokenPath() });
-    const r = await fetch(`${ts.url}/v2/sessions`, {
+    const r = await fetch(`${ts.url}/v2/does-not-exist`, {
       headers: { 'x-conductor-token': ts.token ?? '' },
     });
     expect(r.status).toBe(404);
@@ -124,12 +124,12 @@ describe('DAEMON-T02 — token auth onRequest hook + rotate endpoint', () => {
     });
     const { token: newToken } = (await rotateR.json()) as { token: string };
 
-    const oldR = await fetch(`${ts.url}/v2/sessions`, {
+    const oldR = await fetch(`${ts.url}/v2/does-not-exist`, {
       headers: { 'x-conductor-token': oldToken },
     });
     expect(oldR.status).toBe(401);
 
-    const newR = await fetch(`${ts.url}/v2/sessions`, {
+    const newR = await fetch(`${ts.url}/v2/does-not-exist`, {
       headers: { 'x-conductor-token': newToken },
     });
     expect(newR.status).toBe(404);
