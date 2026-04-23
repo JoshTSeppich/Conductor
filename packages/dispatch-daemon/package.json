@@ -11,7 +11,8 @@
     "spike:S05": "tsx spikes/DAEMON-S05-http-server.ts",
     "spike:S01": "tsx spikes/DAEMON-S01-websocket.ts",
     "spike:S02": "tsx spikes/DAEMON-S02-fsevents.ts",
-    "spike:S03": "tsx spikes/DAEMON-S03-notifications.ts"
+    "spike:S03": "tsx spikes/DAEMON-S03-notifications.ts",
+    "spike:S04": "tsx spikes/DAEMON-S04-launchd.ts"
   },
   "dependencies": {
     "dispatch-core": "workspace:*"
