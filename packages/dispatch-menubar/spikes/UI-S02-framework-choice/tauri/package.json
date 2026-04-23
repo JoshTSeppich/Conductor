@@ -1,0 +1,17 @@
+{
+  "name": "ui-s02-tauri-helloworld",
+  "version": "0.0.0",
+  "private": true,
+  "description": "UI-S02 hello-world: Tauri 2.x tray app. Throwaway.",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "typescript": "^5.6.3",
+    "@types/node": "^20.17.6",
+    "zod": "^4.3.6"
+  }
+}

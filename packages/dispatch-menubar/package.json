@@ -1,0 +1,11 @@
+{
+  "name": "dispatch-menubar",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Foxworks Dispatch v2 macOS menu bar widget. Framework TBD — UI-S02 spike.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  }
+}

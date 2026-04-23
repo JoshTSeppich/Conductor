@@ -1,0 +1,18 @@
+{
+  "productName": "ui-s02-tauri-helloworld",
+  "version": "0.0.0",
+  "identifier": "dev.foxworks.ui-s02-tauri",
+  "build": {
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "windows": [],
+    "security": { "csp": null },
+    "macOSPrivateApi": false
+  },
+  "bundle": {
+    "active": true,
+    "targets": "app",
+    "icon": ["icons/icon.png"]
+  }
+}

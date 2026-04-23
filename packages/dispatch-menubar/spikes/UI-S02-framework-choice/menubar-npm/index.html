@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8" /><title>UI-S02 menubar npm</title></head>
+<body style="margin:0;padding:16px;font-family:-apple-system,Helvetica,sans-serif;">
+  <button onclick="window.electronAPI.hello()">Hello</button>
+  <button onclick="window.electronAPI.quit()" style="margin-left:8px;">Quit</button>
+  <script>
+    // Preload isn't wired; use the less-safe nodeIntegration path for
+    // the hello-world. Production MB-T01 will use contextBridge.
+    const { ipcRenderer } = require('electron');
+    window.electronAPI = {
+      hello: () => ipcRenderer.send('hello-clicked'),
+      quit: () => ipcRenderer.send('quit-clicked'),
+    };
+  </script>
+</body>
+</html>

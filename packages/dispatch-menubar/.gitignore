@@ -1,0 +1,19 @@
+# Build artifacts
+dist/
+spikes/**/dist/
+*.app
+
+# Dependency installs (candidate subdirs install their own deps)
+spikes/**/node_modules/
+
+# Rust (Tauri)
+spikes/**/target/
+spikes/**/Cargo.lock
+spikes/**/src-tauri/gen/
+
+# Swift
+spikes/**/.build/
+spikes/**/Package.resolved
+
+# OS
+.DS_Store
