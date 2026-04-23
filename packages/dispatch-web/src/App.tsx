@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './query-client.js';
+import { AuthBootstrap } from './components/AuthBootstrap.js';
 
 function AppFallback({
   error,
@@ -38,7 +39,7 @@ export function App({ children }: AppProps): ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary FallbackComponent={AppFallback}>
-        {children ?? <DashboardPlaceholder />}
+        <AuthBootstrap>{children ?? <DashboardPlaceholder />}</AuthBootstrap>
       </ErrorBoundary>
     </QueryClientProvider>
   );
