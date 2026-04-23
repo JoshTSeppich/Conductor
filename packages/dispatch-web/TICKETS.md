@@ -1,7 +1,21 @@
 # WEB-T decomposition — Phase Y.2 (Session B territory)
 
-- **Status:** Pending operator ack (pre-reg gate 3)
-- **Date:** 2026-04-23
+- **Status:** Accepted (pre-reg gate 3) — amended per operator
+  clarifications 2026-04-23
+- **Date:** 2026-04-23 (initial) / amended 2026-04-23 (same day,
+  post-ack clarifications)
+- **Amendments in this revision:**
+  - T08 (dark/light mode) **deferred** to post-MVP followup (UI-F13)
+  - T22 (archive toggle) **inlined** into T09 as column header
+    affordance; no standalone ticket
+  - **Final ticket count: 20** (T01–T21, with T22 removed)
+  - §2.2 TanStack Query invalidation matrix expanded to per-event
+    granularity (uniform rule with one exception)
+  - §6 CORS row updated: **no CORS allowlist needed** — Vite
+    dev-proxy handles dev, daemon same-origin in prod
+  - Error boundaries explicitly scoped into WEB-T01 (top-level
+    `<App>`) and WEB-T06 (per-panel) per operator option-A
+    recommendation
 - **Session:** B (UI)
 - **Frozen inputs:**
   - `CONDUCTOR_API_CONTRACT.md` v2.0.0 (commit `3ddca60`)
@@ -87,18 +101,52 @@ connection status, GAP-2 commit-subject reduce). Shape below.
 
 ### 2.2 TanStack Query keys + invalidation
 
-| Key | Fetch | Invalidation triggers |
-|---|---|---|
-| `['health']` | `GET /v2/health` | periodic refetch (every 30 s) |
-| `['sessions']` | `GET /v2/sessions` | WS `state_changed`, `handoff_written`, `prompt_sent`, `test_status_updated` |
-| `['session', name]` | `GET /v2/sessions/:name` | WS events for that session (same list) |
-| `['events', since]` | `GET /v2/events?since=` | manual (ticker backfill) |
+**Query keys** (static shape):
 
-Mutations (auto-invalidate affected keys):
+| Key | Fetch |
+|---|---|
+| `['health']` | `GET /v2/health` (polled every 30 s) |
+| `['sessions']` | `GET /v2/sessions` |
+| `['session', name]` | `GET /v2/sessions/:name` |
+| `['events', since]` | `GET /v2/events?since=` (manual backfill; ticker only) |
+
+**Mutations** (auto-invalidate affected keys on success):
 
 - `patchSessionState({name, state})` → `PATCH /v2/sessions/:name/state`
-- `postPrompt({name, prompt})` → `POST /v2/sessions/:name/prompts`
-- `getHandoff({name})` → `GET /v2/sessions/:name/handoff`
+  → invalidates `['sessions']` + `['session', name]`
+- `postPrompt({name, prompt})` → `POST /v2/sessions/:name/prompts` →
+  invalidates `['sessions']` + `['session', name]`
+- `getHandoff({name})` → `GET /v2/sessions/:name/handoff` → no
+  invalidation (read-only for UI state; daemon archives handoff but
+  that's server-side)
+
+**WebSocket event → invalidation matrix** (per-event granularity;
+uniform rule = both keys invalidated on any session-scoped event,
+with one exception):
+
+| §5.3 event | `['sessions']` | `['session', eventSession]` | Zustand side-effect | `<InBannerHost>` banner (§2.6) |
+|---|---|---|---|---|
+| `state_changed` | ✓ | ✓ | — | — |
+| `commit_landed` | ✓ | ✓ | `applyCommitEvent` (GAP-2 reduce) | — |
+| `handoff_written` | ✓ | ✓ | — | toast (auto-dismiss) if `notifications_available=false`; none if `true` |
+| `cairn_violation_detected` | ✓ | ✓ | — | sticky (always, defense in depth) |
+| `gate_trip` | ✓ | ✓ | — | sticky (always) |
+| `prompt_sent` | ✓ | ✓ | — | — (ticker only) |
+| `test_status_updated` | — | ✓ | — | — |
+
+**Exception — `test_status_updated`** invalidates only
+`['session', eventSession]`. Rationale: list response shape (contract
+§4.2) includes `last_status_json_at` timestamp but kanban cards
+(T10) don't render anything derived from `status_json`; focused
+detail (T12) does. Invalidating list would be wasted work. If a
+future T10 ever surfaces a tests-passing badge on the card, upgrade
+this row to match the uniform rule.
+
+**Ticker (T18)** receives every event regardless of invalidation
+rule; subscription is orthogonal to query invalidation.
+
+**All events** pass through `useDaemonEvents()` which dispatches the
+right side-effects in a single tick (no double-fire risk).
 
 ### 2.3 Zustand store shape
 
@@ -284,28 +332,42 @@ etc.). Clusters can overlap if dependencies allow.
 
 ### W-1 Foundation (5 tickets)
 
-#### WEB-T01 — Vite + React + TS scaffold
+#### WEB-T01 — Vite + React + TS scaffold + dev-proxy + top-level error boundary
 
 - **Scope:** Replace `packages/dispatch-web/` minimal-scaffold (the
   UI-S01 spike shell) with a production scaffold: Vite 5, React 19,
   TypeScript, `workspace:*` dep on `dispatch-core` for v2 schemas.
-  Add dev script. Decide dev-server origin (`http://localhost:5173`
-  default) and surface it to Session A for CORS allowlist.
+  **Vite dev-proxy** for `/v2/*` HTTP and `/v2/events/stream` WS →
+  `http://localhost:7878` (Vite's `server.proxy` config with
+  `ws: true`). Dev server on `http://localhost:5173`; operator can
+  override with `--port` flag if collision. Production build output
+  is consumed by daemon's static serve (same-origin in prod).
+  **Top-level `<App>` error boundary** via `react-error-boundary`
+  (fallback UI: "Something went wrong — reload"; logs to console +
+  Zustand error slice for dev inspection).
 - **Acceptance:**
-  - `pnpm --filter dispatch-web dev` opens dev server, shows "Hello
-    Conductor" page
+  - `pnpm --filter dispatch-web dev` opens dev server on 5173, shows
+    "Hello Conductor" page
+  - Dev fetch `/v2/health` via the proxy returns daemon response
+    (tested against a stub daemon or MSW)
+  - Dev WS connection to `/v2/events/stream` via the proxy works
+    (`ws: true` in proxy config)
   - `pnpm --filter dispatch-web build` emits static assets to
     `packages/dispatch-web/dist/`
   - `pnpm typecheck` + `pnpm test` green
   - `import { StateEnum } from 'dispatch-core/v2/schema'` resolves
     via workspace dep (no relative paths)
-  - Cross-session coordination note filed: "Session B dev origin =
-    http://localhost:5173; Session A daemon CORS allowlist must
-    include this origin."
-- **Deps:** none (this is the entry)
+  - Top-level `<App>` boundary catches a thrown test error in a
+    child component and renders fallback without crashing the app
+  - **No CORS coordination needed** with Session A — Vite dev-proxy
+    makes dev same-origin from the browser's perspective; daemon
+    serves static assets in prod (also same-origin)
+- **Deps:** none (entry)
 - **External:** Vite, React, @vitejs/plugin-react, dispatch-core
-  workspace
-- **Followups:** none (CORS coordination handled at ticket time)
+  workspace, `react-error-boundary`
+- **Cross-session coordination:** none (previously surfaced as CORS
+  allowlist; obsoleted by dev-proxy decision)
+- **Followups:** UI-F13 (WEB-T08 dark/light mode deferred)
 
 #### WEB-T02 — HTTP client wrapper + auth bootstrap
 
@@ -384,20 +446,27 @@ etc.). Clusters can overlap if dependencies allow.
 
 ### W-2 Layout (3 tickets)
 
-#### WEB-T06 — Main layout scaffold
+#### WEB-T06 — Main layout scaffold + per-panel error boundaries
 
 - **Scope:** CSS grid layout (kanban top-left, focused-detail
   top-right, ticker bottom, full width). Responsive breakpoints
   (desktop-only for v2 MVP; narrower viewport collapses to stacked).
   `<ConnectionStatusBanner>` + `<InBannerHost>` slots reserved but
-  empty until T21 lands.
+  empty until T21 lands. **Per-panel error boundaries** around
+  `<KanbanPanel>`, `<FocusedDetailPanel>`, `<TickerPanel>`, and
+  `<InBannerHost>`. Each boundary's fallback is panel-scoped
+  ("Kanban failed to render — reload"; similar for others). A
+  runtime error in one panel does NOT break the others.
 - **Acceptance:**
   - Layout renders at 1280×800 (operator's laptop size) with kanban
     ~60% width, focused-detail ~40%, ticker ~160px tall bottom strip
   - Resize to 800×600 stacks panels vertically
   - Empty slots don't shift layout when populated
+  - Test: throwing an error inside `<FocusedDetailPanel>` renders
+    the panel-scoped fallback; `<KanbanPanel>` + `<TickerPanel>`
+    still work
 - **Deps:** WEB-T01, WEB-T07
-- **External:** Tailwind CSS grid
+- **External:** Tailwind CSS grid; `react-error-boundary`
 - **Followups:** none
 
 #### WEB-T07 — Tailwind config + design tokens
@@ -418,38 +487,42 @@ etc.). Clusters can overlap if dependencies allow.
 - **External:** Tailwind
 - **Followups:** none
 
-#### WEB-T08 — Dark/light mode toggle
+#### WEB-T08 — Dark/light mode toggle — **DEFERRED post-ack**
 
-- **Scope:** `prefers-color-scheme` media query detection + manual
-  override (button in a corner). Persisted in localStorage.
-- **Acceptance:**
-  - Switches correctly on macOS dark-mode system toggle
-  - Manual override persists across reloads
-  - Tokens in T07 render correctly in both modes
-- **Deps:** WEB-T07
-- **Status note:** this ticket is **deferrable** to followup
-  (UI-F12) if scope pressure arrives. v2 MVP can ship with
-  system-theme-only support.
+Deferred per operator decision 2026-04-23 to followup **UI-F13**. v2
+MVP ships with `prefers-color-scheme` system detection only (no
+manual toggle); T07 tokens must render legibly in both modes.
+Full-featured toggle (manual override, localStorage persistence)
+lands post-MVP if operator prioritizes.
+
+**No ticket work in Phase Y.2.** Placeholder retained here so the
+cluster numbering is unaltered; W-2 Layout effectively ships as 2
+tickets (T06, T07).
 
 ### W-3 Kanban (3 tickets)
 
-#### WEB-T09 — KanbanPanel + 4 columns
+#### WEB-T09 — KanbanPanel + 4 columns + inlined archive toggle (formerly T22)
 
 - **Scope:** 4 columns (awaiting_review, stale, running, idle) with
   v1 sort priority preserved. Grouping reads `computed_status` per
-  GAP-3. Killed sessions filtered out by default per GAP-1 (visible
-  when `showArchived` is true).
+  GAP-3. Killed sessions filtered out by default per GAP-1; **archive
+  toggle is inlined as a column-header affordance** (checkbox or
+  small toggle near the kanban title: "Show archived"). When on,
+  killed sessions appear as a 5th "Archived" column; when off, killed
+  are omitted entirely. Toggle state in Zustand `showArchived`,
+  persisted to localStorage.
 - **Acceptance:**
   - Sessions grouped into correct columns per `computed_status`
   - Sort priority matches v1 (`awaiting_review(0) > stale(1) >
     running(2) > idle(3)`)
-  - Archive toggle reveals/hides killed sessions (but killed have
-    no computed_status match — shown as 5th "Archived" column when
-    toggle on? or mixed into idle? decided at ticket time)
+  - Archive toggle (header affordance) reveals/hides 5th column of
+    killed sessions
+  - Toggle state persists across reloads (localStorage)
   - Empty columns show placeholder "No X sessions"
 - **Deps:** WEB-T04, WEB-T05, WEB-T07
-- **External:** contract §4.2; v2 schema `SessionsListResponse`
-- **Followups:** T22 archive toggle design
+- **External:** contract §4.2; v2 schema `SessionsListResponse`;
+  GAP-1 resolution
+- **Followups:** none
 
 #### WEB-T10 — SessionCard minimal view
 
@@ -651,22 +724,14 @@ etc.). Clusters can overlap if dependencies allow.
 - **Followups:** none (this ticket closes the DAEMON-S03 loop on
   Session B side)
 
-### Supporting (1 ticket)
+### Supporting — **INLINED**
 
-#### WEB-T22 — ArchiveToggle (GAP-1 per-session-list filter)
+**WEB-T22 (archive toggle) inlined into WEB-T09** per operator
+reshape 2026-04-23. Archive toggle becomes column-header affordance
+on the kanban panel rather than a standalone ticket. Scope captured
+in T09 above.
 
-- **Scope:** Small toggle/checkbox near the kanban header: "Show
-  archived sessions". When off (default), killed sessions hidden
-  from kanban. When on, killed sessions appear in a 5th column
-  "Archived" OR inline in their nominal computed_status column
-  (decided at ticket time — either works; 5th column is clearer).
-- **Acceptance:**
-  - Toggle state in Zustand (`showArchived`)
-  - Kanban grouping logic respects flag
-  - Persisted in localStorage (operator preference)
-- **Deps:** WEB-T05, WEB-T09
-- **External:** GAP-1 arbitration
-- **Followups:** none
+No standalone supporting tickets remain in Phase Y.2.
 
 ---
 
@@ -674,12 +739,12 @@ etc.). Clusters can overlap if dependencies allow.
 
 | Coordination | Consumed in | Produced by | Notes |
 |---|---|---|---|
-| CORS allowlist | Session A (DAEMON-T0x) | WEB-T01 | WEB-T01 commit body names the dev origin (`http://localhost:5173`); Session A's HTTP server ticket reads + allows |
+| ~~CORS allowlist~~ | ~~Session A~~ | ~~WEB-T01~~ | **OBSOLETED 2026-04-23** — Vite dev-proxy handles `/v2/*` HTTP and `/v2/events/stream` WS in dev (browser sees same-origin); daemon serves Vite-built static assets in prod (same-origin). No CORS allowlist required on Session A's side. |
 | `notifications_available` flag | WEB-T18, WEB-T21 | Session A DAEMON-S03 + `/v2/health` contract | Flag defaults false until Session A proves otherwise; T21 rules are correct in both states |
 | UI-S01 preflight pattern | WEB-T02, WEB-T03 | UI-S01 ADR (Session B, already landed) | Spike client → production client, same algorithm |
 | UI-S04 clipboard FM2 toast | WEB-T16 | UI-S04 ADR (Session B, already landed) | Operator-visible feedback on every web-UI clipboard write |
 | Token storage path | WEB-T02 | Session A daemon (token file) + contract §3.2 | Web UI must read `~/.foxworks-dispatch/token`; how it reaches browser JS is WEB-T02's design decision (meta-tag injection, dedicated endpoint, or Electron preload) |
-| WS URL convention | WEB-T03, MB-T xx | Contract §5.1 | `ws://localhost:7878/v2/events/stream?token=<t>` |
+| WS URL convention | WEB-T03, MB-T xx | Contract §5.1 | `ws://localhost:7878/v2/events/stream?token=<t>` (prod same-origin); dev uses `ws://localhost:5173/v2/events/stream?token=<t>` via Vite proxy |
 | URL-fragment routing | WEB-T11, MB-T07 | This doc | `#session=<name>` agreed; MB-T07 uses `open <URL>#session=<name>` |
 | v2 Zod schemas | WEB-T02, T04, T09, T12, T13, T15, T21 | `packages/dispatch-core/src/v2/schema.ts` (operator-frozen at `551c469`) | Runtime validation in dev, type flow in prod |
 
@@ -693,7 +758,9 @@ etc.). Clusters can overlap if dependencies allow.
 - UI-F04 — token rotation mid-stream handling (post-MVP)
 - UI-F05 — Linux clipboard parity (deferred; Linux not in v2)
 - UI-F10 — MB-T07 integration for URL-fragment focusing
-- UI-F12 — dark/light mode manual toggle (if WEB-T08 deferred)
+- **UI-F13 — Dark/light mode manual toggle** (WEB-T08 deferred
+  post-ack 2026-04-23; prefers-color-scheme works MVP, manual
+  override lands here)
 
 **Closed by this doc:**
 - UI-F06 — MB-T01 scaffold; activates after WEB-T01 (Electron
@@ -749,17 +816,27 @@ WEB-T execution time.
 
 ---
 
-## 10. What I need from you (pre-reg gate 3)
+## 10. Status (post pre-reg gate 3 ack + amendment)
 
-- **Ack the decomposition as-is,** or
-- **Reshape specific tickets or the overall structure.** Common
-  reshape candidates:
-  - Collapse T08 (dark/light toggle) entirely into followup
-  - Split T15 (SendModal) if it grows beyond ~150 LOC
-  - Move T22 (ArchiveToggle) inline into T09
-  - Renumber or recluster if the 5 clusters don't match your Phase Y
-    structure doc
+**Gate 3 ack received 2026-04-23.** Operator clarifications resolved
+in this amendment:
 
-On ack: I proceed to WEB-T01 red-then-green. WEB-T01 is its own
-pre-reg cycle per §3.2 discipline — small per-ticket surface before
-starting, then red/green pair, then commit/push/halt.
+1. CORS scope → obsoleted (Vite dev-proxy; daemon same-origin in
+   prod); §6 coordination row updated.
+2. TanStack Query invalidation granularity → per-event matrix in
+   §2.2; uniform rule with one exception for `test_status_updated`.
+3. React error boundaries → top-level in WEB-T01 scope, per-panel in
+   WEB-T06 scope; library `react-error-boundary`; no new ticket.
+
+Operator-acked reshape applied:
+- T08 deferred to UI-F13 followup
+- T22 inlined into T09 (archive toggle as column-header affordance)
+- Final ticket count: 20 (T01–T21, T22 removed)
+
+Remaining pre-execution steps:
+- WEB-T01 gets its own per-ticket pre-reg cycle per §3.2: brief
+  surface (Vite config specifics, dev-proxy config, workspace dep,
+  error-boundary setup, initial test scaffold) → halt for ack → red
+  → green → commit/push → halt for findings.
+- Per-commit-push, per-path `git add`, pre-commit territory check,
+  post-commit verification apply to every WEB-T commit.
