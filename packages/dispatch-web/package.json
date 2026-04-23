@@ -5,15 +5,31 @@
   "description": "Foxworks Dispatch v2 web UI. Consumes daemon HTTP API per CONDUCTOR_API_CONTRACT.md.",
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "spike:S01": "tsx spikes/UI-S01-websocket-client/run.ts",
     "spike:S04": "tsx spikes/UI-S04-clipboard/run.ts"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "@tanstack/react-query": "^5.62.0",
+    "dispatch-core": "workspace:*",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-error-boundary": "^5.0.0",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@types/ws": "^8.5.13"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.0",
+    "@types/ws": "^8.5.13",
+    "@vitejs/plugin-react": "^4.3.4",
+    "happy-dom": "^15.11.0",
+    "vite": "^7.0.0",
+    "ws": "^8.18.0"
   }
 }
