@@ -48,6 +48,12 @@ export interface StartupOpts {
    * startup leaves this unset.
    */
   beforeListen?: (app: FastifyInstance) => Promise<void> | void;
+  /**
+   * Path to sessions.json. Default `~/.foxworks-dispatch/sessions.json`.
+   * Extended in DAEMON-T06; wired in the T06 green commit when the
+   * first routes consume T05's readRegistryV2/writeRegistryV2.
+   */
+  registryPath?: string;
 }
 
 export interface StartupHandle {

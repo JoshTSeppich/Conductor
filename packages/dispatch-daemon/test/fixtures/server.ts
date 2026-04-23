@@ -28,6 +28,12 @@ export interface SpawnTestServerOpts {
    * so post-spawn `ts.app.get(...)` is not an option.
    */
   beforeListen?: (app: FastifyInstance) => Promise<void> | void;
+  /**
+   * Test-isolated sessions.json path. Added in DAEMON-T06 so tests
+   * can seed the registry via writeRegistryV2 without touching the
+   * operator's real registry.
+   */
+  registryPath?: string;
 }
 
 export async function spawnTestServer(
@@ -40,6 +46,7 @@ export async function spawnTestServer(
     logger: false,
     tokenPath: opts.tokenPath,
     beforeListen: opts.beforeListen,
+    registryPath: opts.registryPath,
   });
   return {
     app: server,
