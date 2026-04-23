@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Box, Text, render } from 'ink';
 import { stat } from 'node:fs/promises';
-import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
-import { deriveState, type SessionState } from '../../packages/dispatch-core/src/state/derive.js';
-import type { Session } from '../../packages/dispatch-core/src/registry/schema.js';
+import { readRegistry } from 'dispatch-core/src/registry/read.js';
+import { deriveState, type SessionState } from 'dispatch-core/src/state/derive.js';
+import type { Session } from 'dispatch-core/src/registry/schema.js';
 
 export interface StatusRow {
   name: string;

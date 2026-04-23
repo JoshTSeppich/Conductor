@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "commander": "^14.0.3",
+    "dispatch-core": "workspace:*",
     "ink": "^7.0.1",
     "react": "^19.2.5"
   }

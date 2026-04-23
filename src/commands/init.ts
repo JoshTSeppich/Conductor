@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
-import { writeRegistry } from '../../packages/dispatch-core/src/registry/write.js';
-import type { Session } from '../../packages/dispatch-core/src/registry/schema.js';
+import { readRegistry } from 'dispatch-core/src/registry/read.js';
+import { writeRegistry } from 'dispatch-core/src/registry/write.js';
+import type { Session } from 'dispatch-core/src/registry/schema.js';
 
 const TARGET_RE = /^[^:]+:\d+\.\d+$/;
 

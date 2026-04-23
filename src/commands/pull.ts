@@ -1,10 +1,10 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Writable } from 'node:stream';
-import { archiveRoot as defaultArchiveRoot } from '../../packages/dispatch-core/src/lib/paths.js';
-import { copyToClipboard as defaultClipboard } from '../../packages/dispatch-core/src/lib/clipboard.js';
-import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
-import { writeRegistry } from '../../packages/dispatch-core/src/registry/write.js';
+import { archiveRoot as defaultArchiveRoot } from 'dispatch-core/src/lib/paths.js';
+import { copyToClipboard as defaultClipboard } from 'dispatch-core/src/lib/clipboard.js';
+import { readRegistry } from 'dispatch-core/src/registry/read.js';
+import { writeRegistry } from 'dispatch-core/src/registry/write.js';
 
 export interface PullArgs {
   name: string;

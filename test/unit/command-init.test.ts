@@ -3,8 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInit } from '../../src/commands/init.js';
-import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
-import { writeRegistry } from '../../packages/dispatch-core/src/registry/write.js';
+import { readRegistry } from 'dispatch-core/src/registry/read.js';
+import { writeRegistry } from 'dispatch-core/src/registry/write.js';
 
 describe('runInit', () => {
   async function setup(): Promise<{ dir: string; registryPath: string }> {

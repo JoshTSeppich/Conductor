@@ -14,11 +14,11 @@ import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { runSend } from '../../src/commands/send.js';
-import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
-import { writeRegistry } from '../../packages/dispatch-core/src/registry/write.js';
-import { capturePane } from '../../packages/dispatch-core/src/transport/tmux.js';
-import { HANDOFF_FOOTER } from '../../packages/dispatch-core/src/prompt/footer.js';
-import type { Registry } from '../../packages/dispatch-core/src/registry/schema.js';
+import { readRegistry } from 'dispatch-core/src/registry/read.js';
+import { writeRegistry } from 'dispatch-core/src/registry/write.js';
+import { capturePane } from 'dispatch-core/src/transport/tmux.js';
+import { HANDOFF_FOOTER } from 'dispatch-core/src/prompt/footer.js';
+import type { Registry } from 'dispatch-core/src/registry/schema.js';
 
 const execFileP = promisify(execFile);
 const SESSION = `fd-t08-${process.pid}`;
