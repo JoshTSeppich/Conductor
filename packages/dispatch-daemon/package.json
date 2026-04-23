@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "spike:S05": "tsx spikes/DAEMON-S05-http-server.ts",
-    "spike:S01": "tsx spikes/DAEMON-S01-websocket.ts"
+    "spike:S01": "tsx spikes/DAEMON-S01-websocket.ts",
+    "spike:S02": "tsx spikes/DAEMON-S02-fsevents.ts"
   },
   "dependencies": {
     "dispatch-core": "workspace:*"
