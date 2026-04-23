@@ -21,6 +21,13 @@ export interface TestServer {
 export interface SpawnTestServerOpts {
   /** Pass a test-isolated token path so tests do not touch the operator's real token file. */
   tokenPath?: string;
+  /**
+   * Register routes before `app.listen()`. Added in DAEMON-T04
+   * so tests can attach throwing routes that exercise the error
+   * handler. Fastify 5 rejects route registration after listen,
+   * so post-spawn `ts.app.get(...)` is not an option.
+   */
+  beforeListen?: (app: FastifyInstance) => Promise<void> | void;
 }
 
 export async function spawnTestServer(
@@ -32,6 +39,7 @@ export async function spawnTestServer(
     port: 0,
     logger: false,
     tokenPath: opts.tokenPath,
+    beforeListen: opts.beforeListen,
   });
   return {
     app: server,

@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { buildServer, type BuildServerOpts } from '../server.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
+import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
 import { shutdown } from './shutdown.js';
 
@@ -35,10 +36,18 @@ export interface StartupOpts {
   logger?: BuildServerOpts['logger'];
   /**
    * Path to the auth token file. Default `~/.foxworks-dispatch/token`.
-   * Extended in DAEMON-T02; unused until the T02 green commit wires up
-   * `getOrCreateToken` + the auth hook.
+   * Extended in DAEMON-T02; wired up in the T02 green commit.
    */
   tokenPath?: string;
+  /**
+   * Test-only hook: runs after all production setup (error handler,
+   * auth hook, auth routes) and BEFORE `app.listen()`. Added in
+   * DAEMON-T04 because Fastify 5 rejects both `setErrorHandler` and
+   * `app.get(...)` calls after listen. Tests use this to register
+   * throwing routes that exercise the error handler. Production
+   * startup leaves this unset.
+   */
+  beforeListen?: (app: FastifyInstance) => Promise<void> | void;
 }
 
 export interface StartupHandle {
@@ -60,12 +69,23 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
 
   const app = await buildServer({ logger: opts.logger });
 
+  // DAEMON-T04: server-wide error + not-found handlers (JSON
+  // {"error": "..."} shape per §4 + S05 ADR). Register before
+  // routes so all subsequent handlers inherit the shape.
+  registerErrorHandler(app);
+
   // DAEMON-T02: load or create the auth token, register the
   // consolidated onRequest hook, register the rotate endpoint.
   const initialToken = await getOrCreateToken(tokenPath);
   const tokenRef: TokenRef = { value: initialToken };
   app.addHook('onRequest', createAuthHook(tokenRef));
   await registerAuthRoutes(app, { tokenRef, tokenPath });
+
+  // T04 test-only hook: register routes that need to exist before
+  // listen (e.g., throwing routes for error-handler probes).
+  if (opts.beforeListen) {
+    await opts.beforeListen(app);
+  }
 
   await app.listen({ host, port: requestedPort });
 
