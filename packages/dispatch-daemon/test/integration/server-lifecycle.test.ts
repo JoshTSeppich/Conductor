@@ -62,7 +62,12 @@ describe('DAEMON-T01 — Fastify scaffold + server lifecycle', () => {
 
   it('P4 HTTP GET on unknown path returns 404 (Fastify default)', async () => {
     ts = await spawnTestServer();
-    const response = await fetch(`${ts.url}/unknown-path`);
+    // Post-T02: auth hook gates non-health paths. Present the token so
+    // the hook passes through and Fastify's 404 is observable. The
+    // no-token 401 case is covered by DAEMON-T02 auth.test.ts P3.
+    const response = await fetch(`${ts.url}/unknown-path`, {
+      headers: { 'x-conductor-token': ts.token ?? '' },
+    });
     expect(response.status).toBe(404);
   });
 

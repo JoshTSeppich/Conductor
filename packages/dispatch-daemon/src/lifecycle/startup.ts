@@ -14,9 +14,17 @@
  * Each of those is an additive step; the T01 pattern stays intact.
  */
 
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { buildServer, type BuildServerOpts } from '../server.js';
+import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
+import { registerAuthRoutes } from '../routes/auth.js';
 import { shutdown } from './shutdown.js';
+
+function defaultTokenPath(): string {
+  return join(homedir(), '.foxworks-dispatch', 'token');
+}
 
 export interface StartupOpts {
   /** Bind host. Default `127.0.0.1` (localhost-only per contract §3.4). */
@@ -48,8 +56,17 @@ export interface StartupHandle {
 export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const host = opts.host ?? '127.0.0.1';
   const requestedPort = opts.port ?? 7878;
+  const tokenPath = opts.tokenPath ?? defaultTokenPath();
 
   const app = await buildServer({ logger: opts.logger });
+
+  // DAEMON-T02: load or create the auth token, register the
+  // consolidated onRequest hook, register the rotate endpoint.
+  const initialToken = await getOrCreateToken(tokenPath);
+  const tokenRef: TokenRef = { value: initialToken };
+  app.addHook('onRequest', createAuthHook(tokenRef));
+  await registerAuthRoutes(app, { tokenRef, tokenPath });
+
   await app.listen({ host, port: requestedPort });
 
   const addr = app.server.address();
@@ -77,6 +94,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   return {
     server: app,
     port: boundPort,
+    token: tokenRef.value,
     close: async () => {
       process.off('SIGTERM', sigTermHandler);
       process.off('SIGINT', sigIntHandler);
