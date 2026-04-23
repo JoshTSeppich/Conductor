@@ -7,7 +7,8 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "spike:S01": "tsx spikes/UI-S01-websocket-client/run.ts"
+    "spike:S01": "tsx spikes/UI-S01-websocket-client/run.ts",
+    "spike:S04": "tsx spikes/UI-S04-clipboard/run.ts"
   },
   "dependencies": {
     "ws": "^8.18.0"

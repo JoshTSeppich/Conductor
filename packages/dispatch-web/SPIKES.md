@@ -80,3 +80,54 @@ alone. Both arrive as a generic close/error event.
 
 See `docs/adr/UI-S01-websocket-client.md` for decision rationale and
 observed data.
+
+## UI-S04 — Clipboard coordination (daemon pbcopy + web UI clipboard)
+
+Ran `spikes/UI-S04-clipboard/run.ts` to characterize `pbcopy`/`pbpaste`
+semantics when both the daemon (contract §4.4) and the web UI
+(`navigator.clipboard.writeText`) write the same pasteboard with no
+coordination primitive. 4/4 scenarios passed.
+
+Per operator direction: **document the failure mode, don't synchronize
+— the fix is UX-level.**
+
+**KNOWN (observed in spike):**
+
+1. `pbcopy`/`pbpaste` round-trip preserves content byte-for-byte,
+   including the fd v1 Spike 02 hazard classes (triple-backticks,
+   `${vars}`, `$HOME`, nested quotes, unicode, embedded newlines).
+
+2. Two sequential writes (50ms apart) → last-writer-wins. No atomicity
+   across the pair; pbcopy replaces on every invocation.
+
+3. Two concurrent `pbcopy` processes produce a nondeterministic winner
+   across runs (OS scheduler decides). No corruption / partial writes;
+   each individual write is atomic. Race is safe at the data level,
+   unsafe at the intent level.
+
+4. **Failure mode FM2** (surprise overwrite) is the load-bearing one:
+   daemon auto-copies handoff A, operator clicks re-pull for a
+   different session, operator pastes what they expected to be A but
+   gets B. Mitigation lives in WEB-T16 UX: toast
+   `"Copied handoff for <session>"` on every web-UI write.
+
+5. `navigator.clipboard.writeText` on `http://localhost` is a secure
+   context; in a user-gesture click handler it writes silently without
+   a permission prompt on Chrome/Safari. Firefox may prompt first use.
+   Outside a user gesture it rejects with NotAllowedError — WEB-T16
+   catches and shows a modal fallback with a "Copy" button (fresh
+   gesture).
+
+**MODELED:**
+
+- Browser Permissions API actual behavior (citations MDN-current, not
+  executed in-spike — WEB-T16 integration test will upgrade).
+- Linux support — spike is macOS-only; Linux parity (xclip/wl-copy)
+  tracked as followup UI-F05 if/when Linux becomes in scope.
+
+**Not a contract concern.** Clipboard is OS-level; neither daemon nor
+UI surfaces a clipboard API endpoint. This ADR informs WEB-T16 UX and
+documents operator-facing behavior.
+
+See `docs/adr/UI-S04-clipboard.md` for decision record + failure-mode
+taxonomy + UX recommendations.
