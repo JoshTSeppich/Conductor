@@ -8,15 +8,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "composite": true,
-    "outDir": "dist",
-    "rootDir": "src",
+    "noEmit": true,
     "types": ["node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test"],
-  "references": [
-    { "path": "../dispatch-core" }
-  ]
+  "exclude": ["node_modules", "dist", "test"]
 }

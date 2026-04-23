@@ -8,16 +8,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "composite": true,
-    "outDir": "dist",
-    "rootDir": "src",
+    "noEmit": true,
     "jsx": "react-jsx",
     "types": ["node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "scripts"],
-  "references": [
-    { "path": "../dispatch-core" }
-  ]
+  "exclude": ["node_modules", "dist", "test", "scripts"]
 }

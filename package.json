@@ -2,33 +2,21 @@
   "name": "foxworks-dispatch",
   "version": "0.0.0",
   "private": true,
-  "description": "CLI bridge between architect-chat prompts and Claude Code tmux panes.",
+  "description": "Foxworks Dispatch monorepo: dispatch-core (shared lib), dispatch-cli (fd CLI), dispatch-daemon (Conductor daemon).",
   "type": "module",
-  "bin": {
-    "fd": "dist/bin/fd.js"
-  },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "build": "tsc && chmod +x dist/bin/fd.js"
+    "build": "tsc"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",
-    "@types/react": "^19.2.14",
-    "ansi-to-html": "^0.7.2",
-    "ink-testing-library": "^4.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vitest": "^4.1.5"
-  },
-  "dependencies": {
-    "commander": "^14.0.3",
-    "dispatch-core": "workspace:*",
-    "ink": "^7.0.1",
-    "react": "^19.2.5"
   }
 }
