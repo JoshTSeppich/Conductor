@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runList } from '../../src/commands/list.js';
-import { writeRegistry } from '../../src/registry/write.js';
+import { writeRegistry } from '../../packages/dispatch-core/src/registry/write.js';
 
 describe('runList', () => {
   async function setup(): Promise<{ dir: string; registryPath: string }> {

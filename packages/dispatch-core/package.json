@@ -9,6 +9,12 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "spike:01": "tsx spikes/01-tmux-send-keys.ts",
+    "spike:02": "tsx spikes/02-tmux-capture.ts",
+    "spike:03": "tsx spikes/03-tmux-has-session.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
   }
 }

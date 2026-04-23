@@ -8,9 +8,6 @@
     "fd": "dist/bin/fd.js"
   },
   "scripts": {
-    "spike:01": "tsx spikes/01-tmux-send-keys.ts",
-    "spike:02": "tsx spikes/02-tmux-capture.ts",
-    "spike:03": "tsx spikes/03-tmux-has-session.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -31,7 +28,6 @@
   "dependencies": {
     "commander": "^14.0.3",
     "ink": "^7.0.1",
-    "react": "^19.2.5",
-    "zod": "^4.3.6"
+    "react": "^19.2.5"
   }
 }

@@ -24,8 +24,8 @@ import { Writable } from 'node:stream';
 import { runInit } from '../../src/commands/init.js';
 import { runSend } from '../../src/commands/send.js';
 import { runPull } from '../../src/commands/pull.js';
-import { readRegistry } from '../../src/registry/read.js';
-import { capturePane } from '../../src/transport/tmux.js';
+import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
+import { capturePane } from '../../packages/dispatch-core/src/transport/tmux.js';
 import { loadRows } from '../../src/commands/status.js';
 
 const execFileP = promisify(execFile);

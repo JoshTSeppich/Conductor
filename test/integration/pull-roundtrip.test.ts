@@ -62,9 +62,9 @@ beforeEach(() => {
 // vi.mock is hoisted by vitest to the top of the module, so this order is
 // only relevant visually.
 import { runPull } from '../../src/commands/pull.js';
-import { readRegistry } from '../../src/registry/read.js';
-import { writeRegistry } from '../../src/registry/write.js';
-import type { Registry } from '../../src/registry/schema.js';
+import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
+import { writeRegistry } from '../../packages/dispatch-core/src/registry/write.js';
+import type { Registry } from '../../packages/dispatch-core/src/registry/schema.js';
 
 // ---- test helpers ---------------------------------------------------------
 function makeRegistry(

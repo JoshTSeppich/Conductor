@@ -1,4 +1,4 @@
-import { readRegistry } from '../registry/read.js';
+import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
 
 export interface ListArgs {
   registryPath?: string;

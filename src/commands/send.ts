@@ -1,10 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { archiveRoot as defaultArchiveRoot } from '../lib/paths.js';
-import { assemble } from '../prompt/assemble.js';
-import { readRegistry } from '../registry/read.js';
-import { writeRegistry } from '../registry/write.js';
-import { hasSession, sendKeys } from '../transport/tmux.js';
+import { archiveRoot as defaultArchiveRoot } from '../../packages/dispatch-core/src/lib/paths.js';
+import { assemble } from '../../packages/dispatch-core/src/prompt/assemble.js';
+import { readRegistry } from '../../packages/dispatch-core/src/registry/read.js';
+import { writeRegistry } from '../../packages/dispatch-core/src/registry/write.js';
+import { hasSession, sendKeys } from '../../packages/dispatch-core/src/transport/tmux.js';
 
 export interface SendArgs {
   name: string;

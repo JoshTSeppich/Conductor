@@ -17,9 +17,6 @@ importers:
       react:
         specifier: ^19.2.5
         version: 19.2.5
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: ^20.17.6
@@ -49,7 +46,11 @@ importers:
         specifier: workspace:*
         version: link:../dispatch-core
 
-  packages/dispatch-core: {}
+  packages/dispatch-core:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   packages/dispatch-daemon:
     dependencies:
