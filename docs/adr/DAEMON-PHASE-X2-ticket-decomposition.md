@@ -1,6 +1,9 @@
 # DAEMON-T + CLI-T Phase X.2 ticket decomposition (pre-reg gate 3 surface)
 
-**Status:** Surface for operator ack. Pre-reg gate 3 per Session A's original ticket §5.5.
+**Status:** Amended after operator arbitration on RA-01. Pre-reg gate 3 per Session A's original ticket §5.5.
+**Amendment history:**
+- Initial surface at `80372f1` — flagged RA-01 for operator arbitration
+- This amendment — RA-01 resolved via Option 1 (new additive endpoint); DAEMON-T17a added to D-5 cluster
 **Scope:** Session A side only. Session B's WEB-T already landed at `90e2dd0`/`fe1164f`. Session C (MB-T) spawns post-Phase-X.2 closure.
 **Inputs consumed:**
 - `CONDUCTOR_API_CONTRACT.md` v2.0.0 at `3ddca60` (frozen)
@@ -24,7 +27,7 @@
 
 ## Cluster overview
 
-Six DAEMON-T clusters + one CLI-T cluster. Total 25 tickets (19 DAEMON-T, 6 CLI-T).
+Six DAEMON-T clusters + one CLI-T cluster. Total 26 tickets (20 DAEMON-T, 6 CLI-T).
 
 | Cluster | Scope | Count |
 |---|---|---|
@@ -32,7 +35,7 @@ Six DAEMON-T clusters + one CLI-T cluster. Total 25 tickets (19 DAEMON-T, 6 CLI-
 | D-2 Sessions CRUD + State Machine | Session read/create, PATCH state with §6.1 transitions + side effects | 3 |
 | D-3 Operations | Prompt send, handoff pull, events history | 3 |
 | D-4 Real-time | WS stream, handoff watcher, git log watcher, STATUS.json watcher | 4 |
-| D-5 Notifications + Ring Buffer | Notification engine, in-memory event history, ring buffer to back `/v2/events` | 2 |
+| D-5 Notifications + Ring Buffer + Violations | Notification engine, in-memory event history, ring buffer, `POST /violations` endpoint (T17a per RA-01 Option 1) | 3 |
 | D-6 Deployment | launchd installer + uninstaller scripts | 2 |
 | **CLI-T** | fd v1 refactor, fd status dashboard, new state commands, daemon-dead fallback, regression + new tests | 6 |
 
@@ -130,7 +133,7 @@ Six DAEMON-T clusters + one CLI-T cluster. Total 25 tickets (19 DAEMON-T, 6 CLI-
 - **Followups:** none
 
 ### DAEMON-T08 — `PATCH /v2/sessions/:name/state` with transitions + side effects
-- **Scope:** `packages/dispatch-daemon/src/state/transitions.ts` + route. Validate requested state against `SessionState` enum. Validate transition against §6.1 rules (422 if invalid). Execute side effects: `armed → held` sends Ctrl-C via `dispatch-core`'s tmux transport; `armed → killed` / `paused → killed` / `held → killed` runs `tmux kill-session`; other transitions have no tmux side effect. On success: write registry, emit `state_changed` event with `triggered_by: "operator"`. Cairn-triggered transitions (§6.2) are out of scope for v2.0; see Residual Ambiguity RA-01.
+- **Scope:** `packages/dispatch-daemon/src/state/transitions.ts` + route. Validate requested state against `SessionState` enum. Validate transition against §6.1 rules (422 if invalid). Execute side effects: `armed → held` sends Ctrl-C via `dispatch-core`'s tmux transport; `armed → killed` / `paused → killed` / `held → killed` runs `tmux kill-session`; other transitions have no tmux side effect. On success: write registry, emit `state_changed` event with `triggered_by: "operator"`. The transition helper exported from this ticket is reused by T17a for cairn/gate-triggered transitions (auto-to-held with `triggered_by: "cairn_violation"` or `"gate_trip"` per contract §6.2) — no code duplication between operator-initiated and violation-initiated state changes.
 - **Acceptance criteria:**
   - Valid transitions execute side effect + persist + emit
   - Invalid transitions (e.g., `killed` → anything, or any rule violation) return 422
@@ -139,7 +142,7 @@ Six DAEMON-T clusters + one CLI-T cluster. Total 25 tickets (19 DAEMON-T, 6 CLI-
   - Table-driven unit tests for every transition in §6.1 valid + invalid matrix
 - **Dependencies:** T02, T05, T12
 - **External deps:** contract §4.3 + §6.1, `dispatch-core`'s `sendKeys` + tmux helpers
-- **Followups:** RA-01 (cairn/gate_trip emission mechanism) — see §Residual ambiguity below
+- **Followups:** none from this ticket. Cairn/gate-triggered transitions are handled by T17a (RA-01 resolution); this ticket's transition helper is the shared primitive both routes use.
 
 ---
 
@@ -236,7 +239,7 @@ Six DAEMON-T clusters + one CLI-T cluster. Total 25 tickets (19 DAEMON-T, 6 CLI-
 ## DAEMON-T cluster D-5 — Notifications + Ring Buffer
 
 ### DAEMON-T16 — Notification engine
-- **Scope:** `packages/dispatch-daemon/src/events/notifications.ts`. At startup, fire a silent `node-notifier` probe (wait:false, 2s timeout per S03 ADR pattern). Result populates the module-level `notifications_available` flag (used by T03's health endpoint). Subscribe to the daemon's internal event bus; for `handoff_written` events, fire a brief silent notification (`sound: false, wait: false`); for `cairn_violation_detected` events (out of v2 scope per RA-01, but the engine supports emission once the mechanism lands), fire a sticky wait:true notification. All other event types are NOT native-notification-worthy (WS-only). When `notifications_available === false`, the engine is a NOP — no calls to `notifier.notify()`.
+- **Scope:** `packages/dispatch-daemon/src/events/notifications.ts`. At startup, fire a silent `node-notifier` probe (wait:false, 2s timeout per S03 ADR pattern). Result populates the module-level `notifications_available` flag (used by T03's health endpoint). Subscribe to the daemon's internal event bus; for `handoff_written` events, fire a brief silent notification (`sound: false, wait: false`); for `cairn_violation_detected` events (emitted by T17a per RA-01 resolution), fire a sticky wait:true notification. All other event types are NOT native-notification-worthy (WS-only). When `notifications_available === false`, the engine is a NOP — no calls to `notifier.notify()`.
 - **Acceptance criteria:**
   - Startup probe runs within 3s of daemon start; `notifications_available` is set before HTTP listens
   - When `true`: `handoff_written` events produce a `notifier.notify()` call with expected arg shape
@@ -245,7 +248,7 @@ Six DAEMON-T clusters + one CLI-T cluster. Total 25 tickets (19 DAEMON-T, 6 CLI-
   - Log line at startup: `notifications: enabled` or `notifications: disabled (probe failed)`
 - **Dependencies:** T01 (startup orchestration), T03 (health reads flag)
 - **External deps:** S03 ADR patterns, CS-02 (Session B + C consume the flag)
-- **Followups:** DAEMON-F01 resolution (monitor post-install — if systemic, pivot to osascript per S03 Option C); `cairn_violation_detected` emission wiring once RA-01 is arbitrated
+- **Followups:** DAEMON-F01 resolution (monitor post-install — if systemic, pivot to osascript per S03 Option C). `cairn_violation_detected` + `gate_trip` emission wiring comes from T17a; notification engine consumes both event types when they appear on the bus.
 
 ### DAEMON-T17 — In-memory event ring buffer
 - **Scope:** `packages/dispatch-daemon/src/events/history.ts`. Fixed-size ring buffer (default 10000 events total across sessions). Every event emitted via the daemon's internal `emit()` goes into the buffer AND onto WS subscribers (T12). `GET /v2/events` (T11) queries this buffer. Events older than buffer capacity are evicted silently. Per-session query (`recent_events` on T06) filters by session name.
@@ -258,6 +261,21 @@ Six DAEMON-T clusters + one CLI-T cluster. Total 25 tickets (19 DAEMON-T, 6 CLI-
 - **Dependencies:** T01
 - **External deps:** contract §4.5 (history endpoint), §4.2 (recent_events field)
 - **Followups:** persistent event log (deferred, contract §9 out of scope for v2)
+
+### DAEMON-T17a — `POST /v2/sessions/:name/violations` (RA-01 Option 1)
+- **Scope:** `packages/dispatch-daemon/src/routes/violations.ts`. New additive endpoint per operator's RA-01 arbitration. Request body: `{type: 'cairn_violation' | 'gate_trip', details: <shape per contract §5.3 event data>, timestamp?: string (ISO 8601, defaults to server now)}`. Response: `202 Accepted` with `{event_id: string}`. Side effects in strict order: (1) validate session exists (404) and state ≠ `killed` (422 with `{"error": "cannot report violation on terminal session"}`); (2) transition session state → `held` per contract §6.2 using the same transition helper as T08; (3) emit `state_changed` event (from the held transition) on the WS stream with `triggered_by: "cairn_violation"` or `"gate_trip"` matching the request type; (4) emit `cairn_violation_detected` or `gate_trip` event per request `type` on the WS stream; (5) push both events to the T17 ring buffer for `/v2/events` gap-fill replay; (6) atomic registry write via T05 migration layer. Token auth required via consolidated onRequest hook (T02).
+- **Acceptance criteria:**
+  - Valid `{type: 'cairn_violation', details: {violation_type, details}}` → 202, session state transitions to `held`, both `state_changed` and `cairn_violation_detected` events visible on WS stream in that order
+  - Valid `{type: 'gate_trip', details: {gate_name, context, expected_action}}` → 202, `gate_trip` event emitted, state `held`
+  - Unknown session name → 404 with `{"error": "no session registered as <name>"}`
+  - Session in `killed` state → 422 with the terminal-session error body above
+  - Malformed body (missing `type`, invalid `type`, missing `details`) → 422
+  - Missing/wrong token → 401 (via T02)
+  - `event_id` in response body matches the id attached to emitted WS events + ring buffer entries for both events
+  - Unit tests: each branch (cairn vs gate, each state precondition, each error path); integration test: real Fastify + WS subscriber observes both events in order
+- **Dependencies:** T02 (auth), T05 (migration layer), T08 (state transition helper reuse), T12 (WS emit), T17 (ring buffer push)
+- **External deps:** contract §5.3 event types (frozen), §6.2 cairn-triggered transitions, §2 additive extension rule, operator RA-01 Option 1 arbitration (this amendment). Additive per §2; no contract version bump; operator authors contract §4.X endpoint documentation post-Phase-Y.
+- **Followups:** `fd violation <name> <type> <details>` CLI command (defer — not in v2.0 CLI-T scope; file as v2.1 CLI extension). Session B "report violation" UI button (their WEB-T territory; consumption is same-origin POST with token header). Session C menu bar action (future, their territory).
 
 ---
 
@@ -424,23 +442,59 @@ Idempotent: already-migrated v2 registries round-trip unchanged. No "double-migr
 
 ---
 
-## Residual ambiguity flagged to operator
+## RA-01 resolution (operator-arbitrated)
 
-### RA-01 — `cairn_violation_detected` / `gate_trip` event emission mechanism
+### Arbitration outcome: Option 1 (new additive endpoint)
 
-Contract §5.3 names these two event types and §6.2 describes what happens when daemon "flags" a cairn violation or "pre-registration gate trips" (auto-transition to `paused`, emit both `state_changed` and the cairn/gate event). But no §4 endpoint is specified for the TRIGGER — how does the operator (or some external monitor) report to the daemon that a violation occurred?
+Operator arbitrated: `POST /v2/sessions/:name/violations` as a new additive endpoint per contract §2 additive-extension rule. Contract v2.0.0 at `3ddca60` remains **frozen**; the endpoint is an additive extension that operator will author into contract §4.X as a post-Phase-Y authoring action. No contract version bump required.
 
-**Three possibilities, operator arbitrates:**
+### Why Option 1 over Options 2 and 3
 
-1. **New additive endpoint (v2.1 additive).** `POST /v2/sessions/:name/cairn-violation` with body `{violation_type, details}` and `POST /v2/sessions/:name/gate-trip` with body `{gate_name, context, expected_action}`. Session B's web UI + Session C menu bar expose "report violation" buttons; CLI-T cluster gains `fd violation <name> <type> <details>` command. Contract bumps to v2.1.
+- **Rejected Option 2 (PATCH state extension):** couples operator-initiated state changes with automated violation detection into one endpoint. Bad abstraction for future Cairn-tooling integration. Violation-as-reason-overloaded-on-PATCH is a semantic collision waiting to be cleaned up later.
+- **Rejected Option 3 (defer to v2.1):** leaves contract §5.3 `cairn_violation_detected` / `gate_trip` as dead text in v2.0. Session B's WEB-T21 in-banner and Session C's menu bar notifications would build UI for events that never fire. Contract should describe what CAN happen, not what MAY someday happen.
+- **Accepted Option 1:** new endpoint cleanly separates concerns (operator state changes on `PATCH /state`; automated violation reports on `POST /violations`). Session B + Session C UI becomes end-to-end testable in v2.0. Additive extension doesn't cost a version bump. Cairn-tooling integration story is forward-compatible.
 
-2. **PATCH state extension.** `PATCH /v2/sessions/:name/state` gains optional body fields `{cairn_event?: {type, details}, gate_event?: {gate_name, context, expected_action}}` that, when present alongside `{state: "paused"}`, trigger the matching event emission. Contract additive.
+### Endpoint specification (mirror of DAEMON-T17a scope)
 
-3. **Deferred to v2.1.** v2.0 ships with the infrastructure for these events (notification engine supports them; ring buffer accepts them) but no trigger path. Operator or external tools can't cause them until v2.1. Event types remain in the §5.3 frozen list; no daemon code emits them in v2.0.
+```
+POST /v2/sessions/:name/violations
 
-**My recommendation:** Option 3 (deferred). Keeps v2.0 scope tight; preserves contract as frozen; defers an ambiguous trigger-mechanism decision until real usage surfaces a clear pattern. Cairn observability in v2.0 is via `state_changed` events (which DO exist and DO fire for `paused`) — operator sees the state change without needing the cairn-specific discriminator.
+Request body:
+{
+  "type": "cairn_violation" | "gate_trip",
+  "details": { /* shape per contract §5.3 event data for the matching type */ },
+  "timestamp": "<ISO 8601>"   // optional; defaults to server now
+}
 
-Request: arbitrate RA-01 (1 / 2 / 3) before DAEMON-T16 notification engine implementation begins. Other tickets are unblocked.
+Response: 202 Accepted
+{
+  "event_id": "<string>"
+}
+
+Auth: X-Conductor-Token header required (consolidated onRequest hook per T02)
+
+Side effects (strict order):
+1. Validate session exists (404 if not) and state ≠ 'killed' (422 if terminal)
+2. Transition session state → 'held' per contract §6.2 (reuses T08 transition helper)
+3. Emit state_changed event on WS stream (triggered_by: "cairn_violation" | "gate_trip")
+4. Emit cairn_violation_detected OR gate_trip event per request type
+5. Push both events into T17 ring buffer for /v2/events gap-fill replay
+6. Atomic registry write via T05 migration layer
+```
+
+### Ticket addition
+
+**DAEMON-T17a** added to D-5 cluster (placement: after T17 ring buffer, before D-6 deployment). Decimal-suffix numbering avoids renumbering downstream tickets. D-5 cluster count goes from 2 to 3; total from 25 to 26.
+
+### Contract impact
+
+Additive per §2. No version bump. v2.0.0 at `3ddca60` remains frozen. Operator authors the §4.X endpoint documentation post-Phase-Y against the frozen file. Until then, this decomposition doc + the T17a ticket body are the authoritative spec for the endpoint.
+
+### Session B + Session C impact
+
+- **Session B WEB-T21** (in-banner for `cairn_violation_detected`) becomes end-to-end testable in v2.0 via curl or synthetic test client hitting `POST /v2/sessions/:name/violations`. **No WEB-T ticket changes needed** — consumption shape is unchanged from pre-arbitration; only production changes (events now actually fire in v2.0 instead of being dead).
+- **Session C menu bar notifications** (future) for `cairn_violation_detected` become end-to-end testable in v2.0 the same way. **No decomposition amendment from Session C** (doesn't exist yet; MB-T decomposition happens post-X.2 closure).
+- **CLI-T cluster** does NOT gain an `fd violation` command in v2.0 (operator-reported automation is out of v2.0 CLI scope; Cairn tooling integration comes later). Followup filed on T17a.
 
 ---
 
@@ -461,9 +515,11 @@ T01 → T02 → T04 → T05 → [T03 after T16]
                               ┌──────┼──────┐
                               T13   T14   T15
                                      ↓
-                                   T16 (after RA-01 ack)
+                                   T17 (ring buffer used by T06, T11, T12, T17a)
                                      ↓
-                                   T17 (ring buffer used by T06, T11, T12)
+                                   T16 (notification engine subscribes to event bus)
+                                     ↓
+                                   T17a (violations endpoint — needs T02, T05, T08, T12, T17)
 
 D-6 (T18, T19) runs in parallel to D-1..D-5 — installer doesn't block daemon code
 
@@ -476,7 +532,7 @@ CLI-T sequencing:
 - CLI-T06 depends on CLI-T02, T03
 ```
 
-Estimated total effort: ~25 tickets, each averaging 0.5-2 days. Calendar estimate 2-3 weeks single-session (not parallelized).
+Estimated total effort: ~26 tickets, each averaging 0.5-2 days. Calendar estimate 2-3 weeks single-session (not parallelized).
 
 ---
 
@@ -485,9 +541,9 @@ Estimated total effort: ~25 tickets, each averaging 0.5-2 days. Calendar estimat
 - Q1 API spike: n/a — decomposition, not a spike
 - Q2 behavior/mocks: n/a — docs only
 - Q3 impl delete: n/a — docs only
-- Q4 outside contract: no — every ticket maps to a contract section or operator arbitration; RA-01 explicitly surfaces ambiguity rather than inventing a trigger mechanism
-- Q5 contract modification: no — CS-02's `notifications_available` is contract-additive per §2 (no bump); RA-01 options 1 and 2 would require a version bump which is operator-arbitrated
-- Q6 unlabeled claims: no — MODELED/KNOWN labels held; RA-01 explicitly called out as ambiguous
+- Q4 outside contract: no — every ticket maps to a contract section or operator arbitration; RA-01 resolved via Option 1 (additive endpoint per §2) not unilateral improvisation
+- Q5 contract modification: no — both CS-02's `notifications_available` and T17a's `POST /violations` endpoint are contract-additive per §2. Contract v2.0.0 at `3ddca60` stays frozen; operator authors §4.X post-Phase-Y
+- Q6 unlabeled claims: no — MODELED/KNOWN labels held; RA-01 is now RESOLVED (no longer labeled ambiguous)
 - Q7 Session B territory: no — this doc is in `docs/adr/` (shared docs); no edits to `packages/dispatch-web/`, `packages/dispatch-menubar/`. The CLI-T cluster is Session A territory per operator arbitration folding CLI-T into Session A's surface.
 - Q8 registry bypass: no — every state change in the decomposition routes through `PATCH /v2/sessions/:name/state` (DAEMON-T08), never direct registry writes (except the explicit v2 migration path in T05 which is bootstrap-only)
 - Q9 halt discipline: held — no implementation code drafted; this is the decomposition surface, which is exactly what pre-reg gate 3 asks for. Scope fence: no DAEMON-T implementation, no CLI-T implementation, no test writing, no dep installs beyond what's already in the spike phase.
@@ -496,11 +552,13 @@ Estimated total effort: ~25 tickets, each averaging 0.5-2 days. Calendar estimat
 
 ## Halt
 
-Surface ends here. Halting for operator ack on:
+Surface ends here. This is the amended decomposition — the initial surface at `80372f1` was acked on everything except RA-01; the operator arbitrated RA-01 as Option 1 and requested the amendment. Halting for operator ack on the amendment specifically:
 
-1. **Cluster shape** (D-1 through D-6 + CLI-T) — approve or revise
-2. **Ticket list** — 25 tickets as proposed, or adjust
-3. **Cross-cutting decisions** — test strategy, file layout, logging approach — approve or revise
-4. **RA-01 arbitration** — options 1, 2, or 3 for cairn/gate_trip trigger mechanism (recommendation: 3, deferred to v2.1)
+1. **DAEMON-T17a ticket body** (scope, acceptance criteria, dependencies, external deps, followups) — approve or revise
+2. **RA-01 resolution section** (Option 1 rationale + endpoint spec + contract-impact framing) — approve or revise
+3. **Cluster count + table update** (D-5 now 3 tickets; total 26) — approve
+4. **Dependency graph update** (T17 → T16 → T17a ordering, T17a dependencies explicit) — approve
 
-Post-reg-gate-3 ack triggers DAEMON-T01 implementation start as the first work cycle. Per §3.7: no implementation code until ack. Per unified Phase X.2 arbitration, cross-session consistency with Session B's WEB-T + future Session C's MB-T is operator-verified before any implementation session starts.
+Post-amendment ack triggers DAEMON-T01 implementation start as the first work cycle. Per §3.7: no implementation code until ack.
+
+Per operator instruction on cluster-batched review: halt after the last D-1 ticket ships (T05 schema migration, the cluster-closing ticket per dependency order). Operator reviews D-1 as a unit. No per-ticket halts within the cluster unless something surprises.
