@@ -21,7 +21,10 @@ import { buildServer, type BuildServerOpts } from '../server.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
 import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
-import { registerSessionsReadRoutes } from '../routes/sessions.js';
+import {
+  registerSessionsReadRoutes,
+  registerSessionsWriteRoutes,
+} from '../routes/sessions.js';
 import { shutdown } from './shutdown.js';
 
 function defaultTokenPath(): string {
@@ -92,6 +95,10 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // T05's readRegistryV2. Registered after auth so the hook gates
   // these routes (§3.1 token required).
   await registerSessionsReadRoutes(app, { registryPath: opts.registryPath });
+
+  // DAEMON-T07: POST /v2/sessions with Blocker 1 (state='armed') +
+  // Blocker 3 (409 on name collision, verbatim body on killed).
+  await registerSessionsWriteRoutes(app, { registryPath: opts.registryPath });
 
   // T04 test-only hook: register routes that need to exist before
   // listen (e.g., throwing routes for error-handler probes).

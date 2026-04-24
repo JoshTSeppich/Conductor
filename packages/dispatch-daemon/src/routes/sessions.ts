@@ -25,8 +25,11 @@
 import type { FastifyInstance } from 'fastify';
 import { stat } from 'node:fs/promises';
 import { deriveState, type SessionState } from 'dispatch-core/src/state/derive.js';
-import type { SessionV2 } from 'dispatch-core/src/v2/schema.js';
-import { readRegistryV2 } from '../migration/schema-v2.js';
+import {
+  CreateSessionRequest,
+  type SessionV2,
+} from 'dispatch-core/src/v2/schema.js';
+import { readRegistryV2, writeRegistryV2 } from '../migration/schema-v2.js';
 
 /** fd v1 default. Tracked under DAEMON-F04 threshold-tuning followup. */
 const STALE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -93,4 +96,75 @@ export async function registerSessionsReadRoutes(
       };
     },
   );
+}
+
+/**
+ * POST /v2/sessions — create a new session per contract §4.3.
+ *
+ * Validates request body via CreateSessionRequest (operator-published
+ * schema). On collision with an existing name:
+ *   - state:'killed' existing → 409 with operator-arbitrated Blocker 3
+ *     verbatim body: "Session name in use (killed record exists).
+ *     Pick a new name."
+ *   - any other state (armed/paused/held) → 409 with accurate non-
+ *     misleading body: "Session \"<name>\" already registered."
+ *     (operator-acked Option 1 at T07 pre-reg; style matches T06's
+ *     404 "no session registered as \"<name>\"" for consistency)
+ *
+ * On success: creates session with state='armed' per Blocker 1, all
+ * other v2 fields initialized to null, atomic-writes via T05's
+ * writeRegistryV2, returns 201 with the 10-field shape (matches T06
+ * list-array item shape per operator-acked decision (b) on "full
+ * session entry").
+ */
+export async function registerSessionsWriteRoutes(
+  app: FastifyInstance,
+  deps: SessionsRoutesDeps,
+): Promise<void> {
+  app.post('/v2/sessions', async (request, reply) => {
+    const parsed = CreateSessionRequest.safeParse(request.body);
+    if (!parsed.success) {
+      reply.code(422).send({ error: parsed.error.message });
+      return;
+    }
+    const { name, cwd, tmux_target, handoff_path } = parsed.data;
+
+    const registry = await readRegistryV2(deps.registryPath);
+    const existing = registry.sessions[name];
+    if (existing) {
+      if (existing.state === 'killed') {
+        reply.code(409).send({
+          error: 'Session name in use (killed record exists). Pick a new name.',
+        });
+      } else {
+        reply.code(409).send({
+          error: `Session "${name}" already registered.`,
+        });
+      }
+      return;
+    }
+
+    const newSession: SessionV2 = {
+      cwd,
+      tmux_target,
+      handoff_path,
+      last_prompt_sent_at: null,
+      last_handoff_pulled_at: null,
+      state: 'armed',
+      last_commit_sha: null,
+      last_status_json_at: null,
+    };
+
+    registry.sessions[name] = newSession;
+    await writeRegistryV2(deps.registryPath, registry);
+
+    const now = new Date();
+    const computed_status = await deriveComputedStatus(newSession, now);
+
+    reply.code(201).send({
+      name,
+      ...newSession,
+      computed_status,
+    });
+  });
 }
