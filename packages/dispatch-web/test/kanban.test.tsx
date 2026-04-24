@@ -143,12 +143,15 @@ describe('WEB-T09 KanbanPanel', () => {
     const { wrapper } = createWrapper();
     render(<KanbanPanel />, { wrapper });
 
+    // Combined waitFor: archived column exists AND data has loaded
+    // into it. Single sync assertion can race the async useSessions
+    // query which initially renders empty-state placeholder before
+    // data arrives.
     await waitFor(() => {
-      expect(screen.getByTestId('kanban-column-archived')).toBeInTheDocument();
+      const archived = screen.getByTestId('kanban-column-archived');
+      expect(within(archived).getByText('dead-session')).toBeInTheDocument();
     });
-    const archived = screen.getByTestId('kanban-column-archived');
-    expect(within(archived).getByText('dead-session')).toBeInTheDocument();
-    // dead session NOT in idle column (separated)
+    // Now sync-safe: data resolved, all columns rendered.
     const idle = screen.getByTestId('kanban-column-idle');
     expect(within(idle).queryByText('dead-session')).not.toBeInTheDocument();
   });
