@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import { cleanup } from '@testing-library/react';
 import { WebSocket as NodeWebSocket } from 'ws';
 import { server } from './msw/server.js';
 
@@ -22,6 +23,11 @@ import { server } from './msw/server.js';
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 
 afterEach(() => {
+  // Explicit RTL cleanup: removes containers from document.body so
+  // screen.* queries in the next test don't see prior renders. RTL
+  // *should* auto-register this; observed behavior in T06 was that
+  // multiple-render tests saw stale DOM, so adding belt-and-suspenders.
+  cleanup();
   server.resetHandlers();
   // Clean cross-test state: localStorage may contain tokens from
   // happy-path tests that would leak into subsequent ones.

@@ -3,6 +3,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './query-client.js';
 import { AuthBootstrap } from './components/AuthBootstrap.js';
+import { Layout } from './components/Layout.js';
 
 function AppFallback({
   error,
@@ -22,15 +23,6 @@ function AppFallback({
   );
 }
 
-function DashboardPlaceholder(): ReactNode {
-  return (
-    <main style={{ padding: 24, fontFamily: 'system-ui' }}>
-      <h1>Foxworks Dispatch Conductor</h1>
-      <p>Awaiting daemon connection…</p>
-    </main>
-  );
-}
-
 export interface AppProps {
   children?: ReactNode;
 }
@@ -39,7 +31,7 @@ export function App({ children }: AppProps): ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary FallbackComponent={AppFallback}>
-        <AuthBootstrap>{children ?? <DashboardPlaceholder />}</AuthBootstrap>
+        <AuthBootstrap>{children ?? <Layout />}</AuthBootstrap>
       </ErrorBoundary>
     </QueryClientProvider>
   );

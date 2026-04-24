@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 
 // vi.hoisted shares state across vi.mock factories so per-test
 // behavior toggles work. mockState.throwIn = 'kanban' makes the
@@ -99,9 +99,13 @@ describe('WEB-T06 Layout', () => {
   });
 
   it('per-panel error isolation: error in one panel renders panel fallback; siblings still render', () => {
+    // cleanup() between sub-cases removes the prior render's
+    // container from document.body. unmount() alone leaves the
+    // empty container, which makes subsequent screen.* queries
+    // see DOM from prior renders.
     // Sub-case 1: error in KanbanPanel
     mockState.throwIn = 'kanban';
-    const r1 = render(<Layout />);
+    render(<Layout />);
     expect(screen.getByText(/sessions failed to render/i)).toBeInTheDocument();
     expect(
       screen.getByRole('region', { name: /session detail/i }),
@@ -109,11 +113,11 @@ describe('WEB-T06 Layout', () => {
     expect(
       screen.getByRole('region', { name: /activity/i }),
     ).toBeInTheDocument();
-    r1.unmount();
+    cleanup();
 
     // Sub-case 2: error in FocusedDetailPanel
     mockState.throwIn = 'focused';
-    const r2 = render(<Layout />);
+    render(<Layout />);
     expect(
       screen.getByRole('region', { name: /sessions/i }),
     ).toBeInTheDocument();
@@ -123,7 +127,7 @@ describe('WEB-T06 Layout', () => {
     expect(
       screen.getByRole('region', { name: /activity/i }),
     ).toBeInTheDocument();
-    r2.unmount();
+    cleanup();
 
     // Sub-case 3: error in TickerPanel
     mockState.throwIn = 'ticker';
