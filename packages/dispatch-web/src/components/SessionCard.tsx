@@ -3,19 +3,11 @@ import type {
   SessionResponseV2Type,
   State,
 } from 'dispatch-core/src/v2/schema.js';
+import { formatAge } from '../utils/format-age.js';
 
-// Ported from packages/dispatch-cli/src/commands/status.tsx:88-96.
-// Lift to dispatch-core when a 2nd consumer (T13/T14/T16) needs the
-// same logic per gate ack Decision 2 + operator pattern note.
-export function formatAge(ms: number): string {
-  if (ms < 60_000) return '<1m';
-  const m = Math.floor(ms / 60_000);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d`;
-}
+// formatAge re-exported for consumers that imported from here pre-T12.
+// New consumers should import from '../utils/format-age.js' directly.
+export { formatAge };
 
 // Ported from status.tsx:98-105. Returns the most-recent action
 // timestamp (last_prompt_sent_at or last_handoff_pulled_at), or
