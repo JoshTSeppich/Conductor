@@ -37,6 +37,10 @@ const execFileP = promisify(execFile);
 export interface TmuxOps {
   sendCtrlC(target: string): Promise<void>;
   killSession(target: string): Promise<void>;
+  /** DAEMON-T09: deliver prompt text to a tmux pane. */
+  sendKeys(target: string, text: string): Promise<void>;
+  /** DAEMON-T09: pre-flight check for pane liveness. */
+  hasSession(target: string): Promise<boolean>;
 }
 
 /**
@@ -52,6 +56,15 @@ export const defaultTmuxOps: TmuxOps = {
   async killSession(target: string) {
     const sessionName = target.split(':')[0];
     await execFileP('tmux', ['kill-session', '-t', sessionName]);
+  },
+  // DAEMON-T09 green will replace these with delegations to
+  // dispatch-core/src/transport/tmux.js (frozen sendKeys + hasSession).
+  // Red ships the interface stubs only.
+  async sendKeys(_target: string, _text: string) {
+    throw new Error('defaultTmuxOps.sendKeys not implemented in T09 red');
+  },
+  async hasSession(_target: string): Promise<boolean> {
+    throw new Error('defaultTmuxOps.hasSession not implemented in T09 red');
   },
 };
 

@@ -92,6 +92,15 @@ describe('DAEMON-T08 integration — PATCH /v2/sessions/:name/state', () => {
           calls.push({ op: 'killSession', target });
           if (throwOnKill.value) throw new Error('tmux unavailable');
         },
+        // DAEMON-T09 extended TmuxOps with sendKeys + hasSession.
+        // T08 doesn't exercise these; provide no-op satisfiers so
+        // the interface contract holds.
+        async sendKeys(_target: string, _text: string) {
+          /* T08 unused */
+        },
+        async hasSession(_target: string): Promise<boolean> {
+          return true;
+        },
       },
     };
   }

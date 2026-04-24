@@ -66,6 +66,13 @@ export interface StartupOpts {
    * touching real tmux. Added in DAEMON-T08.
    */
   tmuxOps?: import('../state/transitions.js').TmuxOps;
+  /**
+   * Archive root directory. Default
+   * `~/.foxworks-dispatch/archive/`. Test-isolated per the
+   * fixture's auto-isolation pattern. Added in DAEMON-T09 for
+   * POST /v2/sessions/:name/prompts archive writes.
+   */
+  archiveRoot?: string;
 }
 
 export interface StartupHandle {

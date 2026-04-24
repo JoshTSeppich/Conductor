@@ -43,6 +43,12 @@ export interface SpawnTestServerOpts {
    * Added in DAEMON-T08.
    */
   tmuxOps?: import('../../src/state/transitions.js').TmuxOps;
+  /**
+   * Archive root directory for prompt + handoff persistence.
+   * Auto-isolated per established T06 pattern when omitted.
+   * Added in DAEMON-T09.
+   */
+  archiveRoot?: string;
 }
 
 /**
@@ -65,6 +71,8 @@ export async function spawnTestServer(
   const registryPath =
     opts.registryPath ??
     (await isolatedDefault('fd-fixture-reg-', 'sessions.json'));
+  const archiveRoot =
+    opts.archiveRoot ?? (await isolatedDefault('fd-fixture-arc-', 'archive'));
 
   // logger:false silences per-request Pino output for test ergonomics.
   // Production startup() defaults to info-level logging.
@@ -75,6 +83,7 @@ export async function spawnTestServer(
     beforeListen: opts.beforeListen,
     registryPath,
     tmuxOps: opts.tmuxOps,
+    archiveRoot,
   });
   return {
     app: server,
