@@ -23,6 +23,7 @@ import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
 import {
   registerSessionsReadRoutes,
+  registerSessionsStateRoutes,
   registerSessionsWriteRoutes,
 } from '../routes/sessions.js';
 import { shutdown } from './shutdown.js';
@@ -106,6 +107,14 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // DAEMON-T07: POST /v2/sessions with Blocker 1 (state='armed') +
   // Blocker 3 (409 on name collision, verbatim body on killed).
   await registerSessionsWriteRoutes(app, { registryPath: opts.registryPath });
+
+  // DAEMON-T08: PATCH /v2/sessions/:name/state with §6.1 transition
+  // rules and tmux side effects (Ctrl-C on armed→held, kill-session
+  // on →killed). tmuxOps injectable for tests.
+  await registerSessionsStateRoutes(app, {
+    registryPath: opts.registryPath,
+    tmuxOps: opts.tmuxOps,
+  });
 
   // T04 test-only hook: register routes that need to exist before
   // listen (e.g., throwing routes for error-handler probes).

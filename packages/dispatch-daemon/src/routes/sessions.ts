@@ -27,9 +27,14 @@ import { stat } from 'node:fs/promises';
 import { deriveState, type SessionState } from 'dispatch-core/src/state/derive.js';
 import {
   CreateSessionRequest,
+  PatchStateRequest,
   type SessionV2,
 } from 'dispatch-core/src/v2/schema.js';
 import { readRegistryV2, writeRegistryV2 } from '../migration/schema-v2.js';
+import {
+  transitionSessionState,
+  type TmuxOps,
+} from '../state/transitions.js';
 
 /** fd v1 default. Tracked under DAEMON-F04 threshold-tuning followup. */
 const STALE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -167,4 +172,61 @@ export async function registerSessionsWriteRoutes(
       computed_status,
     });
   });
+}
+
+/**
+ * PATCH /v2/sessions/:name/state — operator-initiated state transition
+ * per contract §4.3 + §6.1.
+ *
+ * Delegates state-machine logic + side effects + persistence to the
+ * shared `transitionSessionState` helper. `triggeredBy: 'operator'`
+ * reflects that this endpoint is the operator-initiated path; the
+ * same helper is reused by T17a with a different triggeredBy value
+ * for cairn/gate-triggered transitions.
+ *
+ * Typed errors (SessionNotFoundError 404, InvalidTransitionError 422)
+ * flow through T04's setErrorHandler automatically — they carry
+ * `statusCode` so the error handler maps them to the correct HTTP
+ * status with `{"error": "..."}` JSON body. Zod parse failures on
+ * the request body are handled inline → 422.
+ */
+export interface SessionsStateRoutesDeps {
+  registryPath?: string;
+  tmuxOps?: TmuxOps;
+}
+
+export async function registerSessionsStateRoutes(
+  app: FastifyInstance,
+  deps: SessionsStateRoutesDeps,
+): Promise<void> {
+  app.patch<{ Params: { name: string } }>(
+    '/v2/sessions/:name/state',
+    async (request, reply) => {
+      const { name } = request.params;
+      const parsed = PatchStateRequest.safeParse(request.body);
+      if (!parsed.success) {
+        reply.code(422).send({ error: parsed.error.message });
+        return;
+      }
+      const { state: targetState } = parsed.data;
+
+      const result = await transitionSessionState({
+        name,
+        targetState,
+        triggeredBy: 'operator',
+        registryPath: deps.registryPath,
+        tmuxOps: deps.tmuxOps,
+        logger: request.log as unknown as { warn: (...args: unknown[]) => void },
+      });
+
+      const now = new Date();
+      const computed_status = await deriveComputedStatus(result.session, now);
+
+      return {
+        name,
+        ...result.session,
+        computed_status,
+      };
+    },
+  );
 }
