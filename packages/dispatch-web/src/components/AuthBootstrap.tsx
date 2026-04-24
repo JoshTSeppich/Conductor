@@ -16,7 +16,7 @@ export function AuthBootstrap({ children }: AuthBootstrapProps): ReactNode {
   if (phase === 'daemon_down') return <ConnectionStatusBanner />;
   // bootstrapping — brief default state before effect resolves
   return (
-    <div role="status" style={{ padding: 16, fontFamily: 'system-ui' }}>
+    <div role="status" className="p-4 font-sans dark:text-gray-100">
       Connecting to daemon…
     </div>
   );

@@ -12,15 +12,17 @@ export function ConnectionStatusBanner(): ReactNode {
         ? 'Authentication failed. Paste a new token.'
         : 'Connecting to daemon…';
 
+  const colorClasses =
+    status === 'daemon_down'
+      ? 'bg-red-50 border-red-300 text-red-900 dark:bg-red-950 dark:border-red-800 dark:text-red-100'
+      : status === 'auth_failed'
+        ? 'bg-yellow-50 border-yellow-300 text-yellow-900 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-100'
+        : 'bg-blue-50 border-blue-300 text-blue-900 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-100';
+
   return (
     <div
       role="status"
-      style={{
-        padding: 8,
-        backgroundColor: status === 'daemon_down' ? '#fee' : '#fef',
-        borderBottom: '1px solid #ccc',
-        fontFamily: 'system-ui',
-      }}
+      className={`p-2 border-b font-sans ${colorClasses}`}
     >
       {label}
     </div>

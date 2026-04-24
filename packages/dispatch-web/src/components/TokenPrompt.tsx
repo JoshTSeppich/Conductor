@@ -24,11 +24,11 @@ export function TokenPrompt({ reason }: TokenPromptProps): ReactNode {
       : 'Run `cat ~/.foxworks-dispatch/token` and paste the contents below.';
 
   return (
-    <main style={{ padding: 24, fontFamily: 'system-ui' }}>
-      <h1>Conductor authentication</h1>
-      <p>{helpText}</p>
+    <main className="p-6 font-sans bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 min-h-screen">
+      <h1 className="text-2xl font-bold mb-2">Conductor authentication</h1>
+      <p className="mb-4">{helpText}</p>
       <form onSubmit={onSubmit}>
-        <label style={{ display: 'block', marginBottom: 8 }}>
+        <label className="block mb-2">
           Token
           <input
             type="text"
@@ -36,15 +36,14 @@ export function TokenPrompt({ reason }: TokenPromptProps): ReactNode {
             onChange={(e) => setValue(e.target.value)}
             autoFocus
             spellCheck={false}
-            style={{
-              width: '100%',
-              fontFamily: 'monospace',
-              padding: 8,
-              marginTop: 4,
-            }}
+            className="block w-full font-mono p-2 mt-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 rounded"
           />
         </label>
-        <button type="submit" disabled={!value.trim()}>
+        <button
+          type="submit"
+          disabled={!value.trim()}
+          className="px-3 py-1 border rounded bg-accent text-white disabled:opacity-50"
+        >
           Connect
         </button>
       </form>

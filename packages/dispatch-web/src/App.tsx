@@ -13,10 +13,19 @@ function AppFallback({
   resetErrorBoundary: () => void;
 }): ReactNode {
   return (
-    <div role="alert" style={{ padding: 16, fontFamily: 'system-ui' }}>
-      <h2>Something went wrong</h2>
-      <pre style={{ color: 'tomato', whiteSpace: 'pre-wrap' }}>{error.message}</pre>
-      <button onClick={resetErrorBoundary} type="button">
+    <div
+      role="alert"
+      className="p-4 font-sans bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100"
+    >
+      <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+      <pre className="text-red-600 dark:text-red-400 whitespace-pre-wrap">
+        {error.message}
+      </pre>
+      <button
+        onClick={resetErrorBoundary}
+        type="button"
+        className="mt-2 px-2 py-1 border rounded"
+      >
         Reload
       </button>
     </div>
