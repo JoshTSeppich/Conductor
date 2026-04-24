@@ -58,6 +58,13 @@ export interface StartupOpts {
    * first routes consume T05's readRegistryV2/writeRegistryV2.
    */
   registryPath?: string;
+  /**
+   * tmux operation injector. Default uses dispatch-core's transport
+   * (KNOWN from SPIKES.md §Spike 01/03). Tests inject mocks to
+   * observe side effects and simulate tmux failures without
+   * touching real tmux. Added in DAEMON-T08.
+   */
+  tmuxOps?: import('../state/transitions.js').TmuxOps;
 }
 
 export interface StartupHandle {

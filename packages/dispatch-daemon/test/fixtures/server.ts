@@ -37,6 +37,12 @@ export interface SpawnTestServerOpts {
    * operator's real registry.
    */
   registryPath?: string;
+  /**
+   * tmux operation injector. Tests supply a stub so side effects
+   * are observable + simulatable-to-fail without hitting real tmux.
+   * Added in DAEMON-T08.
+   */
+  tmuxOps?: import('../../src/state/transitions.js').TmuxOps;
 }
 
 /**
@@ -68,6 +74,7 @@ export async function spawnTestServer(
     tokenPath,
     beforeListen: opts.beforeListen,
     registryPath,
+    tmuxOps: opts.tmuxOps,
   });
   return {
     app: server,
