@@ -56,6 +56,13 @@ export interface SpawnTestServerOpts {
    * Added in DAEMON-T10.
    */
   clipboardCopy?: (content: string) => Promise<void>;
+  /**
+   * Event ring buffer. Tests pass a pre-seeded ring to verify
+   * GET /v2/events pagination. When omitted, startup() creates
+   * a default fresh ring at standard capacity. Added in
+   * DAEMON-T11 (T17 pulled forward from D-5).
+   */
+  eventRing?: import('../../src/events/history.js').EventRing;
 }
 
 /**
@@ -97,6 +104,7 @@ export async function spawnTestServer(
     tmuxOps: opts.tmuxOps,
     archiveRoot,
     clipboardCopy,
+    eventRing: opts.eventRing,
   });
   return {
     app: server,

@@ -18,9 +18,11 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { buildServer, type BuildServerOpts } from '../server.js';
+import { createEventRing, type EventRing } from '../events/history.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
 import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
+import { registerEventsRoutes } from '../routes/events.js';
 import { registerHandoffRoutes } from '../routes/handoff.js';
 import { registerPromptRoutes } from '../routes/prompts.js';
 import {
@@ -83,6 +85,14 @@ export interface StartupOpts {
    * extended to clipboard side effects). Added in DAEMON-T10.
    */
   clipboardCopy?: (content: string) => Promise<void>;
+  /**
+   * In-memory event ring buffer. Default = fresh
+   * createEventRing() instance at default capacity (10000).
+   * Tests pass a pre-seeded ring to verify GET /v2/events
+   * pagination (T11). Added in DAEMON-T17 (pulled forward
+   * from D-5 per operator arbitration 1 on T11 pre-reg).
+   */
+  eventRing?: EventRing;
 }
 
 export interface StartupHandle {
@@ -101,6 +111,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const host = opts.host ?? '127.0.0.1';
   const requestedPort = opts.port ?? 7878;
   const tokenPath = opts.tokenPath ?? defaultTokenPath();
+  const eventRing = opts.eventRing ?? createEventRing();
 
   const app = await buildServer({ logger: opts.logger });
 
@@ -152,6 +163,11 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     archiveRoot: opts.archiveRoot,
     clipboardCopy: opts.clipboardCopy,
   });
+
+  // DAEMON-T11: GET /v2/events paginated history. Reads from
+  // the T17 ring buffer. D-4 will wire emit-sites (T08/T09/T10)
+  // into this same ring.
+  await registerEventsRoutes(app, { eventRing });
 
   // T04 test-only hook: register routes that need to exist before
   // listen (e.g., throwing routes for error-handler probes).
