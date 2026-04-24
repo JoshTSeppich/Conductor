@@ -49,6 +49,13 @@ export interface SpawnTestServerOpts {
    * Added in DAEMON-T09.
    */
   archiveRoot?: string;
+  /**
+   * Clipboard copy operation. Defaults to no-op so tests never
+   * clobber the operator's real pbcopy clipboard. Tests can
+   * override with a recording stub to verify clipboard delivery.
+   * Added in DAEMON-T10.
+   */
+  clipboardCopy?: (content: string) => Promise<void>;
 }
 
 /**
@@ -73,6 +80,11 @@ export async function spawnTestServer(
     (await isolatedDefault('fd-fixture-reg-', 'sessions.json'));
   const archiveRoot =
     opts.archiveRoot ?? (await isolatedDefault('fd-fixture-arc-', 'archive'));
+  // Defense-in-depth: default to no-op clipboard so tests never
+  // clobber operator's real pbcopy. Tests pass a stub explicitly
+  // when they want to verify delivery.
+  const clipboardCopy =
+    opts.clipboardCopy ?? (async (_content: string) => { /* no-op */ });
 
   // logger:false silences per-request Pino output for test ergonomics.
   // Production startup() defaults to info-level logging.
@@ -84,6 +96,7 @@ export async function spawnTestServer(
     registryPath,
     tmuxOps: opts.tmuxOps,
     archiveRoot,
+    clipboardCopy,
   });
   return {
     app: server,

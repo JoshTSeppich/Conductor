@@ -74,6 +74,14 @@ export interface StartupOpts {
    * POST /v2/sessions/:name/prompts archive writes.
    */
   archiveRoot?: string;
+  /**
+   * Clipboard copy operation. Default delegates to
+   * dispatch-core's pbcopy (frozen). Tests inject no-op or
+   * recording stubs; fixture defaults to no-op for safety
+   * (defense-in-depth per latent-default-path-drift finding
+   * extended to clipboard side effects). Added in DAEMON-T10.
+   */
+  clipboardCopy?: (content: string) => Promise<void>;
 }
 
 export interface StartupHandle {
