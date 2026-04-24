@@ -21,6 +21,7 @@ import { buildServer, type BuildServerOpts } from '../server.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
 import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
+import { registerHandoffRoutes } from '../routes/handoff.js';
 import { registerPromptRoutes } from '../routes/prompts.js';
 import {
   registerSessionsReadRoutes,
@@ -140,6 +141,16 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     registryPath: opts.registryPath,
     archiveRoot: opts.archiveRoot,
     tmuxOps: opts.tmuxOps,
+  });
+
+  // DAEMON-T10: GET /v2/sessions/:name/handoff. Reads HANDOFF.md,
+  // archives, best-effort clipboard copy via clipboardCopy
+  // (default = dispatch-core's pbcopy), updates last_handoff_
+  // pulled_at.
+  await registerHandoffRoutes(app, {
+    registryPath: opts.registryPath,
+    archiveRoot: opts.archiveRoot,
+    clipboardCopy: opts.clipboardCopy,
   });
 
   // T04 test-only hook: register routes that need to exist before
