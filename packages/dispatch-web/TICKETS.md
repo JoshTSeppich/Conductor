@@ -545,7 +545,14 @@ tickets (T06, T07).
 - **Acceptance:**
   - Clicking a card updates URL hash AND Zustand state
   - Navigating to `#session=sherpa` directly focuses that card
-  - Back button navigates focus history
+  - **Back button does NOT restore prior focus** — focus is
+    transient view filter, not navigation. Amended 2026-04-23
+    during T11 pre-reg per Round 2 finding #15: T05 Decision 2
+    chose `history.replaceState` over `pushState` for scroll
+    stability + intentional no-history-entry-for-focus rationale.
+    Earlier TICKETS.md acceptance "Back button navigates focus
+    history" conflicted with that operator-acked decision and
+    was wrong.
   - MB-T07 integration note: menu bar's `open <URL>#session=<name>`
     invocation focuses the correct card (verified in MB-T07
     integration, not WEB-T11 unit)

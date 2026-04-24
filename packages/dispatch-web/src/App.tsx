@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './query-client.js';
 import { AuthBootstrap } from './components/AuthBootstrap.js';
 import { Layout } from './components/Layout.js';
+import { useFocusFromHash } from './hooks/useFocusFromHash.js';
 
 function AppFallback({
   error,
@@ -37,6 +38,11 @@ export interface AppProps {
 }
 
 export function App({ children }: AppProps): ReactNode {
+  // T11: global hash↔store sync for #session=<name> deep links.
+  // Mounted at App level (not per-component) so notification clicks
+  // (MB-T07's open <URL>#session=<name>) reach the store regardless
+  // of which page region is rendered.
+  useFocusFromHash();
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary FallbackComponent={AppFallback}>

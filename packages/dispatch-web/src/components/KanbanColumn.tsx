@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SessionResponseV2Type } from 'dispatch-core/src/v2/schema.js';
 import { SessionCard } from './SessionCard.js';
+import { useUIStore } from '../store/ui.js';
 
 export type KanbanColumnStatus =
   | 'awaiting_review'
@@ -24,6 +25,11 @@ export function KanbanColumn({
   label,
   sessions,
 }: KanbanColumnProps): ReactNode {
+  // T11 wires real onClick: click → setFocus(name) → updates Zustand
+  // focusedSessionName + writes window.location.hash via T05's
+  // history.replaceState. Inbound hashchange→store sync handled by
+  // useFocusFromHash mounted at App level.
+  const setFocus = useUIStore((s) => s.setFocus);
   return (
     <div
       data-testid={`kanban-column-${status}`}
@@ -39,10 +45,12 @@ export function KanbanColumn({
       ) : (
         <div className="flex flex-col gap-2">
           {sessions.map(({ name, session }) => (
-            // T10 ships SessionCard without onClick (cards render
-            // but don't respond to clicks). T11 wires real focus
-            // callback. Intentional 1-commit interim state.
-            <SessionCard key={name} name={name} session={session} />
+            <SessionCard
+              key={name}
+              name={name}
+              session={session}
+              onClick={() => setFocus(name)}
+            />
           ))}
         </div>
       )}
