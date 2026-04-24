@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { SessionResponseV2Type } from 'dispatch-core/src/v2/schema.js';
+import { SessionCard } from './SessionCard.js';
 
 export type KanbanColumnStatus =
   | 'awaiting_review'
@@ -36,16 +37,14 @@ export function KanbanColumn({
           No {label.toLowerCase()} sessions
         </p>
       ) : (
-        <ul className="flex flex-col gap-1">
-          {sessions.map(({ name }) => (
-            <li
-              key={name}
-              className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm"
-            >
-              {name}
-            </li>
+        <div className="flex flex-col gap-2">
+          {sessions.map(({ name, session }) => (
+            // T10 ships SessionCard without onClick (cards render
+            // but don't respond to clicks). T11 wires real focus
+            // callback. Intentional 1-commit interim state.
+            <SessionCard key={name} name={name} session={session} />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
