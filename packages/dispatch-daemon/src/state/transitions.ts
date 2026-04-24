@@ -26,6 +26,10 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { State, SessionV2 } from 'dispatch-core/src/v2/schema.js';
 import {
+  hasSession as coreHasSession,
+  sendKeys as coreSendKeys,
+} from 'dispatch-core/src/transport/tmux.js';
+import {
   readRegistryV2,
   writeRegistryV2,
 } from '../migration/schema-v2.js';
@@ -57,14 +61,13 @@ export const defaultTmuxOps: TmuxOps = {
     const sessionName = target.split(':')[0];
     await execFileP('tmux', ['kill-session', '-t', sessionName]);
   },
-  // DAEMON-T09 green will replace these with delegations to
-  // dispatch-core/src/transport/tmux.js (frozen sendKeys + hasSession).
-  // Red ships the interface stubs only.
-  async sendKeys(_target: string, _text: string) {
-    throw new Error('defaultTmuxOps.sendKeys not implemented in T09 red');
+  // DAEMON-T09 green: delegate to dispatch-core's frozen transport
+  // (KNOWN from SPIKES.md §Spike 01 / §Spike 03).
+  async sendKeys(target: string, text: string) {
+    await coreSendKeys(target, text);
   },
-  async hasSession(_target: string): Promise<boolean> {
-    throw new Error('defaultTmuxOps.hasSession not implemented in T09 red');
+  async hasSession(target: string): Promise<boolean> {
+    return coreHasSession(target);
   },
 };
 

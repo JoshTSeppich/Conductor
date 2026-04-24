@@ -21,6 +21,7 @@ import { buildServer, type BuildServerOpts } from '../server.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
 import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
+import { registerPromptRoutes } from '../routes/prompts.js';
 import {
   registerSessionsReadRoutes,
   registerSessionsStateRoutes,
@@ -120,6 +121,16 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // on →killed). tmuxOps injectable for tests.
   await registerSessionsStateRoutes(app, {
     registryPath: opts.registryPath,
+    tmuxOps: opts.tmuxOps,
+  });
+
+  // DAEMON-T09: POST /v2/sessions/:name/prompts. Validates state
+  // precondition (armed only), pre-flights tmux pane liveness,
+  // assembles (idempotent footer), archives, delivers via
+  // tmuxOps.sendKeys, persists last_prompt_sent_at.
+  await registerPromptRoutes(app, {
+    registryPath: opts.registryPath,
+    archiveRoot: opts.archiveRoot,
     tmuxOps: opts.tmuxOps,
   });
 
