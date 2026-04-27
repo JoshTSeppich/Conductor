@@ -5,6 +5,7 @@ import { KanbanPanel } from './KanbanPanel.js';
 import { FocusedDetailPanel } from './FocusedDetailPanel.js';
 import { TickerPanel } from './TickerPanel.js';
 import { InBannerHost } from './InBannerHost.js';
+import { SendModal } from './SendModal.js';
 
 // Tailwind 4 utility classes per WEB-T07. Default flex-col stack
 // for narrow viewports; lg:grid (≥1024px) switches to 60/40
@@ -35,6 +36,8 @@ export function Layout(): ReactNode {
       <PanelErrorBoundary name="Banners">
         <InBannerHost />
       </PanelErrorBoundary>
+
+      <SendModal />
     </div>
   );
 }

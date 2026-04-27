@@ -47,6 +47,14 @@ vi.mock('../src/components/TickerPanel.js', () => ({
   },
 }));
 
+// SendModal mounted at Layout level (T15) calls useQueryClient via
+// usePostPrompt. Layout-shape tests don't provide a QueryClient
+// wrapper, so mock SendModal to a no-op. SendModal's own behavior is
+// covered by test/send-modal.test.tsx with proper wrapper.
+vi.mock('../src/components/SendModal.js', () => ({
+  SendModal: () => null,
+}));
+
 import { Layout } from '../src/components/Layout.js';
 import { useUIStore } from '../src/store/ui.js';
 

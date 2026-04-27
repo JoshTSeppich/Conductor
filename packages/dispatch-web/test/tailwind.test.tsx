@@ -1,5 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render } from '@testing-library/react';
+
+// SendModal (T15) calls useQueryClient via usePostPrompt; this
+// suite renders Layout without a QueryClient wrapper. Mock to a
+// no-op — SendModal's behavior is covered by test/send-modal.test.tsx.
+vi.mock('../src/components/SendModal.js', () => ({
+  SendModal: () => null,
+}));
+
 import { Layout } from '../src/components/Layout.js';
 import { useUIStore } from '../src/store/ui.js';
 
