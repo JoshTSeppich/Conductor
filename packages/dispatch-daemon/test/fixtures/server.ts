@@ -18,6 +18,17 @@ export interface TestServer {
   url: string;
   /** Current auth token (populated by DAEMON-T02 green). */
   token: string | undefined;
+  /**
+   * WebSocket URL for /v2/events/stream (no query string).
+   * Tests append `?token=<ts.token>` to authenticate.
+   * Added in DAEMON-T12.
+   */
+  wsUrl: string;
+  /**
+   * Direct event emit fn — tests trigger events without HTTP for
+   * P3/P4 (raw emit observability). Added in DAEMON-T12.
+   */
+  emit: import('../../src/events/bus.js').EmitFn;
   close: () => Promise<void>;
 }
 
@@ -95,7 +106,7 @@ export async function spawnTestServer(
 
   // logger:false silences per-request Pino output for test ergonomics.
   // Production startup() defaults to info-level logging.
-  const { server, port, token, close } = await startup({
+  const { server, port, token, emit, close } = await startup({
     port: 0,
     logger: false,
     tokenPath,
@@ -110,7 +121,9 @@ export async function spawnTestServer(
     app: server,
     port,
     url: `http://127.0.0.1:${port}`,
+    wsUrl: `ws://127.0.0.1:${port}/v2/events/stream`,
     token,
+    emit,
     close,
   };
 }

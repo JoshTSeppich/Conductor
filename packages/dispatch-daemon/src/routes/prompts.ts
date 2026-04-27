@@ -28,11 +28,16 @@ import { assemble } from 'dispatch-core/src/prompt/assemble.js';
 import { archiveRoot as defaultArchiveRoot } from 'dispatch-core/src/lib/paths.js';
 import { readRegistryV2, writeRegistryV2 } from '../migration/schema-v2.js';
 import { defaultTmuxOps, type TmuxOps } from '../state/transitions.js';
+import type { EmitFn } from '../events/bus.js';
 
 export interface PromptRoutesDeps {
   registryPath?: string;
   archiveRoot?: string;
   tmuxOps?: TmuxOps;
+  /** T12 emit-wiring: bus.emit fires prompt_sent after
+   *  successful registry write. Optional so tests that don't
+   *  observe events can omit it. */
+  emit?: EmitFn;
 }
 
 export async function registerPromptRoutes(
@@ -90,6 +95,18 @@ export async function registerPromptRoutes(
 
       session.last_prompt_sent_at = sentAtIso;
       await writeRegistryV2(deps.registryPath, registry);
+
+      // T12 emit-wiring: prompt_sent fires AFTER successful
+      // registry write. Per §5.3 prompt_sent data shape:
+      // {archived_to, size_chars}.
+      deps.emit?.({
+        session: name,
+        type: 'prompt_sent',
+        data: {
+          archived_to: archivePath,
+          size_chars: assembled.length,
+        },
+      });
 
       return {
         sent_at: sentAtIso,

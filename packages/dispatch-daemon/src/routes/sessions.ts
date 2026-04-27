@@ -35,6 +35,7 @@ import {
   transitionSessionState,
   type TmuxOps,
 } from '../state/transitions.js';
+import type { EmitFn } from '../events/bus.js';
 
 /** fd v1 default. Tracked under DAEMON-F04 threshold-tuning followup. */
 const STALE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -193,6 +194,10 @@ export async function registerSessionsWriteRoutes(
 export interface SessionsStateRoutesDeps {
   registryPath?: string;
   tmuxOps?: TmuxOps;
+  /** T12 emit-wiring: bus.emit fires state_changed after
+   *  successful registry write. Optional so tests that don't
+   *  observe events can omit it. */
+  emit?: EmitFn;
 }
 
 export async function registerSessionsStateRoutes(
@@ -217,6 +222,21 @@ export async function registerSessionsStateRoutes(
         registryPath: deps.registryPath,
         tmuxOps: deps.tmuxOps,
         logger: request.log as unknown as { warn: (...args: unknown[]) => void },
+      });
+
+      // T12 emit-wiring: state_changed fires AFTER successful
+      // registry write. Per T08 MODELED + DAEMON-F10, tmux side
+      // effect failures are tolerated and the transition still
+      // succeeds — emit reflects state-change success regardless
+      // of tmux outcome.
+      deps.emit?.({
+        session: name,
+        type: 'state_changed',
+        data: {
+          from: result.previousState,
+          to: targetState,
+          triggered_by: 'operator',
+        },
       });
 
       const now = new Date();

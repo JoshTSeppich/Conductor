@@ -17,14 +17,17 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
+import websocket from '@fastify/websocket';
 import { buildServer, type BuildServerOpts } from '../server.js';
 import { createEventRing, type EventRing } from '../events/history.js';
+import { createEventBus, type EmitFn } from '../events/bus.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
 import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
 import { registerEventsRoutes } from '../routes/events.js';
 import { registerHandoffRoutes } from '../routes/handoff.js';
 import { registerPromptRoutes } from '../routes/prompts.js';
+import { registerWsRoutes } from '../routes/ws.js';
 import {
   registerSessionsReadRoutes,
   registerSessionsStateRoutes,
@@ -104,6 +107,13 @@ export interface StartupHandle {
    * T02 red window where the field is unpopulated.
    */
   token?: string;
+  /**
+   * Direct event emit fn. Production callers don't use this — routes
+   * receive `emit` via DI from the bus. Exposed on the handle as a
+   * test seam so the fixture can let tests trigger emits without an
+   * HTTP round-trip (T12 P3/P4). Added in DAEMON-T12.
+   */
+  emit: EmitFn;
   close: () => Promise<void>;
 }
 
@@ -112,8 +122,14 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const requestedPort = opts.port ?? 7878;
   const tokenPath = opts.tokenPath ?? defaultTokenPath();
   const eventRing = opts.eventRing ?? createEventRing();
+  const bus = createEventBus(eventRing);
 
   const app = await buildServer({ logger: opts.logger });
+
+  // DAEMON-T12: register WS plugin BEFORE routes so /v2/events/stream
+  // can use { websocket: true }. Plugin registration is independent
+  // of auth (T02 hook below covers WS upgrade auth via path branching).
+  await app.register(websocket);
 
   // DAEMON-T04: server-wide error + not-found handlers (JSON
   // {"error": "..."} shape per §4 + S05 ADR). Register before
@@ -138,20 +154,24 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
 
   // DAEMON-T08: PATCH /v2/sessions/:name/state with §6.1 transition
   // rules and tmux side effects (Ctrl-C on armed→held, kill-session
-  // on →killed). tmuxOps injectable for tests.
+  // on →killed). tmuxOps injectable for tests. T12 emit-wiring:
+  // emits state_changed after successful registry write.
   await registerSessionsStateRoutes(app, {
     registryPath: opts.registryPath,
     tmuxOps: opts.tmuxOps,
+    emit: bus.emit,
   });
 
   // DAEMON-T09: POST /v2/sessions/:name/prompts. Validates state
   // precondition (armed only), pre-flights tmux pane liveness,
   // assembles (idempotent footer), archives, delivers via
-  // tmuxOps.sendKeys, persists last_prompt_sent_at.
+  // tmuxOps.sendKeys, persists last_prompt_sent_at. T12
+  // emit-wiring: emits prompt_sent after successful registry write.
   await registerPromptRoutes(app, {
     registryPath: opts.registryPath,
     archiveRoot: opts.archiveRoot,
     tmuxOps: opts.tmuxOps,
+    emit: bus.emit,
   });
 
   // DAEMON-T10: GET /v2/sessions/:name/handoff. Reads HANDOFF.md,
@@ -168,6 +188,12 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // the T17 ring buffer. D-4 will wire emit-sites (T08/T09/T10)
   // into this same ring.
   await registerEventsRoutes(app, { eventRing });
+
+  // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.
+  // Subscribes per-connection; emit fan-out goes through bus.
+  // Auth handled by T02's onRequest hook (path branching for
+  // ?token= query string).
+  await registerWsRoutes(app, { bus });
 
   // T04 test-only hook: register routes that need to exist before
   // listen (e.g., throwing routes for error-handler probes).
@@ -203,6 +229,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     server: app,
     port: boundPort,
     token: tokenRef.value,
+    emit: bus.emit,
     close: async () => {
       process.off('SIGTERM', sigTermHandler);
       process.off('SIGINT', sigIntHandler);
