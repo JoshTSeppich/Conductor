@@ -29,6 +29,15 @@ import { registerHandoffRoutes } from '../routes/handoff.js';
 import { registerPromptRoutes } from '../routes/prompts.js';
 import { registerWsRoutes } from '../routes/ws.js';
 import {
+  defaultWatcherFactory,
+  type WatcherFactory,
+} from '../watchers/handoff.js';
+import {
+  createWatcherManager,
+  type WatcherManager,
+} from '../watchers/manager.js';
+import { readRegistryV2 } from '../migration/schema-v2.js';
+import {
   registerSessionsReadRoutes,
   registerSessionsStateRoutes,
   registerSessionsWriteRoutes,
@@ -96,6 +105,14 @@ export interface StartupOpts {
    * from D-5 per operator arbitration 1 on T11 pre-reg).
    */
   eventRing?: EventRing;
+  /**
+   * Watcher factory for FS-event-driven event emission.
+   * Default uses node:fs.watch via defaultWatcherFactory
+   * (S02-validated pattern). Tests inject a stub factory
+   * whose returned watchers can be triggered synchronously,
+   * avoiding real fs.watch flake in CI. Added in DAEMON-T13.
+   */
+  watcherFactory?: WatcherFactory;
 }
 
 export interface StartupHandle {
@@ -114,6 +131,14 @@ export interface StartupHandle {
    * HTTP round-trip (T12 P3/P4). Added in DAEMON-T12.
    */
   emit: EmitFn;
+  /**
+   * Watcher manager handle. Production callers don't use this; the
+   * close handler invokes closeAll() on shutdown. Exposed on the
+   * handle so the fixture can issue triggerHandoffWrite() helper
+   * calls and so close() can tear down watchers cleanly. Added in
+   * DAEMON-T13.
+   */
+  watcherManager: WatcherManager;
   close: () => Promise<void>;
 }
 
@@ -123,6 +148,10 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const tokenPath = opts.tokenPath ?? defaultTokenPath();
   const eventRing = opts.eventRing ?? createEventRing();
   const bus = createEventBus(eventRing);
+  const watcherManager = createWatcherManager({
+    factory: opts.watcherFactory ?? defaultWatcherFactory,
+    emit: bus.emit,
+  });
 
   const app = await buildServer({ logger: opts.logger });
 
@@ -150,16 +179,23 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
 
   // DAEMON-T07: POST /v2/sessions with Blocker 1 (state='armed') +
   // Blocker 3 (409 on name collision, verbatim body on killed).
-  await registerSessionsWriteRoutes(app, { registryPath: opts.registryPath });
+  // T13: watcherManager.attach is called after successful registry
+  // write so newly-created sessions get an immediate handoff watcher.
+  await registerSessionsWriteRoutes(app, {
+    registryPath: opts.registryPath,
+    watcherManager,
+  });
 
   // DAEMON-T08: PATCH /v2/sessions/:name/state with §6.1 transition
   // rules and tmux side effects (Ctrl-C on armed→held, kill-session
   // on →killed). tmuxOps injectable for tests. T12 emit-wiring:
-  // emits state_changed after successful registry write.
+  // emits state_changed after successful registry write. T13:
+  // watcherManager.detach on killed transition tears watcher down.
   await registerSessionsStateRoutes(app, {
     registryPath: opts.registryPath,
     tmuxOps: opts.tmuxOps,
     emit: bus.emit,
+    watcherManager,
   });
 
   // DAEMON-T09: POST /v2/sessions/:name/prompts. Validates state
@@ -201,6 +237,21 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     await opts.beforeListen(app);
   }
 
+  // DAEMON-T13: arm watchers for all non-killed sessions in the
+  // initial registry. Subsequent attach/detach happens via the
+  // POST/PATCH route deps. Reading registry here may surface
+  // ENOENT on a fresh install — readRegistryV2 returns an empty
+  // registry in that case, so attachAll is a no-op.
+  try {
+    const initialRegistry = await readRegistryV2(opts.registryPath);
+    watcherManager.attachAll(initialRegistry);
+  } catch (err) {
+    app.log.warn(
+      { err: (err as Error).message },
+      'failed to read initial registry for watcher attachAll; daemon will continue with no pre-attached watchers',
+    );
+  }
+
   await app.listen({ host, port: requestedPort });
 
   const addr = app.server.address();
@@ -218,7 +269,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
 
   async function handleSignal(signal: string): Promise<void> {
     app.log.info({ signal }, 'shutdown signal received');
-    await shutdown({ server: app });
+    await shutdown({ server: app, watcherManager });
     process.exit(0);
   }
 
@@ -230,10 +281,11 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     port: boundPort,
     token: tokenRef.value,
     emit: bus.emit,
+    watcherManager,
     close: async () => {
       process.off('SIGTERM', sigTermHandler);
       process.off('SIGINT', sigIntHandler);
-      await shutdown({ server: app });
+      await shutdown({ server: app, watcherManager });
     },
   };
 }

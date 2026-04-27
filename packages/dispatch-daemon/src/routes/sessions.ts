@@ -36,12 +36,16 @@ import {
   type TmuxOps,
 } from '../state/transitions.js';
 import type { EmitFn } from '../events/bus.js';
+import type { WatcherManager } from '../watchers/manager.js';
 
 /** fd v1 default. Tracked under DAEMON-F04 threshold-tuning followup. */
 const STALE_THRESHOLD_MS = 30 * 60 * 1000;
 
 export interface SessionsRoutesDeps {
   registryPath?: string;
+  /** T13: write route attaches a watcher after successful create.
+   *  Read route ignores this. Optional so legacy tests pass. */
+  watcherManager?: WatcherManager;
 }
 
 async function deriveComputedStatus(
@@ -164,6 +168,10 @@ export async function registerSessionsWriteRoutes(
     registry.sessions[name] = newSession;
     await writeRegistryV2(deps.registryPath, registry);
 
+    // T13: arm watcher AFTER successful registry write so a
+    // watcher leak can't outlive a failed create.
+    deps.watcherManager?.attach(name, newSession);
+
     const now = new Date();
     const computed_status = await deriveComputedStatus(newSession, now);
 
@@ -198,6 +206,9 @@ export interface SessionsStateRoutesDeps {
    *  successful registry write. Optional so tests that don't
    *  observe events can omit it. */
   emit?: EmitFn;
+  /** T13: detach watcher when transitioning to killed (terminal
+   *  state per §6.1; no further events expected). Optional. */
+  watcherManager?: WatcherManager;
 }
 
 export async function registerSessionsStateRoutes(
@@ -238,6 +249,13 @@ export async function registerSessionsStateRoutes(
           triggered_by: 'operator',
         },
       });
+
+      // T13: detach watcher on terminal-state transition. No
+      // further handoff_written events are expected from a
+      // killed session.
+      if (targetState === 'killed') {
+        deps.watcherManager?.detach(name);
+      }
 
       const now = new Date();
       const computed_status = await deriveComputedStatus(result.session, now);

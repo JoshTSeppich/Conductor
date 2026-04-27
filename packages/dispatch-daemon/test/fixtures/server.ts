@@ -11,6 +11,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { startup } from '../../src/lifecycle/startup.js';
+import { readRegistryV2 } from '../../src/migration/schema-v2.js';
+import type {
+  WatcherFactory,
+  WatcherHandle,
+  HandoffWatcherOpts,
+} from '../../src/watchers/handoff.js';
 
 export interface TestServer {
   app: FastifyInstance;
@@ -29,6 +35,19 @@ export interface TestServer {
    * P3/P4 (raw emit observability). Added in DAEMON-T12.
    */
   emit: import('../../src/events/bus.js').EmitFn;
+  /**
+   * Trigger a synthetic handoff_written event for a session via
+   * the stub WatcherFactory. Reads the session's handoff_path
+   * from the seeded registry and fires the watcher's onWritten
+   * callback with {path, size_bytes}. Added in DAEMON-T13.
+   *
+   * Naming pattern: T14/T15 will follow with triggerGitCommit
+   * and triggerStatusJsonUpdate.
+   */
+  triggerHandoffWrite: (
+    sessionName: string,
+    opts?: { size_bytes?: number },
+  ) => Promise<void>;
   close: () => Promise<void>;
 }
 
@@ -74,6 +93,60 @@ export interface SpawnTestServerOpts {
    * DAEMON-T11 (T17 pulled forward from D-5).
    */
   eventRing?: import('../../src/events/history.js').EventRing;
+  /**
+   * Watcher factory. Default = a stub mock that records onWritten
+   * callbacks per handoff path; tests trigger via TestServer's
+   * triggerHandoffWrite helper. Tests can pass their own factory
+   * to observe attach/detach lifecycle directly. Added in
+   * DAEMON-T13.
+   */
+  watcherFactory?: WatcherFactory;
+}
+
+/**
+ * Mock watcher factory used by the fixture by default. Records
+ * each createHandoffWatcher's onWritten callback keyed by the
+ * handoffPath; close() removes that subscriber. Multiple
+ * subscribers per path are supported (set semantics).
+ *
+ * fire(handoffPath, data) invokes every subscriber for that
+ * path. The fixture's triggerHandoffWrite resolves a session's
+ * handoff_path from the seeded registry and calls fire().
+ */
+interface MockWatcherFactory extends WatcherFactory {
+  fire(
+    handoffPath: string,
+    data: { path: string; size_bytes: number },
+  ): void;
+}
+
+function createMockWatcherFactory(): MockWatcherFactory {
+  type Cb = (data: { path: string; size_bytes: number }) => void;
+  const subscribers = new Map<string, Map<symbol, Cb>>();
+
+  return {
+    createHandoffWatcher(opts: HandoffWatcherOpts): WatcherHandle {
+      const id = Symbol();
+      let bucket = subscribers.get(opts.handoffPath);
+      if (!bucket) {
+        bucket = new Map();
+        subscribers.set(opts.handoffPath, bucket);
+      }
+      bucket.set(id, opts.onWritten);
+      return {
+        close: () => {
+          const b = subscribers.get(opts.handoffPath);
+          b?.delete(id);
+          if (b && b.size === 0) subscribers.delete(opts.handoffPath);
+        },
+      };
+    },
+    fire(handoffPath, data) {
+      const bucket = subscribers.get(handoffPath);
+      if (!bucket) return;
+      for (const cb of bucket.values()) cb(data);
+    },
+  };
 }
 
 /**
@@ -104,6 +177,13 @@ export async function spawnTestServer(
   const clipboardCopy =
     opts.clipboardCopy ?? (async (_content: string) => { /* no-op */ });
 
+  // Defense-in-depth: default to a mock watcher factory so tests
+  // never touch real fs.watch on test-isolated handoff paths
+  // (avoids fs.watch flake under CI). Tests can pass their own
+  // factory to observe lifecycle directly.
+  const mockFactory =
+    opts.watcherFactory ?? createMockWatcherFactory();
+
   // logger:false silences per-request Pino output for test ergonomics.
   // Production startup() defaults to info-level logging.
   const { server, port, token, emit, close } = await startup({
@@ -116,7 +196,35 @@ export async function spawnTestServer(
     archiveRoot,
     clipboardCopy,
     eventRing: opts.eventRing,
+    watcherFactory: mockFactory,
   });
+
+  const triggerHandoffWrite = async (
+    sessionName: string,
+    triggerOpts: { size_bytes?: number } = {},
+  ): Promise<void> => {
+    const reg = await readRegistryV2(registryPath);
+    const session = reg.sessions[sessionName];
+    if (!session) {
+      throw new Error(
+        `triggerHandoffWrite: session "${sessionName}" not in registry`,
+      );
+    }
+    // Only the default mock factory exposes fire(); custom factories
+    // passed by tests bypass this helper and trigger via their own
+    // protocol.
+    if ('fire' in mockFactory && typeof (mockFactory as MockWatcherFactory).fire === 'function') {
+      (mockFactory as MockWatcherFactory).fire(session.handoff_path, {
+        path: session.handoff_path,
+        size_bytes: triggerOpts.size_bytes ?? 100,
+      });
+    } else {
+      throw new Error(
+        'triggerHandoffWrite: custom watcherFactory does not expose fire()',
+      );
+    }
+  };
+
   return {
     app: server,
     port,
@@ -124,6 +232,7 @@ export async function spawnTestServer(
     wsUrl: `ws://127.0.0.1:${port}/v2/events/stream`,
     token,
     emit,
+    triggerHandoffWrite,
     close,
   };
 }
