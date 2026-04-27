@@ -7,6 +7,7 @@ import { useUIStore } from '../store/ui.js';
 import { useSession } from '../query/useSession.js';
 import { formatAge } from '../utils/format-age.js';
 import type { CommitEntry } from '../store/ui.js';
+import { StateControlCluster } from './StateControlCluster.js';
 
 const PLACEHOLDER = 'Click a session card';
 const LOADING = 'Loading session details…';
@@ -156,6 +157,7 @@ export function FocusedDetailPanel(): ReactNode {
         value={formatLastAction(data)}
         testId="detail-row-last-action"
       />
+      <StateControlCluster session={data} name={focusedName} />
     </div>,
   );
 }
