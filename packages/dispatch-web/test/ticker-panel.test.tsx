@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, within, act } from '@testing-library/react';
 import { createWrapper } from './test-utils.js';
 import { VALID_TEST_TOKEN } from './msw/handlers.js';
 import { TickerPanel } from '../src/components/TickerPanel.js';
@@ -112,7 +112,7 @@ describe('WEB-T17 TickerPanel', () => {
     expect(rows[2].textContent).toContain('state_changed');
   });
 
-  it('each row renders type + session + timestamp (basic content; visual polish is T20)', () => {
+  it('each row renders type + session content (visual polish was T20 — timestamp format moved to ticker-row.test.tsx)', () => {
     useUIStore.setState(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: [fixtureEvents[1]] } as any,
@@ -122,8 +122,10 @@ describe('WEB-T17 TickerPanel', () => {
     const row = within(region).getByTestId('ticker-row');
     expect(row.textContent).toContain('commit_landed');
     expect(row.textContent).toContain('scribe');
-    // Raw ISO timestamp acceptable for T17; T20 may swap to relative.
-    expect(row.textContent).toContain('2026-04-27T12:00:00.000Z');
+    // T20 retrofit (Decision 10): T17 commit explicitly noted "raw
+    // ISO acceptable for T17; T20 may swap to relative". T20 swapped
+    // to "Xm ago" format with raw ISO preserved as <time title=...>.
+    // Format-specific assertion lives in ticker-row.test.tsx now.
   });
 
   it('no layout shift — section className identical across 0 / N / N+overflow events', () => {
@@ -167,5 +169,44 @@ describe('WEB-T17 TickerPanel', () => {
     // only, not aggregate classes across inner content.
     expect(classNameN).toBe(className0);
     expect(classNameOverflow).toBe(className0);
+  });
+
+  // T20: 30s tick refreshes relative timestamps in rendered rows.
+  // Decision 6: single setInterval at TickerPanel level bumping a
+  // useState counter; each row re-renders + re-formats time.
+  // Decision 8: vi.useFakeTimers + vi.setSystemTime for deterministic
+  // time math.
+  it('relative timestamps refresh on ~30s tick (Decision 6 + 8)', () => {
+    const FROZEN_NOW = Date.UTC(2026, 3, 27, 12, 0, 0);
+    vi.useFakeTimers();
+    vi.setSystemTime(FROZEN_NOW);
+    // Event 30 seconds in the past → "<1m ago" at frozen now.
+    const event: EventV2Type = {
+      type: 'commit_landed',
+      timestamp: new Date(FROZEN_NOW - 30_000).toISOString(),
+      session: 'sherpa',
+      data: { sha: 'abc', subject: 's', branch: 'main' },
+    };
+    useUIStore.setState(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { events: [event] } as any,
+    );
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
+    const region = screen.getByRole('region', { name: /activity/i });
+    const row = within(region).getByTestId('ticker-row');
+    expect(row.textContent).toMatch(/<1m ago/);
+
+    // Advance system clock 60s + advance timers so the panel's
+    // 30s interval fires + the counter bump triggers re-render.
+    act(() => {
+      vi.setSystemTime(FROZEN_NOW + 60_000);
+      vi.advanceTimersByTime(30_000);
+    });
+
+    // Now event is 90s in the past → "1m ago"
+    const refreshedRow = within(region).getByTestId('ticker-row');
+    expect(refreshedRow.textContent).toMatch(/\b1m ago\b/);
+
+    vi.useRealTimers();
   });
 });
