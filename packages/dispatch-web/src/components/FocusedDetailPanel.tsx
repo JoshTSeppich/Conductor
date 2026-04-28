@@ -9,6 +9,7 @@ import { formatAge } from '../utils/format-age.js';
 import type { CommitEntry } from '../store/ui.js';
 import { StateControlCluster } from './StateControlCluster.js';
 import { SendButton } from './SendButton.js';
+import { PullButton } from './PullButton.js';
 
 const PLACEHOLDER = 'Click a session card';
 const LOADING = 'Loading session details…';
@@ -161,7 +162,7 @@ export function FocusedDetailPanel(): ReactNode {
       <StateControlCluster session={data} name={focusedName} />
       <div className="flex gap-2 mt-2">
         <SendButton session={data} />
-        {/* PullButton lands in WEB-T16 as sibling here. */}
+        <PullButton session={data} />
       </div>
     </div>,
   );

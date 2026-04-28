@@ -1,11 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/react';
 
-// SendModal (T15) calls useQueryClient via usePostPrompt; this
-// suite renders Layout without a QueryClient wrapper. Mock to a
-// no-op — SendModal's behavior is covered by test/send-modal.test.tsx.
+// SendModal (T15) + PullButton (T16) call useQueryClient via their
+// mutation hooks; this suite renders Layout (which → FocusedDetailPanel
+// → PullButton) without a QueryClient wrapper. Mock both to no-ops —
+// behavior is covered by test/send-modal.test.tsx + test/pull-button.test.tsx.
+// Per finding-#22 test-coupling survey: mock-vs-provide choice is a
+// function of test purpose; this suite asserts class-string presence,
+// not component behavior.
 vi.mock('../src/components/SendModal.js', () => ({
   SendModal: () => null,
+}));
+vi.mock('../src/components/PullButton.js', () => ({
+  PullButton: () => null,
 }));
 
 import { Layout } from '../src/components/Layout.js';
