@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { EventV2Type } from 'dispatch-core/src/v2/schema.js';
 
 // Full shape per packages/dispatch-web/TICKETS.md §2.3. T02 shipped
 // connectionStatus + authRetryNonce; T05 expands to focus, modals,
@@ -54,6 +55,13 @@ interface UIState {
   banners: Banner[];
   authRetryNonce: number;
 
+  // T17: global event ring buffer. T17 only adds the slot with []
+  // default so TickerPanel can read safely. T18 wires the writer
+  // (useDaemonEvents callback + GET /v2/events backfill) and adds
+  // the bounded-100 ring policy. Distinct from
+  // SessionResponseV2.recent_events, which is per-session embedded.
+  events: EventV2Type[];
+
   // ── actions ───────────────────────────────────────────────────
   setFocus: (name: string | null) => void;
   openSendModal: () => void;
@@ -87,6 +95,7 @@ export const useUIStore = create<UIState>((set) => ({
   commitBySession: {},
   banners: [],
   authRetryNonce: 0,
+  events: [],
 
   // INTENTIONAL: setFocus uses history.replaceState, not pushState
   // or window.location.hash assignment. Focus is transient UI
