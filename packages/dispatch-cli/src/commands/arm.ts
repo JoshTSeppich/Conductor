@@ -12,7 +12,10 @@
  * armed→armed self-transition or killed→armed).
  */
 
-import { runStateTransitionV2 } from '../lib/daemon-client.js';
+import {
+  assertDaemonRunning,
+  runStateTransitionV2,
+} from '../lib/daemon-client.js';
 import { loadToken } from '../lib/token.js';
 
 export interface ArmArgs {
@@ -22,6 +25,8 @@ export interface ArmArgs {
 }
 
 export async function runArm(args: ArmArgs): Promise<void> {
+  // CLI-T04 guard per Arbitration 3A.
+  await assertDaemonRunning({ baseUrl: args.baseUrl });
   const token = await loadToken(args.tokenPath);
   await runStateTransitionV2(args.name, 'armed', {
     token,

@@ -8,7 +8,10 @@
  * T08 helper fires sendCtrlC side effect on the transition.
  */
 
-import { runStateTransitionV2 } from '../lib/daemon-client.js';
+import {
+  assertDaemonRunning,
+  runStateTransitionV2,
+} from '../lib/daemon-client.js';
 import { loadToken } from '../lib/token.js';
 
 export interface HoldArgs {
@@ -18,6 +21,8 @@ export interface HoldArgs {
 }
 
 export async function runHold(args: HoldArgs): Promise<void> {
+  // CLI-T04 guard per Arbitration 3A.
+  await assertDaemonRunning({ baseUrl: args.baseUrl });
   const token = await loadToken(args.tokenPath);
   await runStateTransitionV2(args.name, 'held', {
     token,

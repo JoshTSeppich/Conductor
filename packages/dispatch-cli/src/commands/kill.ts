@@ -12,7 +12,10 @@
  * (default) at the prompt.
  */
 
-import { runStateTransitionV2 } from '../lib/daemon-client.js';
+import {
+  assertDaemonRunning,
+  runStateTransitionV2,
+} from '../lib/daemon-client.js';
 import { confirmAction } from '../lib/prompt.js';
 import { loadToken } from '../lib/token.js';
 
@@ -24,6 +27,11 @@ export interface KillArgs {
 }
 
 export async function runKill(args: KillArgs): Promise<void> {
+  // CLI-T04 guard per Arbitration 3A: probe BEFORE confirm
+  // prompt so operator gets the X2-line-351 verbatim error
+  // immediately on daemon-dead, rather than first answering Y
+  // to the kill prompt and then learning daemon is down.
+  await assertDaemonRunning({ baseUrl: args.baseUrl });
   if (!args.yes) {
     const confirmed = await confirmAction(
       `kill "${args.name}"? this is terminal per §6.3. [y/N]`,

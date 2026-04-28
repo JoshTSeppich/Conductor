@@ -109,6 +109,63 @@ export function buildPatchStateBody(target: State): { state: State } {
   return { state: target };
 }
 
+// ─── CLI-T04 daemon-dead fallback primitives ────────────────────
+
+export interface ProbeOpts {
+  baseUrl?: string;
+  /** Probe timeout. Default 500ms per X2 §CLI-T04 line 346
+   *  verbatim. */
+  timeoutMs?: number;
+}
+
+const PROBE_TIMEOUT_MS = 500;
+
+/**
+ * Probe GET /v2/health per contract §7.2 verbatim:
+ *   "If daemon is not running (GET /v2/health fails), fd v1
+ *    commands fall back to direct fd v1 behavior"
+ *
+ * Per Arbitration 4: never throws on failure. Connection
+ * refused, timeout, and non-2xx all map to false. Caller
+ * (dispatcher) decides UX (warn-log + fall back to v1, or
+ * throw "requires daemon" for T03 commands via
+ * assertDaemonRunning).
+ */
+export async function probeDaemon(opts: ProbeOpts = {}): Promise<boolean> {
+  const url = `${opts.baseUrl ?? DEFAULT_BASE_URL}/v2/health`;
+  const timeoutMs = opts.timeoutMs ?? PROBE_TIMEOUT_MS;
+  try {
+    const r = await fetch(url, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * X2 §CLI-T04 line 351 verbatim T03 fallback error:
+ *   "This command requires the Conductor daemon. Start it
+ *    with `launchctl ...`."
+ *
+ * T03 commands (kill/pause/hold/arm) prepend
+ * assertDaemonRunning to fail-fast before any HTTP attempt
+ * or destructive confirmation prompt. Per Arbitration 3A:
+ * per-command guard placement (not in shared helper).
+ */
+const DAEMON_REQUIRED_MSG =
+  'This command requires the Conductor daemon. Start it with `launchctl ...`.';
+
+export async function assertDaemonRunning(
+  opts: ProbeOpts = {},
+): Promise<void> {
+  const ok = await probeDaemon(opts);
+  if (!ok) {
+    throw new Error(DAEMON_REQUIRED_MSG);
+  }
+}
+
 // ─── HTTP variants (smoke-tested at T05) ────────────────────────
 
 export interface HttpClientOpts {

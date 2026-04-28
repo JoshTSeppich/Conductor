@@ -8,7 +8,10 @@
  * with verbatim error body for invalid transitions.
  */
 
-import { runStateTransitionV2 } from '../lib/daemon-client.js';
+import {
+  assertDaemonRunning,
+  runStateTransitionV2,
+} from '../lib/daemon-client.js';
 import { loadToken } from '../lib/token.js';
 
 export interface PauseArgs {
@@ -18,6 +21,8 @@ export interface PauseArgs {
 }
 
 export async function runPause(args: PauseArgs): Promise<void> {
+  // CLI-T04 guard per Arbitration 3A.
+  await assertDaemonRunning({ baseUrl: args.baseUrl });
   const token = await loadToken(args.tokenPath);
   await runStateTransitionV2(args.name, 'paused', {
     token,
