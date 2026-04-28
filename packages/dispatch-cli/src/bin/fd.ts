@@ -4,10 +4,12 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { Command } from 'commander';
-import { runInit } from '../commands/init.js';
-import { runList } from '../commands/list.js';
-import { runPull } from '../commands/pull.js';
-import { runSend } from '../commands/send.js';
+import {
+  runInitDispatch,
+  runListDispatch,
+  runPullDispatch,
+  runSendDispatch,
+} from '../lib/dispatch.js';
 import { runStatus } from '../commands/status.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -46,7 +48,9 @@ program
   .action(async (name: string, options: { cwd?: string; target?: string }) => {
     const cwd = options.cwd ?? (await prompt('cwd (absolute path of the session repo)'));
     const target = options.target ?? (await prompt('tmux target (session:window.pane)'));
-    await runInit({ name, cwd, target });
+    // CLI-T01: route through dispatcher (default useHttp=false →
+    // v1 path; T04 will invert based on /v2/health probe).
+    await runInitDispatch({ name, cwd, target });
     console.log(`registered "${name}" -> ${target} (cwd ${cwd})`);
   });
 
@@ -56,7 +60,7 @@ program
   .argument('<name>', 'registered session name (see fd list)')
   .argument('<prompt-file>', 'path to the prompt file to deliver')
   .action(async (name: string, promptFile: string) => {
-    await runSend({ name, promptFile });
+    await runSendDispatch({ name, promptFile });
     console.log(`sent ${promptFile} → ${name}`);
   });
 
@@ -65,14 +69,14 @@ program
   .description('Read HANDOFF.md from a registered session, print it, and copy it to the clipboard.')
   .argument('<name>', 'registered session name (see fd list)')
   .action(async (name: string) => {
-    await runPull({ name });
+    await runPullDispatch({ name });
   });
 
 program
   .command('list')
   .description('List registered sessions as tab-separated lines (name\\tcwd\\ttmux_target).')
   .action(async () => {
-    const out = await runList();
+    const out = await runListDispatch();
     if (out) process.stdout.write(out);
   });
 
