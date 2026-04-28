@@ -27,7 +27,6 @@ import {
   resolveNodeBinary,
   resolveRepoRoot,
 } from '../src/install/paths.js';
-import { buildDaemonArtifact } from '../src/install/build.js';
 import {
   bootstrapLaunchAgent,
   formatBootstrapCommand,
@@ -43,20 +42,35 @@ async function main(): Promise<void> {
   const repoRoot = resolveRepoRoot(import.meta.dirname);
   console.log(`  repo root: ${repoRoot}`);
 
-  console.log('  building daemon (pnpm --filter dispatch-daemon build)...');
-  await buildDaemonArtifact(repoRoot);
+  // DAEMON-Z-1 Path B: skip build step. Production launchd
+  // runtime is tsx + src/index.ts (was node + dist/index.js
+  // pre-Z-1 per S04 §3.1; pending S04 amendment per Z-1
+  // commit body). Aligns daemon runtime with rest of codebase
+  // (tests, dev, install/uninstall scripts all run via tsx).
 
   const daemonScript = join(
     repoRoot,
     'packages',
     'dispatch-daemon',
-    'dist',
-    'index.js',
+    'src',
+    'index.ts',
   );
 
+  // DAEMON-Z-1 Path B: invoke node directly with --import
+  // tsx loader. tsx CLI wrapper itself cannot be exec'd by
+  // launchd (macOS provenance xattr → "Operation not
+  // permitted"). node binary is unrestricted; --import tsx
+  // loads tsx ESM hooks + runs the .ts source.
   const nodePath = resolveNodeBinary();
+  const programArguments = [
+    nodePath,
+    '--import',
+    'tsx',
+    daemonScript,
+  ];
   console.log(`  node: ${nodePath}`);
   console.log(`  daemon: ${daemonScript}`);
+  console.log(`  ProgramArguments: ${JSON.stringify(programArguments)}`);
 
   const home = findUserHome();
   const stateDir = join(home, '.foxworks-dispatch');
@@ -65,10 +79,12 @@ async function main(): Promise<void> {
 
   const plist = generatePlist({
     label: LABEL,
-    nodePath,
-    daemonScript,
+    programArguments,
     stdoutPath: join(logsDir, 'daemon.out.log'),
     stderrPath: join(logsDir, 'daemon.err.log'),
+    // Z-1 Path B: launchd cwd defaults to /; node needs to
+    // resolve `tsx` via node_modules at repo root.
+    workingDirectory: repoRoot,
   });
 
   const launchAgentsDir = join(home, 'Library', 'LaunchAgents');

@@ -23,19 +23,52 @@ export interface PlistOpts {
    *  'com.foxworks.dispatch-daemon' at the call site (CS-03
    *  anchor); kept as an opt for testability. */
   label: string;
-  /** Absolute path to the node binary launchd will exec. */
-  nodePath: string;
-  /** Absolute path to the daemon's built entry script.
-   *  Per S04: <repo>/packages/dispatch-daemon/dist/index.js */
-  daemonScript: string;
+  /** ProgramArguments array — argv-equivalent that launchd
+   *  execs. Each element becomes a `<string>` in the plist
+   *  array.
+   *
+   *  DAEMON-Z-1 Path B: refactored from the pre-Z-1 fixed
+   *  pair (nodePath, daemonScript) to support the
+   *  `node --import tsx src/index.ts` 4-arg shape. The
+   *  pre-Z-1 form was `[nodePath, daemonScript]` per S04
+   *  §3.1 verbatim "node + dist/index.js"; Z-1 surfaced
+   *  that the daemon's compiled dist/index.js cannot
+   *  resolve workspace `dispatch-core/src/...` imports at
+   *  node-runtime, and the tsx CLI wrapper can't be
+   *  exec'd by launchd (macOS provenance xattr → "Operation
+   *  not permitted"). Fix: invoke node directly with
+   *  --import tsx, which loads tsx as ESM hooks + runs
+   *  the .ts source. node binary is unrestricted by
+   *  launchd; tsx-as-loader handles cross-package src/
+   *  imports the same way dev/test/scripts already do. */
+  programArguments: readonly string[];
   /** Absolute path for stdout capture; daemon log output
    *  lands here (S04 §"4. StandardOutPath captures..."). */
   stdoutPath: string;
   /** Absolute path for stderr capture. */
   stderrPath: string;
+  /** Optional working directory for the daemon process.
+   *  DAEMON-Z-1 Path B requires this so `node --import tsx`
+   *  can resolve tsx via node_modules at the repo root.
+   *  Without it, launchd starts the daemon at cwd=/ and
+   *  node fails ERR_MODULE_NOT_FOUND on tsx package resolve. */
+  workingDirectory?: string;
+}
+
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 export function generatePlist(opts: PlistOpts): string {
+  const argsXml = opts.programArguments
+    .map((arg) => `    <string>${escapeXml(arg)}</string>`)
+    .join('\n');
+  const workingDirectoryXml = opts.workingDirectory
+    ? `  <key>WorkingDirectory</key>\n  <string>${escapeXml(opts.workingDirectory)}</string>\n`
+    : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -44,14 +77,13 @@ export function generatePlist(opts: PlistOpts): string {
   <string>${opts.label}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${opts.nodePath}</string>
-    <string>${opts.daemonScript}</string>
+${argsXml}
   </array>
   <key>KeepAlive</key>
   <true/>
   <key>RunAtLoad</key>
   <true/>
-  <key>StandardOutPath</key>
+${workingDirectoryXml}  <key>StandardOutPath</key>
   <string>${opts.stdoutPath}</string>
   <key>StandardErrorPath</key>
   <string>${opts.stderrPath}</string>

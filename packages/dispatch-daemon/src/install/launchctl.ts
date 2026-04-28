@@ -90,9 +90,18 @@ export function getCurrentUid(): string {
  *  (S04 spike documented bootout's "No such process" but
  *  not bootstrap's already-loaded variant; expanded regex
  *  covers both directions for safety; smoke test will
- *  surface if pattern misses real-world variant). */
+ *  surface if pattern misses real-world variant).
+ *
+ *  DAEMON-Z-1 fix (Finding 2): smoke test verbatim captured
+ *  current macOS bootstrap-already-loaded error as
+ *  "Bootstrap failed: 5: Input/output error". S04 spike
+ *  characterized "exit code: 17" but current darwin returns
+ *  exit code 5 with "Input/output error" message. Regex
+ *  extended to match the new pattern; spike-era pattern
+ *  preserved for forward/backward compatibility across
+ *  macOS versions. */
 const ALREADY_LOADED_OR_UNLOADED_REGEX =
-  /already (loaded|bootstrapped)|service already|No such process|not loaded|Could not find (service|specified service)|No such file|Boot-out failed|exit code: 17/i;
+  /already (loaded|bootstrapped)|service already|No such process|not loaded|Could not find (service|specified service)|No such file|Boot-out failed|exit code: 17|Bootstrap failed: 5/i;
 
 export function isAlreadyHandledLaunchctlError(err: unknown): boolean {
   const msg = (err as Error)?.message ?? '';

@@ -25,12 +25,21 @@ import { describe, expect, it } from 'vitest';
 import { generatePlist } from '../../src/install/plist.js';
 
 describe('DAEMON-T18 — generatePlist', () => {
-  it('P1 returns well-formed plist with all S04-required keys', () => {
+  it('P1 returns well-formed plist with all S04-required keys; programArguments preserved in order', () => {
+    // DAEMON-Z-1 Path B test-mechanism-adaptation per finding #29:
+    // generatePlist refactored from fixed (nodePath, daemonScript)
+    // pair to programArguments: readonly string[] to support
+    // `node --import tsx src/index.ts` 4-arg shape. Test feeds
+    // a 4-arg array; assertions verify each arg appears in
+    // order in the rendered plist.
     const xml = generatePlist({
       label: 'com.foxworks.dispatch-daemon',
-      nodePath: '/usr/local/bin/node',
-      daemonScript:
-        '/Users/op/foxworks-dispatch/packages/dispatch-daemon/dist/index.js',
+      programArguments: [
+        '/usr/local/bin/node',
+        '--import',
+        'tsx',
+        '/Users/op/foxworks-dispatch/packages/dispatch-daemon/src/index.ts',
+      ],
       stdoutPath: '/Users/op/.foxworks-dispatch/logs/daemon.out.log',
       stderrPath: '/Users/op/.foxworks-dispatch/logs/daemon.err.log',
     });
@@ -50,14 +59,16 @@ describe('DAEMON-T18 — generatePlist', () => {
     expect(xml).toContain('<key>StandardOutPath</key>');
     expect(xml).toContain('<key>StandardErrorPath</key>');
 
-    // ProgramArguments has both abs paths in order
+    // ProgramArguments contains all 4 arguments in order
     const argsBlock = xml.match(
       /<key>ProgramArguments<\/key>\s*<array>([\s\S]*?)<\/array>/,
     );
     expect(argsBlock).not.toBeNull();
     expect(argsBlock![1]).toContain('<string>/usr/local/bin/node</string>');
+    expect(argsBlock![1]).toContain('<string>--import</string>');
+    expect(argsBlock![1]).toContain('<string>tsx</string>');
     expect(argsBlock![1]).toContain(
-      '<string>/Users/op/foxworks-dispatch/packages/dispatch-daemon/dist/index.js</string>',
+      '<string>/Users/op/foxworks-dispatch/packages/dispatch-daemon/src/index.ts</string>',
     );
 
     // KeepAlive + RunAtLoad both true (S04 default per §"3. KeepAlive")
@@ -79,8 +90,7 @@ describe('DAEMON-T18 — generatePlist', () => {
   it('P2 label is reverse-DNS com.foxworks.dispatch-daemon (locks CS-03 anchor)', () => {
     const xml = generatePlist({
       label: 'com.foxworks.dispatch-daemon',
-      nodePath: '/n',
-      daemonScript: '/d/dist/index.js',
+      programArguments: ['/n', '/d/src/index.ts'],
       stdoutPath: '/o',
       stderrPath: '/e',
     });

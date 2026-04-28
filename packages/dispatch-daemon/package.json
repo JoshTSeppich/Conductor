@@ -10,6 +10,7 @@
     "build": "tsc",
     "install:daemon": "tsx scripts/install.ts",
     "uninstall:daemon": "tsx scripts/uninstall.ts",
+    "smoke-test": "tsx scripts/smoke-test.ts",
     "spike:S05": "tsx spikes/DAEMON-S05-http-server.ts",
     "spike:S01": "tsx spikes/DAEMON-S01-websocket.ts",
     "spike:S02": "tsx spikes/DAEMON-S02-fsevents.ts",
