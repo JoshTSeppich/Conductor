@@ -16,6 +16,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { State } from 'dispatch-core/src/v2/schema.js';
 
 export const DEFAULT_BASE_URL = 'http://127.0.0.1:7878';
 
@@ -97,6 +98,15 @@ export function formatDaemonError(
     return `HTTP ${response.status} ${response.statusText}`;
   }
   return `daemon request failed (no response body)`;
+}
+
+/**
+ * Build PATCH /v2/sessions/:name/state request body per
+ * DAEMON-T08 + dispatch-core PatchStateRequest schema.
+ * Pure shape lock (CLI-T03 P1).
+ */
+export function buildPatchStateBody(target: State): { state: State } {
+  return { state: target };
 }
 
 // ─── HTTP variants (smoke-tested at T05) ────────────────────────
@@ -224,6 +234,29 @@ export async function fetchHealth(
   }
   const body = await r.json().catch(() => null);
   return parseHealthResponse(body);
+}
+
+/**
+ * CLI-T03 shared HTTP helper for the 4 state commands.
+ * PATCH /v2/sessions/:name/state with target state body.
+ * Reuses formatDaemonError for 422 (invalid transition per
+ * §6.1) + 404 (unknown session) surfacing per X2 lines
+ * 338-339 verbatim. Smoke-tested at T06.
+ */
+export async function runStateTransitionV2(
+  name: string,
+  target: State,
+  opts: HttpClientOpts,
+): Promise<void> {
+  const url = `${opts.baseUrl ?? DEFAULT_BASE_URL}/v2/sessions/${encodeURIComponent(name)}/state`;
+  const r = await fetchJson(url, {
+    method: 'PATCH',
+    headers: authHeaders(opts.token),
+    body: JSON.stringify(buildPatchStateBody(target)),
+  });
+  if (!r.ok) {
+    throw new Error(formatDaemonError(r.raw, r.body));
+  }
 }
 
 export async function runPullV2(

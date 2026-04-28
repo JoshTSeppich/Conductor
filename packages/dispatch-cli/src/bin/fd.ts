@@ -11,6 +11,10 @@ import {
   runSendDispatch,
   runStatusDispatch,
 } from '../lib/dispatch.js';
+import { runArm } from '../commands/arm.js';
+import { runHold } from '../commands/hold.js';
+import { runKill } from '../commands/kill.js';
+import { runPause } from '../commands/pause.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -87,6 +91,46 @@ program
     // CLI-T02: route through dispatcher (default useHttp=false →
     // v1 polling; T04 will invert based on /v2/health probe).
     await runStatusDispatch();
+  });
+
+// CLI-T03: state machine commands (kill/pause/hold/arm). HTTP-only
+// per X2 line 351 verbatim ("NOT faded back — they require daemon").
+
+program
+  .command('kill')
+  .description('Terminate a session (transition to killed; terminal per §6.3).')
+  .argument('<name>', 'registered session name (see fd list)')
+  .option('--yes', 'skip the destructive-action confirmation prompt')
+  .action(async (name: string, options: { yes?: boolean }) => {
+    await runKill({ name, yes: options.yes });
+    console.log(`killed "${name}"`);
+  });
+
+program
+  .command('pause')
+  .description('Transition a session from armed to paused.')
+  .argument('<name>', 'registered session name (see fd list)')
+  .action(async (name: string) => {
+    await runPause({ name });
+    console.log(`paused "${name}"`);
+  });
+
+program
+  .command('hold')
+  .description('Transition a session from armed to held (sends Ctrl-C to tmux pane).')
+  .argument('<name>', 'registered session name (see fd list)')
+  .action(async (name: string) => {
+    await runHold({ name });
+    console.log(`held "${name}"`);
+  });
+
+program
+  .command('arm')
+  .description('Resume a paused or held session (transition to armed).')
+  .argument('<name>', 'registered session name (see fd list)')
+  .action(async (name: string) => {
+    await runArm({ name });
+    console.log(`armed "${name}"`);
   });
 
 program.parseAsync(process.argv).catch((err: Error) => {
