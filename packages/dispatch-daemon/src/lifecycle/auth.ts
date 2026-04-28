@@ -61,8 +61,14 @@ export async function rotateToken(path: string): Promise<string> {
 /**
  * Create the Fastify onRequest hook. Path branching:
  *   /v2/health            → bypass (§4.1)
+ *   non-/v2/* paths       → bypass (Z-3 static-serve: SPA assets at
+ *                          / + /assets/* + SPA client routes are
+ *                          public on same origin per §3.4-arbitrated
+ *                          static-serve addition; daemon binds
+ *                          127.0.0.1 only, so localhost-scope is
+ *                          the trust boundary)
  *   /v2/events/stream     → ?token= query string (§5.1, WS)
- *   any other path        → X-Conductor-Token header (§3.1)
+ *   any other /v2/* path  → X-Conductor-Token header (§3.1)
  * Mismatch → 401 + {"error": "Invalid or missing token"}.
  */
 export function createAuthHook(
@@ -72,6 +78,14 @@ export function createAuthHook(
     const pathOnly = request.url.split('?')[0];
 
     if (pathOnly === '/v2/health') {
+      return;
+    }
+
+    // Z-3 §3.4-arbitrated static-serve: bypass auth for non-/v2/*
+    // paths. Static SPA assets (index.html + /assets/*) + SPA
+    // client-routed paths are served on the same origin with
+    // localhost-only trust scope. /v2/* API stays gated.
+    if (!pathOnly.startsWith('/v2/')) {
       return;
     }
 

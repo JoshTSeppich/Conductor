@@ -28,7 +28,24 @@ function hasStatusCode(err: unknown): err is { statusCode: number } {
   );
 }
 
-export function registerErrorHandler(app: FastifyInstance): void {
+export interface RegisterErrorHandlerOpts {
+  /**
+   * Z-3: when set, enables SPA fall-through for non-/v2/* GETs.
+   * Unmatched non-/v2/* GET routes serve index.html from this
+   * directory (so URL-fragment focus paths like /#session=sherpa
+   * load the SPA on first hit). /v2/* unmatched still returns
+   * JSON 404 per S05 ADR.
+   *
+   * When undefined, original behavior preserved: all unmatched
+   * paths return JSON 404 (existing daemon-only test scenarios).
+   */
+  staticRoot?: string;
+}
+
+export function registerErrorHandler(
+  app: FastifyInstance,
+  opts: RegisterErrorHandlerOpts = {},
+): void {
   app.setErrorHandler((err, request, reply) => {
     request.log.error({ err }, 'unhandled error in route handler');
     const statusCode = hasStatusCode(err) ? err.statusCode : 500;
@@ -39,7 +56,18 @@ export function registerErrorHandler(app: FastifyInstance): void {
     reply.code(statusCode).send({ error: message });
   });
 
-  app.setNotFoundHandler((_request, reply) => {
-    reply.code(404).send({ error: 'Not found' });
+  const staticRoot = opts.staticRoot;
+  app.setNotFoundHandler((request, reply) => {
+    const pathOnly = request.url.split('?')[0];
+    if (staticRoot && request.method === 'GET' && !pathOnly.startsWith('/v2/')) {
+      // Z-3 SPA fall-through. @fastify/static (registered in
+      // startup.ts when staticRoot is set) declares sendFile via
+      // FastifyReply augmentation; cast keeps this file independent
+      // of the @fastify/static type import.
+      return (reply as unknown as {
+        sendFile: (filename: string, root: string) => unknown;
+      }).sendFile('index.html', staticRoot);
+    }
+    void reply.code(404).send({ error: 'Not found' });
   });
 }

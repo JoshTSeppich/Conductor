@@ -100,24 +100,31 @@ export async function startFixture(): Promise<FixtureHandle> {
     res.end();
   };
 
-  const httpServer: HttpServer = createServer(handler);
-  const wss = new WebSocketServer({ server: httpServer, path: '/v2/events/stream' });
+  // Z-3 restart() helper requires httpServer + wss to be mutable so
+  // they can be replaced in-place during a daemon-restart simulation.
+  // Connection-handler attachment is extracted so the same logic
+  // re-runs on the rebound wss instance after restart.
+  let httpServer: HttpServer = createServer(handler);
+  let wss = new WebSocketServer({ server: httpServer, path: '/v2/events/stream' });
 
-  wss.on('connection', (ws, req) => {
-    const url = new URL(req.url ?? '/', 'http://localhost');
-    const token = url.searchParams.get('token');
-    if (validToken === null || token !== validToken) {
-      ws.close(1008, 'invalid_token');
-      return;
-    }
-    wsClients.add(ws);
-    ws.on('close', () => wsClients.delete(ws));
-    if (replayAll) {
-      for (const e of log) ws.send(JSON.stringify(e));
-    }
-    connectionIndex += 1;
-    onConnection?.(connectionIndex);
-  });
+  function attachWssHandlers(target: WebSocketServer): void {
+    target.on('connection', (ws, req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const token = url.searchParams.get('token');
+      if (validToken === null || token !== validToken) {
+        ws.close(1008, 'invalid_token');
+        return;
+      }
+      wsClients.add(ws);
+      ws.on('close', () => wsClients.delete(ws));
+      if (replayAll) {
+        for (const e of log) ws.send(JSON.stringify(e));
+      }
+      connectionIndex += 1;
+      onConnection?.(connectionIndex);
+    });
+  }
+  attachWssHandlers(wss);
 
   const port = await new Promise<number>((resolve) => {
     httpServer.listen(0, '127.0.0.1', () => {
@@ -181,13 +188,29 @@ export async function startFixture(): Promise<FixtureHandle> {
     },
 
     async restart() {
-      // Z-3 RED stub. Green commit lands the full HTTP+WS rebind
-      // (requires refactoring httpServer + wss to mutable refs +
-      // re-running the wss.on('connection', ...) hook setup on the
-      // new bindings). Stub throws so T2 (WS reconnect across
-      // daemon restart) fails with a clear red signal at the
-      // restart call site.
-      throw new Error('fixture.restart() not yet implemented (Z-3 green)');
+      // Z-3 simulate daemon restart: close all WS + HTTP, await full
+      // teardown, recreate HTTP server + WSS bound to the SAME port,
+      // re-attach connection handler. Token + log preserved across
+      // restart (matches real-daemon: token survives in
+      // ~/.foxworks-dispatch/token; event ring is in-memory but
+      // typically carries forward via fresh re-fetch on reconnect).
+      // Here we clear log to make pre/post-restart events
+      // distinguishable in tests.
+      for (const c of [...wsClients]) c.terminate();
+      wsClients.clear();
+      log.length = 0;
+      await new Promise<void>((resolve) => wss.close(() => resolve()));
+      await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      // Brief await tick to let any in-flight HTTP fetches see ECONNREFUSED
+      // (simulates the daemon-down window operators observe).
+      await new Promise<void>((resolve) => setTimeout(resolve, 10));
+      httpServer = createServer(handler);
+      wss = new WebSocketServer({ server: httpServer, path: '/v2/events/stream' });
+      attachWssHandlers(wss);
+      await new Promise<void>((resolve, reject) => {
+        httpServer.once('error', reject);
+        httpServer.listen(port, '127.0.0.1', () => resolve());
+      });
     },
   };
 }

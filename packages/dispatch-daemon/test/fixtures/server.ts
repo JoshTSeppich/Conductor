@@ -155,6 +155,13 @@ export interface SpawnTestServerOpts {
    * Added in DAEMON-T16.
    */
   notificationsAvailable?: boolean;
+  /**
+   * Z-3: dispatch-web/dist root for static-serve. When undefined,
+   * startup skips @fastify/static registration (default for
+   * existing daemon tests that don't exercise static-serve).
+   * Z-3 static-serve.test.ts passes a mkdtemp fixture dist.
+   */
+  staticRoot?: string;
 }
 
 /**
@@ -322,6 +329,7 @@ export async function spawnTestServer(
     watcherFactory: mockFactory,
     notify,
     notificationsAvailable: opts.notificationsAvailable ?? false,
+    staticRoot: opts.staticRoot,
   });
 
   const triggerHandoffWrite = async (

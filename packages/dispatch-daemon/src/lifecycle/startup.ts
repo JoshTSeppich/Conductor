@@ -18,6 +18,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import websocket from '@fastify/websocket';
+import fastifyStatic from '@fastify/static';
 import { buildServer, type BuildServerOpts } from '../server.js';
 import { createEventRing, type EventRing } from '../events/history.js';
 import { createEventBus, type EmitFn } from '../events/bus.js';
@@ -136,6 +137,19 @@ export interface StartupOpts {
    * Added in DAEMON-T16.
    */
   notificationsAvailable?: boolean;
+  /**
+   * Z-3: dispatch-web/dist root path for @fastify/static
+   * registration. When undefined, static-serve is NOT
+   * registered (dev-mode where Vite serves the SPA). When
+   * provided, daemon serves SPA assets at / + /assets/* +
+   * SPA fall-through for client-routed paths.
+   *
+   * Added under operator-arbitrated §3.4 mechanical-translation
+   * carve-out. Pattern matches existing tokenPath /
+   * registryPath / archiveRoot opt precedent: test-injectable
+   * + production-tunable + monorepo-default-friendly.
+   */
+  staticRoot?: string;
 }
 
 export interface StartupHandle {
@@ -195,7 +209,10 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // DAEMON-T04: server-wide error + not-found handlers (JSON
   // {"error": "..."} shape per §4 + S05 ADR). Register before
   // routes so all subsequent handlers inherit the shape.
-  registerErrorHandler(app);
+  // Z-3: pass staticRoot so unmatched non-/v2/* GETs fall through
+  // to index.html (SPA client routes). /v2/* unmatched still
+  // returns JSON 404 per S05.
+  registerErrorHandler(app, { staticRoot: opts.staticRoot });
 
   // DAEMON-T02: load or create the auth token, register the
   // consolidated onRequest hook, register the rotate endpoint.
@@ -303,6 +320,37 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // Auth handled by T02's onRequest hook (path branching for
   // ?token= query string).
   await registerWsRoutes(app, { bus });
+
+  // Z-3: register @fastify/static after all /v2/* route registrations
+  // so /v2/* take precedence by Fastify routing order. wildcard:false
+  // keeps unmatched paths going to setNotFoundHandler where SPA
+  // fall-through serves index.html for non-/v2/* GETs. Production
+  // points staticRoot at packages/dispatch-web/dist; tests use
+  // mkdtemp fixture dist with index.html + assets/. When staticRoot
+  // is undefined, no static-serve registered (dev-mode where Vite
+  // serves the SPA via its own dev server + proxy).
+  //
+  // Authority chain (operator-arbitrated §3.4 mechanical-translation
+  // carve-out, this cycle):
+  //   - Operator §3.4 arbitration (Path 1b ack)
+  //   - T18 HealthResponse extension precedent (first §3.4 carve-out
+  //     in Round 2; structurally additive + derivable from
+  //     authoritative source)
+  //   - DAEMON-S04 ADR (LaunchAgent + plist; daemon owns static-serve
+  //     scope)
+  //   - Existing startup.ts opts pattern (tokenPath, registryPath,
+  //     archiveRoot precedent)
+  if (opts.staticRoot) {
+    await app.register(fastifyStatic, {
+      root: opts.staticRoot,
+      prefix: '/',
+      wildcard: false,
+    });
+    // SPA fall-through is wired via registerErrorHandler's
+    // setNotFoundHandler (Z-3 enrichment, staticRoot-aware). No
+    // additional handler registration needed here — Fastify rejects
+    // double setNotFoundHandler per-prefix.
+  }
 
   // T04 test-only hook: register routes that need to exist before
   // listen (e.g., throwing routes for error-handler probes).
