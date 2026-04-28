@@ -139,17 +139,31 @@ describe('CLI-T01 — testable helpers', () => {
 
   it('P5 runInitDispatch default → v1 path (registry side effect observable)', async () => {
     const registryPath = await mkRegistryPath();
-    // Default opts (no useHttp) — Shape B default per arb 1
-    await runInitDispatch({
-      name: 'sherpa',
-      cwd: '/tmp/sherpa',
-      target: 'sherpa:0.0',
-      registryPath,
-    });
+    // CLI-T05 adaptation per finding #29 (5th occurrence) +
+    // finding #48 (cascade discovery): T04 inverted dispatcher
+    // default to undefined-triggers-probe (was useHttp=false at
+    // T01). Without explicit baseUrl, this test would probe the
+    // default 127.0.0.1:7878 — passing under daemon-down env
+    // (probe fails → v1) but FAILING under daemon-up env (probe
+    // succeeds → HTTP → POSTs to real daemon's registry, NOT
+    // the test's mkdtemp registry). Explicit unreachable baseUrl
+    // 65535 makes the test daemon-environment-independent: probe
+    // always fails → v1 path always taken → P5 assertion always
+    // holds (matches T04 P2's daemon-independent pattern).
+    await runInitDispatch(
+      {
+        name: 'sherpa',
+        cwd: '/tmp/sherpa',
+        target: 'sherpa:0.0',
+        registryPath,
+      },
+      { baseUrl: 'http://127.0.0.1:65535' },
+    );
 
-    // v1 path wrote to the registry. HTTP path would have required
-    // a daemon; absence of daemon means HTTP path would have thrown.
-    // Successful registry write under default opts proves v1 was taken.
+    // v1 path wrote to the registry. HTTP path would have hit
+    // the unreachable port + thrown before any registry write.
+    // Successful registry write proves v1 was taken (regardless
+    // of whether a real daemon happens to be running on 7878).
     const reg = await readRegistry(registryPath);
     expect(reg.sessions.sherpa).toBeDefined();
     expect(reg.sessions.sherpa?.cwd).toBe('/tmp/sherpa');
