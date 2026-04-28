@@ -17,6 +17,7 @@ import type {
   WatcherHandle,
   HandoffWatcherOpts,
 } from '../../src/watchers/handoff.js';
+import type { GitWatcherOpts } from '../../src/watchers/git.js';
 
 export interface TestServer {
   app: FastifyInstance;
@@ -47,6 +48,17 @@ export interface TestServer {
   triggerHandoffWrite: (
     sessionName: string,
     opts?: { size_bytes?: number },
+  ) => Promise<void>;
+  /**
+   * Trigger a synthetic commit_landed event for a session via
+   * the stub WatcherFactory. Reads the session's cwd from the
+   * seeded registry and fires the git watcher's onCommit
+   * callback with the test-supplied {sha, subject, branch}.
+   * Added in DAEMON-T14.
+   */
+  triggerGitCommit: (
+    sessionName: string,
+    data: { sha: string; subject: string; branch: string },
   ) => Promise<void>;
   close: () => Promise<void>;
 }
@@ -104,45 +116,80 @@ export interface SpawnTestServerOpts {
 }
 
 /**
- * Mock watcher factory used by the fixture by default. Records
- * each createHandoffWatcher's onWritten callback keyed by the
- * handoffPath; close() removes that subscriber. Multiple
- * subscribers per path are supported (set semantics).
+ * Mock watcher factory used by the fixture by default.
  *
- * fire(handoffPath, data) invokes every subscriber for that
- * path. The fixture's triggerHandoffWrite resolves a session's
- * handoff_path from the seeded registry and calls fire().
+ * Handoff watchers are keyed by handoffPath; git watchers
+ * are keyed by cwd. close() on either removes that subscriber.
+ * Multiple subscribers per key are supported (Set-of-symbols
+ * semantics).
+ *
+ * fireHandoff(handoffPath, data) and fireGit(cwd, data) invoke
+ * every subscriber for that key. The fixture's
+ * triggerHandoffWrite + triggerGitCommit helpers resolve the
+ * key from the seeded registry and call the appropriate fire
+ * method.
  */
 interface MockWatcherFactory extends WatcherFactory {
-  fire(
+  fireHandoff(
     handoffPath: string,
     data: { path: string; size_bytes: number },
+  ): void;
+  fireGit(
+    cwd: string,
+    data: { sha: string; subject: string; branch: string },
   ): void;
 }
 
 function createMockWatcherFactory(): MockWatcherFactory {
-  type Cb = (data: { path: string; size_bytes: number }) => void;
-  const subscribers = new Map<string, Map<symbol, Cb>>();
+  type HandoffCb = (data: { path: string; size_bytes: number }) => void;
+  type GitCb = (data: {
+    sha: string;
+    subject: string;
+    branch: string;
+  }) => void;
+  const handoffSubs = new Map<string, Map<symbol, HandoffCb>>();
+  const gitSubs = new Map<string, Map<symbol, GitCb>>();
 
   return {
     createHandoffWatcher(opts: HandoffWatcherOpts): WatcherHandle {
       const id = Symbol();
-      let bucket = subscribers.get(opts.handoffPath);
+      let bucket = handoffSubs.get(opts.handoffPath);
       if (!bucket) {
         bucket = new Map();
-        subscribers.set(opts.handoffPath, bucket);
+        handoffSubs.set(opts.handoffPath, bucket);
       }
       bucket.set(id, opts.onWritten);
       return {
         close: () => {
-          const b = subscribers.get(opts.handoffPath);
+          const b = handoffSubs.get(opts.handoffPath);
           b?.delete(id);
-          if (b && b.size === 0) subscribers.delete(opts.handoffPath);
+          if (b && b.size === 0) handoffSubs.delete(opts.handoffPath);
         },
       };
     },
-    fire(handoffPath, data) {
-      const bucket = subscribers.get(handoffPath);
+    createGitWatcher(opts: GitWatcherOpts): WatcherHandle {
+      const id = Symbol();
+      let bucket = gitSubs.get(opts.cwd);
+      if (!bucket) {
+        bucket = new Map();
+        gitSubs.set(opts.cwd, bucket);
+      }
+      bucket.set(id, opts.onCommit);
+      return {
+        close: () => {
+          const b = gitSubs.get(opts.cwd);
+          b?.delete(id);
+          if (b && b.size === 0) gitSubs.delete(opts.cwd);
+        },
+      };
+    },
+    fireHandoff(handoffPath, data) {
+      const bucket = handoffSubs.get(handoffPath);
+      if (!bucket) return;
+      for (const cb of bucket.values()) cb(data);
+    },
+    fireGit(cwd, data) {
+      const bucket = gitSubs.get(cwd);
       if (!bucket) return;
       for (const cb of bucket.values()) cb(data);
     },
@@ -210,17 +257,40 @@ export async function spawnTestServer(
         `triggerHandoffWrite: session "${sessionName}" not in registry`,
       );
     }
-    // Only the default mock factory exposes fire(); custom factories
-    // passed by tests bypass this helper and trigger via their own
-    // protocol.
-    if ('fire' in mockFactory && typeof (mockFactory as MockWatcherFactory).fire === 'function') {
-      (mockFactory as MockWatcherFactory).fire(session.handoff_path, {
+    if (
+      'fireHandoff' in mockFactory &&
+      typeof (mockFactory as MockWatcherFactory).fireHandoff === 'function'
+    ) {
+      (mockFactory as MockWatcherFactory).fireHandoff(session.handoff_path, {
         path: session.handoff_path,
         size_bytes: triggerOpts.size_bytes ?? 100,
       });
     } else {
       throw new Error(
-        'triggerHandoffWrite: custom watcherFactory does not expose fire()',
+        'triggerHandoffWrite: custom watcherFactory does not expose fireHandoff()',
+      );
+    }
+  };
+
+  const triggerGitCommit = async (
+    sessionName: string,
+    data: { sha: string; subject: string; branch: string },
+  ): Promise<void> => {
+    const reg = await readRegistryV2(registryPath);
+    const session = reg.sessions[sessionName];
+    if (!session) {
+      throw new Error(
+        `triggerGitCommit: session "${sessionName}" not in registry`,
+      );
+    }
+    if (
+      'fireGit' in mockFactory &&
+      typeof (mockFactory as MockWatcherFactory).fireGit === 'function'
+    ) {
+      (mockFactory as MockWatcherFactory).fireGit(session.cwd, data);
+    } else {
+      throw new Error(
+        'triggerGitCommit: custom watcherFactory does not expose fireGit()',
       );
     }
   };
@@ -233,6 +303,7 @@ export async function spawnTestServer(
     token,
     emit,
     triggerHandoffWrite,
+    triggerGitCommit,
     close,
   };
 }
