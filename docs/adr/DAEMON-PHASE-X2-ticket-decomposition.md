@@ -312,7 +312,8 @@ Folded into this surface per operator instruction. `packages/dispatch-cli/` owns
 ### CLI-T01 — fd v1 commands refactored as thin HTTP clients
 - **Scope:** `packages/dispatch-cli/src/commands/{init,list,send,pull}.ts` rewritten to issue HTTP calls to the daemon. Each command: load token from `~/.foxworks-dispatch/token`, hit the corresponding endpoint, format response for the operator. `fd init` → `POST /v2/sessions`; `fd list` → `GET /v2/sessions` → tab-separated stdout; `fd send` → read prompt file + `POST /v2/sessions/:name/prompts`; `fd pull` → `GET /v2/sessions/:name/handoff` → stdout + clipboard (daemon already copies, CLI prints; duplicate clipboard calls are benign).
 - **Acceptance criteria:**
-  - All 43 fd v1 regression tests still pass (covered by CLI-T05)
+  - All v1 regression tests still pass (covered by CLI-T05)
+    > **Z-7 amendment:** the original "43 tests" claim was a pre-restructure count. Actual count at cluster close is 61 (20 v1 baseline + 5 T01 + 6 T02 + 6 T03 + 3 T04 + 21 T06). Constraint intent ("no v1 regression") unchanged; numerical claim updated to current shipped count. Filed as finding #15-class amendment per CLI-T01 pre-red Check 3.
   - Per-command happy path: CLI output identical to v1 for the cases v1 tests assert
   - Per-command error messages include the daemon's error body when present (e.g., 404 surfaces "no session named X" cleanly)
 - **Dependencies:** DAEMON-T02 (auth), T06 (list), T07 (init), T09 (send), T10 (pull). MUST wait for those to land before CLI-T01 implementation.
@@ -326,7 +327,7 @@ Folded into this surface per operator instruction. `packages/dispatch-cli/` owns
   - WS disconnect is handled — CLI reverts to polling, displays a subtle indicator
   - Notifications-available hint visible when flag is false
   - Ctrl+C exits cleanly (closes WS, doesn't leave dangling connections)
-- **Dependencies:** DAEMON-T12 (WS stream), DAEMON-T03 (health with flag), CLI-T04 (daemon-dead fallback is the polling mode)
+- **Dependencies:** DAEMON-T12 (WS stream), DAEMON-T16 (health with flag — original X2 referenced "DAEMON-T03"; that decomposition was filled by T16 via Z-1 / D-5 work, not T03; **Z-7 amendment** corrects the dep label per finding #15-class), CLI-T04 (daemon-dead fallback is the *daemon-down dispatch* mode, distinct from CLI-T02's WS-disconnect → HTTP-polling fallback inside fd status; **Z-7 clarification** — these are two different fallback layers, not interchangeable)
 - **External deps:** contract §7.1 (status → `GET /v2/sessions` + WS), contract §5
 - **Followups:** keybindings for kill/pause/arm from the dashboard (follow-on to CLI-T03)
 
@@ -353,8 +354,8 @@ Folded into this surface per operator instruction. `packages/dispatch-cli/` owns
 - **External deps:** contract §7.2
 - **Followups:** configurable fallback threshold (health-probe timeout) via env
 
-### CLI-T05 — 43 fd v1 regression tests still pass
-- **Scope:** No new code; this ticket is a verification checkpoint. After CLI-T01 through CLI-T04 land, the existing `packages/dispatch-cli/test/{unit,integration,e2e}/` suite (43 tests) MUST pass both WITH daemon running (exercises HTTP path) and WITHOUT daemon (exercises fallback path).
+### CLI-T05 — fd v1 regression tests still pass
+- **Scope:** Verification checkpoint + minor test-mechanism-adaptation as needed for daemon-agnostic test runs (**Z-7 amendment** per finding #15-class: the original "no new code" framing was wrong because T04's dispatcher-default-to-undefined inversion made T01 P5 environmentally sensitive to daemon-up state. Single-line `baseUrl: 'http://127.0.0.1:65535'` adaptation in P5 was needed for the suite to pass under both daemon-up and daemon-down configs. Filed as finding #29 family 5th occurrence). After CLI-T01 through CLI-T04 land, the existing `packages/dispatch-cli/test/{unit,integration,e2e}/` suite MUST pass both WITH daemon running (exercises HTTP path) and WITHOUT daemon (exercises fallback path).
 - **Acceptance criteria:**
   - `pnpm --filter dispatch-cli test` returns 43/43 passing with daemon live
   - Same suite returns 43/43 with daemon stopped (fallback mode)
@@ -365,6 +366,7 @@ Folded into this surface per operator instruction. `packages/dispatch-cli/` owns
 
 ### CLI-T06 — New fd command tests
 - **Scope:** Unit + integration tests for CLI-T03's new commands (kill/pause/hold/arm) + `fd status` WS subscription behavior (CLI-T02). Uses mock daemon (HTTP + WS fixtures) for speed; one integration test against real daemon for sanity.
+  > **Z-7 note** (finding #15-class): real-daemon integration shipped via Path A (spawn production daemon binary via tsx in test fixture) rather than Path B (cross-package import of `dispatch-daemon/test/fixtures/server.ts`'s `spawnTestServer`). Cross-package import was feasible at runtime but introduced test-file-cross-package coupling smell; pivoted at pre-red. Path A spawns daemon as `npx tsx packages/dispatch-daemon/src/index.ts` — same pattern T05 verification used. State touch (`~/.foxworks-dispatch/token` create/reuse) acceptable for the single sanity test per operator pre-reg ack.
 - **Acceptance criteria:**
   - Per-command happy path + 2-3 error paths (invalid transition, unknown session, daemon dead) tested
   - `fd status` WS subscription: mock emits 3 events, TUI reflects state
