@@ -28,6 +28,7 @@ import { registerEventsRoutes } from '../routes/events.js';
 import { registerHandoffRoutes } from '../routes/handoff.js';
 import { registerHealthRoutes } from '../routes/health.js';
 import { registerPromptRoutes } from '../routes/prompts.js';
+import { registerViolationsRoutes } from '../routes/violations.js';
 import { registerWsRoutes } from '../routes/ws.js';
 import {
   defaultNotify,
@@ -285,6 +286,17 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // the T17 ring buffer. D-4 will wire emit-sites (T08/T09/T10)
   // into this same ring.
   await registerEventsRoutes(app, { eventRing });
+
+  // DAEMON-T17a: POST /v2/sessions/:name/violations. Out-of-band
+  // cairn-violation + gate-trip reporting per X2 line 266 +
+  // RA-01 Option 1 + contract §6.2. Source-state matrix:
+  // armed→paused via transition + dual emit; paused/held emit-
+  // only; killed → 422.
+  await registerViolationsRoutes(app, {
+    registryPath: opts.registryPath,
+    emit: bus.emit,
+    tmuxOps: opts.tmuxOps,
+  });
 
   // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.
   // Subscribes per-connection; emit fan-out goes through bus.

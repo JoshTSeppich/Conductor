@@ -351,3 +351,66 @@ export const SendPromptResponse = z.object({
   archived_to: z.string().optional(),
 });
 export type SendPromptResponseType = z.infer<typeof SendPromptResponse>;
+
+/**
+ * POST /v2/sessions/:name/violations request body (DAEMON-T17a).
+ *
+ * Discriminated union over `type`. `data` field carries the
+ * §5.3 frozen event-data shape for the matching event type.
+ *
+ * Authority chain (multi-source-citation primitive applied per
+ * Round 2 finding consolidation; particular care after T17a
+ * pre-red §6.2 verbatim-read caught Finding #32 occurrence):
+ *   - Contract §5.3 frozen event-data shapes
+ *     (CairnViolationDetectedEvent + GateTripEvent — see §4
+ *     above for the full event envelopes)
+ *   - X2 line 266 endpoint specification: 202 + {event_id}
+ *     response, body shape {type, details, timestamp?}
+ *     (X2 used 'details' for the data field; mechanical-
+ *     translation rename to 'data' aligns with §5.3 event-
+ *     data convention; documented as MODELED rename)
+ *   - ViolationTypeEnum + StateTriggerEnum (already in
+ *     dispatch-core §1)
+ *   - Project instructions §3.4 mechanical-translation
+ *     carve-out
+ *   - Operator best-judgment authorization (T17a turn,
+ *     same primitive as T16 HealthResponse extension)
+ *
+ * Co-Authored-By Claude per project conventions; operator-
+ * authored attribution NOT claimed.
+ */
+export const ReportViolationRequest = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('cairn_violation'),
+    data: z.object({
+      violation_type: ViolationTypeEnum,
+      details: z.string(),
+    }),
+    timestamp: z.string().datetime().optional(),
+  }),
+  z.object({
+    type: z.literal('gate_trip'),
+    data: z.object({
+      gate_name: z.string().min(1),
+      context: z.string(),
+      expected_action: z.string(),
+    }),
+    timestamp: z.string().datetime().optional(),
+  }),
+]);
+export type ReportViolationRequestType = z.infer<
+  typeof ReportViolationRequest
+>;
+
+/**
+ * POST /v2/sessions/:name/violations response body (DAEMON-T17a).
+ * Per X2 line 266: 202 + {event_id}. event_id is the violation/
+ * gate event's id (operator arbitration 4A — caller acknowledges
+ * THAT specific report; state_changed is derived consequence).
+ */
+export const ReportViolationResponse = z.object({
+  event_id: z.string().min(1),
+});
+export type ReportViolationResponseType = z.infer<
+  typeof ReportViolationResponse
+>;
