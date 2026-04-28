@@ -278,6 +278,13 @@ v2 daemon reads/writes the same `sessions.json` file as fd v1. Schema changes ar
 - New optional fields allowed (`last_commit_sha`, `last_status_json_at`)
 - Existing fields unchanged (`cwd`, `tmux_target`, `handoff_path`, `last_prompt_sent_at`, `last_handoff_pulled_at`)
 - Schema version bumps from 1 to 2 with auto-migration on first daemon write
+- fd v1 commands must read v2-schema sessions.json transparently (version
+  field accepts both 1 and 2; unknown fields preserved through round-trip
+  via Zod `.passthrough()`), to support the §7.2 daemon-dead fallback after
+  the daemon has ever run. Without this, v1 would either reject v2
+  registries (parse failure) or silently strip v2-only fields on writeback
+  (state-data loss across all sessions). [Amended 2026-04-28 per Z-4
+  evidence, commit c8c9ec2]
 
 ### §7.4 43 fd v1 tests
 
