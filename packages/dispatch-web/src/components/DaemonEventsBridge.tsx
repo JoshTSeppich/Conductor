@@ -11,6 +11,7 @@ import type { BackoffConfig } from '../daemon-client/backoff.js';
 import { useUIStore } from '../store/ui.js';
 import { defaultClient } from '../query/internal.js';
 import { readToken } from '../auth/token-storage.js';
+import { evaluateBannerRule } from '../banner-rules/evaluate.js';
 
 export interface DaemonEventsBridgeProps {
   children: ReactNode;
@@ -75,6 +76,15 @@ export function DaemonEventsBridge({
         return;
       }
       applyEvent(result.data);
+      // T21 Decision 2: evaluate §2.6 rule + pushBanner if non-null.
+      // useUIStore.getState() reads notificationsAvailable LIVE so
+      // flag changes (daemon restart → /v2/health re-fetch) are
+      // reflected on next event without remounting Bridge.
+      const flag = useUIStore.getState().notificationsAvailable;
+      const banner = evaluateBannerRule(result.data, flag);
+      if (banner) {
+        useUIStore.getState().pushBanner(banner);
+      }
     },
   });
 

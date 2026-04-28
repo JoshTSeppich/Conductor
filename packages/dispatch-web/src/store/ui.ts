@@ -92,7 +92,7 @@ function generateBannerId(): string {
   return `banner-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   // data defaults
   focusedSessionName: null,
   sendModalOpen: false,
@@ -166,8 +166,12 @@ export const useUIStore = create<UIState>((set) => ({
 
   setNotificationsAvailable: (b) => set({ notificationsAvailable: b }),
 
-  // Returns the generated id so callers can auto-dismiss:
-  //   const id = pushBanner(...); setTimeout(() => dismissBanner(id), 5000)
+  // T21 Decision 4: pushBanner schedules auto-dismiss for kind='toast'
+  // after 5000ms per TICKETS.md §2.6 verbatim "auto-dismiss, 5s".
+  // Sticky banners stay until explicit dismissBanner(id). The
+  // SendModal.tsx:16 forward note ("T21 enriches auto-dismiss timing")
+  // is discharged here — callers (T13/T15/T16/T21) auto-benefit
+  // without per-call setTimeout boilerplate.
   pushBanner: (b) => {
     const id = generateBannerId();
     const banner: Banner = {
@@ -179,6 +183,9 @@ export const useUIStore = create<UIState>((set) => ({
       createdAt: Date.now(),
     };
     set((s) => ({ banners: [...s.banners, banner] }));
+    if (b.kind === 'toast') {
+      setTimeout(() => get().dismissBanner(id), 5000);
+    }
     return id;
   },
 
