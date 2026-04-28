@@ -39,6 +39,11 @@ describe('WEB-T05 Zustand store', () => {
     // T17: global event ring buffer. T18 will write; T17 only adds
     // the slot with [] default so TickerPanel can read safely.
     expect(s.events).toEqual([]);
+    // T18: notifications_available flag plumbed from /v2/health.
+    // Default false per DAEMON-S03 §"Cross-session impacts" +
+    // TICKETS.md cross-session line 750 ("defaults false until
+    // Session A proves otherwise"). T21 reads for banner rules.
+    expect(s.notificationsAvailable).toBe(false);
   });
 
   it('setFocus(name) updates focusedSessionName and syncs window.location.hash', () => {
@@ -176,5 +181,54 @@ describe('WEB-T05 Zustand store', () => {
     useUIStore.getState().dismissBanner(id1);
     useUIStore.getState().dismissBanner(id3);
     expect(useUIStore.getState().banners).toEqual([]);
+  });
+
+  // T18 applyEvent: ring-buffer write action. UI-S01 ADR mandates
+  // dedupe semantics (S5: "exactly one copy each"); useDaemonEvents
+  // internal `seen` Set is per-cycle, so cross-cycle WS-replay needs
+  // store-layer dedupe via UI-S01 dedupeKey.
+  it('applyEvent: appends event to events array', () => {
+    const event = {
+      type: 'state_changed' as const,
+      timestamp: '2026-04-27T12:00:00.000Z',
+      session: 'sherpa',
+      data: {
+        from: 'paused' as const,
+        to: 'armed' as const,
+        triggered_by: 'operator' as const,
+      },
+    };
+    useUIStore.getState().applyEvent(event);
+    expect(useUIStore.getState().events).toHaveLength(1);
+    expect(useUIStore.getState().events[0]).toEqual(event);
+  });
+
+  it('applyEvent: dedupes by UI-S01 dedupeKey (timestamp|session|type|data)', () => {
+    const event = {
+      type: 'commit_landed' as const,
+      timestamp: '2026-04-27T12:00:00.000Z',
+      session: 'sherpa',
+      data: { sha: 'abc1234', subject: 'fix bug', branch: 'main' },
+    };
+    useUIStore.getState().applyEvent(event);
+    useUIStore.getState().applyEvent(event);
+    expect(useUIStore.getState().events).toHaveLength(1);
+  });
+
+  it('applyEvent: bounded ring keeps newest 100 (oldest dropped past 100)', () => {
+    const apply = useUIStore.getState().applyEvent;
+    for (let i = 0; i < 105; i += 1) {
+      apply({
+        type: 'commit_landed' as const,
+        timestamp: new Date(Date.UTC(2026, 3, 27, 12, 0, i)).toISOString(),
+        session: 'sherpa',
+        data: { sha: `sha${i}`, subject: `s${i}`, branch: 'main' },
+      });
+    }
+    const events = useUIStore.getState().events;
+    expect(events).toHaveLength(100);
+    // Oldest 5 (indices 0-4) dropped; first remaining is index 5
+    expect((events[0].data as { sha: string }).sha).toBe('sha5');
+    expect((events[99].data as { sha: string }).sha).toBe('sha104');
   });
 });
