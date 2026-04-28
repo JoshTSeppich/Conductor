@@ -1,17 +1,24 @@
-import { useState, type ChangeEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from 'react';
 import type { EventV2Type } from 'dispatch-core/src/v2/schema.js';
 import { useUIStore } from '../store/ui.js';
 import { useSessions } from '../query/useSessions.js';
+import { TickerRow } from './TickerRow.js';
 
 // T17: layout + render. T18: subscription + bounded ring. T19:
-// filters (this file). T20: visual polish (per-event-type colors,
-// icons, relative timestamps, click-to-focus). T21 unrelated
-// (banners overlay; separate surface).
+// filters (this file). T20: visual polish (TickerRow extracted to
+// its own file; 30s tick lives here per Decision 6 — single timer
+// at panel level bumps a counter to trigger row re-renders).
+// T21 unrelated (banners overlay; separate surface).
 //
-// TickerRow + TickerFilters are sibling components for now — T20
-// expected to extract TickerRow to src/components/TickerRow.tsx
-// and may also extract TickerFilters to its own file when adding
-// a styled Combobox replacement for the native <select> elements.
+// TickerFilters stays inline — Decision 9 conditional-forward-note
+// discipline: T19 forward note conditioned extraction on adding a
+// styled Combobox replacement for native <select>; T20 doesn't
+// add Combobox so extraction deferred until a real driver.
 
 // Per CONDUCTOR_API_CONTRACT.md §5.3 "Event types (frozen at v2
 // ship)". Hardcoded list mirrors the schema's discriminated union.
@@ -102,21 +109,6 @@ function TickerFilters({
   );
 }
 
-function TickerRow({ event }: { event: EventV2Type }): ReactNode {
-  return (
-    <div
-      data-testid="ticker-row"
-      className="text-sm py-1 border-b border-gray-200 dark:border-gray-800 font-mono"
-    >
-      <span>{event.type}</span>
-      {' · '}
-      <span>{event.session}</span>
-      {' · '}
-      <span>{event.timestamp}</span>
-    </div>
-  );
-}
-
 export function TickerPanel(): ReactNode {
   const events = useUIStore((s) => s.events);
   // Defensive ?? {} handles loading/error from useSessions per
@@ -127,6 +119,17 @@ export function TickerPanel(): ReactNode {
 
   const [filterSession, setFilterSession] = useState<FilterSession>(null);
   const [filterType, setFilterType] = useState<FilterType>(null);
+
+  // T20 Decision 6: single setInterval(30_000) bumps a counter to
+  // force row re-renders so relative timestamps refresh. Counter
+  // is unused in render — its only effect is the re-render itself.
+  // Cleanup on unmount via returned function (verified per
+  // operator pre-reg ack note).
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Filter THEN sort per Decision 8: smaller array to sort = perf-
   // positive default at minimal complexity. AND-composition per

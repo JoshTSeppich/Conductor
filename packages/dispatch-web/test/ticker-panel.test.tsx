@@ -196,14 +196,18 @@ describe('WEB-T17 TickerPanel', () => {
     const row = within(region).getByTestId('ticker-row');
     expect(row.textContent).toMatch(/<1m ago/);
 
-    // Advance system clock 60s + advance timers so the panel's
-    // 30s interval fires + the counter bump triggers re-render.
+    // Advance fake-timer clock 60s. Per vitest docs:
+    // advanceTimersByTime updates Date.now too (it's the timer
+    // mock's clock). So a single 60s advance moves Date.now from
+    // FROZEN_NOW to FROZEN_NOW+60s, AND fires the panel's 30s
+    // interval (twice, at +30s and +60s) which bumps the counter
+    // and triggers row re-render.
     act(() => {
-      vi.setSystemTime(FROZEN_NOW + 60_000);
-      vi.advanceTimersByTime(30_000);
+      vi.advanceTimersByTime(60_000);
     });
 
-    // Now event is 90s in the past → "1m ago"
+    // Now Date.now=FROZEN_NOW+60s, event was 30s before FROZEN_NOW
+    // → age = 90s → "1m ago".
     const refreshedRow = within(region).getByTestId('ticker-row');
     expect(refreshedRow.textContent).toMatch(/\b1m ago\b/);
 
