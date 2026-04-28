@@ -11,7 +11,8 @@
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "build": "tsc && chmod +x dist/bin/fd.js",
-    "smoke-test-cli": "tsx scripts/smoke-test-cli.ts"
+    "smoke-test-cli": "tsx scripts/smoke-test-cli.ts",
+    "smoke-test-z2": "tsx scripts/smoke-test-z2.ts"
   },
   "dependencies": {
     "commander": "^14.0.3",

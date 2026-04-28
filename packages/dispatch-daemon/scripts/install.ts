@@ -19,9 +19,13 @@
  * permission granted to Terminal.app does NOT carry over.
  */
 
+import { execFile } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { generatePlist } from '../src/install/plist.js';
+
+const execFileP = promisify(execFile);
 import {
   findUserHome,
   resolveNodeBinary,
@@ -42,11 +46,27 @@ async function main(): Promise<void> {
   const repoRoot = resolveRepoRoot(import.meta.dirname);
   console.log(`  repo root: ${repoRoot}`);
 
-  // DAEMON-Z-1 Path B: skip build step. Production launchd
+  // DAEMON-Z-1 Path B: skip daemon build step. Production launchd
   // runtime is tsx + src/index.ts (was node + dist/index.js
-  // pre-Z-1 per S04 §3.1; pending S04 amendment per Z-1
-  // commit body). Aligns daemon runtime with rest of codebase
-  // (tests, dev, install/uninstall scripts all run via tsx).
+  // pre-Z-1 per S04 §3.1; amended in c1bb7fe per Z-1 commit body).
+  // Aligns daemon runtime with rest of codebase (tests, dev,
+  // install/uninstall scripts all run via tsx).
+  //
+  // Z-2 build-step expansion (per operator §3.4 ack this cycle +
+  // finding #36 system-integration-boundary discipline): build
+  // dispatch-web ahead of launchctl bootstrap so the SPA dist
+  // exists when @fastify/static registers (src/index.ts default
+  // staticRoot points at packages/dispatch-web/dist). Without
+  // this, fresh install hits ENOENT on dist/ → daemon refuses to
+  // start or browser-side acceptance silently breaks. Daemon
+  // itself still runs from source via tsx; this is web-only.
+  console.log('  building dispatch-web (SPA dist for @fastify/static)…');
+  await execFileP(
+    'pnpm',
+    ['--filter', 'dispatch-web', 'build'],
+    { cwd: repoRoot },
+  );
+  console.log('  ✓ dispatch-web/dist built');
 
   const daemonScript = join(
     repoRoot,
@@ -77,6 +97,17 @@ async function main(): Promise<void> {
   const logsDir = join(stateDir, 'logs');
   await mkdir(logsDir, { recursive: true });
 
+  // Z-2 PATH discovery: launchd default PATH is
+  // /usr/bin:/bin:/usr/sbin:/sbin (no Homebrew). Daemon shells
+  // out to tmux via dispatch-core's transport; without an
+  // extended PATH every prompt-delivery + handoff-pull fails
+  // with ENOENT/has-session-false. Default covers Apple
+  // Silicon Homebrew first + Intel + system paths. Surfaced by
+  // Z-2 smoke S4 production-bug discovery; fix in same commit
+  // per Z-1/Z-4 surface-then-fix precedent.
+  const pathEnv =
+    '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
+
   const plist = generatePlist({
     label: LABEL,
     programArguments,
@@ -85,6 +116,7 @@ async function main(): Promise<void> {
     // Z-1 Path B: launchd cwd defaults to /; node needs to
     // resolve `tsx` via node_modules at repo root.
     workingDirectory: repoRoot,
+    pathEnv,
   });
 
   const launchAgentsDir = join(home, 'Library', 'LaunchAgents');

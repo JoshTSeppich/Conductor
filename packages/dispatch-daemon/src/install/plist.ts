@@ -53,6 +53,22 @@ export interface PlistOpts {
    *  Without it, launchd starts the daemon at cwd=/ and
    *  node fails ERR_MODULE_NOT_FOUND on tsx package resolve. */
   workingDirectory?: string;
+  /** Optional EnvironmentVariables PATH for the daemon process.
+   *  DAEMON-Z-2 surfaced: launchd's default PATH is
+   *  `/usr/bin:/bin:/usr/sbin:/sbin` which excludes Homebrew
+   *  prefixes (`/opt/homebrew/bin` Apple Silicon, `/usr/local/bin`
+   *  Intel). Daemon shells out to `tmux` via dispatch-core's
+   *  transport (`execFile('tmux', [...])`) — without an extended
+   *  PATH, every prompt-delivery + handoff-pull invocation
+   *  fails with ENOENT/has-session-false. Surfaced by Z-2 smoke
+   *  S4 (fd send → prompt_sent expected) and fixed in same
+   *  commit per Z-1/Z-4 surface-then-fix precedent.
+   *
+   *  Default value covers Apple Silicon Homebrew first
+   *  (most-common operator setup), Intel Homebrew, then system
+   *  paths. Override-able for non-Homebrew installs (MacPorts,
+   *  manual builds in $HOME/bin, etc.). */
+  pathEnv?: string;
 }
 
 function escapeXml(s: string): string {
@@ -69,6 +85,9 @@ export function generatePlist(opts: PlistOpts): string {
   const workingDirectoryXml = opts.workingDirectory
     ? `  <key>WorkingDirectory</key>\n  <string>${escapeXml(opts.workingDirectory)}</string>\n`
     : '';
+  const pathEnvXml = opts.pathEnv
+    ? `  <key>EnvironmentVariables</key>\n  <dict>\n    <key>PATH</key>\n    <string>${escapeXml(opts.pathEnv)}</string>\n  </dict>\n`
+    : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -83,7 +102,7 @@ ${argsXml}
   <true/>
   <key>RunAtLoad</key>
   <true/>
-${workingDirectoryXml}  <key>StandardOutPath</key>
+${workingDirectoryXml}${pathEnvXml}  <key>StandardOutPath</key>
   <string>${opts.stdoutPath}</string>
   <key>StandardErrorPath</key>
   <string>${opts.stderrPath}</string>
