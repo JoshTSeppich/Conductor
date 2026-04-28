@@ -1,6 +1,6 @@
 {
   "name": "dispatch-cli",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "fd CLI — thin client for the Conductor daemon with fd v1 fallback.",
   "type": "module",
