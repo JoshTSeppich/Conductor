@@ -17,6 +17,8 @@ import { runInit, type InitArgs } from '../commands/init.js';
 import { runList, type ListArgs } from '../commands/list.js';
 import { runPull, type PullArgs } from '../commands/pull.js';
 import { runSend, type SendArgs } from '../commands/send.js';
+import { runStatus } from '../commands/status.js';
+import { runStatusV2 } from '../commands/status-v2.js';
 import {
   runInitV2,
   runListV2,
@@ -97,4 +99,23 @@ export async function runPullDispatch(
     );
   }
   return runPull(args);
+}
+
+export interface StatusDispatchArgs {
+  registryPath?: string;
+}
+
+/** CLI-T02 status dispatcher. Default useHttp=false routes
+ *  to v1 runStatus (registry polling); T04 will invert based
+ *  on /v2/health probe. V2 path requires a token; default
+ *  v1 path doesn't. */
+export async function runStatusDispatch(
+  args: StatusDispatchArgs = {},
+  opts: DispatchOpts = {},
+): Promise<void> {
+  if (opts.useHttp) {
+    const token = await ensureToken(opts);
+    return runStatusV2({ token, baseUrl: opts.baseUrl });
+  }
+  return runStatus(args);
 }

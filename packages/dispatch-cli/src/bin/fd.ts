@@ -9,8 +9,8 @@ import {
   runListDispatch,
   runPullDispatch,
   runSendDispatch,
+  runStatusDispatch,
 } from '../lib/dispatch.js';
-import { runStatus } from '../commands/status.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -84,7 +84,9 @@ program
   .command('status')
   .description('Live TUI showing all sessions, their state, and age. Refreshes every 2s. Ctrl+C to exit.')
   .action(async () => {
-    await runStatus();
+    // CLI-T02: route through dispatcher (default useHttp=false →
+    // v1 polling; T04 will invert based on /v2/health probe).
+    await runStatusDispatch();
   });
 
 program.parseAsync(process.argv).catch((err: Error) => {

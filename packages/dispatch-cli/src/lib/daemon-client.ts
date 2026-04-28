@@ -192,6 +192,40 @@ export interface PullV2Args {
   clipboard?: (content: string) => Promise<void>;
 }
 
+/**
+ * Extract notifications_available from /v2/health response
+ * body. Per S03 ADR §"Graceful degradation": default to
+ * false on missing/invalid (UI fallback path is always
+ * correct when we say unavailable). Pure function — unit-
+ * tested at P3.
+ */
+export function parseHealthResponse(
+  body: unknown,
+): { notifications_available: boolean } {
+  if (!body || typeof body !== 'object') {
+    return { notifications_available: false };
+  }
+  const v = (body as { notifications_available?: unknown })
+    .notifications_available;
+  return { notifications_available: typeof v === 'boolean' ? v : false };
+}
+
+/**
+ * GET /v2/health (auth-exempt per §4.1 + auth.ts:74-76).
+ * Smoke-tested at CLI-T05 (finding #36 boundary).
+ */
+export async function fetchHealth(
+  opts: { baseUrl?: string } = {},
+): Promise<{ notifications_available: boolean }> {
+  const url = `${opts.baseUrl ?? DEFAULT_BASE_URL}/v2/health`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    throw new Error(`health check failed: HTTP ${r.status}`);
+  }
+  const body = await r.json().catch(() => null);
+  return parseHealthResponse(body);
+}
+
 export async function runPullV2(
   args: PullV2Args,
   opts: HttpClientOpts,

@@ -35,10 +35,16 @@ importers:
       react:
         specifier: ^19.2.5
         version: 19.2.5
+      ws:
+        specifier: ^8.0.0
+        version: 8.20.0
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
+      '@types/ws':
+        specifier: ^8.0.0
+        version: 8.18.1
       ansi-to-html:
         specifier: ^0.7.2
         version: 0.7.2
