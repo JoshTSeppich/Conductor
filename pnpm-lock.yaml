@@ -11,6 +11,9 @@ importers:
       '@types/node':
         specifier: ^20.17.6
         version: 20.19.39
+      dispatch-cli:
+        specifier: workspace:*
+        version: link:packages/dispatch-cli
       tsx:
         specifier: ^4.19.2
         version: 4.21.0
