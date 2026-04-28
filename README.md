@@ -13,6 +13,10 @@ tracking more than two or three sessions.
 > commands route through HTTP; when it isn't, they fall back to the v1
 > behavior described below. See [Conductor v2 (daemon mode)](#conductor-v2-daemon-mode) for install + architecture.
 
+> **New to fd?** See [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)
+> for a step-by-step zero-to-one walkthrough (~30-60 min from clone to
+> watching CC events in the dashboard).
+
 ## Install
 
 Requirements:
