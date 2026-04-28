@@ -4,8 +4,17 @@
   "private": true,
   "description": "Shared library: tmux transport, registry, prompt assembly, state derivation, paths, clipboard.",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    "./registry/read": "./dist/registry/read.js",
+    "./registry/write": "./dist/registry/write.js",
+    "./registry/schema": "./dist/registry/schema.js",
+    "./v2/*": "./dist/v2/*.js",
+    "./lib/paths": "./dist/lib/paths.js",
+    "./lib/clipboard": "./dist/lib/clipboard.js",
+    "./prompt/assemble": "./dist/prompt/assemble.js",
+    "./transport/tmux": "./dist/transport/tmux.js",
+    "./state/derive": "./dist/state/derive.js"
+  },
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
