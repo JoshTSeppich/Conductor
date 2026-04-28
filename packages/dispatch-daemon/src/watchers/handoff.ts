@@ -25,6 +25,10 @@ import { watch, type FSWatcher } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { createGitWatcher, type GitWatcherOpts } from './git.js';
+import {
+  createStatusWatcher,
+  type StatusWatcherOpts,
+} from './status-json.js';
 
 export interface HandoffWatcherOpts {
   /** Session cwd (parent dir of handoff_path by fd convention).
@@ -45,9 +49,11 @@ export interface WatcherHandle {
 
 export interface WatcherFactory {
   createHandoffWatcher(opts: HandoffWatcherOpts): WatcherHandle;
-  /** T14 additive extension; T15 will further extend with
-   *  createStatusWatcher per pre-reg-ack pattern. */
+  /** T14 additive extension. */
   createGitWatcher(opts: GitWatcherOpts): WatcherHandle;
+  /** T15 additive extension — completes the v2 trio.
+   *  Future watcher types follow the same shape pattern. */
+  createStatusWatcher(opts: StatusWatcherOpts): WatcherHandle;
 }
 
 export function createHandoffWatcher(
@@ -86,4 +92,5 @@ export function createHandoffWatcher(
 export const defaultWatcherFactory: WatcherFactory = {
   createHandoffWatcher,
   createGitWatcher,
+  createStatusWatcher,
 };

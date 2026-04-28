@@ -18,6 +18,8 @@ import type {
   HandoffWatcherOpts,
 } from '../../src/watchers/handoff.js';
 import type { GitWatcherOpts } from '../../src/watchers/git.js';
+import type { StatusWatcherOpts } from '../../src/watchers/status-json.js';
+import type { StatusJson } from 'dispatch-core/src/v2/schema.js';
 
 export interface TestServer {
   app: FastifyInstance;
@@ -59,6 +61,18 @@ export interface TestServer {
   triggerGitCommit: (
     sessionName: string,
     data: { sha: string; subject: string; branch: string },
+  ) => Promise<void>;
+  /**
+   * Trigger a synthetic STATUS.json update for a session via
+   * the stub WatcherFactory. Takes the FULL on-disk StatusJson
+   * shape (operator-published in dispatch-core). The daemon's
+   * manager projects to the 3-field event shape and emits if
+   * all 3 event-required fields are non-null. Added in
+   * DAEMON-T15.
+   */
+  triggerStatusJsonUpdate: (
+    sessionName: string,
+    data: StatusJson,
   ) => Promise<void>;
   close: () => Promise<void>;
 }
@@ -138,6 +152,7 @@ interface MockWatcherFactory extends WatcherFactory {
     cwd: string,
     data: { sha: string; subject: string; branch: string },
   ): void;
+  fireStatus(cwd: string, data: StatusJson): void;
 }
 
 function createMockWatcherFactory(): MockWatcherFactory {
@@ -147,8 +162,10 @@ function createMockWatcherFactory(): MockWatcherFactory {
     subject: string;
     branch: string;
   }) => void;
+  type StatusCb = (data: StatusJson) => void;
   const handoffSubs = new Map<string, Map<symbol, HandoffCb>>();
   const gitSubs = new Map<string, Map<symbol, GitCb>>();
+  const statusSubs = new Map<string, Map<symbol, StatusCb>>();
 
   return {
     createHandoffWatcher(opts: HandoffWatcherOpts): WatcherHandle {
@@ -183,6 +200,22 @@ function createMockWatcherFactory(): MockWatcherFactory {
         },
       };
     },
+    createStatusWatcher(opts: StatusWatcherOpts): WatcherHandle {
+      const id = Symbol();
+      let bucket = statusSubs.get(opts.cwd);
+      if (!bucket) {
+        bucket = new Map();
+        statusSubs.set(opts.cwd, bucket);
+      }
+      bucket.set(id, opts.onUpdate);
+      return {
+        close: () => {
+          const b = statusSubs.get(opts.cwd);
+          b?.delete(id);
+          if (b && b.size === 0) statusSubs.delete(opts.cwd);
+        },
+      };
+    },
     fireHandoff(handoffPath, data) {
       const bucket = handoffSubs.get(handoffPath);
       if (!bucket) return;
@@ -190,6 +223,11 @@ function createMockWatcherFactory(): MockWatcherFactory {
     },
     fireGit(cwd, data) {
       const bucket = gitSubs.get(cwd);
+      if (!bucket) return;
+      for (const cb of bucket.values()) cb(data);
+    },
+    fireStatus(cwd, data) {
+      const bucket = statusSubs.get(cwd);
       if (!bucket) return;
       for (const cb of bucket.values()) cb(data);
     },
@@ -295,6 +333,29 @@ export async function spawnTestServer(
     }
   };
 
+  const triggerStatusJsonUpdate = async (
+    sessionName: string,
+    data: StatusJson,
+  ): Promise<void> => {
+    const reg = await readRegistryV2(registryPath);
+    const session = reg.sessions[sessionName];
+    if (!session) {
+      throw new Error(
+        `triggerStatusJsonUpdate: session "${sessionName}" not in registry`,
+      );
+    }
+    if (
+      'fireStatus' in mockFactory &&
+      typeof (mockFactory as MockWatcherFactory).fireStatus === 'function'
+    ) {
+      (mockFactory as MockWatcherFactory).fireStatus(session.cwd, data);
+    } else {
+      throw new Error(
+        'triggerStatusJsonUpdate: custom watcherFactory does not expose fireStatus()',
+      );
+    }
+  };
+
   return {
     app: server,
     port,
@@ -304,6 +365,7 @@ export async function spawnTestServer(
     emit,
     triggerHandoffWrite,
     triggerGitCommit,
+    triggerStatusJsonUpdate,
     close,
   };
 }

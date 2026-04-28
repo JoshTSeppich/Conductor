@@ -15,14 +15,13 @@
  *   - Map<debounceKey, unknown> — last-data per key; closure
  *     reading this knows the concrete type per key prefix
  *
- * Debounce key prefixing (per T14 pre-reg ack):
- *   - handoff:<name>            (handoff_written)
- *   - git:<name>:<branch>       (commit_landed; per-branch
- *                                isolation lets rapid branch
- *                                switches preserve both
- *                                snapshots)
- *   - status:<name>             (T15 — additive when ticket
- *                                lands)
+ * Debounce key prefixing:
+ *   - handoff:<name>            (handoff_written, T13)
+ *   - git:<name>:<branch>       (commit_landed, T14;
+ *                                per-branch isolation lets
+ *                                rapid branch-switch+commit
+ *                                preserve both snapshots)
+ *   - status:<name>             (test_status_updated, T15)
  *
  * Lifecycle hooks consumed by startup/routes:
  *   attachAll(registry) — startup boots watchers for non-
@@ -72,8 +71,9 @@ interface SessionWatcherWrap {
 
 function isKeyForSession(key: string, name: string): boolean {
   return (
-    key === `handoff:${name}` || key.startsWith(`git:${name}:`)
-    // T15 will add: || key === `status:${name}`
+    key === `handoff:${name}` ||
+    key.startsWith(`git:${name}:`) ||
+    key === `status:${name}`
   );
 }
 
@@ -132,10 +132,38 @@ export function createWatcherManager(
       },
     });
 
+    // T15 status watcher: read on-disk StatusJsonSchema, project
+    // to TestStatusUpdatedEvent.data. Skip emit if any of the 3
+    // event-required fields is null (Round 2 Finding #26: schemas
+    // serve different domains, daemon bridges via projection +
+    // null-skip).
+    const statusHandle: WatcherHandle = opts.factory.createStatusWatcher({
+      cwd: session.cwd,
+      onUpdate: (data) => {
+        if (
+          data.tests_passing === null ||
+          data.tests_failing === null ||
+          data.phase === null
+        ) {
+          // Silent skip per arb 2b — CC's incremental-write
+          // pattern legitimately produces nullable values
+          // pre-test-run; warn-logging would clutter output.
+          return;
+        }
+        const eventData = {
+          tests_passing: data.tests_passing,
+          tests_failing: data.tests_failing,
+          phase: data.phase,
+        };
+        scheduleEmit(`status:${name}`, name, 'test_status_updated', eventData);
+      },
+    });
+
     sessionWatchers.set(name, {
       close: () => {
         handoffHandle.close();
         gitHandle.close();
+        statusHandle.close();
       },
     });
   }
