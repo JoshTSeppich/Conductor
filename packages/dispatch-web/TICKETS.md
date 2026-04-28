@@ -675,8 +675,16 @@ tickets (T06, T07).
   `useDaemonEvents()`. Maintain bounded window (last 100 events).
   Handle `notifications_available` flag for T21 deciding banner
   behavior.
+- **Amendment 2026-04-27 (T18 green):** "Mount fetches backfill" is
+  satisfied via UI-S01 ADR preflight step 2 (`GET /v2/events?since=
+  <lastTs>` with `lastTs = epoch 0` on initial mount), invoked by
+  `useDaemonEvents` automatically. No separate backfill query
+  needed — adding one would defeat the ADR's per-cycle dedupe `seen`
+  Set guarantee. UI-S01 ADR is more specific than this TICKETS.md
+  text and is operator-acked; ADR wins per finding #15 pattern.
 - **Acceptance:**
-  - Mount fetches backfill + renders
+  - Mount fetches backfill + renders (via preflight step 2 per
+    amendment above)
   - WS events append to ring buffer, oldest dropped past 100
   - `notifications_available` flag flows to `<InBannerHost>` via
     Zustand

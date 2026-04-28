@@ -1,7 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from './msw/server.js';
+
+// T18: AuthBootstrap connected branch wraps children in
+// DaemonEventsBridge → useDaemonEvents → opens WebSocket. This
+// suite verifies AuthBootstrap phase transitions, not WS lifecycle
+// (covered by daemon-events.test.tsx + daemon-events-bridge.test.tsx).
+// Mock the bridge to a transparent pass-through so test 2
+// ("renders children on happy path") doesn't open real WS.
+vi.mock('../src/components/DaemonEventsBridge.js', () => ({
+  DaemonEventsBridge: ({ children }: { children: ReactNode }) => children,
+}));
+
 import { AuthBootstrap } from '../src/components/AuthBootstrap.js';
 import { VALID_TEST_TOKEN } from './msw/handlers.js';
 

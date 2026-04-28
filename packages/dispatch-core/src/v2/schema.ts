@@ -235,11 +235,21 @@ export type EventV2Type = z.infer<typeof EventV2>;
 /**
  * GET /v2/health response. Per contract §4.1, no auth required.
  * Per DAEMON-S05 ADR: shape is { status, version, uptime_seconds }.
+ *
+ * Contract-additive extension per DAEMON-S03 ADR §"Patterns locked in
+ * / /v2/health response shape" + §"Cross-session impacts": the daemon
+ * surfaces `notifications_available: boolean` so the UI knows whether
+ * native delivery is reachable. Optional in zod so legacy/pre-S03
+ * daemons (and Session A's inline-typed T16 green) parse cleanly.
+ * Consumers default-to-false when undefined per S03 graceful-
+ * degradation rule. Authority: project instructions §3.4 mechanical-
+ * translation carve-out under operator best-judgment arbitration.
  */
 export const HealthResponse = z.object({
   status: z.literal('ok'),
   version: z.string(),
   uptime_seconds: z.number().nonnegative(),
+  notifications_available: z.boolean().optional(),
 });
 export type HealthResponseType = z.infer<typeof HealthResponse>;
 

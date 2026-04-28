@@ -17,6 +17,8 @@ beforeEach(() => {
       commitBySession: {},
       banners: [],
       authRetryNonce: 0,
+      events: [],
+      notificationsAvailable: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
   );

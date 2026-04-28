@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { EventV2Type } from 'dispatch-core/src/v2/schema.js';
+import { dedupeKey } from '../daemon-client/dedupe.js';
 
 // Full shape per packages/dispatch-web/TICKETS.md §2.3. T02 shipped
 // connectionStatus + authRetryNonce; T05 expands to focus, modals,
@@ -55,12 +56,17 @@ interface UIState {
   banners: Banner[];
   authRetryNonce: number;
 
-  // T17: global event ring buffer. T17 only adds the slot with []
-  // default so TickerPanel can read safely. T18 wires the writer
-  // (useDaemonEvents callback + GET /v2/events backfill) and adds
-  // the bounded-100 ring policy. Distinct from
+  // T17: global event ring buffer. T17 added the slot with []
+  // default so TickerPanel can read safely. T18 added the writer
+  // (DaemonEventsBridge → useDaemonEvents callback) + bounded-100
+  // ring policy + UI-S01 dedupeKey deduplication. Distinct from
   // SessionResponseV2.recent_events, which is per-session embedded.
   events: EventV2Type[];
+
+  // T18: notifications_available flag from /v2/health. Default
+  // false per DAEMON-S03 §"Cross-session impacts" graceful-
+  // degradation rule. T21 reads for banner rules.
+  notificationsAvailable: boolean;
 
   // ── actions ───────────────────────────────────────────────────
   setFocus: (name: string | null) => void;
@@ -72,6 +78,8 @@ interface UIState {
   setConnectionStatus: (s: ConnectionStatus) => void;
   bumpAuthRetry: () => void;
   applyCommitEvent: (e: CommitEventPayload) => void;
+  applyEvent: (e: EventV2Type) => void;
+  setNotificationsAvailable: (b: boolean) => void;
   pushBanner: (b: Omit<Banner, 'id' | 'createdAt'>) => string;
   dismissBanner: (id: string) => void;
 }
@@ -96,6 +104,7 @@ export const useUIStore = create<UIState>((set) => ({
   banners: [],
   authRetryNonce: 0,
   events: [],
+  notificationsAvailable: false,
 
   // INTENTIONAL: setFocus uses history.replaceState, not pushState
   // or window.location.hash assignment. Focus is transient UI
@@ -142,6 +151,20 @@ export const useUIStore = create<UIState>((set) => ({
         },
       },
     })),
+
+  // T18: bounded-100 ring buffer + UI-S01 dedupeKey. Cross-cycle
+  // WS-replay guard at store layer beyond useDaemonEvents internal
+  // per-cycle `seen` Set. O(n) dedupe per insert at n≤100 — fine
+  // for current scope; UI-F03 batching followup may need indexing
+  // if sustained throughput exceeds.
+  applyEvent: (e) =>
+    set((state) => {
+      const key = dedupeKey(e);
+      if (state.events.some((x) => dedupeKey(x) === key)) return {};
+      return { events: [...state.events, e].slice(-100) };
+    }),
+
+  setNotificationsAvailable: (b) => set({ notificationsAvailable: b }),
 
   // Returns the generated id so callers can auto-dismiss:
   //   const id = pushBanner(...); setTimeout(() => dismissBanner(id), 5000)

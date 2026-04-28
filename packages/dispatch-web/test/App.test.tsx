@@ -1,5 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
+
+// T18: AuthBootstrap connected branch wraps children in
+// DaemonEventsBridge → useDaemonEvents → opens WebSocket. App.test
+// purpose is auth wiring + top-level error boundary, not WS
+// lifecycle (covered by daemon-events.test.tsx + daemon-events-
+// bridge.test.tsx). Mock the bridge to a transparent pass-through
+// so connected-branch tests don't open real WS connections.
+vi.mock('../src/components/DaemonEventsBridge.js', () => ({
+  DaemonEventsBridge: ({ children }: { children: ReactNode }) => children,
+}));
+
 import { App } from '../src/App.js';
 import { VALID_TEST_TOKEN } from './msw/handlers.js';
 
