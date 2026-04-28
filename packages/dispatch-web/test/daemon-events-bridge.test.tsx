@@ -221,4 +221,85 @@ describe('WEB-T18 DaemonEventsBridge', () => {
     expect(useUIStore.getState().notificationsAvailable).toBe(false);
     expect(warnSpy).toHaveBeenCalled();
   });
+
+  // T21 integration: Bridge wires evaluateBannerRule to pushBanner
+  // alongside applyEvent (Decision 2). Sample-cell wiring tests —
+  // exhaustive matrix coverage lives in test/banner-rules.test.ts.
+  it('T21 wiring: handoff_written + notificationsAvailable=false → toast banner pushed', async () => {
+    // Default health handler omits notifications_available → defaults
+    // to false per DAEMON-S03 graceful-degradation. No override needed.
+    fixture.setOnConnection((connectionIndex) => {
+      if (connectionIndex === 1) {
+        fixture.emit({
+          type: 'handoff_written',
+          timestamp: '2026-04-27T12:00:00.000Z',
+          session: 'sherpa',
+          data: { path: '/h.md', size_bytes: 1 },
+        });
+      }
+    });
+
+    render(
+      <DaemonEventsBridge
+        backoff={TEST_BACKOFF}
+        wsUrlOverride={fixture.wsUrl}
+        httpBaseOverride={fixture.httpBase}
+      >
+        <div>children</div>
+      </DaemonEventsBridge>,
+    );
+
+    await waitFor(() => {
+      expect(useUIStore.getState().banners).toHaveLength(1);
+    });
+    const banner = useUIStore.getState().banners[0];
+    expect(banner.kind).toBe('toast');
+    expect(banner.severity).toBe('info');
+    expect(banner.title).toMatch(/handoff written.*sherpa/i);
+  });
+
+  it('T21 wiring: handoff_written + notificationsAvailable=true → NO banner pushed (rule reads flag live)', async () => {
+    server.use(
+      http.get('/v2/health', () =>
+        HttpResponse.json({
+          status: 'ok',
+          version: '2.0.0',
+          uptime_seconds: 1,
+          notifications_available: true,
+        }),
+      ),
+    );
+    fixture.setOnConnection((connectionIndex) => {
+      if (connectionIndex === 1) {
+        fixture.emit({
+          type: 'handoff_written',
+          timestamp: '2026-04-27T12:00:00.000Z',
+          session: 'sherpa',
+          data: { path: '/h.md', size_bytes: 1 },
+        });
+      }
+    });
+
+    render(
+      <DaemonEventsBridge
+        backoff={TEST_BACKOFF}
+        wsUrlOverride={fixture.wsUrl}
+        httpBaseOverride={fixture.httpBase}
+      >
+        <div>children</div>
+      </DaemonEventsBridge>,
+    );
+
+    // Wait for: (a) health fetch resolves + sets flag=true, (b) WS
+    // connects + emits handoff_written event, (c) Bridge processes
+    // event with flag=true → no banner. Settle window via events
+    // ring assertion (event flowed) + then assert banners stays 0.
+    await waitFor(() => {
+      expect(useUIStore.getState().notificationsAvailable).toBe(true);
+    });
+    await waitFor(() => {
+      expect(useUIStore.getState().events).toHaveLength(1);
+    });
+    expect(useUIStore.getState().banners).toHaveLength(0);
+  });
 });
