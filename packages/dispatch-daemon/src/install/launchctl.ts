@@ -28,8 +28,23 @@ export interface LaunchctlOpts {
   plistPath: string;
 }
 
+/** T19: bootout uses uid+label (no plist path needed; the
+ *  service is identified by its bootstrapped label). */
+export interface BootoutOpts {
+  uid: string;
+  label: string;
+}
+
 export function formatBootstrapCommand(opts: LaunchctlOpts): string {
   return `launchctl bootstrap gui/${opts.uid} ${opts.plistPath}`;
+}
+
+/** T19: produces the equivalent shell command for diagnostic
+ *  logging if the wrapper fails partway and operator needs
+ *  to retry manually. Verbatim from S04 §"Install / uninstall
+ *  commands" shape. */
+export function formatBootoutCommand(opts: BootoutOpts): string {
+  return `launchctl bootout gui/${opts.uid}/${opts.label}`;
 }
 
 /** OS boundary: smoke-tested at install (finding #36). */
@@ -40,6 +55,20 @@ export async function bootstrapLaunchAgent(
     'bootstrap',
     `gui/${opts.uid}`,
     opts.plistPath,
+  ]);
+}
+
+/** OS boundary: smoke-tested at uninstall (finding #36).
+ *  S04 §6 documented that bootout on already-unloaded label
+ *  fails with "No such process" — the existing
+ *  isAlreadyHandledLaunchctlError regex catches it for
+ *  idempotent re-runs. */
+export async function bootoutLaunchAgent(
+  opts: BootoutOpts,
+): Promise<void> {
+  await execFileP('launchctl', [
+    'bootout',
+    `gui/${opts.uid}/${opts.label}`,
   ]);
 }
 
