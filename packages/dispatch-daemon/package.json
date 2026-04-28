@@ -8,6 +8,7 @@
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
+    "install:daemon": "tsx scripts/install.ts",
     "spike:S05": "tsx spikes/DAEMON-S05-http-server.ts",
     "spike:S01": "tsx spikes/DAEMON-S01-websocket.ts",
     "spike:S02": "tsx spikes/DAEMON-S02-fsevents.ts",
