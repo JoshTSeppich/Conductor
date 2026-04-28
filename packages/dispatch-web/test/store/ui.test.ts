@@ -36,6 +36,9 @@ describe('WEB-T05 Zustand store', () => {
     expect(s.commitBySession).toEqual({});
     expect(s.banners).toEqual([]);
     expect(s.authRetryNonce).toBe(0);
+    // T17: global event ring buffer. T18 will write; T17 only adds
+    // the slot with [] default so TickerPanel can read safely.
+    expect(s.events).toEqual([]);
   });
 
   it('setFocus(name) updates focusedSessionName and syncs window.location.hash', () => {
