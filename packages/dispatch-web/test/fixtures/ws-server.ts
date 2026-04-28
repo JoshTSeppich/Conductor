@@ -29,6 +29,16 @@ export interface FixtureHandle {
   /** Drops all WS connections, clears event log, restores initial valid token, clears onConnection hook. */
   reset: () => void;
 
+  /**
+   * Z-3 — simulate daemon restart. Closes all WS connections + the
+   * HTTP server, awaits full teardown, then re-binds on the same port
+   * with the SAME token + a CLEAN event log. Tests the UI-S01
+   * reconnect cycle against a real socket close+rebind without
+   * replacing the fixture handle. Caller awaits the returned
+   * promise; subsequent fixture.* calls operate on the new binding.
+   */
+  restart: () => Promise<void>;
+
   /** Add an event to the log AND broadcast to currently-open WS clients. */
   emit: (event: EventShape) => void;
 
@@ -168,6 +178,16 @@ export async function startFixture(): Promise<FixtureHandle> {
 
     getConnectionCount() {
       return connectionIndex;
+    },
+
+    async restart() {
+      // Z-3 RED stub. Green commit lands the full HTTP+WS rebind
+      // (requires refactoring httpServer + wss to mutable refs +
+      // re-running the wss.on('connection', ...) hook setup on the
+      // new bindings). Stub throws so T2 (WS reconnect across
+      // daemon restart) fails with a clear red signal at the
+      // restart call site.
+      throw new Error('fixture.restart() not yet implemented (Z-3 green)');
     },
   };
 }
