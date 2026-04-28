@@ -143,7 +143,18 @@ describe('WEB-T19 TickerFilters', () => {
     expect(optionTexts).toContain('gate_trip');
   });
 
-  it('session filter selects single dimension — only matching events render', () => {
+  it('session filter selects single dimension — only matching events render', async () => {
+    // useSessions resolves async; selecting 'scribe' on a select that
+    // hasn't yet rendered the scribe option silently snaps value to ''
+    // (native HTML behavior). Override MSW with both fixture sessions
+    // and waitFor population before firing change.
+    server.use(
+      http.get('/v2/sessions', () =>
+        HttpResponse.json({
+          sessions: { sherpa: baseSession, scribe: baseSession },
+        }),
+      ),
+    );
     useUIStore.setState(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: fixtures } as any,
@@ -151,22 +162,22 @@ describe('WEB-T19 TickerFilters', () => {
     const { wrapper } = createWrapper();
     render(<TickerPanel />, { wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
+    const sessionSelect = screen.getByRole('combobox', {
+      name: /filter by session/i,
+    });
+
+    // Wait for sessions list to populate the dropdown.
+    await screen.findByRole('option', { name: 'scribe' });
 
     // Initial: 3 rows visible (no filter)
     expect(within(region).queryAllByTestId('ticker-row').length).toBe(3);
 
     // Filter by session=sherpa → 2 rows (state_changed + commit_landed for sherpa)
-    fireEvent.change(
-      screen.getByRole('combobox', { name: /filter by session/i }),
-      { target: { value: 'sherpa' } },
-    );
+    fireEvent.change(sessionSelect, { target: { value: 'sherpa' } });
     expect(within(region).queryAllByTestId('ticker-row').length).toBe(2);
 
     // Filter by session=scribe → 1 row
-    fireEvent.change(
-      screen.getByRole('combobox', { name: /filter by session/i }),
-      { target: { value: 'scribe' } },
-    );
+    fireEvent.change(sessionSelect, { target: { value: 'scribe' } });
     expect(within(region).queryAllByTestId('ticker-row').length).toBe(1);
   });
 
@@ -191,7 +202,14 @@ describe('WEB-T19 TickerFilters', () => {
     });
   });
 
-  it('both filters AND-compose — only events matching both render', () => {
+  it('both filters AND-compose — only events matching both render', async () => {
+    server.use(
+      http.get('/v2/sessions', () =>
+        HttpResponse.json({
+          sessions: { sherpa: baseSession, scribe: baseSession },
+        }),
+      ),
+    );
     useUIStore.setState(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: fixtures } as any,
@@ -199,6 +217,8 @@ describe('WEB-T19 TickerFilters', () => {
     const { wrapper } = createWrapper();
     render(<TickerPanel />, { wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
+
+    await screen.findByRole('option', { name: 'sherpa' });
 
     // session=sherpa AND type=commit_landed → 1 row (sherpa's commit_landed)
     fireEvent.change(
@@ -215,7 +235,14 @@ describe('WEB-T19 TickerFilters', () => {
     expect(rows[0].textContent).toContain('sherpa');
   });
 
-  it('Clear filter button resets both filters; disabled when no filter is active', () => {
+  it('Clear filter button resets both filters; disabled when no filter is active', async () => {
+    server.use(
+      http.get('/v2/sessions', () =>
+        HttpResponse.json({
+          sessions: { sherpa: baseSession, scribe: baseSession },
+        }),
+      ),
+    );
     useUIStore.setState(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: fixtures } as any,
@@ -224,6 +251,8 @@ describe('WEB-T19 TickerFilters', () => {
     render(<TickerPanel />, { wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     const clearBtn = screen.getByRole('button', { name: /clear filter/i });
+
+    await screen.findByRole('option', { name: 'sherpa' });
 
     // Initially: no filter active, Clear disabled (Decision 5)
     expect((clearBtn as HTMLButtonElement).disabled).toBe(true);

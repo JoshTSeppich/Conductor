@@ -14,6 +14,13 @@ vi.mock('../src/components/SendModal.js', () => ({
 vi.mock('../src/components/PullButton.js', () => ({
   PullButton: () => null,
 }));
+// T19: TickerPanel now consumes useSessions (Query) for filter
+// dropdown population. Mock to no-op for class-string assertion
+// purpose. Same finding-#22 mitigation pattern as SendModal /
+// PullButton above.
+vi.mock('../src/components/TickerPanel.js', () => ({
+  TickerPanel: () => null,
+}));
 
 import { Layout } from '../src/components/Layout.js';
 import { useUIStore } from '../src/store/ui.js';

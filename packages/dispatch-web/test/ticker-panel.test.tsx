@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { createWrapper } from './test-utils.js';
+import { VALID_TEST_TOKEN } from './msw/handlers.js';
 import { TickerPanel } from '../src/components/TickerPanel.js';
 import { useUIStore } from '../src/store/ui.js';
 import type { EventV2Type } from 'dispatch-core/src/v2/schema.js';
@@ -42,32 +44,39 @@ beforeEach(() => {
       banners: [],
       authRetryNonce: 0,
       events: [],
+      notificationsAvailable: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
   );
+  // T19 retrofit: TickerPanel now consumes useSessions via the
+  // <TickerFilters> sibling. Default MSW /v2/sessions handler
+  // requires VALID_TEST_TOKEN; pre-populate so the dropdown gets
+  // populated cleanly. Tests below don't query the dropdown but
+  // need the Query call to not error/loop.
+  localStorage.setItem('x-conductor-token', VALID_TEST_TOKEN);
 });
 
 describe('WEB-T17 TickerPanel', () => {
   it('renders panel region with role + aria-label preserved (T06 contract)', () => {
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     expect(region).toBeInTheDocument();
   });
 
   it('section element has fixed-height class (h-40 per Decision 4)', () => {
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     expect(region.className).toMatch(/\bh-40\b/);
   });
 
   it('section element has scrollable class (overflow-auto per Decision 5)', () => {
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     expect(region.className).toMatch(/\boverflow-auto\b/);
   });
 
   it('0 events → no TickerRow rendered (region still mounts)', () => {
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     expect(region).toBeInTheDocument();
     expect(within(region).queryAllByTestId('ticker-row').length).toBe(0);
@@ -78,7 +87,7 @@ describe('WEB-T17 TickerPanel', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: fixtureEvents } as any,
     );
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     expect(within(region).queryAllByTestId('ticker-row').length).toBe(3);
   });
@@ -90,7 +99,7 @@ describe('WEB-T17 TickerPanel', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: fixtureEvents } as any,
     );
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     const rows = within(region).queryAllByTestId('ticker-row');
     expect(rows.length).toBe(3);
@@ -108,7 +117,7 @@ describe('WEB-T17 TickerPanel', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: [fixtureEvents[1]] } as any,
     );
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const region = screen.getByRole('region', { name: /activity/i });
     const row = within(region).getByTestId('ticker-row');
     expect(row.textContent).toContain('commit_landed');
@@ -119,7 +128,7 @@ describe('WEB-T17 TickerPanel', () => {
 
   it('no layout shift — section className identical across 0 / N / N+overflow events', () => {
     // Sub-case 1: 0 events
-    const { unmount: u0 } = render(<TickerPanel />);
+    const { unmount: u0 } = render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const className0 = screen
       .getByRole('region', { name: /activity/i })
       .className;
@@ -130,7 +139,7 @@ describe('WEB-T17 TickerPanel', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: fixtureEvents } as any,
     );
-    const { unmount: uN } = render(<TickerPanel />);
+    const { unmount: uN } = render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const classNameN = screen
       .getByRole('region', { name: /activity/i })
       .className;
@@ -147,7 +156,7 @@ describe('WEB-T17 TickerPanel', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { events: many } as any,
     );
-    render(<TickerPanel />);
+    render(<TickerPanel />, { wrapper: createWrapper().wrapper });
     const classNameOverflow = screen
       .getByRole('region', { name: /activity/i })
       .className;
