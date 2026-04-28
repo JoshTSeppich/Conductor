@@ -63,6 +63,51 @@ All 6 probes pass on macOS / darwin arm64 after accounting for launchd's default
 </plist>
 ```
 
+### §3.1.1 Amendment (Z-1 Path B, 2026-04-28)
+
+The §3.1 verbatim plist template originally specified:
+
+    ProgramArguments = [<absolute_path_to_node>, <absolute_path_to>/packages/dispatch-daemon/dist/index.js]
+
+Z-1 real-environment smoke testing (commit 8c4c5e0) surfaced that this path
+fails with `ERR_MODULE_NOT_FOUND` under launchd-spawn because the codebase
+imports use `dispatch-core/src/lib/paths.js`-style specifiers (tsx-runtime
+convention). Node-runtime cannot resolve these against compiled `dist/` output
+without either an `exports` field mapping on dispatch-core (which forces all
+tests to pre-build) or a 30+ file import refactor — both out of MVP scope.
+
+Path B chosen: align plist runtime with the codebase's existing tsx-runtime
+convention (used throughout tests, dev, spikes, install/uninstall scripts,
+smoke tests). Final shape:
+
+```xml
+<key>ProgramArguments</key>
+<array>
+  <string>/ABSOLUTE/PATH/TO/node</string>
+  <string>--import</string>
+  <string>tsx</string>
+  <string>/ABSOLUTE/PATH/TO/packages/dispatch-daemon/src/index.ts</string>
+</array>
+<key>WorkingDirectory</key>
+<string>/ABSOLUTE/PATH/TO/repo-root</string>
+```
+
+`WorkingDirectory` is required because launchd starts the daemon at `cwd=/` by
+default, which prevents `node --import tsx` from resolving the `tsx` package
+via `node_modules`. Setting `WorkingDirectory` to the repo root fixes
+node_modules resolution.
+
+Trade-off: ~1s tsx startup per launchd spawn (negligible for long-running
+daemon). Production distribution path (esbuild bundle producing self-contained
+`dist/index.js`) deferred to v2.1 per S04 followup #5.
+
+Authority chain:
+- Z-1 commit 8c4c5e0 smoke test evidence (workspace build gap + tsx CLI
+  wrapper macOS provenance + launchd cwd=/ workaround)
+- Round 2 finding #49 (runtime-path divergence): production runtime must
+  align with codebase-wide runtime convention or import resolution breaks
+  at boundaries
+
 ### 2. Install / uninstall commands
 
 ```bash
