@@ -9,6 +9,10 @@ tracking more than two or three sessions.
 
 `fd` never calls an LLM. It is a shell between your typing and tmux.
 
+> **v2 adds a daemon and a web UI.** When the daemon is running, `fd`
+> commands route through HTTP; when it isn't, they fall back to the v1
+> behavior described below. See [Conductor v2 (daemon mode)](#conductor-v2-daemon-mode) for install + architecture.
+
 ## Install
 
 Requirements:
@@ -41,6 +45,10 @@ first write).
 > the hand-off in my clipboard.
 
 Everything below is in service of that sentence.
+
+> `fd` assumes basic tmux fluency (sessions, panes, attach/detach). If
+> you're not familiar, the `tmux` man page or any short primer is
+> worth ~15 minutes before going further.
 
 ### 1. `fd init <name>`
 
@@ -210,3 +218,220 @@ Detail in `BUILD_CONTRACT.md` §7.
 - `SPIKES.md` — every tmux behavior we relied on, verified against a
   real tmux server before any production code was written.
 - `BUILD_CONTRACT.md` — what this repo was built to do, in full.
+
+---
+
+## Conductor v2 (daemon mode)
+
+v2 adds three components on top of the v1 CLI:
+
+- **dispatch-daemon** — Fastify HTTP + WebSocket server bound to
+  `127.0.0.1:7878` that manages session state, watches HANDOFF.md /
+  git refs / STATUS.json, and emits real-time events.
+- **dispatch-web** — React + Tailwind dashboard that consumes the
+  daemon's HTTP+WS surface (Session B territory).
+- **dispatch-cli (v2)** — the `fd` CLI you already use, refactored to
+  route commands through the daemon when it's running and fall back
+  to the v1 behavior when it isn't.
+
+The daemon is optional: every v1 command still works without it. v2
+adds visibility-and-control surface (web UI, lifecycle commands,
+push events), not new responsibilities for the CLI itself.
+
+### Install the daemon
+
+Prerequisites: completed the v1 `Install` section above (so
+`pnpm install` has been run at the repo root).
+
+```bash
+pnpm --filter dispatch-daemon install:daemon
+```
+
+This:
+
+1. Resolves the absolute path to `node` and to
+   `packages/dispatch-daemon/src/index.ts` from this repo.
+2. Generates a launchd plist at
+   `~/Library/LaunchAgents/com.foxworks.dispatch-daemon.plist` that
+   runs `node --import tsx <repo>/packages/dispatch-daemon/src/index.ts`
+   with `WorkingDirectory` set to the repo root.
+3. Bootstraps the agent: `launchctl bootstrap gui/$(id -u) <plist>`.
+4. Prints post-install instructions for granting macOS notification
+   permission (System Settings → Notifications → "Foxworks Dispatch
+   Daemon" / "terminal-notifier" → Allow). See `docs/adr/DAEMON-S03-notifications.md`
+   for why this is per-launchd-parent-process.
+
+Re-running `install:daemon` against an already-loaded daemon is a
+safe no-op (prints "already loaded; idempotent re-run").
+
+### Verify
+
+```bash
+curl http://127.0.0.1:7878/v2/health
+# {"status":"ok","version":"0.0.0","uptime_seconds":3,"notifications_available":true}
+```
+
+`/v2/health` is **auth-exempt by design** (per contract §4.1 + the
+daemon's `auth.ts` path bypass). A 200 here means the daemon process
+is alive and bound. A 401 instead would mean route registration is
+broken — check daemon logs at `~/.foxworks-dispatch/logs/daemon.err.log`.
+
+```bash
+launchctl list | grep foxworks
+# -    0    com.foxworks.dispatch-daemon
+```
+
+### Uninstall
+
+```bash
+pnpm --filter dispatch-daemon uninstall:daemon
+# default: preserves ~/.foxworks-dispatch/ state (sessions, archive, token)
+
+pnpm --filter dispatch-daemon uninstall:daemon -- --clean
+# with --clean: prompts to also remove ~/.foxworks-dispatch/ entirely
+```
+
+`uninstall:daemon` is tolerant of "not currently loaded" — running
+it twice is safe.
+
+## v2 commands
+
+The v1 commands (`fd init`, `fd list`, `fd send`, `fd pull`,
+`fd status`) all still work; with the daemon up they go through
+HTTP, with it down they fall back to v1 behavior automatically and
+print a one-line warning on stderr.
+
+v2 adds four lifecycle commands. These **require the daemon** —
+they touch the v2 state machine that v1 doesn't know about:
+
+| Command            | Effect                                              |
+|--------------------|-----------------------------------------------------|
+| `fd kill <name>`   | Transition session to `killed` (terminal). Prompts for confirmation; pass `--yes` to skip. |
+| `fd pause <name>`  | Transition `armed` → `paused` (no side effect).      |
+| `fd hold <name>`   | Transition `armed` → `held` (daemon sends Ctrl-C to the tmux pane). |
+| `fd arm <name>`    | Transition `paused`/`held` → `armed` (resume).       |
+
+If the daemon is down when you run one of these, you'll see:
+
+> `This command requires the Conductor daemon. Start it with `launchctl ...`.`
+
+That's by design — v1 has no concept of paused/held, so falling back
+silently would lie about what happened.
+
+The state machine itself is contract §6.1; valid transitions are
+enumerated there. `fd status` shows the current state of every
+session.
+
+## Architecture
+
+High level:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        fd CLI                               │
+│  init  list  send  pull  status  kill  pause  hold  arm     │
+└────────────────────┬─────────────────┬──────────────────────┘
+                     │ HTTP /v2/*       │ direct sessions.json
+                     │ (daemon up)      │ (daemon down — fallback)
+                     ▼                  │
+┌─────────────────────────────────────┐ │
+│      dispatch-daemon (Fastify)      │ │
+│  /v2/sessions  /v2/events  /v2/health│ │
+│  WS /v2/events/stream                │ │
+└────┬──────────────┬─────────────┬────┘ │
+     │ tmux         │ FSEvents    │     │
+     ▼              ▼             ▼     ▼
+   tmux pane    HANDOFF.md /     ~/.foxworks-dispatch/
+   (CC session) .git/refs /      sessions.json (shared
+                STATUS.json       v1 + v2 state)
+```
+
+Same `~/.foxworks-dispatch/sessions.json` is read and written by
+both the daemon (v2 schema) and the CLI v1 fallback (transparent
+v2-aware reader; see `packages/dispatch-core/src/registry/schema.ts`).
+
+dispatch-web (Session B's territory) consumes the same daemon HTTP
++ WS surface; it isn't installed by `install:daemon`. See
+`docs/adr/UI-S01-websocket-client.md`.
+
+For deeper detail:
+
+- **API contract** — `CONDUCTOR_API_CONTRACT.md` (auth, endpoints,
+  events, state machine, fd v1 backward compat)
+- **launchd integration** — `docs/adr/DAEMON-S04-launchd.md`
+- **WebSocket** — `docs/adr/DAEMON-S01-websocket.md`
+- **FSEvents watching** — `docs/adr/DAEMON-S02-fsevents.md`
+- **Notifications** — `docs/adr/DAEMON-S03-notifications.md`
+- **HTTP server** — `docs/adr/DAEMON-S05-http-server.md`
+
+## v2 troubleshooting
+
+### Daemon installed but `/v2/health` not reachable
+
+Most common cause: daemon process is launching under launchd but
+exiting immediately. Check the error log:
+
+```bash
+tail -30 ~/.foxworks-dispatch/logs/daemon.err.log
+```
+
+If you see `ERR_MODULE_NOT_FOUND` referencing
+`dispatch-core/src/lib/...`, your install ran an outdated build path.
+Re-run `pnpm --filter dispatch-daemon install:daemon` against a
+current checkout (this was Z-1's Path B fix).
+
+If you see `Cannot find package 'tsx'`, the daemon's plist is
+missing `WorkingDirectory` — same Z-1 fix; re-run `install:daemon`.
+
+If you see something else, capture the stack and check daemon
+imports against the package being requested.
+
+### `fd init` fails with schema validation errors after daemon was running
+
+If you see something like `path: ["version"], message: "Invalid input: expected 1"`,
+your `~/.foxworks-dispatch/sessions.json` was migrated by the
+daemon to v2 schema, and you're hitting an older CLI build whose
+v1 fallback can't read v2. Resolved at Z-4 — pull the latest
+checkout and rebuild.
+
+### Notifications not appearing
+
+macOS sandboxes notification permissions per parent process. The
+daemon running under launchd has a different parent than the
+daemon running from your terminal during dev — granting permission
+to `Terminal.app` doesn't transfer.
+
+Open System Settings → Notifications, find "Foxworks Dispatch
+Daemon" or "terminal-notifier", and enable Allow. If you granted
+permission after the daemon was already running, restart it:
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.foxworks.dispatch-daemon
+```
+
+Daemon's `notifications_available` flag on `/v2/health` reflects
+its own probe at startup; if it's `false` the web UI falls back to
+in-banner display automatically.
+
+### Port 7878 already in use
+
+```bash
+lsof -ti :7878
+```
+
+Find what's holding it. Most likely another instance of the daemon
+or a stale process. Kill it (`kill <pid>`), wait a second, then
+re-run `install:daemon`. Configurable port is a v2.1 followup
+(`CLI-F-probe-timeout-env` covers the related probe-timeout knob).
+
+### Smoke-testing the install end-to-end
+
+```bash
+pnpm --filter dispatch-daemon smoke-test       # daemon install/uninstall
+pnpm --filter dispatch-cli smoke-test-cli      # CLI ↔ daemon binding
+```
+
+Both scripts ship in this repo. They install + verify + uninstall
+in a single run. They preserve `~/.foxworks-dispatch/` operator
+state (sessions, token, archive) — only entries with the
+`z4-smoke-` prefix are removed at cleanup.
