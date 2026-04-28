@@ -26,8 +26,15 @@ import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
 import { registerEventsRoutes } from '../routes/events.js';
 import { registerHandoffRoutes } from '../routes/handoff.js';
+import { registerHealthRoutes } from '../routes/health.js';
 import { registerPromptRoutes } from '../routes/prompts.js';
 import { registerWsRoutes } from '../routes/ws.js';
+import {
+  defaultNotify,
+  probeNotificationsAvailable,
+  startNotifications,
+  type NotifyFn,
+} from '../notifications/index.js';
 import {
   defaultWatcherFactory,
   type WatcherFactory,
@@ -113,6 +120,21 @@ export interface StartupOpts {
    * avoiding real fs.watch flake in CI. Added in DAEMON-T13.
    */
   watcherFactory?: WatcherFactory;
+  /**
+   * Native notification dispatch fn. Default = defaultNotify
+   * which wraps node-notifier. Tests inject a recording stub
+   * (fixture default) or a per-test custom stub. Added in
+   * DAEMON-T16.
+   */
+  notify?: NotifyFn;
+  /**
+   * Whether native notifications are available at startup.
+   * When undefined, startup runs the S03 probe (2s timeout
+   * via node-notifier). Tests pass an explicit boolean to
+   * skip the probe and fix the value deterministically.
+   * Added in DAEMON-T16.
+   */
+  notificationsAvailable?: boolean;
 }
 
 export interface StartupHandle {
@@ -146,12 +168,21 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const host = opts.host ?? '127.0.0.1';
   const requestedPort = opts.port ?? 7878;
   const tokenPath = opts.tokenPath ?? defaultTokenPath();
+  const startedAt = Date.now();
   const eventRing = opts.eventRing ?? createEventRing();
   const bus = createEventBus(eventRing);
   const watcherManager = createWatcherManager({
     factory: opts.watcherFactory ?? defaultWatcherFactory,
     emit: bus.emit,
   });
+
+  // T16: notifications availability — opt wins; otherwise
+  // run the S03 production probe (skipped in tests via opt).
+  const notificationsAvailable =
+    opts.notificationsAvailable !== undefined
+      ? opts.notificationsAvailable
+      : await probeNotificationsAvailable();
+  const notify = opts.notify ?? defaultNotify;
 
   const app = await buildServer({ logger: opts.logger });
 
@@ -171,6 +202,36 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const tokenRef: TokenRef = { value: initialToken };
   app.addHook('onRequest', createAuthHook(tokenRef));
   await registerAuthRoutes(app, { tokenRef, tokenPath });
+
+  // DAEMON-T16: GET /v2/health per S03 contract-additive
+  // change to §4.1. Auth-exempt via auth.ts:74-76 path
+  // bypass; the route's own handler doesn't enforce auth.
+  await registerHealthRoutes(app, {
+    version: '0.0.0',
+    startedAt,
+    notificationsAvailable,
+  });
+
+  // T16: notifications consumer — subscribes to bus emit
+  // fan-out (parallel to T12 WS consumer). Filters to
+  // eligible event types and calls notify. No-op handle
+  // when notificationsAvailable is false (S03 §Graceful
+  // degradation).
+  const notifications = startNotifications({
+    bus,
+    notify,
+    available: notificationsAvailable,
+    logger: app.log as unknown as { warn: (...args: unknown[]) => void },
+  });
+
+  // S03 followup #2: log notification state explicitly so
+  // operators see it without querying /v2/health.
+  app.log.info(
+    { available: notificationsAvailable },
+    notificationsAvailable
+      ? 'notifications: enabled'
+      : 'notifications: disabled (probe-failed or opted-out)',
+  );
 
   // DAEMON-T06: GET /v2/sessions + GET /v2/sessions/:name, consuming
   // T05's readRegistryV2. Registered after auth so the hook gates
@@ -269,7 +330,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
 
   async function handleSignal(signal: string): Promise<void> {
     app.log.info({ signal }, 'shutdown signal received');
-    await shutdown({ server: app, watcherManager });
+    await shutdown({ server: app, watcherManager, notifications });
     process.exit(0);
   }
 
@@ -285,7 +346,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     close: async () => {
       process.off('SIGTERM', sigTermHandler);
       process.off('SIGINT', sigIntHandler);
-      await shutdown({ server: app, watcherManager });
+      await shutdown({ server: app, watcherManager, notifications });
     },
   };
 }

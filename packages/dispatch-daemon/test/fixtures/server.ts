@@ -20,6 +20,10 @@ import type {
 import type { GitWatcherOpts } from '../../src/watchers/git.js';
 import type { StatusWatcherOpts } from '../../src/watchers/status-json.js';
 import type { StatusJson } from 'dispatch-core/src/v2/schema.js';
+import type {
+  NotifyFn,
+  NotifyInput,
+} from '../../src/notifications/index.js';
 
 export interface TestServer {
   app: FastifyInstance;
@@ -74,6 +78,15 @@ export interface TestServer {
     sessionName: string,
     data: StatusJson,
   ) => Promise<void>;
+  /**
+   * Recording array for native notification dispatches when
+   * the fixture's default stub notify is in use. Per
+   * arbitration 5A on T16 pre-reg (matches established T12
+   * fixture-exposed array pattern). Tests pass their own
+   * notify via SpawnTestServerOpts.notify when they want
+   * different recording semantics. Added in DAEMON-T16.
+   */
+  notifyCalls: NotifyInput[];
   close: () => Promise<void>;
 }
 
@@ -127,6 +140,21 @@ export interface SpawnTestServerOpts {
    * DAEMON-T13.
    */
   watcherFactory?: WatcherFactory;
+  /**
+   * Notification dispatch fn. Default = pushes-to-array stub
+   * (recorded into TestServer.notifyCalls). Tests can pass
+   * their own stub to observe per-test (e.g., throw-on-first
+   * for resilience verification). Added in DAEMON-T16.
+   */
+  notify?: NotifyFn;
+  /**
+   * Whether the daemon should treat notifications as
+   * available. Default = false (skip OS probe in tests; no
+   * notifies fire). Tests pass true when they want the
+   * notifications consumer wired up to observe dispatches.
+   * Added in DAEMON-T16.
+   */
+  notificationsAvailable?: boolean;
 }
 
 /**
@@ -269,6 +297,16 @@ export async function spawnTestServer(
   const mockFactory =
     opts.watcherFactory ?? createMockWatcherFactory();
 
+  // T16: notification recording. Default stub pushes every
+  // dispatch into a fixture-owned array (TestServer.notifyCalls).
+  // Tests that need throw/error semantics pass their own notify.
+  const notifyCalls: NotifyInput[] = [];
+  const notify: NotifyFn =
+    opts.notify ??
+    (async (input) => {
+      notifyCalls.push(input);
+    });
+
   // logger:false silences per-request Pino output for test ergonomics.
   // Production startup() defaults to info-level logging.
   const { server, port, token, emit, close } = await startup({
@@ -282,6 +320,8 @@ export async function spawnTestServer(
     clipboardCopy,
     eventRing: opts.eventRing,
     watcherFactory: mockFactory,
+    notify,
+    notificationsAvailable: opts.notificationsAvailable ?? false,
   });
 
   const triggerHandoffWrite = async (
@@ -366,6 +406,7 @@ export async function spawnTestServer(
     triggerHandoffWrite,
     triggerGitCommit,
     triggerStatusJsonUpdate,
+    notifyCalls,
     close,
   };
 }

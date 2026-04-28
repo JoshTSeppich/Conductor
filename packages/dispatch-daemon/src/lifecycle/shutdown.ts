@@ -13,13 +13,20 @@
 
 import type { FastifyInstance } from 'fastify';
 import type { WatcherManager } from '../watchers/manager.js';
+import type { NotificationsConsumerHandle } from '../notifications/index.js';
 
 export interface ShutdownResources {
   server: FastifyInstance;
   watcherManager?: WatcherManager;
+  /** T16 notifications consumer; stop unsubscribes from
+   *  the bus before the server tears WS clients down so no
+   *  in-flight notify dispatches run against a closing
+   *  process. */
+  notifications?: NotificationsConsumerHandle;
 }
 
 export async function shutdown(resources: ShutdownResources): Promise<void> {
+  resources.notifications?.stop();
   resources.watcherManager?.closeAll();
   await resources.server.close();
 }

@@ -93,10 +93,17 @@ describe('DAEMON-T02 — token auth onRequest hook + rotate endpoint', () => {
     expect(r.status).toBe(404);
   });
 
-  it('P6 /v2/health bypasses auth → Fastify default 404 without any token header', async () => {
+  it('P6 /v2/health bypasses auth → 200 without any token header (route registered by T16)', async () => {
+    // Pre-T16: /v2/health was unregistered; auth bypass surfaced
+    // as Fastify default 404 (route absent + no auth challenge).
+    // T16 registered the route; auth bypass now surfaces as 200
+    // from the route handler running without an auth challenge.
+    // Test-mechanism-adaptation per established pattern: probe
+    // intent (auth exempt) is unchanged; observable signal
+    // updated from 404 to 200 because the route now exists.
     ts = await spawnTestServer({ tokenPath: await mkTokenPath() });
     const r = await fetch(`${ts.url}/v2/health`);
-    expect(r.status).toBe(404);
+    expect(r.status).toBe(200);
   });
 
   it('P7 POST /v2/auth/rotate with correct token → 200 + new token; file updated', async () => {
