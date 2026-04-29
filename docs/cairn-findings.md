@@ -160,3 +160,22 @@ overreach.
 
 Companion to #52 (workspace dep public surface) and #53
 (type-contract emission gap) — same incident family, third facet.
+
+### Finding #55 — frozen contracts must be verified against code state at freeze time
+
+- **Captured:** 2026-04-29
+- **Origin:** Operator session at e7e66b4 + MB-S03 spike halt; resolved via WORKSTATION_CONTRACT.md §8.1 amendment
+- **Companions:** _none_
+- **Codification target:** Cairn v0.2 §<TBD> (frozen-contract-verification primitive)
+- **Status:** Captured
+
+WORKSTATION_CONTRACT.md §8.1 was authored describing v3 persistence as residing in "the existing daemon SQLite database at `~/.foxworks-dispatch/data.db`" and citing `a502c4c` as the migration precedent. Both claims were structurally false: the daemon has no SQLite database (persistence is JSON-file based), and `a502c4c` is a JSON schema amendment, not SQL DDL. The contract was authored on the assumption that v2.0.0 daemon already had SQLite — an architectural assumption that did not match repository reality.
+
+The error survived Phase 0 ratification because the verbal architectural model in the operator+Opus design conversation was treated as KNOWN when it was actually MODELED. WORKSTATION_CONTRACT.md was committed as authority without anyone verifying the §8.1 claims against actual `~/.foxworks-dispatch/` contents or `packages/dispatch-daemon/package.json` dependencies.
+
+MB-S03 (the first spike to consume §8.1's persistence claims) caught the contradiction at file-read time and halted per §3.7 + frozen-contract-respect rather than infer-around-it. The halt was structurally clean: spike state had no commits, no staged files, no "useful prep" past the surface point. Operator amended §8.1 to reflect actual state (data.db doesn't exist; v3 introduces it; better-sqlite3 driver chosen; init lands in COARCH-T01) and committed the amendment as a `contract:` change. MB-S03 then resumed.
+
+**Methodology lesson:** Frozen-contract artifacts must be verified against actual code state at the moment of freeze, not at first downstream consumption. Verbal architectural models are MODELED until they're checked against repository facts. A "verify against code" pre-flight check should be added to contract-freeze procedure: every claim that references existing files, paths, dependencies, or schemas in the contract must be grep-confirmed in the repo before the `contract:` commit.
+
+**Companion to §3.1 anti-fabrication:** anti-fabrication says "read actual sources before claiming what they say." Finding #55 extends this to authored documents: "verify actual sources before claiming what they say in operator-authored frozen artifacts."
+

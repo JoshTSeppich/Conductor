@@ -331,13 +331,28 @@ Both directions validate against the v3 schema at message-bus boundaries. Invali
 
 ### §8.1 Storage layer
 
-Per ratified §0.7: chat history, audit log, and ticket state persist in the existing daemon SQLite database at `~/.foxworks-dispatch/data.db` (or the path configured per `CONDUCTOR_API_CONTRACT.md`). Three new tables added in v3.0:
+**Amended 2026-04-29 per MB-S03 spike halt evidence.** The pre-amendment text claimed v3 persistence reused "the existing daemon SQLite database" and cited `a502c4c` as the migration precedent. Both claims were structurally false: the daemon has no SQLite database (persistence is the JSON file `~/.foxworks-dispatch/sessions.json` plus archive directories), and `a502c4c` is a Zod schema amendment to the JSON file, not a SQL DDL migration. MB-S03's halt surfaced this contradiction before any spike work proceeded. See cairn finding #55 for the methodology lesson.
+
+**v3.0 persistence layer (corrected):**
+
+Per ratified §0.7, chat history, audit log, and ticket state persist in a daemon-owned SQLite database at `~/.foxworks-dispatch/data.db`. The database does NOT exist as of v2.0.1; v3.0 introduces it as part of the daemon's persistence layer. Three new tables ship in v3.0:
 
 - `orchestrator_messages` — chat history
 - `orchestrator_audit` — audit log
 - `orchestrator_ticket_state` — ticket state per ratified P-0.5 Q8.2
 
-Schema migration is additive (new tables; no changes to existing v2 tables) and matches the precedent set by §7.3 v1-reads-v2 amendment at `a502c4c`.
+**Driver:** `better-sqlite3` (synchronous Node SQLite, the de facto standard). Operator-arbitrated 2026-04-29. Daemon opens the database on startup with WAL journal mode; closes on shutdown via existing lifecycle/shutdown.ts hooks.
+
+**Init responsibility:** COARCH-T01 (production daemon work) implements:
+1. Driver wired into `packages/dispatch-daemon` (operator commits the dependency separately as `chore:` infrastructure setup)
+2. Database open + WAL pragma at startup
+3. Migration runner that creates the three tables on first daemon start where `data.db` is absent
+4. Single Database instance exposed via dependency-injection pattern matching existing daemon style
+5. Database close on shutdown
+
+**Migration model:** Additive only. Each new table is created via `CREATE TABLE IF NOT EXISTS`. v3.0's data.db is created from empty; no v2-to-v3 data migration exists because no v2 SQLite data exists. The daemon's existing JSON-file persistence (sessions.json) remains the source of truth for v2 session state and is unchanged.
+
+**Coexistence with sessions.json:** The daemon retains JSON-file persistence for `sessions.json` (registry of active CC sessions). The new SQLite database is for v3.0 orchestrator-and-ticket state only. The two persistence layers are independent; no synchronization is required.
 
 ### §8.2 Build-doc storage
 
