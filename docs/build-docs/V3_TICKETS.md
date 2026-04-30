@@ -70,11 +70,14 @@ ADR: `docs/adr/MB-S02-electron-tmux-spawn.md`.
 **MB-S03 — Daemon contract amendment for orchestrator endpoints.**
 
 Validates: new daemon endpoint shapes for orchestrator chat persistence and audit log. Specifically:
-- `POST /v2/orchestrator/messages` — append chat message to history
-- `GET /v2/orchestrator/history` — retrieve chat history
-- `DELETE /v2/orchestrator/history` — clear history
-- `POST /v2/orchestrator/audit` — append audit row
-- `GET /v2/orchestrator/audit` — query audit (filterable)
+- `POST /v3/orchestrator/messages` — append chat message to history
+- `GET /v3/orchestrator/history` — retrieve chat history
+- `DELETE /v3/orchestrator/history` — clear history
+- `POST /v3/orchestrator/audit` — append audit row
+- `GET /v3/orchestrator/audit` — query audit (filterable)
+- `POST /v3/tickets/state` — upsert ticket state row
+- `GET /v3/tickets/state` — list ticket state rows (filterable)
+- `GET /v3/tickets/state/:ticket_id` — fetch single ticket state (build_doc_id REQUIRED query param)
 
 SQLite schema migration in existing daemon DB: new tables `orchestrator_messages` and `orchestrator_audit`. Round-trip a chat message and an audit row, restart daemon, verify retrievable.
 
@@ -150,7 +153,7 @@ Acceptance: at-cap state behaves per spec; override path behaves per spec; cap v
 
 **COARCH-T01 — Daemon contract amendment + orchestrator endpoints.**
 
-Lands the contract change surfaced in MB-S03. New daemon endpoints: `POST /v2/orchestrator/messages`, `GET /v2/orchestrator/history`, `DELETE /v2/orchestrator/history`, `POST /v2/orchestrator/audit`, `GET /v2/orchestrator/audit`. SQLite schema migration: new tables `orchestrator_messages` and `orchestrator_audit` per MB-S03 ADR.
+Lands the contract change surfaced in MB-S03. New daemon endpoints: `POST /v3/orchestrator/messages`, `GET /v3/orchestrator/history`, `DELETE /v3/orchestrator/history`, `POST /v3/orchestrator/audit`, `GET /v3/orchestrator/audit`, `POST /v3/tickets/state`, `GET /v3/tickets/state`, `GET /v3/tickets/state/:ticket_id`. SQLite schema migration: new tables `orchestrator_messages`, `orchestrator_audit`, and `orchestrator_ticket_state` per MB-S03 ADR (frozen at 946e06d) and v3 schema (frozen at 232fbaa).
 
 This ticket includes the `contract:` commit amending `CONDUCTOR_API_CONTRACT.md` (operator-arbitrated under §3.4; CC drafts text per spike evidence, operator reviews and commits final).
 
