@@ -47,6 +47,8 @@ have resolved before Phase Z cluster close.
 | `WEB-F-send-modal-error-differentiation` | Modal currently surfaces a single error region; differentiate validation vs network vs daemon-422 paths | W-3 / WEB-T11 |
 | `UI-F-banner-copy` | Banner text refinement (Session B authoring decision) | W-1 |
 | `UI-F-real-browser-modal` | Real-browser smoke test for SendPromptModal interactions (deferred per Session B's no-Playwright scope) | W-3 |
+| `MB-F-pnpm-electron-packaging` | When COARCH-T03 reinstalls `@anthropic-ai/sdk`, re-spike packager against actual workspace dep tree. Decide between `node-linker=hoisted` (workspace-wide), `public-hoist-pattern` (local), or `electron-builder`. MB-S04 ADR's K6 claim (263 MB / 8.4 s) was sterile-spike evidence, not workspace-dep evidence. | MB-T01 green |
+| `MB-F-mb-s04-spike-amendment` | Amend MB-S04 ADR §K6 to reflect spike-vs-reality gap discovered at MB-T01 green: sterile package.json doesn't surface pnpm symlink + `@electron/packager` prune walker incompatibility. Future packaging spikes must use actual workspace dep tree. | MB-T01 green |
 
 ---
 
@@ -76,6 +78,7 @@ Followups carry a domain prefix matching their package owner:
 - `CLI-F-*` — `packages/dispatch-cli/`
 - `WEB-F-*` — `packages/dispatch-web/`
 - `UI-F-*` — Session B's UI surface broadly (web + menubar)
+- `MB-F-*` — `packages/dispatch-workstation/` (v3.0 Workstation surface)
 
 Origin column references the cluster ID (`D-1` through `D-6`, `W-1`
 through `W-5`, `CLI-T`, `Z-*`) plus the originating ticket where

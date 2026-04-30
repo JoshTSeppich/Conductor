@@ -2,17 +2,22 @@
   "name": "dispatch-workstation",
   "version": "2.0.1",
   "private": true,
-  "description": "Foxworks Dispatch v2 macOS menu bar widget. Framework TBD — UI-S02 spike.",
+  "description": "Foxworks Workstation v3.0 — Electron desktop app embedding dispatch-web kanban + Sonnet 4.6 orchestrator chat panel.",
   "type": "module",
+  "main": "dist/main/main.js",
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "dev": "pnpm build && electron dist/main/main.js",
+    "package": "pnpm build && electron-packager . dispatch-workstation --out=dist/packaged --overwrite --electron-version=41.3.0 --ignore=^/node_modules --ignore=^/spikes --ignore=^/src --ignore=^/test --ignore=^/scripts --ignore=^/coarchitect --ignore=^/SPIKES\\.md$ --ignore=^/tsconfig\\.json$ --ignore=^/vitest\\.config\\. --ignore=^/dist/packaged",
     "generate:section-10-5": "tsx scripts/generate-section-10-5.ts"
   },
   "devDependencies": {
-    "electron": "^41.3.0"
+    "electron": "^41.3.0",
+    "@electron/packager": "^18.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.1"
+    "dispatch-core": "workspace:*"
   }
 }
