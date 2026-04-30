@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:section-10-5": "tsx scripts/generate-section-10-5.ts"
   },
   "devDependencies": {
     "electron": "^41.3.0"
