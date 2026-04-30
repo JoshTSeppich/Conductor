@@ -14,6 +14,10 @@ _Append-only. Format: timestamp | event | citation_
 
 2026-04-30T17:46:08Z | HALT — OPEN-Q-B-1 surfaced to operator, awaiting ack before red commit | contract §3.5 / §8.5
 
+2026-04-30 | SESSION_RESUME | Operator re-launched Session B; re-launch serves as implicit ack for OPEN-Q-B-1 to proceed. Session C notes read: C resolved OPEN-Q-C-1 unilaterally (structurally forced option); no new methodology to propagate to B. Session D still empty. main.ts integrity re-confirmed at 151897f.
+
+2026-04-30 | PRE_REG_GATE_RESOLVED | OPEN-Q-B-1 resolved: Option C — CDP HTTP discovery. Spawn Electron with --remote-debugging-port=9773 --remote-debugging-address=127.0.0.1; poll http://127.0.0.1:9773/json (Node 18 global fetch, no new packages) after WINDOW_READY; find page target; assert target.url === WEB_UI_URL. MODELED label applied (documented Electron 41 behavior, not spiked in this repo). DOM column assertions (kanban: AWAITING REVIEW / STALE / RUNNING / IDLE, session-card) deferred as it.todo() per contract §3.5 "low-stakes for Round 2; operator may revisit at MB-T07."
+
 ---
 
 ## Session C — MB-T03 (menu + window lifecycle)
@@ -34,6 +38,22 @@ Proceeding without explicit operator ack: option (c) is structurally forced (onl
 
 2026-04-30T00:00Z | RED COMMIT | contract §4.6
 
+Red: test/integration/mb-t03/window-state-persists.test.ts committed. Pre-condition `existsSync(dist/main/window-lifecycle.js)` fails → test RED. notes.md update co-committed.
+
+2026-04-30T00:00Z | GREEN COMMIT | contract §4.4
+
+Implementation complete:
+- src/main/menu.ts: buildMenuTemplate() returns all 6 menu sections (App/File/Edit/View/Window/Help) with required HIG shortcuts. registerApplicationMenu() idempotent guard. Zero side effects at module init.
+- src/main/window-lifecycle.ts: createManagedWindow() persists geometry via custom JSON to app.getPath('userData')/window-state.json (OPEN-Q-C-1 option c). Emits WINDOW_STATE stdout sentinel unconditionally. RESIZE stdin command gated behind MB_TEST_HOOKS=1. registerLifecycleHooks() wires window-all-closed → app.quit() + activate → reopenWindow() when getWindow() === null.
+- test/integration/mb-t03/lifecycle-fixture-main.mjs: Electron entry spawned by test; imports createManagedWindow + registerLifecycleHooks from dist/main/window-lifecycle.js. Enables GREEN pre-zipper.
+
+Build: `pnpm build` clean (tsc, zero errors). Typecheck: `pnpm typecheck` clean.
+Tests: `pnpm test` → 2 passed (2): app-launches-clean.test.ts (MB-T01) + window-state-persists.test.ts (MB-T03). MB-T03 test ran in 2421ms (two spawn cycles), well within 60s timeout.
+
+FOLLOWUPS.md: MB-F-MB-T03-DOCK-BADGE filed per RESOLUTION-2 + contract §4.6.
+
+Cross-session observation: Session B resumed (operator re-launch ack for OPEN-Q-B-1). B resolved OPEN-Q-B-1 via CDP HTTP discovery (Option C). B noted C's OPEN-Q-C-1 resolution is structurally forced (no new methodology to propagate to C). See cross-session propagation log.
+
 ---
 
 ## Session D — COARCH-T02 (chat panel UI scaffold)
@@ -48,7 +68,7 @@ _Append-only. Format: timestamp | event | citation_
 
 _Append-only. Sessions log when they adopt a discipline change observed in another session's notes._
 
-(empty)
+2026-04-30T00:00Z | B → C observed | Session B noted C's OPEN-Q-C-1 resolution (option c, structurally forced by §8.8). No methodology change required in C — C had already arrived at the same conclusion independently. No new propagation from B to C at this point. B's OPEN-Q-B-1 CDP resolution (Option C) is informational to C but not actionable (C doesn't exercise DOM assertions).
 
 ---
 
