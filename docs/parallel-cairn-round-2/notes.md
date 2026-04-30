@@ -18,6 +18,8 @@ _Append-only. Format: timestamp | event | citation_
 
 2026-04-30 | PRE_REG_GATE_RESOLVED | OPEN-Q-B-1 resolved: Option C — CDP HTTP discovery. Spawn Electron with --remote-debugging-port=9773 --remote-debugging-address=127.0.0.1; poll http://127.0.0.1:9773/json (Node 18 global fetch, no new packages) after WINDOW_READY; find page target; assert target.url === WEB_UI_URL. MODELED label applied (documented Electron 41 behavior, not spiked in this repo). DOM column assertions (kanban: AWAITING REVIEW / STALE / RUNNING / IDLE, session-card) deferred as it.todo() per contract §3.5 "low-stakes for Round 2; operator may revisit at MB-T07."
 
+2026-04-30 | RED_COMMIT | test/integration/mb-t02/dispatch-web-renders-in-shell.test.ts committed. URL assertion (CDP HTTP) exercises RED→GREEN: RED=data: URL loads (MB-T01 scaffold) → CDP returns data: URL ≠ WEB_UI_URL → FAIL. GREEN (post Zipper-1, dispatch-web running) → URL matches → PASS. Two DOM column it.todo() entries surfaced pending OPEN-Q-B-1 DOM ack.
+
 ---
 
 ## Session C — MB-T03 (menu + window lifecycle)

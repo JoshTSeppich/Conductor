@@ -49,6 +49,7 @@ have resolved before Phase Z cluster close.
 | `UI-F-real-browser-modal` | Real-browser smoke test for SendPromptModal interactions (deferred per Session B's no-Playwright scope) | W-3 |
 | `MB-F-pnpm-electron-packaging` | When COARCH-T03 reinstalls `@anthropic-ai/sdk`, re-spike packager against actual workspace dep tree. Decide between `node-linker=hoisted` (workspace-wide), `public-hoist-pattern` (local), or `electron-builder`. MB-S04 ADR's K6 claim (263 MB / 8.4 s) was sterile-spike evidence, not workspace-dep evidence. | MB-T01 green |
 | `MB-F-mb-s04-spike-amendment` | Amend MB-S04 ADR §K6 to reflect spike-vs-reality gap discovered at MB-T01 green: sterile package.json doesn't surface pnpm symlink + `@electron/packager` prune walker incompatibility. Future packaging spikes must use actual workspace dep tree. | MB-T01 green |
+| `MB-F-MB-T03-DOCK-BADGE` | Dock badge implementation deferred per RESOLUTION-2 (operator 2026-04-30). V3_TICKETS.md L120 "if relevant" language stripped from MB-T03 frozen surface (contract §4.6, OPEN-Q-C-2). Implement in a future ticket: `app.setBadgeCount(n)` for unread-action-count badge on the macOS dock icon. Requires daemon polling or SSE event to drive count updates. Non-blocking for v3.0 ship. | MB-T03 green |
 
 ---
 
