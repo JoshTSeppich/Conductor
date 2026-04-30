@@ -18,7 +18,7 @@
 
 ### §1.1 What Workstation is
 
-Foxworks Workstation is a desktop Electron application that wraps Conductor v2's existing dispatch-web kanban UI and adds an embedded Claude Sonnet 4.6 orchestrator chat panel for managing multiple Claude Code sessions through a build cycle. It ships as `packages/dispatch-menubar/` (renamed to `dispatch-workstation` at MB-T01) within the foxworks-dispatch monorepo at version 3.0.0.
+Foxworks Workstation is a desktop Electron application that wraps Conductor v2's existing dispatch-web kanban UI and adds an embedded Claude Sonnet 4.6 orchestrator chat panel for managing multiple Claude Code sessions through a build cycle. It ships as `packages/dispatch-workstation/` (originally scaffolded as `dispatch-menubar`; renamed at MB-T01 chore commit `a32ece8`) within the foxworks-dispatch monorepo at version 3.0.0.
 
 Workstation does not replace the daemon, the dispatch-web UI, or the fd CLI. It embeds dispatch-web in a BrowserWindow, talks to the daemon over the existing `/v2/*` API surface plus new `/v3/*` orchestrator-specific endpoints, and provides operators a single integrated surface for spawn, monitor, approve, and dogfood.
 
@@ -110,7 +110,7 @@ For v3.0 ship: the v3 schema is `1.0`. The build-doc schema (separate version na
 
 The orchestrator is a Claude Sonnet 4.6 model called via Anthropic API from the Workstation Electron main process. Its role is stateless routing and translation per ratified vision §7.1. It does not hold state across calls. It does not arbitrate ambiguity. It does not modify the build doc. It produces structured output of four types: action, card, multi-choice-card, escape-block.
 
-The orchestrator's complete behavioral specification is the system prompt at `packages/dispatch-menubar/coarchitect/system-prompt.md` (operator-arbitrated; frozen as contract artifact per ratified P-0.4 Q6).
+The orchestrator's complete behavioral specification is the system prompt at `packages/dispatch-workstation/coarchitect/system-prompt.md` (operator-arbitrated; frozen as contract artifact per ratified P-0.4 Q6).
 
 ### §3.2 Approval model
 
