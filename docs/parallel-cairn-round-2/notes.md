@@ -56,6 +56,22 @@ FOLLOWUPS.md: MB-F-MB-T03-DOCK-BADGE filed per RESOLUTION-2 + contract §4.6.
 
 Cross-session observation: Session B resumed (operator re-launch ack for OPEN-Q-B-1). B resolved OPEN-Q-B-1 via CDP HTTP discovery (Option C). B noted C's OPEN-Q-C-1 resolution is structurally forced (no new methodology to propagate to C). See cross-session propagation log.
 
+Self-correction (§8.6): First green commit (5acadef) omitted implementation files — git add ran from packages/dispatch-workstation/ cwd instead of repo root; paths resolved correctly but the index state was lost between status check and commit. Remediation: second green commit (865b80f) staged from repo root explicitly. Disclosed in 865b80f commit body.
+
+Shared git index finding: Session B's test file (mb-t02/dispatch-web-renders-in-shell.test.ts) appeared staged in shared git index on both git add attempts (staged by Session B's parallel session). Detected via `git status` after per-path add. Unstaged via `git restore --staged` before committing. Not a §9.1 violation — Session C never committed it. Parallel-session shared index is a new coordination hazard not anticipated in §9.1-§9.4. Flagged for operator / Final integration awareness.
+
+2026-04-30T00:00Z | SESSION COMPLETE | contract §4
+
+MB-T03 deliverables complete per §2 territory matrix:
+- src/main/menu.ts: committed at 865b80f ✓
+- src/main/window-lifecycle.ts: committed at 865b80f ✓
+- test/integration/mb-t03/window-state-persists.test.ts: committed at 470a065 ✓
+- test/integration/mb-t03/lifecycle-fixture-main.mjs: committed at 865b80f ✓
+- docs/FOLLOWUPS.md MB-F-MB-T03-DOCK-BADGE: committed at 865b80f ✓
+- main.ts: NOT touched ✓ (territory invariant holds)
+
+Zipper-1 pre-conditions met: exports match §4.2-§4.3 exactly; pnpm test 2 passed (2).
+
 ---
 
 ## Session D — COARCH-T02 (chat panel UI scaffold)
