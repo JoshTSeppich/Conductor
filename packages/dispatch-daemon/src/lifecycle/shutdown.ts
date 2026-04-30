@@ -11,6 +11,7 @@
  * connected WS clients before those connections terminate.
  */
 
+import type Database from 'better-sqlite3';
 import type { FastifyInstance } from 'fastify';
 import type { WatcherManager } from '../watchers/manager.js';
 import type { NotificationsConsumerHandle } from '../notifications/index.js';
@@ -23,10 +24,15 @@ export interface ShutdownResources {
    *  in-flight notify dispatches run against a closing
    *  process. */
   notifications?: NotificationsConsumerHandle;
+  /** v3 SQLite database. Closed last, after the HTTP server has
+   *  drained, so any in-flight route handler can finish a write
+   *  before the file handle releases. Added in COARCH-T01 B2. */
+  db?: Database.Database;
 }
 
 export async function shutdown(resources: ShutdownResources): Promise<void> {
   resources.notifications?.stop();
   resources.watcherManager?.closeAll();
   await resources.server.close();
+  resources.db?.close();
 }

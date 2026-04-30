@@ -9,6 +9,7 @@
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type Database from 'better-sqlite3';
 import type { FastifyInstance } from 'fastify';
 import { startup } from '../../src/lifecycle/startup.js';
 import { readRegistryV2 } from '../../src/migration/schema-v2.js';
@@ -87,6 +88,13 @@ export interface TestServer {
    * different recording semantics. Added in DAEMON-T16.
    */
   notifyCalls: NotifyInput[];
+  /**
+   * v3 SQLite database handle (test-isolated path per dbPath opt or
+   * mkdtemp default). Tests that exercise /v3/* routes register them
+   * via beforeListen and can also seed rows directly via this handle.
+   * Added in COARCH-T01 B2.
+   */
+  db: Database.Database;
   close: () => Promise<void>;
 }
 
@@ -162,6 +170,13 @@ export interface SpawnTestServerOpts {
    * Z-3 static-serve.test.ts passes a mkdtemp fixture dist.
    */
   staticRoot?: string;
+  /**
+   * Test-isolated v3 SQLite path. Auto-isolated per the established
+   * tokenPath / registryPath / archiveRoot pattern when omitted so
+   * tests never touch the operator's real ~/.foxworks-dispatch/data.db.
+   * Added in COARCH-T01 B2.
+   */
+  dbPath?: string;
 }
 
 /**
@@ -291,6 +306,8 @@ export async function spawnTestServer(
     (await isolatedDefault('fd-fixture-reg-', 'sessions.json'));
   const archiveRoot =
     opts.archiveRoot ?? (await isolatedDefault('fd-fixture-arc-', 'archive'));
+  const dbPath =
+    opts.dbPath ?? (await isolatedDefault('fd-fixture-db-', 'data.db'));
   // Defense-in-depth: default to no-op clipboard so tests never
   // clobber operator's real pbcopy. Tests pass a stub explicitly
   // when they want to verify delivery.
@@ -316,7 +333,7 @@ export async function spawnTestServer(
 
   // logger:false silences per-request Pino output for test ergonomics.
   // Production startup() defaults to info-level logging.
-  const { server, port, token, emit, close } = await startup({
+  const { server, port, token, emit, db, close } = await startup({
     port: 0,
     logger: false,
     tokenPath,
@@ -330,6 +347,7 @@ export async function spawnTestServer(
     notify,
     notificationsAvailable: opts.notificationsAvailable ?? false,
     staticRoot: opts.staticRoot,
+    dbPath,
   });
 
   const triggerHandoffWrite = async (
@@ -415,6 +433,7 @@ export async function spawnTestServer(
     triggerGitCommit,
     triggerStatusJsonUpdate,
     notifyCalls,
+    db,
     close,
   };
 }

@@ -14,6 +14,7 @@
  * Each of those is an additive step; the T01 pattern stays intact.
  */
 
+import type Database from 'better-sqlite3';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
@@ -23,6 +24,11 @@ import { buildServer, type BuildServerOpts } from '../server.js';
 import { createEventRing, type EventRing } from '../events/history.js';
 import { createEventBus, type EmitFn } from '../events/bus.js';
 import { createAuthHook, getOrCreateToken, type TokenRef } from './auth.js';
+import {
+  defaultDataDbPath,
+  openDatabase,
+  runMigrations,
+} from './db.js';
 import { registerErrorHandler } from './error-handler.js';
 import { registerAuthRoutes } from '../routes/auth.js';
 import { registerEventsRoutes } from '../routes/events.js';
@@ -150,6 +156,13 @@ export interface StartupOpts {
    * + production-tunable + monorepo-default-friendly.
    */
   staticRoot?: string;
+  /**
+   * Path to the v3 SQLite database. Default
+   * `~/.foxworks-dispatch/data.db` per WORKSTATION_CONTRACT.md §8.1.
+   * Test-isolated per the existing tokenPath / registryPath /
+   * archiveRoot defense-in-depth pattern. Added in COARCH-T01 B2.
+   */
+  dbPath?: string;
 }
 
 export interface StartupHandle {
@@ -176,6 +189,14 @@ export interface StartupHandle {
    * DAEMON-T13.
    */
   watcherManager: WatcherManager;
+  /**
+   * v3 SQLite database handle. Production callers don't use this
+   * directly; route handlers receive it via DI. Exposed on the
+   * handle so the test fixture can attach v3 routes via
+   * `beforeListen` and so `close()` can release the file handle
+   * cleanly. Added in COARCH-T01 B2.
+   */
+  db: Database.Database;
   close: () => Promise<void>;
 }
 
@@ -220,6 +241,14 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const tokenRef: TokenRef = { value: initialToken };
   app.addHook('onRequest', createAuthHook(tokenRef));
   await registerAuthRoutes(app, { tokenRef, tokenPath });
+
+  // COARCH-T01 B2: open the v3 SQLite database and run additive-only
+  // migrations per WORKSTATION_CONTRACT.md §8.1 (amended at 7fd48e4).
+  // Init runs after auth-hook registration so /v3/* routes registered
+  // below are gated by the same X-Conductor-Token check as /v2/*.
+  const dbPath = opts.dbPath ?? defaultDataDbPath();
+  const db = openDatabase(dbPath);
+  runMigrations(db);
 
   // DAEMON-T16: GET /v2/health per S03 contract-additive
   // change to §4.1. Auth-exempt via auth.ts:74-76 path
@@ -390,7 +419,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
 
   async function handleSignal(signal: string): Promise<void> {
     app.log.info({ signal }, 'shutdown signal received');
-    await shutdown({ server: app, watcherManager, notifications });
+    await shutdown({ server: app, watcherManager, notifications, db });
     process.exit(0);
   }
 
@@ -403,10 +432,11 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     token: tokenRef.value,
     emit: bus.emit,
     watcherManager,
+    db,
     close: async () => {
       process.off('SIGTERM', sigTermHandler);
       process.off('SIGINT', sigIntHandler);
-      await shutdown({ server: app, watcherManager, notifications });
+      await shutdown({ server: app, watcherManager, notifications, db });
     },
   };
 }
