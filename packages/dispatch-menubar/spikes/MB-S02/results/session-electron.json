@@ -1,0 +1,15 @@
+{
+  "http_code": 201,
+  "body": {
+    "name": "mb-s02-electron-reg-91552",
+    "cwd": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S02/results",
+    "tmux_target": "mb-s02-electron:0.0",
+    "handoff_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S02/results/HANDOFF.md",
+    "last_prompt_sent_at": null,
+    "last_handoff_pulled_at": null,
+    "state": "armed",
+    "last_commit_sha": null,
+    "last_status_json_at": null,
+    "computed_status": "idle"
+  }
+}

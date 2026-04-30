@@ -1,0 +1,615 @@
+{
+  "generated_at": "2026-04-30T04:56:40.267Z",
+  "cli_var_count": 32,
+  "comparisons": [
+    {
+      "label": "B1_inherited",
+      "available": true,
+      "divergences": [
+        {
+          "key": "COLOR",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "1",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "EDITOR",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "vi",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "INIT_CWD",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "NODE",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin/node",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "NODE_PATH",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.pnpm/electron@41.3.0/node_modules/electron/node_modules:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.pnpm/electron@41.3.0/node_modules:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.pnpm/node_modules",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "PATH",
+          "status": "value_differs",
+          "cli": "/Users/joshuatseppich/Library/pnpm:/Users/joshuatseppich/.local/bin:/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Users/joshuatseppich/.cargo/bin",
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/node_modules/.bin:/Users/joshuatseppich/Desktop/node_modules/.bin:/Users/joshuatseppich/node_modules/.bin:/Users/node_modules/.bin:/node_modules/.bin:/Users/joshuatseppich/.nvm/versions/node/v20.19.6/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/node-gyp-bin:/Users/joshuatseppich/Library/pnpm:/Users/joshuatseppich/.local/bin:/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Users/joshuatseppich/.cargo/bin",
+          "bucket": "PATH_CRITICAL"
+        },
+        {
+          "key": "TMUX",
+          "status": "value_differs",
+          "cli": "/private/tmp/tmux-501/mb-s02-cli-env-91484,91497,0",
+          "compare": "/private/tmp/tmux-501/mb-s02-b1-env-91552,91562,0",
+          "bucket": "SPAWN_METADATA"
+        },
+        {
+          "key": "__CF_USER_TEXT_ENCODING",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "0x1F5:0x0:0x0",
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "npm_command",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "exec",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_cache",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.npm",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_global_prefix",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_globalconfig",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/etc/npmrc",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_init_module",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.npm-init.js",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_local_prefix",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_node_gyp",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_noproxy",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_npm_version",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "10.8.2",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_prefix",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6",
+          "bucket": "PATH_CRITICAL"
+        },
+        {
+          "key": "npm_config_user_agent",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "npm/10.8.2 node/v20.19.6 darwin arm64 workspaces/false",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_userconfig",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.npmrc",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_execpath",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/lib/node_modules/npm/bin/npm-cli.js",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_lifecycle_event",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "npx",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_lifecycle_script",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "electron",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_node_execpath",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin/node",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_package_json",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/package.json",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_package_name",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "dispatch-menubar",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_package_version",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "2.0.1",
+          "bucket": "CC_BEHAVIORAL"
+        }
+      ],
+      "summary": {
+        "total": 27,
+        "by_bucket": {
+          "UNCLASSIFIED": 4,
+          "CC_BEHAVIORAL": 19,
+          "PATH_CRITICAL": 2,
+          "SPAWN_METADATA": 1,
+          "TERMINAL_SPECIFIC": 1
+        }
+      }
+    },
+    {
+      "label": "B2_launchd_minimal",
+      "available": true,
+      "divergences": [
+        {
+          "key": "FPATH",
+          "status": "only_in_cli",
+          "cli": "/opt/homebrew/share/zsh/site-functions:/usr/local/share/zsh/site-functions:/usr/share/zsh/site-functions:/usr/share/zsh/5.9/functions",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "HOMEBREW_CELLAR",
+          "status": "only_in_cli",
+          "cli": "/opt/homebrew/Cellar",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "HOMEBREW_PREFIX",
+          "status": "only_in_cli",
+          "cli": "/opt/homebrew",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "HOMEBREW_REPOSITORY",
+          "status": "only_in_cli",
+          "cli": "/opt/homebrew",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "INFOPATH",
+          "status": "only_in_cli",
+          "cli": "/opt/homebrew/share/info:",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "LANG",
+          "status": "only_in_cli",
+          "cli": "en_US.UTF-8",
+          "compare": null,
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "NVM_BIN",
+          "status": "only_in_cli",
+          "cli": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin",
+          "compare": null,
+          "bucket": "PATH_CRITICAL"
+        },
+        {
+          "key": "NVM_CD_FLAGS",
+          "status": "only_in_cli",
+          "cli": "-q",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "NVM_DIR",
+          "status": "only_in_cli",
+          "cli": "/Users/joshuatseppich/.nvm",
+          "compare": null,
+          "bucket": "PATH_CRITICAL"
+        },
+        {
+          "key": "NVM_INC",
+          "status": "only_in_cli",
+          "cli": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/include/node",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "OSLogRateLimit",
+          "status": "only_in_cli",
+          "cli": "64",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "PATH",
+          "status": "value_differs",
+          "cli": "/Users/joshuatseppich/Library/pnpm:/Users/joshuatseppich/.local/bin:/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Users/joshuatseppich/.cargo/bin",
+          "compare": "/usr/bin:/bin:/usr/sbin:/sbin",
+          "bucket": "PATH_CRITICAL"
+        },
+        {
+          "key": "PNPM_HOME",
+          "status": "only_in_cli",
+          "cli": "/Users/joshuatseppich/Library/pnpm",
+          "compare": null,
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "SHLVL",
+          "status": "value_differs",
+          "cli": "3",
+          "compare": "1",
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "SSH_AUTH_SOCK",
+          "status": "only_in_cli",
+          "cli": "/private/tmp/com.apple.launchd.kgFMH6o86u/Listeners",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "TERM_SESSION_ID",
+          "status": "only_in_cli",
+          "cli": "AD5BB8F9-5D61-498E-B2DD-966DA538B493",
+          "compare": null,
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "TMUX",
+          "status": "value_differs",
+          "cli": "/private/tmp/tmux-501/mb-s02-cli-env-91484,91497,0",
+          "compare": "/private/tmp/tmux-501/mb-s02-b2-env-91552,91587,0",
+          "bucket": "SPAWN_METADATA"
+        },
+        {
+          "key": "XPC_FLAGS",
+          "status": "only_in_cli",
+          "cli": "0x0",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "XPC_SERVICE_NAME",
+          "status": "only_in_cli",
+          "cli": "0",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "__CFBundleIdentifier",
+          "status": "only_in_cli",
+          "cli": "com.apple.Terminal",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        }
+      ],
+      "summary": {
+        "total": 20,
+        "by_bucket": {
+          "UNCLASSIFIED": 12,
+          "TERMINAL_SPECIFIC": 3,
+          "PATH_CRITICAL": 3,
+          "CC_BEHAVIORAL": 1,
+          "SPAWN_METADATA": 1
+        }
+      }
+    },
+    {
+      "label": "electron_process_env",
+      "available": true,
+      "divergences": [
+        {
+          "key": "COLOR",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "1",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "EDITOR",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "vi",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "INIT_CWD",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "NODE",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin/node",
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "NODE_PATH",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.pnpm/electron@41.3.0/node_modules/electron/node_modules:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.pnpm/electron@41.3.0/node_modules:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.pnpm/node_modules",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "PATH",
+          "status": "value_differs",
+          "cli": "/Users/joshuatseppich/Library/pnpm:/Users/joshuatseppich/.local/bin:/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Users/joshuatseppich/.cargo/bin",
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/node_modules/.bin:/Users/joshuatseppich/Desktop/Automata/node_modules/.bin:/Users/joshuatseppich/Desktop/node_modules/.bin:/Users/joshuatseppich/node_modules/.bin:/Users/node_modules/.bin:/node_modules/.bin:/Users/joshuatseppich/.nvm/versions/node/v20.19.6/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/node-gyp-bin:/Users/joshuatseppich/Library/pnpm:/Users/joshuatseppich/.local/bin:/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Users/joshuatseppich/.cargo/bin",
+          "bucket": "PATH_CRITICAL"
+        },
+        {
+          "key": "SHLVL",
+          "status": "value_differs",
+          "cli": "3",
+          "compare": "2",
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "TERM",
+          "status": "value_differs",
+          "cli": "tmux-256color",
+          "compare": "xterm-256color",
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "TERM_PROGRAM",
+          "status": "value_differs",
+          "cli": "tmux",
+          "compare": "Apple_Terminal",
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "TERM_PROGRAM_VERSION",
+          "status": "value_differs",
+          "cli": "3.6a",
+          "compare": "466",
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "TMUX",
+          "status": "only_in_cli",
+          "cli": "/private/tmp/tmux-501/mb-s02-cli-env-91484,91497,0",
+          "compare": null,
+          "bucket": "SPAWN_METADATA"
+        },
+        {
+          "key": "TMUX_PANE",
+          "status": "only_in_cli",
+          "cli": "%0",
+          "compare": null,
+          "bucket": "SPAWN_METADATA"
+        },
+        {
+          "key": "_",
+          "status": "only_in_cli",
+          "cli": "/usr/bin/env",
+          "compare": null,
+          "bucket": "UNCLASSIFIED"
+        },
+        {
+          "key": "__CF_USER_TEXT_ENCODING",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "0x1F5:0x0:0x0",
+          "bucket": "TERMINAL_SPECIFIC"
+        },
+        {
+          "key": "npm_command",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "exec",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_cache",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.npm",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_global_prefix",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_globalconfig",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/etc/npmrc",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_init_module",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.npm-init.js",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_local_prefix",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_node_gyp",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_noproxy",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_npm_version",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "10.8.2",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_prefix",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6",
+          "bucket": "PATH_CRITICAL"
+        },
+        {
+          "key": "npm_config_user_agent",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "npm/10.8.2 node/v20.19.6 darwin arm64 workspaces/false",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_config_userconfig",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.npmrc",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_execpath",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/lib/node_modules/npm/bin/npm-cli.js",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_lifecycle_event",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "npx",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_lifecycle_script",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "electron",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_node_execpath",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/.nvm/versions/node/v20.19.6/bin/node",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_package_json",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/package.json",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_package_name",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "dispatch-menubar",
+          "bucket": "CC_BEHAVIORAL"
+        },
+        {
+          "key": "npm_package_version",
+          "status": "only_in_electron",
+          "cli": null,
+          "compare": "2.0.1",
+          "bucket": "CC_BEHAVIORAL"
+        }
+      ],
+      "summary": {
+        "total": 33,
+        "by_bucket": {
+          "UNCLASSIFIED": 5,
+          "CC_BEHAVIORAL": 19,
+          "PATH_CRITICAL": 2,
+          "TERMINAL_SPECIFIC": 5,
+          "SPAWN_METADATA": 2
+        }
+      }
+    }
+  ],
+  "classification_note": "PATH_CRITICAL divergences affect binary resolution. CC_BEHAVIORAL divergences affect claude/AI tool behavior. TERMINAL_SPECIFIC are cosmetic. SPAWN_METADATA are expected from tmux pane context."
+}

@@ -1,0 +1,43 @@
+=== TERM ===
+tmux-256color
+
+=== COLORTERM ===
+truecolor
+
+=== tty device ===
+/dev/ttys010
+
+=== isatty(stdin) ===
+yes
+
+=== COLUMNS x LINES ===
+COLUMNS=<unset>  LINES=<unset>
+
+=== stty -a ===
+speed 9600 baud; 50 rows; 220 columns;
+lflags: icanon isig iexten echo echoe -echok echoke -echonl echoctl
+	-echoprt -altwerase -noflsh -tostop -flusho -pendin -nokerninfo
+	-extproc
+iflags: -istrip icrnl -inlcr -igncr ixon -ixoff ixany imaxbel iutf8
+	-ignbrk brkint -inpck -ignpar -parmrk
+oflags: opost onlcr -oxtabs -onocr -onlret
+cflags: cread cs8 -parenb -parodd hupcl -clocal -cstopb -crtscts -dsrflow
+	-dtrflow -mdmbuf
+cchars: discard = ^O; dsusp = ^Y; eof = ^D; eol = <undef>;
+	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U; lnext = ^V;
+	min = 1; quit = ^\; reprint = ^R; start = ^Q; status = ^T;
+	stop = ^S; susp = ^Z; time = 0; werase = ^W;
+
+=== SIGWINCH ===
+(static measurement; SIGWINCH delivery requires an attached client and window resize)
+tmux allocates PTY for all panes regardless of spawn context; SIGWINCH is sent
+by tmux to the pane process on client resize. Not dependent on spawning env.
+
+=== input echo discipline ===
+echo
+echoe
+echok
+echoke
+echonl
+echoctl
+echoprt

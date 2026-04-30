@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-04-30T04:56:40.412Z",
+  "summary": {
+    "total": 5,
+    "pass": 4,
+    "skip": 0,
+    "not_enforced": 1
+  },
+  "verdicts": [
+    {
+      "id": "FM-1",
+      "status": "PASS"
+    },
+    {
+      "id": "FM-2",
+      "status": "PASS"
+    },
+    {
+      "id": "FM-3",
+      "status": "PASS"
+    },
+    {
+      "id": "FM-4",
+      "status": "PASS"
+    },
+    {
+      "id": "FM-5",
+      "status": "NOT_ENFORCED"
+    }
+  ],
+  "details": [
+    {
+      "id": "FM-1",
+      "description": "tmux binary not found",
+      "status": "PASS",
+      "error_code": "ENOENT",
+      "message": "spawn /nonexistent/bin/tmux-does-not-exist ENOENT"
+    },
+    {
+      "id": "FM-2",
+      "description": "claude binary not found inside pane (exit 127 simulation)",
+      "status": "PASS",
+      "spawn_error": null,
+      "pane_exited_promptly": true,
+      "note": "tmux does not retry on non-zero exit; pane is destroyed immediately. Workstation v3 must detect short-lived sessions and surface error to user."
+    },
+    {
+      "id": "FM-3",
+      "description": "daemon unreachable (connection refused)",
+      "status": "PASS",
+      "error_type": "TypeError",
+      "error_message": "fetch failed"
+    },
+    {
+      "id": "FM-4",
+      "description": "name collision — killed record (409)",
+      "status": "PASS",
+      "first_http": 201,
+      "second_http": 409,
+      "second_body": {
+        "error": "Session name in use (killed record exists). Pick a new name."
+      },
+      "expected_http": 409,
+      "expected_message_fragment": "killed record exists"
+    },
+    {
+      "id": "FM-5",
+      "description": "max-sessions cap",
+      "status": "NOT_ENFORCED",
+      "note": "v2.0.1 POST /v2/sessions has no max-sessions cap. Cap is a v3 requirement. Cannot test failure mode that does not exist. Workstation v3 must add cap enforcement before FM-5 can be PASS.",
+      "v3_action": "Add max_sessions cap check in POST /v2/sessions handler; return 429 or 503 with descriptive error."
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "generated_at": "2026-04-30T04:56:40.302Z",
+  "cli_http_code": 201,
+  "electron_http_code": 201,
+  "fields": [
+    {
+      "field": "computed_status",
+      "status": "match",
+      "value": "idle",
+      "verdict": "PASS"
+    },
+    {
+      "field": "cwd",
+      "status": "provenance_field",
+      "cli": "/var/folders/2w/74bl5mvj1jg7dwd_7h004glw0000gn/T/tmp.RifbUfnann",
+      "electron": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S02/results",
+      "verdict": "EXPECTED_DIFFERENCE"
+    },
+    {
+      "field": "handoff_path",
+      "status": "provenance_field",
+      "cli": "/var/folders/2w/74bl5mvj1jg7dwd_7h004glw0000gn/T/tmp.RifbUfnann/HANDOFF.md",
+      "electron": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S02/results/HANDOFF.md",
+      "verdict": "EXPECTED_DIFFERENCE"
+    },
+    {
+      "field": "last_commit_sha",
+      "status": "null_check",
+      "cli": null,
+      "electron": null,
+      "verdict": "PASS"
+    },
+    {
+      "field": "last_handoff_pulled_at",
+      "status": "null_check",
+      "cli": null,
+      "electron": null,
+      "verdict": "PASS"
+    },
+    {
+      "field": "last_prompt_sent_at",
+      "status": "null_check",
+      "cli": null,
+      "electron": null,
+      "verdict": "PASS"
+    },
+    {
+      "field": "last_status_json_at",
+      "status": "null_check",
+      "cli": null,
+      "electron": null,
+      "verdict": "PASS"
+    },
+    {
+      "field": "name",
+      "status": "provenance_field",
+      "cli": "mb-s02-cli-reg-91484",
+      "electron": "mb-s02-electron-reg-91552",
+      "verdict": "EXPECTED_DIFFERENCE"
+    },
+    {
+      "field": "state",
+      "status": "match",
+      "value": "armed",
+      "verdict": "PASS"
+    },
+    {
+      "field": "tmux_target",
+      "status": "provenance_field",
+      "cli": "mb-s02-cli:0.0",
+      "electron": "mb-s02-electron:0.0",
+      "verdict": "EXPECTED_DIFFERENCE"
+    }
+  ],
+  "verdict": "PASS",
+  "notes": [
+    "All non-provenance fields structurally identical. §8.1 registration parity: KNOWN."
+  ]
+}
