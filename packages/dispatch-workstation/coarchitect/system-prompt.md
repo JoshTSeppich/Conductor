@@ -2,7 +2,7 @@
 
 **Status:** DRAFT under operator-explicit Path B scope-narrowing per P-0.4 multi-choice arbitration walkthrough (2026-04-28). Pending operator ratification ("P-0.4 ratified") to freeze as authority for v3.0 orchestrator behavior.
 
-**Authority:** Hybrid artifact per ratified P-0.4 Q6. This Markdown file is the source of truth for `contract:` commits. Build pipeline embeds the prompt content into a TypeScript constant at `packages/dispatch-menubar/src/coarchitect/system-prompt.generated.ts` at build time. Both files commit; this `.md` is authoritative.
+**Authority:** Hybrid artifact per ratified P-0.4 Q6. This Markdown file is the source of truth for `contract:` commits. Build pipeline embeds the prompt content into a TypeScript constant at `packages/dispatch-workstation/src/coarchitect/system-prompt.generated.ts` at build time. Both files commit; this `.md` is authoritative.
 
 **Length target:** 1500-2500 words per ratified P-0.4 Q1 (STRUCTURED MEDIUM).
 
@@ -164,9 +164,9 @@ When in doubt, escape.
 
 ### Artifact location
 
-Source of truth: this Markdown file at `packages/dispatch-menubar/coarchitect/system-prompt.md` (operator-arbitrated under `contract:` commits).
+Source of truth: this Markdown file at `packages/dispatch-workstation/coarchitect/system-prompt.md` (operator-arbitrated under `contract:` commits).
 
-Build pipeline output: TypeScript constant at `packages/dispatch-menubar/src/coarchitect/system-prompt.generated.ts` (regenerated on build from this Markdown's content).
+Build pipeline output: TypeScript constant at `packages/dispatch-workstation/src/coarchitect/system-prompt.generated.ts` (regenerated on build from this Markdown's content).
 
 Both files commit. The `.generated.ts` is `.gitignore`-excluded if the build pipeline regenerates it on every build, OR committed if regeneration is deterministic and the build pipeline asserts no diff. Operator decides at MB-T01 implementation time.
 
