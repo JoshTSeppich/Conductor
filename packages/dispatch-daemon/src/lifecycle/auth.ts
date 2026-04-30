@@ -81,11 +81,14 @@ export function createAuthHook(
       return;
     }
 
-    // Z-3 §3.4-arbitrated static-serve: bypass auth for non-/v2/*
-    // paths. Static SPA assets (index.html + /assets/*) + SPA
+    // Z-3 §3.4-arbitrated static-serve: bypass auth for non-API
+    // paths only. Static SPA assets (index.html + /assets/*) + SPA
     // client-routed paths are served on the same origin with
-    // localhost-only trust scope. /v2/* API stays gated.
-    if (!pathOnly.startsWith('/v2/')) {
+    // localhost-only trust scope. /v2/* + /v3/* API stays gated
+    // per CONDUCTOR_API_CONTRACT.md §3.1 (and amended §4.6 once
+    // the contract amendment lands; coordinated /v3/* surface per
+    // WORKSTATION_CONTRACT.md §6).
+    if (!pathOnly.startsWith('/v2/') && !pathOnly.startsWith('/v3/')) {
       return;
     }
 
