@@ -70,7 +70,15 @@ Cross-session observation: Session B resumed (operator re-launch ack for OPEN-Q-
 
 Self-correction (§8.6): First green commit (5acadef) omitted implementation files — git add ran from packages/dispatch-workstation/ cwd instead of repo root; paths resolved correctly but the index state was lost between status check and commit. Remediation: second green commit (865b80f) staged from repo root explicitly. Disclosed in 865b80f commit body.
 
-Shared git index finding: Session B's test file (mb-t02/dispatch-web-renders-in-shell.test.ts) appeared staged in shared git index on both git add attempts (staged by Session B's parallel session). Detected via `git status` after per-path add. Unstaged via `git restore --staged` before committing. Not a §9.1 violation — Session C never committed it. Parallel-session shared index is a new coordination hazard not anticipated in §9.1-§9.4. Flagged for operator / Final integration awareness.
+Shared git index event: Session B's test file (mb-t02/dispatch-web-renders-in-shell.test.ts) appeared staged in shared index on both git add attempts. Detected via `git status` after per-path add. Unstaged via `git restore --staged` before committing. No contamination landed in Session C commits.
+
+2026-04-30T00:00Z | FRAMING CORRECTION — operator review | contract §3.8, §8.7
+
+The shared-index event documented above and in 0bf4722 was framed as a "novel §9.x candidate" and "not anticipated in §9.1-§9.4." That framing is incorrect and corrected here per operator review.
+
+The shared-working-tree per-path-git-add discipline is NOT novel. It is Round 1 Incident 8, codified in project instructions §3.8 ("Per-path git add (shared-working-tree contexts)"): git add -A in shared-working-tree parallel sessions is unsafe; use explicit git add <path> for every staged file; pre-commit territory check via git status --short; post-commit verification via git log -1 --stat. The Round 2 contract §8/§9 inherits this primitive. Session C's per-path add + git status check + git restore --staged sequence is the existing primitive executing as designed, not new methodology.
+
+No contract amendment recommendation stands (contract amendment is operator-only authoring under §3.4 and not in build-session lane to recommend). The "novel §9.x candidate" and "anticipated failure modes don't cover shared index" claims in 0bf4722 commit body are incorrect. This correction propagates forward so cross-session inheritance in any subsequent round receives accurate framing.
 
 2026-04-30T00:00Z | SESSION COMPLETE | contract §4
 
