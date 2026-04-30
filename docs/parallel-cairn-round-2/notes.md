@@ -122,6 +122,22 @@ DISCREPANCY NOTED (contract §4.7 step 3 vs frozen file): Contract §4.7 step 3 
 
 MODELED CONCERN (loadDispatchWeb rejection): `loadDispatchWeb` returns `win.loadURL(WEB_UI_URL)` with no error handling. If the dev-server is unreachable during tests, `loadURL` may reject with ERR_CONNECTION_REFUSED, which may prevent `did-finish-load` from firing and thus suppress the `WINDOW_READY` sentinel that MB-T01 awaits. Mitigation: register `did-finish-load` listener BEFORE `await loadDispatchWeb(mainWindow)` so the listener exists when the URL load starts. Will run tests post-wiring and surface if MB-T01 regresses per execution sequence step 4.
 
+2026-04-30T00:00Z | WIRING COMMIT 68e6528 — refactor(zipper-1): wire B's webview-loader + C's menu/window-lifecycle into main.ts | §7.2 wiring complete
+
+POST-EDIT VERIFICATION RESULTS:
+- typecheck: clean (no errors)
+- build: clean
+- test 3 passed (3): MB-T01 PASS 2421ms, MB-T02 PASS 2156ms, MB-T03 PASS 2632ms
+- git log -1 --stat: only main.ts in commit (17 insertions, 22 deletions)
+- git status --short: clean post-commit
+- git log --oneline origin/main..HEAD: empty (fully pushed)
+
+MODELED CONCERN RESOLVED: loadDispatchWeb rejection → OBSERVED SAFE. Electron fires did-finish-load for its ERR_CONNECTION_REFUSED error page. WINDOW_READY emitted. MB-T01 passes without modification. No test updates required.
+
+CONTRACT DISCREPANCY RESOLVED: §4.7 step 3 `defaultWidth`/`defaultHeight` → used `width`/`height` per frozen file (authority per anti-fabrication). Surfaced in commit body 68e6528.
+
+ZIPPER-1 SESSION COMPLETE. Deliverables: packages/dispatch-workstation/src/main/main.ts (68e6528). Operator exit gate: manual `pnpm --filter dispatch-workstation dev` launch to verify menu bar + webview load. Zipper-2 may proceed once COARCH-T02 session delivers (Session D territory: src/coarchitect/* — not touched by Zipper-1).
+
 ---
 
 ## Cross-session methodology propagation log
