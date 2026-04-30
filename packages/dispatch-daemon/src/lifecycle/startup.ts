@@ -57,6 +57,7 @@ import {
   registerSessionsStateRoutes,
   registerSessionsWriteRoutes,
 } from '../routes/sessions.js';
+import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
 import { shutdown } from './shutdown.js';
 
 function defaultTokenPath(): string {
@@ -343,6 +344,15 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     emit: bus.emit,
     tmuxOps: opts.tmuxOps,
   });
+
+  // COARCH-T01 B4: POST /v3/orchestrator/messages — append chat
+  // message to orchestrator_messages SQLite table per
+  // WORKSTATION_CONTRACT.md §6.1 + ratified MB-S03 §6.3 (UUIDv7 ids).
+  // Auth-gated via the same hook as /v2/* per the A1 patch
+  // (lifecycle/auth.ts:88). Registered between /v2/* HTTP routes
+  // and the /v2/events/stream WS so all HTTP API routes group
+  // before the WS upgrade per ADR §3.3.
+  await registerOrchestratorMessagesRoutes(app, { db });
 
   // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.
   // Subscribes per-connection; emit fan-out goes through bus.

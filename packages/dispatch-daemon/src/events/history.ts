@@ -132,7 +132,7 @@ export function createEventRing(capacity: number = DEFAULT_CAPACITY): EventRing 
  * |                            rand_b                             |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-function uuidv7(): string {
+export function uuidv7(): string {
   const bytes = randomBytes(16);
   const now = BigInt(Date.now());
   bytes[0] = Number((now >> 40n) & 0xffn);
