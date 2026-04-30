@@ -2,7 +2,7 @@
 
 **Status:** Draft authoring artifact under operator best-judgment authorization. Ticket scope locks at Phase 1 spike outcomes per cairn discipline.
 **Repo state at draft:** v2.0.1 shipped clean at HEAD `7a800a9`, working tree clean, synced with origin.
-**Anchored against:** `docs/adr/UI-S02-menubar-framework.md` (Electron locked 2026-04-23), `docs/FOLLOWUPS.md` numbering convention, `docs/adr/UI-S03-notification-click.md`, `packages/dispatch-menubar/SPIKES.md`.
+**Anchored against:** `docs/adr/UI-S02-menubar-framework.md` (Electron locked 2026-04-23), `docs/FOLLOWUPS.md` numbering convention, `docs/adr/UI-S03-notification-click.md`, `packages/dispatch-workstation/SPIKES.md`.
 **Date:** 2026-04-28
 
 ---
@@ -11,11 +11,11 @@
 
 Following the existing repo convention from `docs/FOLLOWUPS.md`:
 
-- **`MB-T*`** — production tickets for `packages/dispatch-menubar/` (the v3 surface)
+- **`MB-T*`** — production tickets for `packages/dispatch-workstation/` (the v3 surface)
 - **`MB-S*`** — spike tickets for menubar (extends existing `UI-S*` pattern; new domain prefix because v3 spikes are menubar-specific)
 - **`MB-F*`** — followups filed during v3 build, land in `docs/FOLLOWUPS.md`
 - **`DAEMON-T*`** — production tickets in `packages/dispatch-daemon/` (only used for daemon contract amendments needed by v3)
-- **`COARCH-T*`** — production tickets for the orchestrator chat panel surface, lives within `packages/dispatch-menubar/` (separate ID prefix because conceptually a sub-product)
+- **`COARCH-T*`** — production tickets for the orchestrator chat panel surface, lives within `packages/dispatch-workstation/` (separate ID prefix because conceptually a sub-product)
 
 ADR location: `docs/adr/MB-S<N>-<topic>.md` for new spikes.
 Cairn findings continue from #55.
@@ -32,7 +32,7 @@ These must land before any production ticket (`MB-T01`+) commits. All operator-a
 
 **P-0.3 — `WORKSTATION_CONTRACT.md` initial authoring.** Per locked P-0.4 (separate document, not amendments to `CONDUCTOR_API_CONTRACT.md`). Enumerates: app shell scope, embedded-webview boundary, kanban-card output format, two-pill approve/decline + free-form text field semantics, multi-choice card variant, escape-block format, persistence model, IPC boundary, build-doc upload mechanism, audit log schema. Path B scaffolding available. Output: `WORKSTATION_CONTRACT.md` committed at repo root alongside `CONDUCTOR_API_CONTRACT.md` and `BUILD_CONTRACT.md`.
 
-**P-0.4 — Orchestrator system prompt.** Operator-authored text artifact. Encodes: orchestrator role definition, build-doc-as-authority discipline, kanban-card output formats, approval semantics, action enumeration, stale-card handling, escape-hatch invocation rules, cairn methodology reference, cairn-Sonnet extensions reference. Path B scaffolding available. Output: versioned text artifact at `packages/dispatch-menubar/coarchitect/system-prompt.md` (or similar; final path is operator territory). Frozen as contract.
+**P-0.4 — Orchestrator system prompt.** Operator-authored text artifact. Encodes: orchestrator role definition, build-doc-as-authority discipline, kanban-card output formats, approval semantics, action enumeration, stale-card handling, escape-hatch invocation rules, cairn methodology reference, cairn-Sonnet extensions reference. Path B scaffolding available. Output: versioned text artifact at `packages/dispatch-workstation/coarchitect/system-prompt.md` (or similar; final path is operator territory). Frozen as contract.
 
 **P-0.5 — Build-doc schema specification.** Operator-authored. Defines what a Sonnet-consumable build doc looks like: required sections, ticket boundary markers, decision-point flags, multi-choice question templates, escape-hatch points pre-marked. Path B scaffolding available. Output: schema spec as versioned text artifact.
 
@@ -97,13 +97,13 @@ Phase 1 exit gate: three ADRs landed and frozen. `CONDUCTOR_API_CONTRACT.md` ame
 
 **MB-T01 — Electron app shell scaffold.**
 
-Per UI-S02 ADR: scaffold Electron 33+ in `packages/dispatch-menubar/`. Main process entry, BrowserWindow factory, preload script (empty), dev/prod build pipeline, `package` script producing macOS `.app` bundle (no signing yet, deferred to v3.x maintenance per UI-S02 ADR). Workspace dep on `dispatch-core` via `"dispatch-core": "workspace:*"` (sidesteps the `tsc rootDir` spillage flagged in UI-S02 evidence).
+Per UI-S02 ADR: scaffold Electron 33+ in `packages/dispatch-workstation/`. Main process entry, BrowserWindow factory, preload script (empty), dev/prod build pipeline, `package` script producing macOS `.app` bundle (no signing yet, deferred to v3.x maintenance per UI-S02 ADR). Workspace dep on `dispatch-core` via `"dispatch-core": "workspace:*"` (sidesteps the `tsc rootDir` spillage flagged in UI-S02 evidence).
 
-Updates `packages/dispatch-menubar/package.json` description from "Framework TBD — UI-S02 spike" to reflect Electron scaffolding complete.
+Updates `packages/dispatch-workstation/package.json` description from "Framework TBD — UI-S02 spike" to reflect Electron scaffolding complete.
 
 Red: `test_app_launches_clean.spec.ts` — spawn built app, assert process starts, window appears, exits cleanly on quit.
 Green: implement `main.ts`, `preload.ts`, package scripts.
-Acceptance: `pnpm --filter dispatch-menubar dev` opens empty window. `pnpm --filter dispatch-menubar package` produces runnable `.app`. Existing v2 tests still pass.
+Acceptance: `pnpm --filter dispatch-workstation dev` opens empty window. `pnpm --filter dispatch-workstation package` produces runnable `.app`. Existing v2 tests still pass.
 
 Closes UI-F06.
 
