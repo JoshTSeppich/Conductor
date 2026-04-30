@@ -20,6 +20,14 @@ _Append-only. Format: timestamp | event | citation_
 
 2026-04-30 | RED_COMMIT | test/integration/mb-t02/dispatch-web-renders-in-shell.test.ts committed. URL assertion (CDP HTTP) exercises RED→GREEN: RED=data: URL loads (MB-T01 scaffold) → CDP returns data: URL ≠ WEB_UI_URL → FAIL. GREEN (post Zipper-1, dispatch-web running) → URL matches → PASS. Two DOM column it.todo() entries surfaced pending OPEN-Q-B-1 DOM ack.
 
+2026-04-30T17:52:45Z | OPEN-Q-B-1 operator arbitration received — prior CDP resolution (above) superseded. Option C approved as extended MB-S04 stdout sentinel. Three rescopes applied: (1) single sentinel WEBVIEW_LOAD_ATTEMPTED, (2) test renamed webview-loader-callable.test.ts, (3) MB-F-MB-T02-DOM-ASSERTION filed at green | operator arbitration 2026-04-30
+
+2026-04-30T17:52:45Z | territory check: stale dispatch-web-renders-in-shell.test.ts (untracked, wrong approach) deleted; stale dist/main/webview-loader.js (prior run artifact) deleted to restore red state; FOLLOWUPS.md clean (Session C committed DOCK-BADGE at 865b80f); C and D files not in Session B working tree | §8.3 pre-commit check
+
+2026-04-30T17:52:45Z | cross-session read: Session C complete at 0bf4722 (menu.ts+window-lifecycle.ts+fixture at 865b80f); Session D empty; no methodology remediations to absorb | §8.7
+
+2026-04-30T17:52:45Z | RED verified: pnpm test → 1 failed (MB-T02 webview-loader-callable) / 2 passed (MB-T01, MB-T03). Fail: existsSync(dist/main/webview-loader.js) → false, expected RED state. Proceeding to red commit | red criterion §3.5
+
 ---
 
 ## Session C — MB-T03 (menu + window lifecycle)
