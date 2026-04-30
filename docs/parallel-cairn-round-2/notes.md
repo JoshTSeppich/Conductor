@@ -100,7 +100,9 @@ Zipper-1 pre-conditions met: exports match §4.2-§4.3 exactly; pnpm test 2 pass
 
 _Append-only. Format: timestamp | event | citation_
 
-(empty — Session D writes here)
+2026-04-30T00:00Z | SESSION_START | single-session deferred execution; baseline reads complete (contract §5, MB-S05 ADR, MB-S04 ADR, notes.md Sessions B + C, FOLLOWUPS.md); no pre-reg gate required — D-1 (RESOLUTION-1: React deps pre-installed) and D-3 (RESOLUTION-3: Pattern B contextBridge) resolved pre-flight; jsdom NOT available (workspace node_modules empty for jsdom/happy-dom/testing-library); testing mechanism: Electron-spawned renderer (option b per §5.8) with console-message sentinels (MB-S05 ADR K5/K6, event.message form critical); proceeding to RED commit | contract §5 / §8.4
+
+2026-04-30T00:00Z | TSCONFIG_NOTE | src/coarchitect/ excluded from tsconfig.json include scope; renderer code (.tsx) processed by esbuild only — existing tsconfig has types:["node"] with no DOM lib and no jsx option; adding DOM+jsx to shared tsconfig would pollute main-process type scope; clean separation: exclude src/coarchitect from tsc, esbuild owns renderer transpilation; disclosed per §8.6 transparency; no frozen export signatures changed | implementation detail per contract §5
 
 ---
 
