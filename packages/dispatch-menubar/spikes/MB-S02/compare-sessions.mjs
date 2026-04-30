@@ -29,8 +29,14 @@ const RESULTS_DIR = join(SPIKE_DIR, 'results');
 // Fields that are expected to differ (probe-specific inputs).
 const PROVENANCE_FIELDS = new Set(['name', 'cwd', 'tmux_target', 'handoff_path']);
 
-// Fields that must be null in both records at registration time (per §4.3).
-const MUST_BE_NULL = new Set(['started_at', 'last_active_at', 'ended_at']);
+// Fields that must be null in both records at registration time (per §4.3 +
+// daemon impl at routes/sessions.ts:157-166 + schema at v2/schema.ts:86-98).
+const MUST_BE_NULL = new Set([
+  'last_prompt_sent_at',
+  'last_handoff_pulled_at',
+  'last_commit_sha',
+  'last_status_json_at',
+]);
 
 function readResult(filename) {
   const path = join(RESULTS_DIR, filename);
