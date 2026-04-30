@@ -1,0 +1,17 @@
+# Ignore everything by default; explicitly track the named result files.
+*
+
+# Allow the 12 named result files that are committed with the ADR.
+!.gitignore
+!env-cli.txt
+!pty-cli.txt
+!session-cli.json
+!env-electron-process.txt
+!env-electron-b1.txt
+!pty-electron-b1.txt
+!env-electron-b2.txt
+!pty-electron-b2.txt
+!session-electron.json
+!env-diff.json
+!session-comparison.json
+!failure-modes.json
