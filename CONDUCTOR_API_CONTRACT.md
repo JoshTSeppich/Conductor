@@ -13,6 +13,8 @@ This contract specifies the HTTP API surface between Conductor's daemon (built i
 
 The contract exists because parallel CC sessions on the same codebase produce drift unless contracts are specified upfront. fd v1's frozen `sessions.json` schema and frozen handoff footer set the precedent; this contract extends the pattern to the v2 daemon API.
 
+**Coordinated `/v3/*` surface (additive, governed by `WORKSTATION_CONTRACT.md`):** The daemon also serves `/v3/*` endpoints introduced by Foxworks Workstation v3.0 per `WORKSTATION_CONTRACT.md` §6. The `/v3/*` shape definitions, persistence model, and authority chain live in that contract; this contract remains authoritative for `/v2/*` and for the daemon's HTTP/auth/error-handler infrastructure (§3, §10) which both surfaces share. Where the two contracts coordinate (auth header, error envelope, route-registration order), this contract's primitives govern.
+
 ---
 
 ## §2 — Authority and frozen status
@@ -163,6 +165,19 @@ Response:
 ```
 
 Default limit: 100. Maximum: 500.
+
+### §4.6 Coordinated `/v3/*` surface
+
+Per `WORKSTATION_CONTRACT.md` §1.2 + §6, the daemon hosts a coordinated `/v3/*` endpoint surface for Foxworks Workstation. `/v3/*` shape definitions live in `WORKSTATION_CONTRACT.md`; this contract enumerates the cross-cutting expectations:
+
+- **Auth (§3.1).** All `/v3/*` requests require the same `X-Conductor-Token` header as `/v2/*`. There is no `/v3/*` equivalent of the `/v2/health` exemption.
+- **Error envelope (§4 + §10.4).** `/v3/*` error responses share the JSON `{"error": "..."}` shape used by `/v2/*` for HTTP-level errors. `WORKSTATION_CONTRACT.md` §6.5 specifies a richer typed `WorkstationError` discriminated-union body for application-level errors; the two coexist (HTTP-level errors stay as `{"error": "..."}`, application errors carry the typed shape with appropriate status codes).
+- **Route-registration order.** The daemon registers `/v2/*` routes BEFORE `/v3/*` routes, and both BEFORE `@fastify/static`. SPA fall-through must not match `/v3/*` paths (current 404-handler must be amended to gate the same way it gates `/v2/*`).
+- **404 shape.** Unmatched `/v3/*` paths return JSON 404 (`{"error": "Not found"}`), not the SPA fall-through bundle.
+- **WebSocket.** v3.0 ships with no `/v3/*` WS endpoints. The existing `/v2/events/stream` endpoint remains the sole real-time channel; orchestrator IPC for the embedded webview rides the existing v2 WS stream where applicable.
+- **Versioning.** Per §12, this contract bumps to v2.1.0 to reflect the additive `/v3/*` cross-reference. The `/v3/*` surface itself versions independently per `WORKSTATION_CONTRACT.md` §2.3.
+
+This contract does not duplicate `/v3/*` shape definitions. Readers wanting the request/response shapes for `/v3/orchestrator/messages`, `/v3/orchestrator/history`, `/v3/orchestrator/audit`, `/v3/tickets/state`, etc., consult `WORKSTATION_CONTRACT.md` §6 and `packages/dispatch-core/src/v3/schema.ts` (the freeze-anchor schema, operator-arbitrated at commit `232fbaa` under `WORKSTATION_CONTRACT.md` §2).
 
 ---
 
@@ -387,6 +402,7 @@ When implementing endpoints that reference external surfaces:
 - fs.watch / fsevents: spike against macOS fsevents if coalescing behavior matters
 - node-notifier or AppleScript notifications: spike for delivery semantics
 - launchd integration: spike for crash-recovery behavior
+- **`/v3/*` SQLite layer (per `WORKSTATION_CONTRACT.md` §8.1, amended 2026-04-29):** spike against `better-sqlite3` for migration idempotence + WAL pragma + UNIQUE constraints (already validated by `MB-S03` spike harness; production code citations should reference that harness, the `migration-orchestrator.test.ts` unit suite, or re-run the harness against `~/.foxworks-dispatch/data.db`).
 
 NO endpoint implementation merged without spike evidence for its load-bearing external dependencies. KNOWN dependencies (HTTP routing via Express/Fastify, JSON serialization, `pbcopy` execFile) need no spike.
 
@@ -451,12 +467,13 @@ Contract is FROZEN. Both sessions consume as input.
 
 ## §12 — Versioning
 
-This document is **v2.0.0**.
+This document is **v2.1.0**.
 
 Future versions:
 - v2.0.x: documentation clarifications, no behavior changes
 - v2.x.0: additive changes (new endpoints, new optional fields, new event types)
 - v3.0.0: breaking changes (requires migration path)
+- **v2.1.0 (this version):** additive cross-reference to the coordinated `/v3/*` surface introduced by `WORKSTATION_CONTRACT.md`. No `/v2/*` shape changes; no behavior changes for v2-only clients. Per §2 authority section's additive-only post-ship rule, this qualifies as a minor bump.
 
 All version bumps require operator approval. Neither CC session may bump version unilaterally.
 
