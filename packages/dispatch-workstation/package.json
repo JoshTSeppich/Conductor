@@ -1,5 +1,5 @@
 {
-  "name": "dispatch-menubar",
+  "name": "dispatch-workstation",
   "version": "2.0.1",
   "private": true,
   "description": "Foxworks Dispatch v2 macOS menu bar widget. Framework TBD — UI-S02 spike.",

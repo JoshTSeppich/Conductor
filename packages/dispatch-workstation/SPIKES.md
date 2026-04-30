@@ -1,4 +1,4 @@
-# dispatch-menubar spikes
+# dispatch-workstation spikes
 
 Consolidated KNOWN facts the production menu bar app will rely on.
 

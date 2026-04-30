@@ -92,16 +92,6 @@ importers:
         specifier: ^8.0.0
         version: 8.20.0
 
-  packages/dispatch-menubar:
-    dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.91.1
-        version: 0.91.1(zod@4.3.6)
-    devDependencies:
-      electron:
-        specifier: ^41.3.0
-        version: 41.3.0
-
   packages/dispatch-web:
     dependencies:
       '@tanstack/react-query':
@@ -159,6 +149,16 @@ importers:
       ws:
         specifier: ^8.18.0
         version: 8.20.0
+
+  packages/dispatch-workstation:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.91.1
+        version: 0.91.1(zod@4.3.6)
+    devDependencies:
+      electron:
+        specifier: ^41.3.0
+        version: 41.3.0
 
 packages:
 
