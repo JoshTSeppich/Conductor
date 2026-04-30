@@ -32,6 +32,8 @@ _Append-only. Format: timestamp | event | citation_
 
 2026-04-30T18:00:08Z | GREEN: pnpm build clean, pnpm test → 3 passed (3) — MB-T02 1757ms, sentinel WEBVIEW_LOAD_ATTEMPTED emitted. MB-T01 and MB-T03 not regressed. webview-loader.ts exports match frozen §3.2 exactly. FOLLOWUPS.md: filed MB-F-MB-T02-PRODUCTION-LOADING + MB-F-MB-T02-DOM-ASSERTION (RESCOPE 3). Proceeding to green commit | §3.2 frozen exports verified
 
+2026-04-30 | SESSION_COMPLETE | FOLLOWUPS.md staged but inadvertently excluded from green commit 7ef8e44; committed separately via docs(MB-T02) commit. Session B deliverables complete: src/main/webview-loader.ts (green 7ef8e44), test/integration/mb-t02/ (red ac38567 — webview-loader-callable.test.ts + mb-t02-harness.mjs), docs/FOLLOWUPS.md (MB-F-MB-T02-PRODUCTION-LOADING + MB-F-MB-T02-DOM-ASSERTION). main.ts untouched (151897f). Zipper-1 integration ready per §3.6. | §8.3 session close
+
 ---
 
 ## Session C — MB-T03 (menu + window lifecycle)
