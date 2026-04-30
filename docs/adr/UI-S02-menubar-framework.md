@@ -135,7 +135,7 @@ if we commit to context-menu interaction.
 
 ## Followups (per-candidate, updated for Electron choice)
 
-- **UI-F06** — **Active.** MB-T01 scaffold around Electron.
+- **UI-F06** — **Closed (MB-T01 @ 151897f).** MB-T01 Electron scaffold landed.
 - **UI-F07** — **Ready for planning.** UI-S03 scope now concrete
   (Electron main-process osascript); spike plan surfaced next.
 - **UI-F08** — **Deprecated.** Tauri not chosen; no API pin/watch
