@@ -6,7 +6,7 @@
 
 **Relationship to other contracts:**
 
-- `CONDUCTOR_API_CONTRACT.md` (frozen at `3ddca60`, amended at `a502c4c` and `c1bb7fe`) — governs the daemon's `/v2/*` endpoint surface and remains authoritative for those endpoints. This contract does NOT duplicate `/v2/*` definitions; references by URL where needed.
+- `CONDUCTOR_API_CONTRACT.md` (frozen at `3ddca60`, amended at `a502c4c`, `c1bb7fe`, and `952f857`) — governs the daemon's `/v2/*` endpoint surface and remains authoritative for those endpoints. This contract does NOT duplicate `/v2/*` definitions; references by URL where needed.
 - `BUILD_CONTRACT.md` — governs build/release process at the monorepo level; remains authoritative.
 - `cairn.md` and `docs/cairn-sonnet-extensions.md` — govern methodology discipline; this contract references them in §9 (Process).
 
