@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MB-S05 — esbuild React Electron spike</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- E1+E2: esbuild bundles index.tsx → ./index.js; file:// URL resolves relative to this HTML -->
+    <script src="./index.js"></script>
+  </body>
+</html>

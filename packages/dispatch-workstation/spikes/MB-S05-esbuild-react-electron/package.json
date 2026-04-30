@@ -1,0 +1,17 @@
+{
+  "name": "mb-s05-esbuild-react-electron-spike",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "MB-S05 spike: validates esbuild + React + Electron renderer integration before Session D dep-install commit.",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "esbuild": "^0.25.0",
+    "electron": "41.3.0"
+  }
+}
