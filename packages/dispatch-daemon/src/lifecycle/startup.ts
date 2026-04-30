@@ -57,6 +57,7 @@ import {
   registerSessionsStateRoutes,
   registerSessionsWriteRoutes,
 } from '../routes/sessions.js';
+import { registerOrchestratorHistoryRoutes } from '../routes/v3/orchestrator-history.js';
 import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
 import { shutdown } from './shutdown.js';
 
@@ -353,6 +354,12 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // and the /v2/events/stream WS so all HTTP API routes group
   // before the WS upgrade per ADR §3.3.
   await registerOrchestratorMessagesRoutes(app, { db });
+
+  // COARCH-T01 B6: GET /v3/orchestrator/history (paginated read with
+  // optional build_doc_id filter) + DELETE /v3/orchestrator/history
+  // (full clear) per WORKSTATION_CONTRACT.md §6.1 + ratified MB-S03 §6.
+  // Same SQLite layer as POST /v3/orchestrator/messages above.
+  await registerOrchestratorHistoryRoutes(app, { db });
 
   // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.
   // Subscribes per-connection; emit fan-out goes through bus.
