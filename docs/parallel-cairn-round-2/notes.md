@@ -28,6 +28,10 @@ _Append-only. Format: timestamp | event | citation_
 
 2026-04-30T17:52:45Z | RED verified: pnpm test → 1 failed (MB-T02 webview-loader-callable) / 2 passed (MB-T01, MB-T03). Fail: existsSync(dist/main/webview-loader.js) → false, expected RED state. Proceeding to red commit | red criterion §3.5
 
+2026-04-30T18:00:08Z | RED COMMIT ac38567 — red(MB-T02): webview-loader-callable test + harness fixture | §3.5 red commit
+
+2026-04-30T18:00:08Z | GREEN: pnpm build clean, pnpm test → 3 passed (3) — MB-T02 1757ms, sentinel WEBVIEW_LOAD_ATTEMPTED emitted. MB-T01 and MB-T03 not regressed. webview-loader.ts exports match frozen §3.2 exactly. FOLLOWUPS.md: filed MB-F-MB-T02-PRODUCTION-LOADING + MB-F-MB-T02-DOM-ASSERTION (RESCOPE 3). Proceeding to green commit | §3.2 frozen exports verified
+
 ---
 
 ## Session C — MB-T03 (menu + window lifecycle)
