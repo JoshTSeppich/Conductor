@@ -1,0 +1,7 @@
+{
+  "name": "mb-s04-packaged-target",
+  "version": "0.0.0",
+  "private": true,
+  "main": "main.mjs",
+  "description": "MB-S04 spike: packaged-app target. Throwaway."
+}

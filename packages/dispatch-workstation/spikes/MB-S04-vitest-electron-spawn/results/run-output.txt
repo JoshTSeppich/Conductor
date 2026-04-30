@@ -1,0 +1,22 @@
+MB-S04: running vitest against /Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-workstation/spikes/MB-S04-vitest-electron-spawn
+
+ RUN  v4.1.5 /Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-workstation/spikes/MB-S04-vitest-electron-spawn
+
+stdout | test/spawn-observe.test.mjs > MB-S04 vitest spawn-and-observe Electron > S-04-05: packaged .app spawn-and-observe (skip if .app not built)
+{"mode":"packaged-app","spawnToReadyMs":2383,"readyToExitMs":245,"exitCode":0,"exitSignal":null}
+
+stdout | test/spawn-observe.test.mjs > MB-S04 vitest spawn-and-observe Electron > S-04-04: full cycle timing — spawn-to-ready < 5s, ready-to-exit < 3s
+{"spawnToReadyMs":401,"readyToExitMs":895}
+
+ ✓ test/spawn-observe.test.mjs (5 tests) 7151ms
+     ✓ S-04-01: spawn electron + main.mjs, observe SPIKE_READY on stdout  448ms
+     ✓ S-04-02: SIGTERM triggers clean exit (code 0)  1482ms
+     ✓ S-04-03: stdin "QUIT" line triggers clean exit (code 0)  1290ms
+     ✓ S-04-05: packaged .app spawn-and-observe (skip if .app not built)  2632ms
+     ✓ S-04-04: full cycle timing — spawn-to-ready < 5s, ready-to-exit < 3s  1297ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  01:55:00
+   Duration  7.25s (transform 18ms, setup 0ms, import 25ms, tests 7.15s, environment 0ms)
+
