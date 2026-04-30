@@ -1,20 +1,22 @@
-// MB-T01 green: Foxworks Workstation Electron entry.
+// Foxworks Workstation Electron entry — wired by Zipper-1 (Round 2).
 //
-// Minimum scaffold per V3_TICKETS.md L100-L106. Production behavior comes
-// in MB-T02+ (dispatch-web BrowserWindow load) and beyond. This entry's
-// only job is to open an empty BrowserWindow and respond to the test
-// instrumentation channels defined by docs/adr/MB-S04-vitest-electron-spawn.md.
+// Composes B's webview-loader (loadDispatchWeb) + C's menu (registerApplicationMenu)
+// and window-lifecycle (createManagedWindow, registerLifecycleHooks) per
+// parallel-cairn-round-2-contract.md §3.6 + §4.7 + §7.2.
 import { app, BrowserWindow } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { loadDispatchWeb } from './webview-loader.js';
+import { registerApplicationMenu } from './menu.js';
+import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.js');
 
 let mainWindow: BrowserWindow | null = null;
 
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
+async function createWindow(): Promise<void> {
+  mainWindow = createManagedWindow({
     width: 1024,
     height: 768,
     show: true,
@@ -26,14 +28,8 @@ function createWindow(): void {
     },
   });
 
-  mainWindow.loadURL(
-    'data:text/html;charset=utf-8,' +
-      encodeURIComponent(
-        '<!doctype html><html><head><meta charset="utf-8"><title>Foxworks Workstation</title></head><body><h1>Foxworks Workstation</h1><p>v3.0 scaffold (MB-T01)</p></body></html>',
-      ),
-  );
-
-  // Test sentinel for MB-T01 Red criterion (MB-S04 ADR K2).
+  // Register WINDOW_READY sentinel before loadDispatchWeb so the listener
+  // exists when loadURL commences (did-finish-load timing discipline).
   mainWindow.webContents.on('did-finish-load', () => {
     process.stdout.write('WINDOW_READY\n');
   });
@@ -41,15 +37,14 @@ function createWindow(): void {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  await loadDispatchWeb(mainWindow);
 }
 
-app.whenReady().then(createWindow);
-
-// Defensive teardown — quit when last window closes (Electron's default
-// macOS behavior keeps the app alive without a window; for v3.0 scaffold
-// we exit the process to match the Red criterion's clean-exit contract).
-app.on('window-all-closed', () => {
-  app.quit();
+app.whenReady().then(async () => {
+  registerApplicationMenu();
+  await createWindow();
+  registerLifecycleHooks(app, () => mainWindow, createWindow);
 });
 
 // stdin "QUIT" channel for the MB-T01 Red criterion (MB-S04 ADR K3).
