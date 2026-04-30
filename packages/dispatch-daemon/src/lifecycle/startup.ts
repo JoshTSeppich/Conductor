@@ -60,6 +60,7 @@ import {
 import { registerOrchestratorAuditRoutes } from '../routes/v3/orchestrator-audit.js';
 import { registerOrchestratorHistoryRoutes } from '../routes/v3/orchestrator-history.js';
 import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
+import { registerTicketsStateRoutes } from '../routes/v3/tickets-state.js';
 import { shutdown } from './shutdown.js';
 
 function defaultTokenPath(): string {
@@ -367,6 +368,12 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // POST persists to orchestrator_audit with JSON-encoded payload TEXT;
   // GET filters per §6.2 axes and paginates with timestamp cursor.
   await registerOrchestratorAuditRoutes(app, { db });
+
+  // COARCH-T01 B10: POST upsert + GET list + GET /:ticket_id for
+  // /v3/tickets/state per WORKSTATION_CONTRACT.md §6.3 + ratified
+  // MB-S03 §6 (composite PK upsert; build_doc_id REQUIRED on single
+  // GET).
+  await registerTicketsStateRoutes(app, { db });
 
   // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.
   // Subscribes per-connection; emit fan-out goes through bus.

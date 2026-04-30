@@ -12,26 +12,27 @@
  *
  * Probes (3):
  *   P1  /v3/* without X-Conductor-Token → 401 + JSON error body.
- *       (RED against current code: bypass would let the route handler
+ *       (RED against pre-A1 code: bypass would let the route handler
  *       respond instead of the auth hook short-circuiting.)
  *   P2  /v3/* with WRONG token → 401.
- *       (RED against current code: same reason — hook never fires.)
- *   P3  /v3/* with CORRECT token → route handler runs (200 returned by
- *       the stub).
- *       (Already passes against current code because the bypass also
- *       returns success; included for symmetry so green stays green.)
+ *       (RED against pre-A1 code: same reason — hook never fires.)
+ *   P3  /v3/* with CORRECT token → route handler runs (200 with the
+ *       real GET /v3/orchestrator/history shape on empty DB).
+ *
+ * Originally used a `beforeListen` stub route; once the real
+ * GET /v3/orchestrator/history landed at B6 (commit 8f68572), the stub
+ * collided with Fastify's "method already declared" guard. Test now
+ * exercises the real route + auth hook composition, which is closer to
+ * production reality anyway.
  *
  * Naming follows existing daemon convention `<feature>.test.ts`. Test
- * uses the same spawnTestServer fixture pattern as auth.test.ts; stub
- * `/v3/orchestrator/history` route registered via `beforeListen` since
- * COARCH-T01 sub-tasks B5+B6 land the real route.
+ * uses the same spawnTestServer fixture pattern as auth.test.ts.
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { FastifyInstance } from 'fastify';
 import { spawnTestServer, type TestServer } from '../fixtures/server.js';
 
 describe('COARCH-T01 A1 — auth hook gates /v3/* paths', () => {
@@ -51,20 +52,8 @@ describe('COARCH-T01 A1 — auth hook gates /v3/* paths', () => {
     return join(dir, 'token');
   }
 
-  async function spawnWithStubV3Route(): Promise<TestServer> {
-    return spawnTestServer({
-      tokenPath: await mkTokenPath(),
-      beforeListen: (app: FastifyInstance) => {
-        app.get('/v3/orchestrator/history', async () => ({
-          messages: [],
-          next_before_id: null,
-        }));
-      },
-    });
-  }
-
   it('P1 /v3/orchestrator/history without X-Conductor-Token → 401 + JSON error', async () => {
-    ts = await spawnWithStubV3Route();
+    ts = await spawnTestServer({ tokenPath: await mkTokenPath() });
     const r = await fetch(`${ts.url}/v3/orchestrator/history`);
     expect(r.status).toBe(401);
     const body = (await r.json()) as { error?: unknown };
@@ -72,7 +61,7 @@ describe('COARCH-T01 A1 — auth hook gates /v3/* paths', () => {
   });
 
   it('P2 /v3/orchestrator/history with WRONG token → 401', async () => {
-    ts = await spawnWithStubV3Route();
+    ts = await spawnTestServer({ tokenPath: await mkTokenPath() });
     const r = await fetch(`${ts.url}/v3/orchestrator/history`, {
       headers: { 'x-conductor-token': 'wrong-token-bogus' },
     });
@@ -80,7 +69,7 @@ describe('COARCH-T01 A1 — auth hook gates /v3/* paths', () => {
   });
 
   it('P3 /v3/orchestrator/history with CORRECT token → route runs (200)', async () => {
-    ts = await spawnWithStubV3Route();
+    ts = await spawnTestServer({ tokenPath: await mkTokenPath() });
     const r = await fetch(`${ts.url}/v3/orchestrator/history`, {
       headers: { 'x-conductor-token': ts.token ?? '' },
     });
