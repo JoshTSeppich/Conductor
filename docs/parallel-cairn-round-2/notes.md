@@ -104,6 +104,26 @@ _Append-only. Format: timestamp | event | citation_
 
 ---
 
+## Zipper-1 — main-process wiring (B + C)
+
+_Append-only. Format: timestamp | event | citation_
+
+2026-04-30T00:00Z | SESSION START — Zipper-1 launching, baseline reads complete, proceeding to wire main.ts | contract §7.2 / execution sequence step 1
+
+Pre-reads complete (in order): contract §3/§4/§7, main.ts (151897f), webview-loader.ts (7ef8e44), menu.ts (865b80f), window-lifecycle.ts (865b80f), all three existing test files, cairn-findings.md.
+
+Territory check: `git log --oneline packages/dispatch-workstation/src/main/main.ts` → `151897f` (green MB-T01) confirmed as last touch. `git status --short` → clean working tree. COARCH-T02 session has staged nothing. Territory invariant holds per §7.5.
+
+Cross-session reads absorbed: Session B complete (7ef8e44), Session C complete (865b80f). Session D empty — COARCH-T02 running in parallel per operator briefing. No methodology remediations from B or C to propagate to Zipper-1 beyond existing per-path git add discipline (already applied).
+
+DISCREPANCY NOTED: briefing states "docs/cairn-findings.md including new entries #56 and #57 — both apply to your work." cairn-findings.md ends at finding #55; #56 and #57 do not exist. Per anti-fabrication discipline, not inventing their content. Proceeding on existing finding #55 (frozen-contract verification) and contract §8.5 (halt-and-surface on ambiguity). Flagged in commit body.
+
+DISCREPANCY NOTED (contract §4.7 step 3 vs frozen file): Contract §4.7 step 3 says `createManagedWindow({ defaultWidth: 1024, defaultHeight: 768, ... })`. Frozen `window-lifecycle.ts` `WindowSizeDefaults` interface uses `width` and `height` (not `defaultWidth`/`defaultHeight`). Frozen file is the authority per anti-fabrication. Wiring uses `{ width: 1024, height: 768, ... }`.
+
+MODELED CONCERN (loadDispatchWeb rejection): `loadDispatchWeb` returns `win.loadURL(WEB_UI_URL)` with no error handling. If the dev-server is unreachable during tests, `loadURL` may reject with ERR_CONNECTION_REFUSED, which may prevent `did-finish-load` from firing and thus suppress the `WINDOW_READY` sentinel that MB-T01 awaits. Mitigation: register `did-finish-load` listener BEFORE `await loadDispatchWeb(mainWindow)` so the listener exists when the URL load starts. Will run tests post-wiring and surface if MB-T01 regresses per execution sequence step 4.
+
+---
+
 ## Cross-session methodology propagation log
 
 _Append-only. Sessions log when they adopt a discipline change observed in another session's notes._
