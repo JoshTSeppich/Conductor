@@ -59,11 +59,21 @@ export function registerErrorHandler(
   const staticRoot = opts.staticRoot;
   app.setNotFoundHandler((request, reply) => {
     const pathOnly = request.url.split('?')[0];
-    if (staticRoot && request.method === 'GET' && !pathOnly.startsWith('/v2/')) {
+    if (
+      staticRoot &&
+      request.method === 'GET' &&
+      !pathOnly.startsWith('/v2/') &&
+      !pathOnly.startsWith('/v3/')
+    ) {
       // Z-3 SPA fall-through. @fastify/static (registered in
       // startup.ts when staticRoot is set) declares sendFile via
       // FastifyReply augmentation; cast keeps this file independent
       // of the @fastify/static type import.
+      //
+      // Both /v2/* and /v3/* API surfaces stay JSON-404 per
+      // CONDUCTOR_API_CONTRACT.md §10.4 (and the amended §4.6 once
+      // the contract amendment lands; coordinated /v3/* surface per
+      // WORKSTATION_CONTRACT.md §6).
       return (reply as unknown as {
         sendFile: (filename: string, root: string) => unknown;
       }).sendFile('index.html', staticRoot);
