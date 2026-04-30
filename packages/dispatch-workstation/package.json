@@ -14,10 +14,15 @@
     "generate:section-10-5": "tsx scripts/generate-section-10-5.ts"
   },
   "devDependencies": {
+    "@electron/packager": "^18.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "electron": "^41.3.0",
-    "@electron/packager": "^18.0.0"
+    "esbuild": "^0.25.12"
   },
   "dependencies": {
-    "dispatch-core": "workspace:*"
+    "dispatch-core": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
