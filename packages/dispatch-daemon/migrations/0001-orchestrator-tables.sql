@@ -59,8 +59,11 @@ CREATE TABLE IF NOT EXISTS orchestrator_audit (
     build_doc_commit_sha    TEXT    NOT NULL,
     -- One of: 'action', 'card', 'multi-choice-card', 'escape-block', 'noop'
     output_type             TEXT    NOT NULL,
-    -- JSON-encoded full orchestrator output per ratified §6.4.
-    output_payload          TEXT    NOT NULL,
+    -- JSON-encoded full orchestrator output per ratified §6.4. NULL when
+    -- output_type='noop' (no orchestrator output to record); per the v3
+    -- freeze-anchor schema OrchestratorAuditRowSchema where
+    -- output_payload is declared `OrchestratorOutputSchema.nullable()`.
+    output_payload          TEXT,
     -- One of: 'approve', 'decline', 'multi-choice-A/B/C/D',
     -- 'copied-escape-block', 'pending'
     operator_response       TEXT    NOT NULL,

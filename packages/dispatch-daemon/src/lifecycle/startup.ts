@@ -57,6 +57,7 @@ import {
   registerSessionsStateRoutes,
   registerSessionsWriteRoutes,
 } from '../routes/sessions.js';
+import { registerOrchestratorAuditRoutes } from '../routes/v3/orchestrator-audit.js';
 import { registerOrchestratorHistoryRoutes } from '../routes/v3/orchestrator-history.js';
 import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
 import { shutdown } from './shutdown.js';
@@ -360,6 +361,12 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // (full clear) per WORKSTATION_CONTRACT.md §6.1 + ratified MB-S03 §6.
   // Same SQLite layer as POST /v3/orchestrator/messages above.
   await registerOrchestratorHistoryRoutes(app, { db });
+
+  // COARCH-T01 B8: POST + GET /v3/orchestrator/audit per
+  // WORKSTATION_CONTRACT.md §6.2 + ratified MB-S03 §6.1/§6.2/§6.4.
+  // POST persists to orchestrator_audit with JSON-encoded payload TEXT;
+  // GET filters per §6.2 axes and paginates with timestamp cursor.
+  await registerOrchestratorAuditRoutes(app, { db });
 
   // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.
   // Subscribes per-connection; emit fan-out goes through bus.
