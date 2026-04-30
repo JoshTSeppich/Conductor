@@ -1,0 +1,84 @@
+{
+  "scenario": {
+    "id": "S-03-05",
+    "description": "Test-failure ownership ambiguous between MB-T05 and MB-T06 — matches MC-test-failure-route",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "multi-choice-card",
+    "triggering_event": "Triggering event for ticket MB-T05: clit06-spike-001 reports a test failure in test_shared_session_helper.spec.ts. The shared helper is referenced by both MB-T05 and MB-T06; build doc does not assign ownership of the helper test. This matches the MC-test-failure-route trigger condition.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "multi-choice-card",
+      "options_count_in": [
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15528
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 735,
+    "total_ms": 4274,
+    "input_tokens": 7424,
+    "output_tokens": 182,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"multi-choice-card\",\"question\":\"Which ticket owns the failing test_shared_session_helper.spec.ts?\",\"options\":[{\"label\":\"A: MB-T05\",\"value\":\"MB-T05\"},{\"label\":\"B: MB-T06\",\"value\":\"MB-T06\"},{\"label\":\"C: Shared helper — neither ticket; escape for ticket assignment\",\"value\":\"escape\"}],\"context\":\"Triggered by MC-test-failure-route template in build doc §multi-choice-templates. Session clit06-spike-001 reported test_shared_session_helper.spec.ts FAIL. This helper is referenced by both MB-T05 and MB-T06; build doc does not assign ownership. Operator's choice routes the next orchestrator call to the chosen ticket's allowed actions.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "multi-choice-card",
+      "question": "Which ticket owns the failing test_shared_session_helper.spec.ts?",
+      "options": [
+        {
+          "label": "A: MB-T05",
+          "value": "MB-T05"
+        },
+        {
+          "label": "B: MB-T06",
+          "value": "MB-T06"
+        },
+        {
+          "label": "C: Shared helper — neither ticket; escape for ticket assignment",
+          "value": "escape"
+        }
+      ],
+      "context": "Triggered by MC-test-failure-route template in build doc §multi-choice-templates. Session clit06-spike-001 reported test_shared_session_helper.spec.ts FAIL. This helper is referenced by both MB-T05 and MB-T06; build doc does not assign ownership. Operator's choice routes the next orchestrator call to the chosen ticket's allowed actions."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "multi-choice-card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-03-05",
+    "scenario_file": "03-multi-choice.json",
+    "expected_output_type": "multi-choice-card",
+    "ttft_ms": 735,
+    "total_ms": 4274,
+    "input_tokens": 7424,
+    "output_tokens": 182,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "multi-choice-card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

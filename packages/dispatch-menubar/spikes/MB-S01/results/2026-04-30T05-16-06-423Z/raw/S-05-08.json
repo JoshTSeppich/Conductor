@@ -1,0 +1,80 @@
+{
+  "scenario": {
+    "id": "S-05-08",
+    "description": "Contract commit for build-doc schema amendment",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: operator approved a build-doc schema amendment adding an optional ticket field. Propose draft-commit-message with a 'contract(build-doc-schema): ...' commit message including the 9-question self-check block in payload.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15500
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 1231,
+    "total_ms": 15790,
+    "input_tokens": 7409,
+    "output_tokens": 715,
+    "error": null,
+    "error_class": null,
+    "raw": "{\n  \"type\": \"card\",\n  \"action\": \"draft-commit-message\",\n  \"target\": \"/Users/josh/Desktop/Automata/foxworks-dispatch\",\n  \"payload\": {\n    \"commit_message\": \"contract(build-doc-schema): add optional ticket field for schema amendment\\n\\nExtends the build-doc schema with an optional ticket field per operator-approved amendment. Field is optional to preserve backward compatibility with existing fixtures including spike-fixture-sha-0000000000000000.\\n\\n---\\nOrchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5):\\n\\n1. Does this commit message reference exactly the scope that the triggering ticket (MB-T-COMMIT) authorized? YES — scope is the schema amendment approved by operator in this call.\\n\\n2. Is the commit type correct for the change? YES — `contract` type for a build-doc schema change is appropriate; `feat` or `fix` would misrepresent the change category.\\n\\n3. Does the payload omit speculation about implementation details not yet visible in the handoff? YES — message describes only the schema field addition; no implementation assumptions.\\n\\n4. Is the `draft-commit-message` action in MB-T-COMMIT's Allowed actions list? YES — MB-T-COMMIT `Allowed actions: [draft-commit-message, send]`.\\n\\n5. Does the commit message include the self-check block in payload (not in rationale) per ratified P-0.3 Q5 and MB-T-COMMIT acceptance? YES — self-check is embedded in this payload field; rationale field describes routing only.\\n\\n6. Does this commit reference any test file names? NO — no test files are implicated by a schema amendment; test reference would be spurious.\\n\\n7. Are there any pending multi-choice ambiguities that should have triggered MC-commit-message-scope instead of proceeding? NO — only one test file context is in scope; MC-commit-message-scope triggers only when two distinct test files pass simultaneously.\\n\\n8. Is the build doc consulted for this commit still frozen at the SHA visible in this call? YES — build_doc_commit_sha is spike-fixture-sha-0000000000000000 throughout this call; no SHA change detected.\\n\\n9. Has the Co-drafted-by trailer been added by the orchestrator? NO — trailer is added by the action handler per system contract; orchestrator does not add it.\"\n  },\n  \"rationale\": \"Triggering event specifies MB-T-COMMIT scope: operator-approved build-doc schema amendment. MB-T-COMMIT Allowed actions includes draft-commit-message. Commit type is `contract` scoping to build-doc-schema per the amendment's subject matter. Self-check block is in payload per MB-T-COMMIT acceptance criteria and ratified P-0.3 Q5; this rationale field does not contain the self-check questions.\",\n  \"free_form_prompt\": \"Approve to register this draft commit message; decline to halt or redirect.\"\n}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "payload": {
+        "commit_message": "contract(build-doc-schema): add optional ticket field for schema amendment\n\nExtends the build-doc schema with an optional ticket field per operator-approved amendment. Field is optional to preserve backward compatibility with existing fixtures including spike-fixture-sha-0000000000000000.\n\n---\nOrchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5):\n\n1. Does this commit message reference exactly the scope that the triggering ticket (MB-T-COMMIT) authorized? YES — scope is the schema amendment approved by operator in this call.\n\n2. Is the commit type correct for the change? YES — `contract` type for a build-doc schema change is appropriate; `feat` or `fix` would misrepresent the change category.\n\n3. Does the payload omit speculation about implementation details not yet visible in the handoff? YES — message describes only the schema field addition; no implementation assumptions.\n\n4. Is the `draft-commit-message` action in MB-T-COMMIT's Allowed actions list? YES — MB-T-COMMIT `Allowed actions: [draft-commit-message, send]`.\n\n5. Does the commit message include the self-check block in payload (not in rationale) per ratified P-0.3 Q5 and MB-T-COMMIT acceptance? YES — self-check is embedded in this payload field; rationale field describes routing only.\n\n6. Does this commit reference any test file names? NO — no test files are implicated by a schema amendment; test reference would be spurious.\n\n7. Are there any pending multi-choice ambiguities that should have triggered MC-commit-message-scope instead of proceeding? NO — only one test file context is in scope; MC-commit-message-scope triggers only when two distinct test files pass simultaneously.\n\n8. Is the build doc consulted for this commit still frozen at the SHA visible in this call? YES — build_doc_commit_sha is spike-fixture-sha-0000000000000000 throughout this call; no SHA change detected.\n\n9. Has the Co-drafted-by trailer been added by the orchestrator? NO — trailer is added by the action handler per system contract; orchestrator does not add it."
+      },
+      "rationale": "Triggering event specifies MB-T-COMMIT scope: operator-approved build-doc schema amendment. MB-T-COMMIT Allowed actions includes draft-commit-message. Commit type is `contract` scoping to build-doc-schema per the amendment's subject matter. Self-check block is in payload per MB-T-COMMIT acceptance criteria and ratified P-0.3 Q5; this rationale field does not contain the self-check questions.",
+      "free_form_prompt": "Approve to register this draft commit message; decline to halt or redirect."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-08",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 1231,
+    "total_ms": 15790,
+    "input_tokens": 7409,
+    "output_tokens": 715,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "scenario": {
+    "id": "S-01-02",
+    "description": "MB-T05 red prompt send to fresh session",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T05: session clit06-spike-001 just registered with daemon and is awaiting its first prompt per MB-T05 Red acceptance.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "send"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15389
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 883,
+    "total_ms": 7273,
+    "input_tokens": 7386,
+    "output_tokens": 287,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"card\",\"action\":\"send\",\"target\":\"clit06-spike-001\",\"payload\":\"You are working on MB-T05: Spawn execution. Begin Red phase: implement test_spawn_creates_registered_session.spec.ts. Acceptance criteria: emit spawn intent, assert tmux session exists, assert daemon has new session record per POST /v2/sessions (CONDUCTOR_API_CONTRACT.md §4.3), assert kanban shows new session card. Spawn must execute against target_repo /Users/josh/Desktop/Automata/foxworks-dispatch. Report test results when complete.\",\"rationale\":\"Session clit06-spike-001 registered with daemon and is awaiting first prompt per MB-T05 Red acceptance criteria. MB-T05 Allowed actions includes send. Triggering event matches MB-T05 Red entry condition: session newly registered, no prior prompt sent (last_prompt_sent_at: 2026-04-29T10:00:00 predates this call but session state is armed/running indicating readiness). Sending Red phase prompt per #tickets-mb-t05 Red section.\",\"free_form_prompt\":\"Approve to send MB-T05 Red prompt to clit06-spike-001; decline to halt.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "send",
+      "target": "clit06-spike-001",
+      "payload": "You are working on MB-T05: Spawn execution. Begin Red phase: implement test_spawn_creates_registered_session.spec.ts. Acceptance criteria: emit spawn intent, assert tmux session exists, assert daemon has new session record per POST /v2/sessions (CONDUCTOR_API_CONTRACT.md §4.3), assert kanban shows new session card. Spawn must execute against target_repo /Users/josh/Desktop/Automata/foxworks-dispatch. Report test results when complete.",
+      "rationale": "Session clit06-spike-001 registered with daemon and is awaiting first prompt per MB-T05 Red acceptance criteria. MB-T05 Allowed actions includes send. Triggering event matches MB-T05 Red entry condition: session newly registered, no prior prompt sent (last_prompt_sent_at: 2026-04-29T10:00:00 predates this call but session state is armed/running indicating readiness). Sending Red phase prompt per #tickets-mb-t05 Red section.",
+      "free_form_prompt": "Approve to send MB-T05 Red prompt to clit06-spike-001; decline to halt."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-01-02",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "card",
+    "ttft_ms": 883,
+    "total_ms": 7273,
+    "input_tokens": 7386,
+    "output_tokens": 287,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

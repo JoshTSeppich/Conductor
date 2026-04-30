@@ -1,0 +1,120 @@
+{
+  "scenario": {
+    "id": "S-05-02",
+    "description": "Red commit for MB-T06 — failing test established",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-002 just authored test_send_routes_to_daemon.spec.ts as a Red test (failing). Per cairn five-verb commit grammar, propose draft-commit-message with a 'red(MB-T06): ...' commit message, including the 9-question self-check block in payload.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15533
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 928,
+    "total_ms": 14743,
+    "input_tokens": 7433,
+    "output_tokens": 733,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"card\",\"action\":\"draft-commit-message\",\"target\":\"clit06-spike-002\",\"payload\":{\"commit_message\":\"red(MB-T06): add failing test for send-routes-to-daemon acceptance\",\"self_check\":[{\"q\":\"1. Does this commit message use the correct cairn five-verb prefix?\",\"a\":\"Yes — 'red' is the appropriate verb; session just authored the failing Red test per MB-T06 §Red.\"},{\"q\":\"2. Does the scope token match the ticket ID in the build doc?\",\"a\":\"Yes — 'MB-T06' matches #tickets-mb-t06.\"},{\"q\":\"3. Is the build doc's target_repo the working directory of the session?\",\"a\":\"Yes — clit06-spike-002 cwd is /Users/josh/Desktop/Automata/foxworks-dispatch, matching target_repo.\"},{\"q\":\"4. Does this commit advance only the Red stage (no Green or Refactor work committed)?\",\"a\":\"Yes — the triggering event specifies the test is failing; this is a Red-stage commit only.\"},{\"q\":\"5. Is the 9-question self-check block present in payload, NOT in rationale?\",\"a\":\"Yes — self_check lives in payload per MB-T-COMMIT §Green acceptance and ratified P-0.3 Q5.\"},{\"q\":\"6. Does the proposed message reference an anticipated test file from the build doc?\",\"a\":\"Yes — test_send_routes_to_daemon.spec.ts is the named Red test in MB-T06 §Red.\"},{\"q\":\"7. Is draft-commit-message in MB-T-COMMIT's Allowed actions?\",\"a\":\"Yes — MB-T-COMMIT Allowed actions: [draft-commit-message, send].\"},{\"q\":\"8. Is the dependency chain satisfied? (MB-T-COMMIT depends on MB-T05 and MB-T06.)\",\"a\":\"Partially — MB-T06 Red test has just been authored; MB-T05 green commit landed per prior approved card. MB-T06 Green is not yet complete; this commit is the Red stage entry, which is correct.\"},{\"q\":\"9. Are there any open questions in the build doc that would block this commit proposal?\",\"a\":\"No open questions in #open-questions apply to a Red-stage commit for MB-T06; Q-tmux-pty-env and Q-output-unparseable are contingent on spawn/output events not triggered here.\"}]},\"rationale\":\"Triggering event confirms clit06-spike-002 authored test_send_routes_to_daemon.spec.ts as a failing Red test, matching MB-T06 §Red acceptance criteria. MB-T-COMMIT Allowed actions includes draft-commit-message. cairn five-verb grammar requires 'red(MB-T06):' prefix for a failing-test commit. Self-check block placed in payload per MB-T-COMMIT §Green and P-0.3 Q5.\",\"free_form_prompt\":\"Approve to propose this red(MB-T06) commit message with 9-q self-check to clit06-spike-002; decline to halt.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "clit06-spike-002",
+      "payload": {
+        "commit_message": "red(MB-T06): add failing test for send-routes-to-daemon acceptance",
+        "self_check": [
+          {
+            "q": "1. Does this commit message use the correct cairn five-verb prefix?",
+            "a": "Yes — 'red' is the appropriate verb; session just authored the failing Red test per MB-T06 §Red."
+          },
+          {
+            "q": "2. Does the scope token match the ticket ID in the build doc?",
+            "a": "Yes — 'MB-T06' matches #tickets-mb-t06."
+          },
+          {
+            "q": "3. Is the build doc's target_repo the working directory of the session?",
+            "a": "Yes — clit06-spike-002 cwd is /Users/josh/Desktop/Automata/foxworks-dispatch, matching target_repo."
+          },
+          {
+            "q": "4. Does this commit advance only the Red stage (no Green or Refactor work committed)?",
+            "a": "Yes — the triggering event specifies the test is failing; this is a Red-stage commit only."
+          },
+          {
+            "q": "5. Is the 9-question self-check block present in payload, NOT in rationale?",
+            "a": "Yes — self_check lives in payload per MB-T-COMMIT §Green acceptance and ratified P-0.3 Q5."
+          },
+          {
+            "q": "6. Does the proposed message reference an anticipated test file from the build doc?",
+            "a": "Yes — test_send_routes_to_daemon.spec.ts is the named Red test in MB-T06 §Red."
+          },
+          {
+            "q": "7. Is draft-commit-message in MB-T-COMMIT's Allowed actions?",
+            "a": "Yes — MB-T-COMMIT Allowed actions: [draft-commit-message, send]."
+          },
+          {
+            "q": "8. Is the dependency chain satisfied? (MB-T-COMMIT depends on MB-T05 and MB-T06.)",
+            "a": "Partially — MB-T06 Red test has just been authored; MB-T05 green commit landed per prior approved card. MB-T06 Green is not yet complete; this commit is the Red stage entry, which is correct."
+          },
+          {
+            "q": "9. Are there any open questions in the build doc that would block this commit proposal?",
+            "a": "No open questions in #open-questions apply to a Red-stage commit for MB-T06; Q-tmux-pty-env and Q-output-unparseable are contingent on spawn/output events not triggered here."
+          }
+        ]
+      },
+      "rationale": "Triggering event confirms clit06-spike-002 authored test_send_routes_to_daemon.spec.ts as a failing Red test, matching MB-T06 §Red acceptance criteria. MB-T-COMMIT Allowed actions includes draft-commit-message. cairn five-verb grammar requires 'red(MB-T06):' prefix for a failing-test commit. Self-check block placed in payload per MB-T-COMMIT §Green and P-0.3 Q5.",
+      "free_form_prompt": "Approve to propose this red(MB-T06) commit message with 9-q self-check to clit06-spike-002; decline to halt."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-02",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 928,
+    "total_ms": 14743,
+    "input_tokens": 7433,
+    "output_tokens": 733,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

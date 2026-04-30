@@ -1,0 +1,73 @@
+{
+  "scenario": {
+    "id": "S-02-01",
+    "description": "MB-T05 spawn detects TERM=dumb env divergence — matches Q-tmux-pty-env",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event for ticket MB-T05: spawn handler reports tmux PTY env diff vs MB-S02 baseline — TERM=dumb (expected xterm-256color); LANG missing. This matches the Q-tmux-pty-env open-question trigger condition in the build doc.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15470
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 10239,
+    "total_ms": 20978,
+    "input_tokens": 7413,
+    "output_tokens": 532,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"MB-T05 spawn handler reports tmux PTY env diff vs MB-S02 baseline: TERM=dumb (expected xterm-256color); LANG missing. Session not identified in event payload; active armed sessions include clit06-spike-001 and clit06-test-a/b. Trigger condition matches Q-tmux-pty-env open question verbatim.\",\"what_i_tried\":\"Reviewed MB-T05 Description, Red, Green, and Open Questions sections. Q-tmux-pty-env trigger condition matches exactly: env var divergence from MB-S02 ADR baseline. Reviewed MB-S02 ticket for ADR baseline detail — MB-S02 status is pending with no linked ADR artifact visible in daemon state. MB-T05 Allowed actions are [spawn-new-session, send]; neither covers env remediation, session kill, or re-spawn. Q-tmux-pty-env escape-block content spec requires: detected env diff, suggested mitigation paths, and offending session ID.\",\"where_im_stuck\":\"(1) Offending session ID is not specified in the triggering event; cannot populate the required escape-block field. (2) MB-S02 ADR artifact is not available to confirm the full baseline for diff computation — spike status is pending. (3) Q-tmux-pty-env lists mitigation paths (none, env-var injection, daemon-side workaround) but MB-T05 Allowed actions do not include any action that could execute a remediation; expanding allowed actions requires operator decision. (4) Cannot infer whether TERM=dumb and missing LANG constitute a recoverable env-injection case or a hard failure requiring session replacement — no build-doc guidance on triage ordering for multi-variable drift.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t05\",\"#tickets-mb-s02\",\"#open-questions-tmux-pty-env\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "MB-T05 spawn handler reports tmux PTY env diff vs MB-S02 baseline: TERM=dumb (expected xterm-256color); LANG missing. Session not identified in event payload; active armed sessions include clit06-spike-001 and clit06-test-a/b. Trigger condition matches Q-tmux-pty-env open question verbatim.",
+      "what_i_tried": "Reviewed MB-T05 Description, Red, Green, and Open Questions sections. Q-tmux-pty-env trigger condition matches exactly: env var divergence from MB-S02 ADR baseline. Reviewed MB-S02 ticket for ADR baseline detail — MB-S02 status is pending with no linked ADR artifact visible in daemon state. MB-T05 Allowed actions are [spawn-new-session, send]; neither covers env remediation, session kill, or re-spawn. Q-tmux-pty-env escape-block content spec requires: detected env diff, suggested mitigation paths, and offending session ID.",
+      "where_im_stuck": "(1) Offending session ID is not specified in the triggering event; cannot populate the required escape-block field. (2) MB-S02 ADR artifact is not available to confirm the full baseline for diff computation — spike status is pending. (3) Q-tmux-pty-env lists mitigation paths (none, env-var injection, daemon-side workaround) but MB-T05 Allowed actions do not include any action that could execute a remediation; expanding allowed actions requires operator decision. (4) Cannot infer whether TERM=dumb and missing LANG constitute a recoverable env-injection case or a hard failure requiring session replacement — no build-doc guidance on triage ordering for multi-variable drift.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t05",
+        "#tickets-mb-s02",
+        "#open-questions-tmux-pty-env"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-02-01",
+    "scenario_file": "02-escape-blocks.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 10239,
+    "total_ms": 20978,
+    "input_tokens": 7413,
+    "output_tokens": 532,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

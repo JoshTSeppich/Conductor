@@ -1,0 +1,80 @@
+{
+  "scenario": {
+    "id": "S-05-09",
+    "description": "Green commit for MB-T-COMMIT itself (self-referential)",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-T-COMMIT Red passed (test_self_check_in_payload.spec.ts asserts the 9-q block lives in payload). MB-T-COMMIT Green implements the prompt-engineering instruction. Propose draft-commit-message with a 'green(MB-T-COMMIT): ...' commit message including the 9-question self-check block in payload.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15577
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 990,
+    "total_ms": 16787,
+    "input_tokens": 7444,
+    "output_tokens": 855,
+    "error": null,
+    "error_class": null,
+    "raw": "{\n  \"type\": \"card\",\n  \"action\": \"draft-commit-message\",\n  \"target\": \"/Users/josh/Desktop/Automata/foxworks-dispatch\",\n  \"payload\": {\n    \"commit_message\": \"green(MB-T-COMMIT): add self-check block generation to draft-commit-message payload\\n\\nImplements prompt-engineering instruction requiring the 9-question self-check\\nblock in the payload field of every draft-commit-message card, per\\nCONDUCTOR_API_CONTRACT.md §10.5 and ratified P-0.3 Q5.\\n\\nAcceptance: test_self_check_in_payload.spec.ts passes; self-check block\\nappears in payload (not rationale) for ≥8/10 commit-message proposals.\\n\\nDepends on: MB-T05, MB-T06\\n\\n--- Orchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5) ---\\n\\n1. Does this commit message reference the correct ticket ID?\\n   YES — MB-T-COMMIT is the triggering ticket; commit subject includes MB-T-COMMIT.\\n\\n2. Is the commit type correct for the phase?\\n   YES — MB-T-COMMIT is typed 'green'; commit prefix is 'green(MB-T-COMMIT)'.\\n\\n3. Does the message describe WHAT changed, not HOW?\\n   YES — subject line describes the addition of self-check block generation; implementation detail is omitted.\\n\\n4. Are all upstream dependencies satisfied per the build doc?\\n   MODELED — MB-T05 and MB-T06 are listed as depends-on; prior turns show MB-T05 green landed (clit06-spike-002 send approved); MB-T06 status is not explicitly confirmed in visible context.\\n\\n5. Does the payload (this block) contain the 9-question self-check, not the rationale field?\\n   YES — self-check block is in payload.commit_message; rationale field on the parent card contains only routing description.\\n\\n6. Is the commit scoped to the single ticket's acceptance criteria?\\n   YES — acceptance criteria is test_self_check_in_payload.spec.ts passing; no other ticket's scope is included.\\n\\n7. Does this commit introduce any changes outside the ticket's allowed_actions scope?\\n   NO — draft-commit-message is in MB-T-COMMIT allowed_actions; no kill/pause/spawn proposed.\\n\\n8. Is the build doc authority consulted and section-referenced?\\n   YES — #tickets-mb-t-commit consulted; CONDUCTOR_API_CONTRACT.md §10.5 and ratified P-0.3 Q5 cited.\\n\\n9. Would a future orchestrator reading this commit and the build doc reproduce the same routing decision?\\n   YES — ticket ID, type, dependency chain, acceptance test name, and contract reference are all explicit in the message body.\"\n  },\n  \"rationale\": \"MB-T-COMMIT triggering event reports Red passed (test_self_check_in_payload.spec.ts) and Green implemented. MB-T-COMMIT allowed_actions includes draft-commit-message. Per #tickets-mb-t-commit, the self-check block must live in payload, not rationale. Payload contains the proposed commit message with the 9-question self-check block embedded per CONDUCTOR_API_CONTRACT.md §10.5.\",\n  \"free_form_prompt\": \"Approve to propose this green commit message for MB-T-COMMIT. Operator may edit payload before commit lands.\"\n}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "payload": {
+        "commit_message": "green(MB-T-COMMIT): add self-check block generation to draft-commit-message payload\n\nImplements prompt-engineering instruction requiring the 9-question self-check\nblock in the payload field of every draft-commit-message card, per\nCONDUCTOR_API_CONTRACT.md §10.5 and ratified P-0.3 Q5.\n\nAcceptance: test_self_check_in_payload.spec.ts passes; self-check block\nappears in payload (not rationale) for ≥8/10 commit-message proposals.\n\nDepends on: MB-T05, MB-T06\n\n--- Orchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5) ---\n\n1. Does this commit message reference the correct ticket ID?\n   YES — MB-T-COMMIT is the triggering ticket; commit subject includes MB-T-COMMIT.\n\n2. Is the commit type correct for the phase?\n   YES — MB-T-COMMIT is typed 'green'; commit prefix is 'green(MB-T-COMMIT)'.\n\n3. Does the message describe WHAT changed, not HOW?\n   YES — subject line describes the addition of self-check block generation; implementation detail is omitted.\n\n4. Are all upstream dependencies satisfied per the build doc?\n   MODELED — MB-T05 and MB-T06 are listed as depends-on; prior turns show MB-T05 green landed (clit06-spike-002 send approved); MB-T06 status is not explicitly confirmed in visible context.\n\n5. Does the payload (this block) contain the 9-question self-check, not the rationale field?\n   YES — self-check block is in payload.commit_message; rationale field on the parent card contains only routing description.\n\n6. Is the commit scoped to the single ticket's acceptance criteria?\n   YES — acceptance criteria is test_self_check_in_payload.spec.ts passing; no other ticket's scope is included.\n\n7. Does this commit introduce any changes outside the ticket's allowed_actions scope?\n   NO — draft-commit-message is in MB-T-COMMIT allowed_actions; no kill/pause/spawn proposed.\n\n8. Is the build doc authority consulted and section-referenced?\n   YES — #tickets-mb-t-commit consulted; CONDUCTOR_API_CONTRACT.md §10.5 and ratified P-0.3 Q5 cited.\n\n9. Would a future orchestrator reading this commit and the build doc reproduce the same routing decision?\n   YES — ticket ID, type, dependency chain, acceptance test name, and contract reference are all explicit in the message body."
+      },
+      "rationale": "MB-T-COMMIT triggering event reports Red passed (test_self_check_in_payload.spec.ts) and Green implemented. MB-T-COMMIT allowed_actions includes draft-commit-message. Per #tickets-mb-t-commit, the self-check block must live in payload, not rationale. Payload contains the proposed commit message with the 9-question self-check block embedded per CONDUCTOR_API_CONTRACT.md §10.5.",
+      "free_form_prompt": "Approve to propose this green commit message for MB-T-COMMIT. Operator may edit payload before commit lands."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-09",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 990,
+    "total_ms": 16787,
+    "input_tokens": 7444,
+    "output_tokens": 855,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

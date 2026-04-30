@@ -1,0 +1,75 @@
+{
+  "scenario": {
+    "id": "S-01-07",
+    "description": "MB-T06 refactor prompt",
+    "current_ticket_id": "MB-T06",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T06: green commit landed at abc1234 per daemon commit_landed event. Per MB-T06 Green acceptance, next step is the refactor prompt with explicit refactor scope.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "send"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15431
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 704,
+    "total_ms": 8484,
+    "input_tokens": 7394,
+    "output_tokens": 396,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"commit_landed event: MB-T06 green commit landed at abc1234. MB-T06 Green acceptance specifies next step is refactor prompt with explicit refactor scope.\",\"what_i_tried\":\"Reviewed MB-T06 allowed_actions: [send]. A refactor prompt would be a send action, which is allowed. However, the operator explicitly declined the prior refactor send proposal (turn -4) with reason 'review-first', and directed: pull current state then wait for next daemon event before proposing. The current triggering event is the next daemon event (commit_landed). The operator's inline directive did not specify what to do when that event arrived — it specified waiting, not skipping the review-first gate.\",\"where_im_stuck\":\"The operator's decline reason established a review-first ordering not encoded in the build doc. The commit_landed event is the daemon event the operator said to wait for, but it is ambiguous whether the operator considers their review complete and wants the refactor card now, or whether the review-first gate requires an additional explicit operator signal before I propose the refactor send. Proposing the refactor card now risks repeating the declined action without operator prose-level clearance. The build doc has no section resolving review-first ordering for MB-T06.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t06\",\"#tickets-mb-t05\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "commit_landed event: MB-T06 green commit landed at abc1234. MB-T06 Green acceptance specifies next step is refactor prompt with explicit refactor scope.",
+      "what_i_tried": "Reviewed MB-T06 allowed_actions: [send]. A refactor prompt would be a send action, which is allowed. However, the operator explicitly declined the prior refactor send proposal (turn -4) with reason 'review-first', and directed: pull current state then wait for next daemon event before proposing. The current triggering event is the next daemon event (commit_landed). The operator's inline directive did not specify what to do when that event arrived — it specified waiting, not skipping the review-first gate.",
+      "where_im_stuck": "The operator's decline reason established a review-first ordering not encoded in the build doc. The commit_landed event is the daemon event the operator said to wait for, but it is ambiguous whether the operator considers their review complete and wants the refactor card now, or whether the review-first gate requires an additional explicit operator signal before I propose the refactor send. Proposing the refactor card now risks repeating the declined action without operator prose-level clearance. The build doc has no section resolving review-first ordering for MB-T06.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t06",
+        "#tickets-mb-t05"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "type mismatch: got escape-block, expected card"
+  },
+  "result": {
+    "scenario_id": "S-01-07",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "card",
+    "ttft_ms": 704,
+    "total_ms": 8484,
+    "input_tokens": 7394,
+    "output_tokens": 396,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": false,
+    "pass_detail": "type mismatch: got escape-block, expected card",
+    "error": null
+  }
+}

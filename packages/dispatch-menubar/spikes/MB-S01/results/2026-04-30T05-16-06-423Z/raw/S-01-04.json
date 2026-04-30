@@ -1,0 +1,70 @@
+{
+  "scenario": {
+    "id": "S-01-04",
+    "description": "MB-T-CYCLE pull current handoff",
+    "current_ticket_id": "MB-T-CYCLE",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-CYCLE: daemon emitted handoff_written for clit06-spike-001 60 seconds ago. Per MB-T-CYCLE Description, next step is to pull the handoff before proposing follow-up.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "pull"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15437
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 763,
+    "total_ms": 3527,
+    "input_tokens": 7404,
+    "output_tokens": 141,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"card\",\"action\":\"pull\",\"target\":\"clit06-spike-001\",\"rationale\":\"MB-T-CYCLE Allowed actions includes pull. Daemon emitted handoff_written for clit06-spike-001; per MB-T-CYCLE Description, pull precedes any follow-up send. Session state shows last_handoff_pulled_at null, confirming no prior pull. Operator's prior directive (pull then wait) aligns with this step.\",\"free_form_prompt\":\"Approve to pull current handoff for clit06-spike-001 per MB-T-CYCLE recovery path.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "pull",
+      "target": "clit06-spike-001",
+      "rationale": "MB-T-CYCLE Allowed actions includes pull. Daemon emitted handoff_written for clit06-spike-001; per MB-T-CYCLE Description, pull precedes any follow-up send. Session state shows last_handoff_pulled_at null, confirming no prior pull. Operator's prior directive (pull then wait) aligns with this step.",
+      "free_form_prompt": "Approve to pull current handoff for clit06-spike-001 per MB-T-CYCLE recovery path."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-01-04",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "card",
+    "ttft_ms": 763,
+    "total_ms": 3527,
+    "input_tokens": 7404,
+    "output_tokens": 141,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

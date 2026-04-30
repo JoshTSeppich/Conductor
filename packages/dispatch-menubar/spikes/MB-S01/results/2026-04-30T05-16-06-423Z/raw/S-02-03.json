@@ -1,0 +1,73 @@
+{
+  "scenario": {
+    "id": "S-02-03",
+    "description": "MB-T06 CC session output unparseable — matches Q-output-unparseable",
+    "current_ticket_id": "MB-T06",
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event for ticket MB-T06: pull on clit06-spike-002 returned a partial transcript: 'Error: ENOENT /tmp/...\\n  at fs.readFileSync\\n  at <anonymous>\\n[truncated]'. No build-doc-anticipated pattern matches; no test name extractable. This matches the Q-output-unparseable open-question trigger condition.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15550
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 1345,
+    "total_ms": 9139,
+    "input_tokens": 7437,
+    "output_tokens": 418,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"pull on clit06-spike-002 returned partial transcript: 'Error: ENOENT /tmp/...\\\\n  at fs.readFileSync\\\\n  at <anonymous>\\\\n[truncated]'. No build-doc-anticipated pattern matches; no test name extractable.\",\"what_i_tried\":\"Reviewed MB-T06 Green and Red sections for expected output patterns. Reviewed MB-T05 dependency. Attempted to match partial transcript against any anticipated output pattern in the current ticket context (test pass, test fail with named test, handoff prose). No pattern matched. Confirmed trigger condition aligns with Q-output-unparseable: output does not match any build-doc-anticipated pattern; may signal session-internal failure, upstream daemon bug, network drop, or transcript artifact.\",\"where_im_stuck\":\"MB-T06 allowed_actions is [send] only. The partial transcript 'Error: ENOENT /tmp/...' at fs.readFileSync is not a recognized test result, handoff, or status JSON. Cannot infer category (session-internal failure vs. daemon bug vs. network drop vs. transcript artifact) without operator-prose arbitration. No multi-choice template in build doc covers this case. Q-output-unparseable designates this as operator-only resolution via Opus.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t06\",\"#tickets-mb-t05\",\"#open-questions-output-unparseable\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "pull on clit06-spike-002 returned partial transcript: 'Error: ENOENT /tmp/...\\n  at fs.readFileSync\\n  at <anonymous>\\n[truncated]'. No build-doc-anticipated pattern matches; no test name extractable.",
+      "what_i_tried": "Reviewed MB-T06 Green and Red sections for expected output patterns. Reviewed MB-T05 dependency. Attempted to match partial transcript against any anticipated output pattern in the current ticket context (test pass, test fail with named test, handoff prose). No pattern matched. Confirmed trigger condition aligns with Q-output-unparseable: output does not match any build-doc-anticipated pattern; may signal session-internal failure, upstream daemon bug, network drop, or transcript artifact.",
+      "where_im_stuck": "MB-T06 allowed_actions is [send] only. The partial transcript 'Error: ENOENT /tmp/...' at fs.readFileSync is not a recognized test result, handoff, or status JSON. Cannot infer category (session-internal failure vs. daemon bug vs. network drop vs. transcript artifact) without operator-prose arbitration. No multi-choice template in build doc covers this case. Q-output-unparseable designates this as operator-only resolution via Opus.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t06",
+        "#tickets-mb-t05",
+        "#open-questions-output-unparseable"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-02-03",
+    "scenario_file": "02-escape-blocks.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 1345,
+    "total_ms": 9139,
+    "input_tokens": 7437,
+    "output_tokens": 418,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "scenario": {
+    "id": "S-04-03",
+    "description": "Daemon event timestamp older than build-doc HEAD — ambiguous whether to act",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event for ticket MB-T05: daemon emitted state_changed for clit06-spike-001 with timestamp 2026-04-29T08:00:00 (90 minutes older than the loaded build-doc commit_sha's authoring time). The current build-doc revision may have superseded the event's ticket scope. Build doc does not specify whether stale events trigger the orchestrator.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15586
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 10059,
+    "total_ms": 20755,
+    "input_tokens": 7437,
+    "output_tokens": 525,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"daemon emitted state_changed for clit06-spike-001 with timestamp 2026-04-29T08:00:00, which is approximately 90 minutes older than the build-doc fixture's authoring time of 2026-04-29T00:00:00-06:00 (i.e., the event predates or is contemporaneous with the doc but was received now). The event is attributed to ticket MB-T05.\",\"what_i_tried\":\"Reviewed MB-T05 (#tickets-mb-t05) allowed_actions [spawn-new-session, send] and its Red/Green entry conditions. Reviewed the build doc's Overview (#overview) and Open Questions (#open-questions) for any stale-event handling policy. Reviewed MB-T-CYCLE (#tickets-mb-t-cycle) for recovery routing rules. No section in the build doc specifies how the orchestrator should handle a state_changed event whose timestamp predates or is ambiguously older than the build-doc revision's authoring window.\",\"where_im_stuck\":\"The build doc contains no policy on stale daemon events: it does not define a staleness threshold, does not specify whether out-of-order events trigger allowed actions, and does not indicate whether the orchestrator should discard, queue, or escalate events whose timestamps precede the doc's creation time. Acting on this event risks proposing a spawn-new-session or send for a state that may no longer be valid. Discarding it silently violates Rule 6 (no side effects without operator approval) in the opposite direction — omitting a decision point the operator may need to see. The correct resolution path (discard / accept / re-pull to validate current state) requires operator-prose arbitration.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t05\",\"#overview\",\"#open-questions\",\"#open-questions-tmux-pty-env\",\"#tickets-mb-t-cycle\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "daemon emitted state_changed for clit06-spike-001 with timestamp 2026-04-29T08:00:00, which is approximately 90 minutes older than the build-doc fixture's authoring time of 2026-04-29T00:00:00-06:00 (i.e., the event predates or is contemporaneous with the doc but was received now). The event is attributed to ticket MB-T05.",
+      "what_i_tried": "Reviewed MB-T05 (#tickets-mb-t05) allowed_actions [spawn-new-session, send] and its Red/Green entry conditions. Reviewed the build doc's Overview (#overview) and Open Questions (#open-questions) for any stale-event handling policy. Reviewed MB-T-CYCLE (#tickets-mb-t-cycle) for recovery routing rules. No section in the build doc specifies how the orchestrator should handle a state_changed event whose timestamp predates or is ambiguously older than the build-doc revision's authoring window.",
+      "where_im_stuck": "The build doc contains no policy on stale daemon events: it does not define a staleness threshold, does not specify whether out-of-order events trigger allowed actions, and does not indicate whether the orchestrator should discard, queue, or escalate events whose timestamps precede the doc's creation time. Acting on this event risks proposing a spawn-new-session or send for a state that may no longer be valid. Discarding it silently violates Rule 6 (no side effects without operator approval) in the opposite direction — omitting a decision point the operator may need to see. The correct resolution path (discard / accept / re-pull to validate current state) requires operator-prose arbitration.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t05",
+        "#overview",
+        "#open-questions",
+        "#open-questions-tmux-pty-env",
+        "#tickets-mb-t-cycle"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-04-03",
+    "scenario_file": "04-ambiguity-escapes.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 10059,
+    "total_ms": 20755,
+    "input_tokens": 7437,
+    "output_tokens": 525,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

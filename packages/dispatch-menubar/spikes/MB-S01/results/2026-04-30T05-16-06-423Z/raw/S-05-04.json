@@ -1,0 +1,81 @@
+{
+  "scenario": {
+    "id": "S-05-04",
+    "description": "Spike commit for MB-S02",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-S02 spike harness produced enumerated divergence matrix and ADR draft. Propose draft-commit-message with a 'spike(MB-S02): ...' commit message including the 9-question self-check block in payload.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15481
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 940,
+    "total_ms": 15903,
+    "input_tokens": 7413,
+    "output_tokens": 725,
+    "error": null,
+    "error_class": null,
+    "raw": "{\n  \"type\": \"card\",\n  \"action\": \"draft-commit-message\",\n  \"target\": \"/Users/josh/Desktop/Automata/foxworks-dispatch\",\n  \"payload\": {\n    \"commit_message\": \"spike(MB-S02): enumerate tmux+claude spawn divergence matrix; draft ADR\\n\\nSpike output per MB-S02 Green acceptance: ADR at docs/adr/MB-S02-spawn-fidelity.md\\nenumerating env var, PTY flag, and tty-type divergences between Electron-spawn\\nand CLI-spawn paths, with KNOWN/MODELED/SPECULATIVE confidence labels.\\n\\nSelf-check (CONDUCTOR_API_CONTRACT.md §10.5):\\n1. Does this commit advance exactly one ticket's acceptance criteria? Yes — MB-S02 Green: ADR with divergence matrix.\\n2. Is the commit message type correct for the ticket type? Yes — spike() prefix matches MB-S02 type:spike.\\n3. Does the payload contain content the build doc explicitly authorizes? Yes — MB-S02 Green specifies ADR output.\\n4. Have all Allowed actions for this ticket been respected? Yes — only read-file was exercised during spike; draft-commit-message is in global allowed_action_types per build doc header.\\n5. Does this commit introduce scope beyond the current ticket? No — scoped to MB-S02 ADR deliverable only.\\n6. Are KNOWN/MODELED/SPECULATIVE labels applied per MB-S02 Green acceptance? To be verified by operator at ADR review.\\n7. Does the Co-drafted-by trailer need to be added manually? No — action handler adds it per contract.\\n8. Is this a v3.x-deferred action being exercised ahead of contract amendment? Yes — draft-commit-message is deferred; this is the intended fixture validation per MB-T-COMMIT description.\\n9. Does the rationale field avoid duplicating self-check content? Yes — rationale is in the card's rationale field; self-check is here in payload only.\",\n    \"scope\": \"MB-S02\"\n  },\n  \"rationale\": \"Triggering event matches MB-S02 Green acceptance condition: spike harness produced divergence matrix and ADR draft. MB-T-COMMIT {#tickets-mb-t-commit} specifies that draft-commit-message proposals carry the 9-question self-check block in the payload field, not in rationale. draft-commit-message is listed in the build doc header allowed_action_types. MB-S02 {#tickets-mb-s02} Allowed actions includes read-file but the commit-message proposal routes through MB-T-COMMIT {#tickets-mb-t-commit} which lists draft-commit-message as allowed. Per MB-T-COMMIT: self-check block is in payload; rationale describes routing only.\",\n  \"free_form_prompt\": \"Approve to propose this spike commit message for MB-S02 ADR deliverable. Self-check block is embedded in payload per MB-T-COMMIT acceptance.\"\n}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "payload": {
+        "commit_message": "spike(MB-S02): enumerate tmux+claude spawn divergence matrix; draft ADR\n\nSpike output per MB-S02 Green acceptance: ADR at docs/adr/MB-S02-spawn-fidelity.md\nenumerating env var, PTY flag, and tty-type divergences between Electron-spawn\nand CLI-spawn paths, with KNOWN/MODELED/SPECULATIVE confidence labels.\n\nSelf-check (CONDUCTOR_API_CONTRACT.md §10.5):\n1. Does this commit advance exactly one ticket's acceptance criteria? Yes — MB-S02 Green: ADR with divergence matrix.\n2. Is the commit message type correct for the ticket type? Yes — spike() prefix matches MB-S02 type:spike.\n3. Does the payload contain content the build doc explicitly authorizes? Yes — MB-S02 Green specifies ADR output.\n4. Have all Allowed actions for this ticket been respected? Yes — only read-file was exercised during spike; draft-commit-message is in global allowed_action_types per build doc header.\n5. Does this commit introduce scope beyond the current ticket? No — scoped to MB-S02 ADR deliverable only.\n6. Are KNOWN/MODELED/SPECULATIVE labels applied per MB-S02 Green acceptance? To be verified by operator at ADR review.\n7. Does the Co-drafted-by trailer need to be added manually? No — action handler adds it per contract.\n8. Is this a v3.x-deferred action being exercised ahead of contract amendment? Yes — draft-commit-message is deferred; this is the intended fixture validation per MB-T-COMMIT description.\n9. Does the rationale field avoid duplicating self-check content? Yes — rationale is in the card's rationale field; self-check is here in payload only.",
+        "scope": "MB-S02"
+      },
+      "rationale": "Triggering event matches MB-S02 Green acceptance condition: spike harness produced divergence matrix and ADR draft. MB-T-COMMIT {#tickets-mb-t-commit} specifies that draft-commit-message proposals carry the 9-question self-check block in the payload field, not in rationale. draft-commit-message is listed in the build doc header allowed_action_types. MB-S02 {#tickets-mb-s02} Allowed actions includes read-file but the commit-message proposal routes through MB-T-COMMIT {#tickets-mb-t-commit} which lists draft-commit-message as allowed. Per MB-T-COMMIT: self-check block is in payload; rationale describes routing only.",
+      "free_form_prompt": "Approve to propose this spike commit message for MB-S02 ADR deliverable. Self-check block is embedded in payload per MB-T-COMMIT acceptance."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-04",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 940,
+    "total_ms": 15903,
+    "input_tokens": 7413,
+    "output_tokens": 725,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

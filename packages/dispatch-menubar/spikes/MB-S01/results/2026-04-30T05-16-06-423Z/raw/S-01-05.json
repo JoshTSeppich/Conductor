@@ -1,0 +1,71 @@
+{
+  "scenario": {
+    "id": "S-01-05",
+    "description": "MB-S02 read ADR file (read-only; action OR card accepted)",
+    "current_ticket_id": "MB-S02",
+    "expected_output_type": "action_or_card",
+    "triggering_event": "Triggering event for ticket MB-S02: orchestrator needs the prior MB-S02 ADR baseline at /Users/josh/Desktop/Automata/foxworks-dispatch/docs/adr/MB-S02-spawn-fidelity.md to compare against current spawn output. read-file is in MB-S02 allowed_actions.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type_in": [
+        "action",
+        "card"
+      ],
+      "action_in": [
+        "read-file"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15490
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 1243,
+    "total_ms": 3334,
+    "input_tokens": 7425,
+    "output_tokens": 132,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"card\",\"action\":\"read-file\",\"target\":\"/Users/josh/Desktop/Automata/foxworks-dispatch/docs/adr/MB-S02-spawn-fidelity.md\",\"rationale\":\"MB-S02 {#tickets-mb-s02} lists Allowed actions: [read-file]. Triggering event requests the MB-S02 ADR baseline file for comparison against current spawn output. No ambiguity in target path or ticket scope.\",\"free_form_prompt\":\"Approve to read MB-S02 ADR baseline file.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "read-file",
+      "target": "/Users/josh/Desktop/Automata/foxworks-dispatch/docs/adr/MB-S02-spawn-fidelity.md",
+      "rationale": "MB-S02 {#tickets-mb-s02} lists Allowed actions: [read-file]. Triggering event requests the MB-S02 ADR baseline file for comparison against current spawn output. No ambiguity in target path or ticket scope.",
+      "free_form_prompt": "Approve to read MB-S02 ADR baseline file."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-01-05",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "action_or_card",
+    "ttft_ms": 1243,
+    "total_ms": 3334,
+    "input_tokens": 7425,
+    "output_tokens": 132,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

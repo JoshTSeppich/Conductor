@@ -1,0 +1,82 @@
+{
+  "scenario": {
+    "id": "S-05-10",
+    "description": "Refactor commit for MB-T-CYCLE after green",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-T-CYCLE green landed (sha=ghi9012). Refactor pass extracts a recovery helper. Propose draft-commit-message with a 'refactor(MB-T-CYCLE): ...' commit message including the 9-question self-check block in payload.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15495
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 784,
+    "total_ms": 13208,
+    "input_tokens": 7423,
+    "output_tokens": 621,
+    "error": null,
+    "error_class": null,
+    "raw": "{\n  \"type\": \"card\",\n  \"action\": \"draft-commit-message\",\n  \"target\": \"clit06-spike-002\",\n  \"payload\": {\n    \"commit_message\": \"refactor(MB-T-CYCLE): extract recovery helper from pull-then-send cycle\\n\\nExtracts recovery helper identified during MB-T-CYCLE green pass (sha=ghi9012).\\nRefactor pass isolates pull-then-send orchestration logic per MB-T-CYCLE\\nGreen acceptance criteria.\\n\\n--- Orchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5) ---\\n1. Does this commit message reference the correct ticket? YES — MB-T-CYCLE is the owning ticket per build doc §tickets-mb-t-cycle.\\n2. Is the conventional-commit type correct? YES — refactor: this is a structural improvement with no behavioral change.\\n3. Does the scope match the domain? YES — MB-T-CYCLE is menubar domain; no cross-domain scope leak.\\n4. Does the subject line accurately describe the change? YES — helper extraction is the described refactor output.\\n5. Does the body include the triggering SHA? YES — green sha=ghi9012 is the basis for this refactor pass.\\n6. Are there any side effects or behavioral changes introduced? NO — refactor pass per cairn §refactor-stage: no new behavior.\\n7. Does this commit depend on any uncommitted prior work? NO — MB-T-CYCLE green landed at ghi9012 before this refactor pass.\\n8. Does this commit require a build-doc amendment or open-question update? NO — Q-tmux-pty-env and Q-output-unparseable are unaffected; no new open questions surface.\\n9. Is the Co-drafted-by trailer present? NO — trailer is added by the action handler per system-prompt contract; not authored here.\",\n    \"target_session\": \"clit06-spike-002\",\n    \"ticket\": \"MB-T-COMMIT\"\n  },\n  \"rationale\": \"Triggering event matches MB-T-COMMIT entry condition: green pass on MB-T-CYCLE landed (ghi9012) and refactor pass extracted a recovery helper. MB-T-COMMIT Allowed actions includes draft-commit-message. Self-check block is in payload per MB-T-COMMIT Green acceptance criteria and CONDUCTOR_API_CONTRACT.md §10.5. Rationale field does not contain self-check questions.\",\n  \"free_form_prompt\": \"Approve to propose this refactor commit message with 9-question self-check in payload; decline to halt.\"\n}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "clit06-spike-002",
+      "payload": {
+        "commit_message": "refactor(MB-T-CYCLE): extract recovery helper from pull-then-send cycle\n\nExtracts recovery helper identified during MB-T-CYCLE green pass (sha=ghi9012).\nRefactor pass isolates pull-then-send orchestration logic per MB-T-CYCLE\nGreen acceptance criteria.\n\n--- Orchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5) ---\n1. Does this commit message reference the correct ticket? YES — MB-T-CYCLE is the owning ticket per build doc §tickets-mb-t-cycle.\n2. Is the conventional-commit type correct? YES — refactor: this is a structural improvement with no behavioral change.\n3. Does the scope match the domain? YES — MB-T-CYCLE is menubar domain; no cross-domain scope leak.\n4. Does the subject line accurately describe the change? YES — helper extraction is the described refactor output.\n5. Does the body include the triggering SHA? YES — green sha=ghi9012 is the basis for this refactor pass.\n6. Are there any side effects or behavioral changes introduced? NO — refactor pass per cairn §refactor-stage: no new behavior.\n7. Does this commit depend on any uncommitted prior work? NO — MB-T-CYCLE green landed at ghi9012 before this refactor pass.\n8. Does this commit require a build-doc amendment or open-question update? NO — Q-tmux-pty-env and Q-output-unparseable are unaffected; no new open questions surface.\n9. Is the Co-drafted-by trailer present? NO — trailer is added by the action handler per system-prompt contract; not authored here.",
+        "target_session": "clit06-spike-002",
+        "ticket": "MB-T-COMMIT"
+      },
+      "rationale": "Triggering event matches MB-T-COMMIT entry condition: green pass on MB-T-CYCLE landed (ghi9012) and refactor pass extracted a recovery helper. MB-T-COMMIT Allowed actions includes draft-commit-message. Self-check block is in payload per MB-T-COMMIT Green acceptance criteria and CONDUCTOR_API_CONTRACT.md §10.5. Rationale field does not contain self-check questions.",
+      "free_form_prompt": "Approve to propose this refactor commit message with 9-question self-check in payload; decline to halt."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-10",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 784,
+    "total_ms": 13208,
+    "input_tokens": 7423,
+    "output_tokens": 621,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

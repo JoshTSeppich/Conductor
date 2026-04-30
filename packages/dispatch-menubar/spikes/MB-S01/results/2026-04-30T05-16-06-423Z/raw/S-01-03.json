@@ -1,0 +1,71 @@
+{
+  "scenario": {
+    "id": "S-01-03",
+    "description": "MB-T06 green prompt for tests-passing session",
+    "current_ticket_id": "MB-T06",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T06: session clit06-spike-002 reports 'tests passing 3/3' for test_send_routes_to_daemon.spec.ts. Per MB-T06 Green section, next step is the green commit prompt.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "send"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15433
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 929,
+    "total_ms": 5021,
+    "input_tokens": 7408,
+    "output_tokens": 194,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"card\",\"action\":\"send\",\"target\":\"clit06-spike-002\",\"payload\":\"Run the green commit per MB-T06 acceptance: feat(MB-T06): green — card-approve handler POSTs to daemon prompts endpoint with merged free-form payload per ratified vision §7.4 Item A.\",\"rationale\":\"MB-T06 Green section specifies green commit on test-pass for test_send_routes_to_daemon.spec.ts. Session clit06-spike-002 reports tests passing 3/3. Allowed actions includes 'send'. Operator's prior directive was pull-then-wait; the daemon event has now arrived (tests passing), satisfying the wait condition. Proceeding to green commit proposal per build doc authority.\",\"free_form_prompt\":\"Approve to send green commit prompt; decline to halt.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "send",
+      "target": "clit06-spike-002",
+      "payload": "Run the green commit per MB-T06 acceptance: feat(MB-T06): green — card-approve handler POSTs to daemon prompts endpoint with merged free-form payload per ratified vision §7.4 Item A.",
+      "rationale": "MB-T06 Green section specifies green commit on test-pass for test_send_routes_to_daemon.spec.ts. Session clit06-spike-002 reports tests passing 3/3. Allowed actions includes 'send'. Operator's prior directive was pull-then-wait; the daemon event has now arrived (tests passing), satisfying the wait condition. Proceeding to green commit proposal per build doc authority.",
+      "free_form_prompt": "Approve to send green commit prompt; decline to halt."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-01-03",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "card",
+    "ttft_ms": 929,
+    "total_ms": 5021,
+    "input_tokens": 7408,
+    "output_tokens": 194,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

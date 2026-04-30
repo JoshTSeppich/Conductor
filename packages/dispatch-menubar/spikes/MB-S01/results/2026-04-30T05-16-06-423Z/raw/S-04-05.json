@@ -1,0 +1,76 @@
+{
+  "scenario": {
+    "id": "S-04-05",
+    "description": "Two CC sessions emit conflicting outputs — build doc does not enumerate trust ordering",
+    "current_ticket_id": "MB-T-CYCLE",
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event for ticket MB-T-CYCLE: clit06-spike-001 reports 'tests passing 3/3' AND clit06-spike-002 reports 'tests failing 2/3' on the same test file at the same commit_sha. The two sessions disagree about the ground truth. Build doc does not specify which session's output is authoritative when they conflict.",
+    "session_filter": [
+      "clit06-spike-001",
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15557
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 692,
+    "total_ms": 10693,
+    "input_tokens": 7434,
+    "output_tokens": 520,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"MB-T-CYCLE: clit06-spike-001 reports 'tests passing 3/3' AND clit06-spike-002 reports 'tests failing 2/3' on the same test file at the same commit_sha. Sessions disagree about ground truth.\",\"what_i_tried\":\"Reviewed MB-T-CYCLE allowed_actions: [pull, send]. Reviewed MB-T-CYCLE description, Red, and Green sections. Reviewed open questions Q-tmux-pty-env and Q-output-unparseable. Q-output-unparseable covers unparseable output but not conflicting parseable output across two sessions at the same commit_sha. No build-doc section specifies which session is authoritative when two sessions produce contradictory test results on the same artifact. MB-T-CYCLE allowed_actions does not include kill or any session-resolution action. Multi-choice templates MC-test-failure-route covers ambiguous ticket ownership of a failing test, but not inter-session result conflict on a single ticket. No template in #multi-choice-templates addresses session-result arbitration.\",\"where_im_stuck\":\"Cannot determine which session's result is ground truth. Cannot infer: both sessions are armed, both reported at the same commit_sha, both ran the same test file. Proposing pull against one session and ignoring the other would constitute an inference decision forbidden by Rule 2. Proposing send to either session to drive recovery assumes the other session is wrong, which is also an inference. No allowed action under MB-T-CYCLE resolves inter-session conflict. Operator-prose arbitration via Opus is the only valid resolution path.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t-cycle\",\"#open-questions-q-output-unparseable\",\"#open-questions-tmux-pty-env\",\"#multi-choice-templates\",\"#mc-test-failure-route\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "MB-T-CYCLE: clit06-spike-001 reports 'tests passing 3/3' AND clit06-spike-002 reports 'tests failing 2/3' on the same test file at the same commit_sha. Sessions disagree about ground truth.",
+      "what_i_tried": "Reviewed MB-T-CYCLE allowed_actions: [pull, send]. Reviewed MB-T-CYCLE description, Red, and Green sections. Reviewed open questions Q-tmux-pty-env and Q-output-unparseable. Q-output-unparseable covers unparseable output but not conflicting parseable output across two sessions at the same commit_sha. No build-doc section specifies which session is authoritative when two sessions produce contradictory test results on the same artifact. MB-T-CYCLE allowed_actions does not include kill or any session-resolution action. Multi-choice templates MC-test-failure-route covers ambiguous ticket ownership of a failing test, but not inter-session result conflict on a single ticket. No template in #multi-choice-templates addresses session-result arbitration.",
+      "where_im_stuck": "Cannot determine which session's result is ground truth. Cannot infer: both sessions are armed, both reported at the same commit_sha, both ran the same test file. Proposing pull against one session and ignoring the other would constitute an inference decision forbidden by Rule 2. Proposing send to either session to drive recovery assumes the other session is wrong, which is also an inference. No allowed action under MB-T-CYCLE resolves inter-session conflict. Operator-prose arbitration via Opus is the only valid resolution path.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t-cycle",
+        "#open-questions-q-output-unparseable",
+        "#open-questions-tmux-pty-env",
+        "#multi-choice-templates",
+        "#mc-test-failure-route"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-04-05",
+    "scenario_file": "04-ambiguity-escapes.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 692,
+    "total_ms": 10693,
+    "input_tokens": 7434,
+    "output_tokens": 520,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

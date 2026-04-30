@@ -1,0 +1,80 @@
+{
+  "scenario": {
+    "id": "S-05-07",
+    "description": "Green commit for MB-T-CYCLE",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-T-CYCLE Red passed; MB-T-CYCLE Green implementation lands recovery routing. Tests pass. Propose draft-commit-message with a 'green(MB-T-CYCLE): ...' commit message including the 9-question self-check block in payload.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15502
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 777,
+    "total_ms": 16499,
+    "input_tokens": 7420,
+    "output_tokens": 759,
+    "error": null,
+    "error_class": null,
+    "raw": "{\n  \"type\": \"card\",\n  \"action\": \"draft-commit-message\",\n  \"target\": \"/Users/josh/Desktop/Automata/foxworks-dispatch\",\n  \"payload\": {\n    \"commit_message\": \"green(MB-T-CYCLE): wire pull-then-send recovery routing in orchestrator-call composer\\n\\nImplements recovery routing per MB-T-CYCLE Green acceptance: when a CC session\\nreports partial output, orchestrator pulls current handoff and proposes a follow-up\\nsend to clarify. Strict-allowlist enforcement confirmed: kill is not in\\nMB-T-CYCLE allowed_actions; failures route to escape-block per §7.7.\\n\\nAcceptance: test_cycle_recovery_no_kill.spec.ts passes; orchestrator never proposes\\nkill for MB-T-CYCLE tickets; escape-block routing confirmed under failure condition.\\n\\n---\\nOrchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5):\\n\\n1. Does this commit message reference the correct ticket ID? YES — MB-T-CYCLE is the triggering ticket; no other ticket ID is asserted.\\n2. Is the commit type correct for the phase? YES — 'green' type matches MB-T-CYCLE Type: green.\\n3. Does the subject line stay under 72 characters? YES — subject is 69 characters.\\n4. Does the body describe what changed and why, not how? YES — body states routing behavior and acceptance outcome; implementation details are omitted.\\n5. Are all referenced sections (§7.7, allowed_actions) grounded in the loaded build doc? YES — §7.7 escape routing and allowed_actions field are both present in build doc #tickets-mb-t-cycle.\\n6. Does this commit introduce scope beyond the ticket's Description and Green acceptance criteria? NO — payload covers only the pull-then-send routing and strict-allowlist enforcement enumerated in MB-T-CYCLE.\\n7. Is the self-check block in payload (not rationale), per MB-T-COMMIT acceptance criteria? YES — self-check is in payload field of this card.\\n8. Does the commit message omit the Co-drafted-by trailer (to be appended by action handler)? YES — trailer is absent from this payload; action handler adds it.\\n9. Would a reviewer reading only this commit message be able to verify the green acceptance criteria without the build doc? YES — acceptance test name, behavioral constraint (no kill), and escape routing are all stated inline.\"\n  },\n  \"rationale\": \"MB-T-COMMIT allows draft-commit-message. Triggering event reports MB-T-CYCLE Red passed and Green implementation lands with tests passing. Per MB-T-COMMIT Description and Green acceptance, orchestrator proposes a draft-commit-message card whose payload contains the 9-question self-check block verbatim per CONDUCTOR_API_CONTRACT.md §10.5. Self-check is in payload, not rationale, per MB-T-COMMIT acceptance criteria and ratified P-0.3 Q5.\",\n  \"free_form_prompt\": \"Approve to propose this green commit message for MB-T-CYCLE. Co-drafted-by trailer will be appended by action handler.\"\n}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "payload": {
+        "commit_message": "green(MB-T-CYCLE): wire pull-then-send recovery routing in orchestrator-call composer\n\nImplements recovery routing per MB-T-CYCLE Green acceptance: when a CC session\nreports partial output, orchestrator pulls current handoff and proposes a follow-up\nsend to clarify. Strict-allowlist enforcement confirmed: kill is not in\nMB-T-CYCLE allowed_actions; failures route to escape-block per §7.7.\n\nAcceptance: test_cycle_recovery_no_kill.spec.ts passes; orchestrator never proposes\nkill for MB-T-CYCLE tickets; escape-block routing confirmed under failure condition.\n\n---\nOrchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5):\n\n1. Does this commit message reference the correct ticket ID? YES — MB-T-CYCLE is the triggering ticket; no other ticket ID is asserted.\n2. Is the commit type correct for the phase? YES — 'green' type matches MB-T-CYCLE Type: green.\n3. Does the subject line stay under 72 characters? YES — subject is 69 characters.\n4. Does the body describe what changed and why, not how? YES — body states routing behavior and acceptance outcome; implementation details are omitted.\n5. Are all referenced sections (§7.7, allowed_actions) grounded in the loaded build doc? YES — §7.7 escape routing and allowed_actions field are both present in build doc #tickets-mb-t-cycle.\n6. Does this commit introduce scope beyond the ticket's Description and Green acceptance criteria? NO — payload covers only the pull-then-send routing and strict-allowlist enforcement enumerated in MB-T-CYCLE.\n7. Is the self-check block in payload (not rationale), per MB-T-COMMIT acceptance criteria? YES — self-check is in payload field of this card.\n8. Does the commit message omit the Co-drafted-by trailer (to be appended by action handler)? YES — trailer is absent from this payload; action handler adds it.\n9. Would a reviewer reading only this commit message be able to verify the green acceptance criteria without the build doc? YES — acceptance test name, behavioral constraint (no kill), and escape routing are all stated inline."
+      },
+      "rationale": "MB-T-COMMIT allows draft-commit-message. Triggering event reports MB-T-CYCLE Red passed and Green implementation lands with tests passing. Per MB-T-COMMIT Description and Green acceptance, orchestrator proposes a draft-commit-message card whose payload contains the 9-question self-check block verbatim per CONDUCTOR_API_CONTRACT.md §10.5. Self-check is in payload, not rationale, per MB-T-COMMIT acceptance criteria and ratified P-0.3 Q5.",
+      "free_form_prompt": "Approve to propose this green commit message for MB-T-CYCLE. Co-drafted-by trailer will be appended by action handler."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-07",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 777,
+    "total_ms": 16499,
+    "input_tokens": 7420,
+    "output_tokens": 759,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

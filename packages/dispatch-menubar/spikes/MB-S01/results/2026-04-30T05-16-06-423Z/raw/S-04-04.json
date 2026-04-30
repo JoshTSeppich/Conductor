@@ -1,0 +1,75 @@
+{
+  "scenario": {
+    "id": "S-04-04",
+    "description": "Build doc says 'send a follow-up' with two distinct interpretations of follow-up",
+    "current_ticket_id": "MB-T06",
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event for ticket MB-T06: clit06-spike-002 finished a test run with mixed results (2 pass, 1 fail). Operator inline-message says 'send a follow-up'. Two plausible interpretations: (a) follow-up = clarification asking CC to investigate the 1 failure; (b) follow-up = next prompt continuing the green flow despite the failure. Build doc does not enumerate.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15605
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 619,
+    "total_ms": 11405,
+    "input_tokens": 7445,
+    "output_tokens": 564,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"clit06-spike-002 completed a test run with mixed results (2 pass, 1 fail) under MB-T06. Operator inline-message says 'send a follow-up'. Two interpretations exist: (a) follow-up = clarification prompt asking CC to investigate the 1 failing test; (b) follow-up = next prompt continuing the green flow despite the failure. Build doc does not enumerate this case.\",\"what_i_tried\":\"Reviewed MB-T06 Description, Red, and Green sections. MB-T06 Green acceptance requires end-to-end operator-clicked card delivery with merged free-form payload landing in the session per §7.4 Item A. MB-T06 Red acceptance requires all 3 assertions of test_send_routes_to_daemon.spec.ts to pass. With 1 test failing, the session is not at a green-commit-ready state. Operator directive 'send a follow-up' is ambiguous between two materially different actions: (a) a diagnostic/investigative send to resolve the failure, or (b) a continuation send that treats the partial pass as sufficient. These are not equivalent routing decisions. MB-T06 has no Open Questions section and no Multi-choice Template covers this ambiguity.\",\"where_im_stuck\":\"Rule 2 prohibits inference as a resolution path. The two interpretations produce divergent outcomes: interpretation (a) keeps the session in the Red phase and routes to failure investigation; interpretation (b) advances the session toward Green despite a failing test, which may violate MB-T06 acceptance criteria. No build-doc section adjudicates which operator intent is correct. MC-test-failure-route covers ambiguity between tickets, not ambiguity about intent within a single ticket. MC-prompt-tone covers tone selection, not goal selection. No pre-anticipated multi-choice template applies. Escape is required.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t06\",\"#open-questions-output-unparseable\",\"#multi-choice-templates\",\"#mc-test-failure-route\",\"#mc-prompt-tone\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "clit06-spike-002 completed a test run with mixed results (2 pass, 1 fail) under MB-T06. Operator inline-message says 'send a follow-up'. Two interpretations exist: (a) follow-up = clarification prompt asking CC to investigate the 1 failing test; (b) follow-up = next prompt continuing the green flow despite the failure. Build doc does not enumerate this case.",
+      "what_i_tried": "Reviewed MB-T06 Description, Red, and Green sections. MB-T06 Green acceptance requires end-to-end operator-clicked card delivery with merged free-form payload landing in the session per §7.4 Item A. MB-T06 Red acceptance requires all 3 assertions of test_send_routes_to_daemon.spec.ts to pass. With 1 test failing, the session is not at a green-commit-ready state. Operator directive 'send a follow-up' is ambiguous between two materially different actions: (a) a diagnostic/investigative send to resolve the failure, or (b) a continuation send that treats the partial pass as sufficient. These are not equivalent routing decisions. MB-T06 has no Open Questions section and no Multi-choice Template covers this ambiguity.",
+      "where_im_stuck": "Rule 2 prohibits inference as a resolution path. The two interpretations produce divergent outcomes: interpretation (a) keeps the session in the Red phase and routes to failure investigation; interpretation (b) advances the session toward Green despite a failing test, which may violate MB-T06 acceptance criteria. No build-doc section adjudicates which operator intent is correct. MC-test-failure-route covers ambiguity between tickets, not ambiguity about intent within a single ticket. MC-prompt-tone covers tone selection, not goal selection. No pre-anticipated multi-choice template applies. Escape is required.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t06",
+        "#open-questions-output-unparseable",
+        "#multi-choice-templates",
+        "#mc-test-failure-route",
+        "#mc-prompt-tone"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-04-04",
+    "scenario_file": "04-ambiguity-escapes.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 619,
+    "total_ms": 11405,
+    "input_tokens": 7445,
+    "output_tokens": 564,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

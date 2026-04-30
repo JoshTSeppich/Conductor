@@ -1,0 +1,77 @@
+{
+  "scenario": {
+    "id": "S-04-01",
+    "description": "Two IDLE sessions, build doc says 'send to the test session' — no template covers",
+    "current_ticket_id": "MB-T06",
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event for ticket MB-T06: operator typed 'send the next prompt to the test session' in chat panel. Daemon shows two sessions in IDLE state — clit06-test-a and clit06-test-b — both registered against target_repo. Neither MB-T06 nor any open-question / multi-choice template enumerates which session is 'the test session'.",
+    "session_filter": [
+      "clit06-test-a",
+      "clit06-test-b"
+    ],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15571
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 19812,
+    "total_ms": 29237,
+    "input_tokens": 7435,
+    "output_tokens": 506,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"Operator typed 'send the next prompt to the test session' for ticket MB-T06. Daemon shows two IDLE sessions — clit06-test-a and clit06-test-b — both registered against target_repo. No session is unambiguously 'the test session'.\",\"what_i_tried\":\"Reviewed MB-T06 description, Red, and Green sections for session targeting guidance. Reviewed MC-spawn-target-repo and MC-test-failure-route multi-choice templates for a matching trigger condition. MC-spawn-target-repo triggers on spawn-new-session repo ambiguity (not applicable here). MC-test-failure-route triggers on ambiguous test ownership between tickets (not applicable here). No template covers session-target ambiguity for a send action when multiple IDLE sessions exist. Reviewed open questions Q-tmux-pty-env and Q-output-unparseable — neither covers session selection. MB-T06 Allowed actions includes send; target session must be unambiguously specified to produce a card.\",\"where_im_stuck\":\"The build doc does not name a canonical 'test session' for MB-T06. Two IDLE sessions (clit06-test-a, clit06-test-b) are eligible by state and cwd. No multi-choice template anticipates this disambiguation. Cannot infer which session is the intended target — Rule 2 prohibits inference as a resolution path. Operator-prose arbitration via Opus is required to either designate the target session explicitly or add a multi-choice template covering this case.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t06\",\"#multi-choice-templates\",\"#mc-spawn-target-repo\",\"#mc-test-failure-route\",\"#open-questions-tmux-pty-env\",\"#open-questions-output-unparseable\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "Operator typed 'send the next prompt to the test session' for ticket MB-T06. Daemon shows two IDLE sessions — clit06-test-a and clit06-test-b — both registered against target_repo. No session is unambiguously 'the test session'.",
+      "what_i_tried": "Reviewed MB-T06 description, Red, and Green sections for session targeting guidance. Reviewed MC-spawn-target-repo and MC-test-failure-route multi-choice templates for a matching trigger condition. MC-spawn-target-repo triggers on spawn-new-session repo ambiguity (not applicable here). MC-test-failure-route triggers on ambiguous test ownership between tickets (not applicable here). No template covers session-target ambiguity for a send action when multiple IDLE sessions exist. Reviewed open questions Q-tmux-pty-env and Q-output-unparseable — neither covers session selection. MB-T06 Allowed actions includes send; target session must be unambiguously specified to produce a card.",
+      "where_im_stuck": "The build doc does not name a canonical 'test session' for MB-T06. Two IDLE sessions (clit06-test-a, clit06-test-b) are eligible by state and cwd. No multi-choice template anticipates this disambiguation. Cannot infer which session is the intended target — Rule 2 prohibits inference as a resolution path. Operator-prose arbitration via Opus is required to either designate the target session explicitly or add a multi-choice template covering this case.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t06",
+        "#multi-choice-templates",
+        "#mc-spawn-target-repo",
+        "#mc-test-failure-route",
+        "#open-questions-tmux-pty-env",
+        "#open-questions-output-unparseable"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-04-01",
+    "scenario_file": "04-ambiguity-escapes.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 19812,
+    "total_ms": 29237,
+    "input_tokens": 7435,
+    "output_tokens": 506,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

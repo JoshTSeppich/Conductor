@@ -1,0 +1,68 @@
+{
+  "scenario": {
+    "id": "S-01-01",
+    "description": "MB-T05 happy-path spawn",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T05: operator clicked 'Spawn new session' in Workstation against this build doc's target_repo. MB-T05 Red phase requires a fresh registered session.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "spawn-new-session"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15420
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 1196,
+    "total_ms": 4092,
+    "input_tokens": 7392,
+    "output_tokens": 168,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"card\",\"action\":\"spawn-new-session\",\"target\":\"/Users/josh/Desktop/Automata/foxworks-dispatch\",\"rationale\":\"MB-T05 Red phase requires a fresh registered session. Operator triggered 'Spawn new session' against this build doc's target_repo. Allowed actions for MB-T05 includes spawn-new-session. Target repo is unambiguously specified by the build doc target_repo field; MC-spawn-target-repo template trigger condition (repo not unambiguously specified) does not apply.\",\"free_form_prompt\":\"Approve to spawn a new Claude Code session against /Users/josh/Desktop/Automata/foxworks-dispatch for MB-T05 Red phase work.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "spawn-new-session",
+      "target": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "rationale": "MB-T05 Red phase requires a fresh registered session. Operator triggered 'Spawn new session' against this build doc's target_repo. Allowed actions for MB-T05 includes spawn-new-session. Target repo is unambiguously specified by the build doc target_repo field; MC-spawn-target-repo template trigger condition (repo not unambiguously specified) does not apply.",
+      "free_form_prompt": "Approve to spawn a new Claude Code session against /Users/josh/Desktop/Automata/foxworks-dispatch for MB-T05 Red phase work."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-01-01",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "card",
+    "ttft_ms": 1196,
+    "total_ms": 4092,
+    "input_tokens": 7392,
+    "output_tokens": 168,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "scenario": {
+    "id": "S-05-01",
+    "description": "Green commit for MB-T05 — single test passing",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-001 reports test_spawn_creates_registered_session.spec.ts passing for MB-T05 Green. Per MB-T-COMMIT, propose draft-commit-message with the green commit message INCLUDING the 9-question self-check block in payload.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15508
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 10115,
+    "total_ms": 25532,
+    "input_tokens": 7422,
+    "output_tokens": 769,
+    "error": null,
+    "error_class": null,
+    "raw": "{\n  \"type\": \"card\",\n  \"action\": \"draft-commit-message\",\n  \"target\": \"clit06-spike-001\",\n  \"payload\": {\n    \"commit_message\": \"feat(MB-T05): green — spawn execution wired to tmux + claude per MB-S02 ADR\",\n    \"body\": \"Wires Workstation spawn IPC event to actual tmux + claude spawn behavior. Spawn executes against target_repo, registers session via daemon POST /v2/sessions per CONDUCTOR_API_CONTRACT.md §4.3. End-to-end spawn-from-UI produces session indistinguishable from CLI-spawned per MB-S02 spike's bit-identical bar.\\n\\nCloses: MB-T05 Green\\nDepends-on: MB-S02\\n\\n--- self-check ---\\n1. Does this commit message reference the correct ticket ID (MB-T05)? Yes — feat(MB-T05) scope matches the triggering ticket.\\n2. Does the subject line fit within 72 characters? Yes — 66 characters.\\n3. Does the body describe what changed, not just that it changed? Yes — spawn IPC wiring, daemon registration endpoint, and parity bar are described.\\n4. Does the commit scope match the allowed_actions list for the ticket? Yes — draft-commit-message is in MB-T-COMMIT allowed_actions; MB-T05 Green acceptance condition was met by the triggering test pass.\\n5. Does the payload omit the Co-drafted-by trailer (to be added by action handler)? Yes — trailer is not present; action handler appends per contract.\\n6. Is the triggering test referenced accurately? Yes — test_spawn_creates_registered_session.spec.ts is the Red acceptance test for MB-T05.\\n7. Does this commit message avoid over-claiming scope beyond what the build doc specifies for MB-T05 Green? Yes — no MB-T06 or MB-T-CYCLE scope is included.\\n8. Is the self-check block in the payload field, not the rationale field? Yes — per MB-T-COMMIT Red acceptance and ratified P-0.3 Q5 + operator decision.\\n9. Does this commit land after the Green phase condition (tests passing) and before the Refactor phase? Yes — triggering event confirms test_spawn_creates_registered_session.spec.ts passing; no refactor prompt has been dispatched for MB-T05.\"\n  },\n  \"rationale\": \"Triggering event: clit06-spike-001 reports test_spawn_creates_registered_session.spec.ts passing, satisfying MB-T05 Green acceptance condition. MB-T-COMMIT (#tickets-mb-t-commit) specifies that on Green test-pass, orchestrator proposes draft-commit-message with 9-question self-check block in payload field. MB-T-COMMIT allowed_actions includes draft-commit-message. Self-check block is in payload.body per MB-T-COMMIT Red acceptance and CONDUCTOR_API_CONTRACT.md §10.5.\",\n  \"free_form_prompt\": \"Approve to propose this green commit message for MB-T05. Operator may edit payload before approving. Co-drafted-by trailer will be appended by action handler.\"\n}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "clit06-spike-001",
+      "payload": {
+        "commit_message": "feat(MB-T05): green — spawn execution wired to tmux + claude per MB-S02 ADR",
+        "body": "Wires Workstation spawn IPC event to actual tmux + claude spawn behavior. Spawn executes against target_repo, registers session via daemon POST /v2/sessions per CONDUCTOR_API_CONTRACT.md §4.3. End-to-end spawn-from-UI produces session indistinguishable from CLI-spawned per MB-S02 spike's bit-identical bar.\n\nCloses: MB-T05 Green\nDepends-on: MB-S02\n\n--- self-check ---\n1. Does this commit message reference the correct ticket ID (MB-T05)? Yes — feat(MB-T05) scope matches the triggering ticket.\n2. Does the subject line fit within 72 characters? Yes — 66 characters.\n3. Does the body describe what changed, not just that it changed? Yes — spawn IPC wiring, daemon registration endpoint, and parity bar are described.\n4. Does the commit scope match the allowed_actions list for the ticket? Yes — draft-commit-message is in MB-T-COMMIT allowed_actions; MB-T05 Green acceptance condition was met by the triggering test pass.\n5. Does the payload omit the Co-drafted-by trailer (to be added by action handler)? Yes — trailer is not present; action handler appends per contract.\n6. Is the triggering test referenced accurately? Yes — test_spawn_creates_registered_session.spec.ts is the Red acceptance test for MB-T05.\n7. Does this commit message avoid over-claiming scope beyond what the build doc specifies for MB-T05 Green? Yes — no MB-T06 or MB-T-CYCLE scope is included.\n8. Is the self-check block in the payload field, not the rationale field? Yes — per MB-T-COMMIT Red acceptance and ratified P-0.3 Q5 + operator decision.\n9. Does this commit land after the Green phase condition (tests passing) and before the Refactor phase? Yes — triggering event confirms test_spawn_creates_registered_session.spec.ts passing; no refactor prompt has been dispatched for MB-T05."
+      },
+      "rationale": "Triggering event: clit06-spike-001 reports test_spawn_creates_registered_session.spec.ts passing, satisfying MB-T05 Green acceptance condition. MB-T-COMMIT (#tickets-mb-t-commit) specifies that on Green test-pass, orchestrator proposes draft-commit-message with 9-question self-check block in payload field. MB-T-COMMIT allowed_actions includes draft-commit-message. Self-check block is in payload.body per MB-T-COMMIT Red acceptance and CONDUCTOR_API_CONTRACT.md §10.5.",
+      "free_form_prompt": "Approve to propose this green commit message for MB-T05. Operator may edit payload before approving. Co-drafted-by trailer will be appended by action handler."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-01",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 10115,
+    "total_ms": 25532,
+    "input_tokens": 7422,
+    "output_tokens": 769,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

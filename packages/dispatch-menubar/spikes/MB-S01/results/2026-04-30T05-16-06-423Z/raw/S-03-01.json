@@ -1,0 +1,86 @@
+{
+  "scenario": {
+    "id": "S-03-01",
+    "description": "MB-T05 spawn target repo unspecified — matches MC-spawn-target-repo",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "multi-choice-card",
+    "triggering_event": "Triggering event for ticket MB-T05: operator typed 'spawn a session for testing' in chat panel. The triggering message does not name a target repo, and MB-T05's Description references the build doc's target_repo only generically. This matches the MC-spawn-target-repo trigger condition.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "multi-choice-card",
+      "options_count_in": [
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15527
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 11182,
+    "total_ms": 14175,
+    "input_tokens": 7414,
+    "output_tokens": 170,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"multi-choice-card\",\"question\":\"Which repo should the new session work against?\",\"options\":[{\"label\":\"A: foxworks-dispatch (this build doc's target_repo)\",\"value\":\"foxworks-dispatch\"},{\"label\":\"B: sherpa\",\"value\":\"sherpa\"},{\"label\":\"C: lantern\",\"value\":\"lantern\"},{\"label\":\"D: Other (escape via free-form)\",\"value\":\"other\"}],\"context\":\"Triggered by MC-spawn-target-repo template in build doc §mc-spawn-target-repo. Operator typed 'spawn a session for testing' without naming a target repo. MB-T05 Description references target_repo only generically. Operator's choice routes back as the spawn target on next call.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "multi-choice-card",
+      "question": "Which repo should the new session work against?",
+      "options": [
+        {
+          "label": "A: foxworks-dispatch (this build doc's target_repo)",
+          "value": "foxworks-dispatch"
+        },
+        {
+          "label": "B: sherpa",
+          "value": "sherpa"
+        },
+        {
+          "label": "C: lantern",
+          "value": "lantern"
+        },
+        {
+          "label": "D: Other (escape via free-form)",
+          "value": "other"
+        }
+      ],
+      "context": "Triggered by MC-spawn-target-repo template in build doc §mc-spawn-target-repo. Operator typed 'spawn a session for testing' without naming a target repo. MB-T05 Description references target_repo only generically. Operator's choice routes back as the spawn target on next call."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "multi-choice-card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-03-01",
+    "scenario_file": "03-multi-choice.json",
+    "expected_output_type": "multi-choice-card",
+    "ttft_ms": 11182,
+    "total_ms": 14175,
+    "input_tokens": 7414,
+    "output_tokens": 170,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "multi-choice-card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

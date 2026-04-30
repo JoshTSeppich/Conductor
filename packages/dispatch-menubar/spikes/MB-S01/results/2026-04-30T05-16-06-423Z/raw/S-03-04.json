@@ -1,0 +1,84 @@
+{
+  "scenario": {
+    "id": "S-03-04",
+    "description": "MB-T-CYCLE partial output, pull frequency unspecified — matches MC-pull-frequency",
+    "current_ticket_id": "MB-T-CYCLE",
+    "expected_output_type": "multi-choice-card",
+    "triggering_event": "Triggering event for ticket MB-T-CYCLE: clit06-spike-002 emitted a handoff_written event 5 seconds ago and the pulled content reads as mid-stream (ends with an unterminated code block). Build doc does not specify whether to pull again immediately or wait for a state_changed event. This matches the MC-pull-frequency trigger condition.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "multi-choice-card",
+      "options_count_in": [
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15576
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 19931,
+    "total_ms": 23820,
+    "input_tokens": 7429,
+    "output_tokens": 195,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"multi-choice-card\",\"question\":\"Should the orchestrator pull again now or wait?\",\"options\":[{\"label\":\"A: Pull immediately (propose `pull` card)\",\"value\":\"pull-immediately\"},{\"label\":\"B: Wait for next daemon `state_changed` event\",\"value\":\"wait-for-state-changed\"},{\"label\":\"C: Escape — partial output may indicate session failure\",\"value\":\"escape\"}],\"context\":\"Triggered by MC-pull-frequency template in build doc §multi-choice-templates. Session clit06-spike-002 emitted handoff_written 5 seconds ago; pulled content is mid-stream (unterminated code block). Build doc §tickets-mb-t-cycle allows [pull, send] but does not specify pull-again-vs-wait behavior. Operator's choice gates the next orchestrator call's action proposal.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "multi-choice-card",
+      "question": "Should the orchestrator pull again now or wait?",
+      "options": [
+        {
+          "label": "A: Pull immediately (propose `pull` card)",
+          "value": "pull-immediately"
+        },
+        {
+          "label": "B: Wait for next daemon `state_changed` event",
+          "value": "wait-for-state-changed"
+        },
+        {
+          "label": "C: Escape — partial output may indicate session failure",
+          "value": "escape"
+        }
+      ],
+      "context": "Triggered by MC-pull-frequency template in build doc §multi-choice-templates. Session clit06-spike-002 emitted handoff_written 5 seconds ago; pulled content is mid-stream (unterminated code block). Build doc §tickets-mb-t-cycle allows [pull, send] but does not specify pull-again-vs-wait behavior. Operator's choice gates the next orchestrator call's action proposal."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "multi-choice-card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-03-04",
+    "scenario_file": "03-multi-choice.json",
+    "expected_output_type": "multi-choice-card",
+    "ttft_ms": 19931,
+    "total_ms": 23820,
+    "input_tokens": 7429,
+    "output_tokens": 195,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "multi-choice-card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

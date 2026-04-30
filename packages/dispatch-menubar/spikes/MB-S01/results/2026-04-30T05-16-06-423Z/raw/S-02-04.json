@@ -1,0 +1,75 @@
+{
+  "scenario": {
+    "id": "S-02-04",
+    "description": "MB-T05 daemon emits unknown event type — runtime-detected (no template covers)",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event for ticket MB-T05: daemon emitted an event of type 'session_quarantined' for clit06-spike-001. The event type is not enumerated in CONDUCTOR_API_CONTRACT.md §5.3 and is not described by any build-doc open-question. Orchestrator cannot match the event to a known handler.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15528
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 13097,
+    "total_ms": 23040,
+    "input_tokens": 7427,
+    "output_tokens": 545,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"Daemon emitted event type 'session_quarantined' for session clit06-spike-001. Event type is not enumerated in CONDUCTOR_API_CONTRACT.md §5.3 and does not match any open-question trigger condition in the build doc.\",\"what_i_tried\":\"Reviewed MB-T05 allowed_actions ([spawn-new-session, send]) — neither maps to a quarantine-recovery action. Reviewed MB-T-CYCLE allowed_actions ([pull, send]) — pull and send are valid for that ticket but clit06-spike-001 is operating under MB-T05 context. Reviewed all build-doc open questions: Q-tmux-pty-env triggers on PTY environment divergence (not quarantine); Q-output-unparseable triggers on unparseable CC output (not a daemon-emitted quarantine event). No multi-choice template covers unknown event types. 'kill' and 'pause' are state-recovery actions not in MB-T05 allowed_actions; I cannot propose them without operator scope expansion.\",\"where_im_stuck\":\"'session_quarantined' is an unrecognized daemon event type with no build-doc handler, no matching open-question escape path, and no allowed action in MB-T05 that constitutes a valid response. I cannot infer what quarantine means for session state, whether it is recoverable, or what action to propose. Operator-prose arbitration via Opus is required to: (1) determine whether 'session_quarantined' maps to a known daemon state, (2) decide whether allowed_actions for MB-T05 should be expanded to include a recovery action, and (3) determine whether clit06-spike-001 should be routed to a different ticket context.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t05\",\"#tickets-mb-t-cycle\",\"#open-questions-tmux-pty-env\",\"#open-questions-output-unparseable\",\"#multi-choice-templates\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "Daemon emitted event type 'session_quarantined' for session clit06-spike-001. Event type is not enumerated in CONDUCTOR_API_CONTRACT.md §5.3 and does not match any open-question trigger condition in the build doc.",
+      "what_i_tried": "Reviewed MB-T05 allowed_actions ([spawn-new-session, send]) — neither maps to a quarantine-recovery action. Reviewed MB-T-CYCLE allowed_actions ([pull, send]) — pull and send are valid for that ticket but clit06-spike-001 is operating under MB-T05 context. Reviewed all build-doc open questions: Q-tmux-pty-env triggers on PTY environment divergence (not quarantine); Q-output-unparseable triggers on unparseable CC output (not a daemon-emitted quarantine event). No multi-choice template covers unknown event types. 'kill' and 'pause' are state-recovery actions not in MB-T05 allowed_actions; I cannot propose them without operator scope expansion.",
+      "where_im_stuck": "'session_quarantined' is an unrecognized daemon event type with no build-doc handler, no matching open-question escape path, and no allowed action in MB-T05 that constitutes a valid response. I cannot infer what quarantine means for session state, whether it is recoverable, or what action to propose. Operator-prose arbitration via Opus is required to: (1) determine whether 'session_quarantined' maps to a known daemon state, (2) decide whether allowed_actions for MB-T05 should be expanded to include a recovery action, and (3) determine whether clit06-spike-001 should be routed to a different ticket context.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t05",
+        "#tickets-mb-t-cycle",
+        "#open-questions-tmux-pty-env",
+        "#open-questions-output-unparseable",
+        "#multi-choice-templates"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-02-04",
+    "scenario_file": "02-escape-blocks.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 13097,
+    "total_ms": 23040,
+    "input_tokens": 7427,
+    "output_tokens": 545,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "scenario": {
+    "id": "S-01-08",
+    "description": "MB-T05 second spawn for parallel test session",
+    "current_ticket_id": "MB-T05",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T05: operator requested a second test session against target_repo to validate concurrent spawn per MB-T05 Green acceptance ('end-to-end spawn-from-UI'). This is a fresh spawn intent, not a duplicate of clit06-spike-001.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "spawn-new-session"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15491
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 12424,
+    "total_ms": 17392,
+    "input_tokens": 7411,
+    "output_tokens": 235,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"multi-choice-card\",\"question\":\"Which repo should the new session work against?\",\"options\":[{\"label\":\"A: foxworks-dispatch (this build doc's target_repo)\",\"value\":\"foxworks-dispatch\"},{\"label\":\"B: sherpa\",\"value\":\"sherpa\"},{\"label\":\"C: lantern\",\"value\":\"lantern\"},{\"label\":\"D: Other (escape via free-form)\",\"value\":\"other\"}],\"context\":\"Triggered by MC-spawn-target-repo template in build doc §multi-choice-templates. MB-T05 Green acceptance requires end-to-end spawn-from-UI; operator requested second test session for concurrent spawn validation. Ticket MB-T05 allows spawn-new-session. Target repo not unambiguously specified in the spawn request — operator said 'against target_repo' but MC-spawn-target-repo fires when the ticket itself does not name a repo, per template trigger condition in #mc-spawn-target-repo. Operator's choice routes back as the spawn target on next call.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "multi-choice-card",
+      "question": "Which repo should the new session work against?",
+      "options": [
+        {
+          "label": "A: foxworks-dispatch (this build doc's target_repo)",
+          "value": "foxworks-dispatch"
+        },
+        {
+          "label": "B: sherpa",
+          "value": "sherpa"
+        },
+        {
+          "label": "C: lantern",
+          "value": "lantern"
+        },
+        {
+          "label": "D: Other (escape via free-form)",
+          "value": "other"
+        }
+      ],
+      "context": "Triggered by MC-spawn-target-repo template in build doc §multi-choice-templates. MB-T05 Green acceptance requires end-to-end spawn-from-UI; operator requested second test session for concurrent spawn validation. Ticket MB-T05 allows spawn-new-session. Target repo not unambiguously specified in the spawn request — operator said 'against target_repo' but MC-spawn-target-repo fires when the ticket itself does not name a repo, per template trigger condition in #mc-spawn-target-repo. Operator's choice routes back as the spawn target on next call."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "multi-choice-card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "type mismatch: got multi-choice-card, expected card"
+  },
+  "result": {
+    "scenario_id": "S-01-08",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "card",
+    "ttft_ms": 12424,
+    "total_ms": 17392,
+    "input_tokens": 7411,
+    "output_tokens": 235,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "multi-choice-card",
+    "pass": false,
+    "pass_detail": "type mismatch: got multi-choice-card, expected card",
+    "error": null
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "scenario": {
+    "id": "S-01-06",
+    "description": "MB-T-CYCLE recovery send after pull",
+    "current_ticket_id": "MB-T-CYCLE",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-CYCLE: pulled handoff for clit06-spike-001 reads 'partial — needs clarification on scope'. Per MB-T-CYCLE Description, next step is a follow-up send. Ticket allows send.",
+    "session_filter": [
+      "clit06-spike-001"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "send"
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15443
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 1062,
+    "total_ms": 5884,
+    "input_tokens": 7405,
+    "output_tokens": 253,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"multi-choice-card\",\"question\":\"Which tone should the recovery prompt use for the clarification send to clit06-spike-001?\",\"options\":[{\"label\":\"A: Terse-corrective (one-line redirect)\",\"value\":\"terse-corrective\"},{\"label\":\"B: Step-by-step explanatory\",\"value\":\"step-by-step\"},{\"label\":\"C: Quote the prior failure verbatim and ask CC to retry\",\"value\":\"quote-and-retry\"},{\"label\":\"D: Escape — operator-prose required\",\"value\":\"escape\"}],\"context\":\"Triggered by MC-prompt-tone template in build doc §multi-choice-templates. MB-T-CYCLE allows send as the follow-up action after pull; handoff for clit06-spike-001 reports 'partial — needs clarification on scope'. Build doc does not specify whether the clarification prompt should be terse-corrective or step-by-step explanatory. Operator's choice here routes to payload composition on the next call. Sections consulted: #tickets-mb-t-cycle, #mc-prompt-tone.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "multi-choice-card",
+      "question": "Which tone should the recovery prompt use for the clarification send to clit06-spike-001?",
+      "options": [
+        {
+          "label": "A: Terse-corrective (one-line redirect)",
+          "value": "terse-corrective"
+        },
+        {
+          "label": "B: Step-by-step explanatory",
+          "value": "step-by-step"
+        },
+        {
+          "label": "C: Quote the prior failure verbatim and ask CC to retry",
+          "value": "quote-and-retry"
+        },
+        {
+          "label": "D: Escape — operator-prose required",
+          "value": "escape"
+        }
+      ],
+      "context": "Triggered by MC-prompt-tone template in build doc §multi-choice-templates. MB-T-CYCLE allows send as the follow-up action after pull; handoff for clit06-spike-001 reports 'partial — needs clarification on scope'. Build doc does not specify whether the clarification prompt should be terse-corrective or step-by-step explanatory. Operator's choice here routes to payload composition on the next call. Sections consulted: #tickets-mb-t-cycle, #mc-prompt-tone."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "multi-choice-card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "type mismatch: got multi-choice-card, expected card"
+  },
+  "result": {
+    "scenario_id": "S-01-06",
+    "scenario_file": "01-normal-actions.json",
+    "expected_output_type": "card",
+    "ttft_ms": 1062,
+    "total_ms": 5884,
+    "input_tokens": 7405,
+    "output_tokens": 253,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "multi-choice-card",
+    "pass": false,
+    "pass_detail": "type mismatch: got multi-choice-card, expected card",
+    "error": null
+  }
+}

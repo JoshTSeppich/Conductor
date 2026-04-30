@@ -1,0 +1,73 @@
+{
+  "scenario": {
+    "id": "S-04-02",
+    "description": "Build doc says 'next ticket' but two unblocked tickets exist",
+    "current_ticket_id": null,
+    "expected_output_type": "escape-block",
+    "triggering_event": "Triggering event: MB-T05 just landed (commit_landed event with sha=abc1234). Operator typed 'proceed to the next ticket' in chat panel. Per build doc dependency DAG, both MB-T-CYCLE (depends on [MB-T05]) and MB-T-COMMIT (depends on [MB-T05, MB-T06] — MB-T06 also done) are unblocked. Build doc does not specify ordering when multiple tickets are simultaneously unblocked.",
+    "session_filter": [],
+    "pass_criteria": {
+      "type": "escape-block"
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15612
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 919,
+    "total_ms": 9364,
+    "input_tokens": 7458,
+    "output_tokens": 498,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"commit_landed sha=abc1234 for MB-T05; operator typed 'proceed to the next ticket'. Both MB-T-CYCLE (depends on [MB-T05]) and MB-T-COMMIT (depends on [MB-T05, MB-T06]) are simultaneously unblocked. MB-T06 is also reported as done per triggering event context.\",\"what_i_tried\":\"Reviewed build doc dependency DAG. MB-T-CYCLE depends on [MB-T05] — now satisfied. MB-T-COMMIT depends on [MB-T05, MB-T06] — both reported satisfied. Reviewed #tickets-mb-t-cycle (Allowed actions: [pull, send]) and #tickets-mb-t-commit (Allowed actions: [draft-commit-message, send]) to identify first action proposals for each. Both tickets are legitimately unblocked with no build-doc-specified ordering between them.\",\"where_im_stuck\":\"Build doc does not specify ticket sequencing when multiple tickets are simultaneously unblocked by dependency satisfaction. Operator said 'the next ticket' (singular), implying a pick, but the build doc provides no tiebreaker. No multi-choice template in #multi-choice-templates covers this case (MC-spawn-target-repo, MC-commit-message-scope, MC-prompt-tone, MC-pull-frequency, and MC-test-failure-route do not address parallel-unblock ordering). Inference is forbidden as resolution path. Cannot pick MB-T-CYCLE over MB-T-COMMIT or vice versa without operator direction.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t05\",\"#tickets-mb-t06\",\"#tickets-mb-t-cycle\",\"#tickets-mb-t-commit\",\"#multi-choice-templates\"]}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "escape-block",
+      "build_doc_path": "/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md",
+      "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+      "triggering_event": "commit_landed sha=abc1234 for MB-T05; operator typed 'proceed to the next ticket'. Both MB-T-CYCLE (depends on [MB-T05]) and MB-T-COMMIT (depends on [MB-T05, MB-T06]) are simultaneously unblocked. MB-T06 is also reported as done per triggering event context.",
+      "what_i_tried": "Reviewed build doc dependency DAG. MB-T-CYCLE depends on [MB-T05] — now satisfied. MB-T-COMMIT depends on [MB-T05, MB-T06] — both reported satisfied. Reviewed #tickets-mb-t-cycle (Allowed actions: [pull, send]) and #tickets-mb-t-commit (Allowed actions: [draft-commit-message, send]) to identify first action proposals for each. Both tickets are legitimately unblocked with no build-doc-specified ordering between them.",
+      "where_im_stuck": "Build doc does not specify ticket sequencing when multiple tickets are simultaneously unblocked by dependency satisfaction. Operator said 'the next ticket' (singular), implying a pick, but the build doc provides no tiebreaker. No multi-choice template in #multi-choice-templates covers this case (MC-spawn-target-repo, MC-commit-message-scope, MC-prompt-tone, MC-pull-frequency, and MC-test-failure-route do not address parallel-unblock ordering). Inference is forbidden as resolution path. Cannot pick MB-T-CYCLE over MB-T-COMMIT or vice versa without operator direction.",
+      "build_doc_sections_consulted": [
+        "#tickets-mb-t05",
+        "#tickets-mb-t06",
+        "#tickets-mb-t-cycle",
+        "#tickets-mb-t-commit",
+        "#multi-choice-templates"
+      ]
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "escape-block"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-04-02",
+    "scenario_file": "04-ambiguity-escapes.json",
+    "expected_output_type": "escape-block",
+    "ttft_ms": 919,
+    "total_ms": 9364,
+    "input_tokens": 7458,
+    "output_tokens": 498,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "escape-block",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}

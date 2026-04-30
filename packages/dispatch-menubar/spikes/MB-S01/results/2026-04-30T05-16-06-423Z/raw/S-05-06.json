@@ -1,0 +1,80 @@
+{
+  "scenario": {
+    "id": "S-05-06",
+    "description": "Red commit for MB-T-CYCLE — recovery test established",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-002 authored test_cycle_recovery_no_kill.spec.ts as a Red test for MB-T-CYCLE. Propose draft-commit-message with a 'red(MB-T-CYCLE): ...' commit message including the 9-question self-check block in payload.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "card",
+      "action_in": [
+        "draft-commit-message"
+      ],
+      "self_check_in_payload": true
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15501
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 1132,
+    "total_ms": 17834,
+    "input_tokens": 7430,
+    "output_tokens": 803,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"card\",\"action\":\"draft-commit-message\",\"target\":\"clit06-spike-002\",\"payload\":\"red(MB-T-CYCLE): add recovery-cycle no-kill red test\\n\\nAdds test_cycle_recovery_no_kill.spec.ts asserting that when a CC session\\nreports failure under MB-T-CYCLE, the orchestrator's valid action types are\\nlimited to `pull` and `send`, and any `kill` proposal must escape via\\n`needs-operator-prose`.\\n\\nNo implementation; red stage only.\\n\\n---\\nOrchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5)\\n\\n1. Does this commit introduce any code changes beyond what the red test requires?\\n   No. This commit adds only the test file; no implementation is touched.\\n\\n2. Does the commit message scope match the ticket identifier in the build doc?\\n   Yes. Scope is `MB-T-CYCLE`; ticket #tickets-mb-t-cycle in the build doc.\\n\\n3. Is the commit type (`red`) consistent with the ticket's current phase?\\n   Yes. MB-T-CYCLE status is pending and the triggering event is authoring the Red test.\\n\\n4. Are all `Allowed actions` for this ticket respected in this proposal?\\n   Yes. `draft-commit-message` is in MB-T-COMMIT's `Allowed actions`; this card is produced under MB-T-COMMIT's authority. MB-T-CYCLE's `Allowed actions` ([pull, send]) are not violated by a commit-message proposal; no kill action is proposed.\\n\\n5. Does the payload self-check block appear in `payload` and NOT in `rationale`?\\n   Yes. The 9-question block is in `payload`; `rationale` contains only routing justification.\\n\\n6. Does this commit reference any session, file, or repo path not covered by the build doc's `target_repo`?\\n   No. Target is clit06-spike-002 working against `/Users/josh/Desktop/Automata/foxworks-dispatch`.\\n\\n7. Does this commit message contain any ambiguity that would require operator-prose arbitration?\\n   No. The commit is narrowly scoped to the single red test file for MB-T-CYCLE.\\n\\n8. Is there any open question in the build doc triggered by this commit's content?\\n   No. `Q-tmux-pty-env` and `Q-output-unparseable` are not triggered by authoring a red test file.\\n\\n9. Is the `Co-drafted-by` trailer present?\\n   No — the trailer is appended by the action handler, not by this payload, per system prompt.\\n---\",\"rationale\":\"Triggering event matches MB-T-COMMIT's purpose: a draft-commit-message card is warranted when a CC session authors a red test for a build-doc ticket. MB-T-COMMIT Allowed actions includes `draft-commit-message`. The 9-question self-check block is in `payload` per MB-T-COMMIT Green acceptance and ratified P-0.3 Q5. `rationale` field contains only routing justification. Build doc sections consulted: #tickets-mb-t-commit, #tickets-mb-t-cycle.\",\"free_form_prompt\":\"Approve to propose this red commit message to clit06-spike-002; decline to halt.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "card",
+      "action": "draft-commit-message",
+      "target": "clit06-spike-002",
+      "payload": "red(MB-T-CYCLE): add recovery-cycle no-kill red test\n\nAdds test_cycle_recovery_no_kill.spec.ts asserting that when a CC session\nreports failure under MB-T-CYCLE, the orchestrator's valid action types are\nlimited to `pull` and `send`, and any `kill` proposal must escape via\n`needs-operator-prose`.\n\nNo implementation; red stage only.\n\n---\nOrchestrator self-check (CONDUCTOR_API_CONTRACT.md §10.5)\n\n1. Does this commit introduce any code changes beyond what the red test requires?\n   No. This commit adds only the test file; no implementation is touched.\n\n2. Does the commit message scope match the ticket identifier in the build doc?\n   Yes. Scope is `MB-T-CYCLE`; ticket #tickets-mb-t-cycle in the build doc.\n\n3. Is the commit type (`red`) consistent with the ticket's current phase?\n   Yes. MB-T-CYCLE status is pending and the triggering event is authoring the Red test.\n\n4. Are all `Allowed actions` for this ticket respected in this proposal?\n   Yes. `draft-commit-message` is in MB-T-COMMIT's `Allowed actions`; this card is produced under MB-T-COMMIT's authority. MB-T-CYCLE's `Allowed actions` ([pull, send]) are not violated by a commit-message proposal; no kill action is proposed.\n\n5. Does the payload self-check block appear in `payload` and NOT in `rationale`?\n   Yes. The 9-question block is in `payload`; `rationale` contains only routing justification.\n\n6. Does this commit reference any session, file, or repo path not covered by the build doc's `target_repo`?\n   No. Target is clit06-spike-002 working against `/Users/josh/Desktop/Automata/foxworks-dispatch`.\n\n7. Does this commit message contain any ambiguity that would require operator-prose arbitration?\n   No. The commit is narrowly scoped to the single red test file for MB-T-CYCLE.\n\n8. Is there any open question in the build doc triggered by this commit's content?\n   No. `Q-tmux-pty-env` and `Q-output-unparseable` are not triggered by authoring a red test file.\n\n9. Is the `Co-drafted-by` trailer present?\n   No — the trailer is appended by the action handler, not by this payload, per system prompt.\n---",
+      "rationale": "Triggering event matches MB-T-COMMIT's purpose: a draft-commit-message card is warranted when a CC session authors a red test for a build-doc ticket. MB-T-COMMIT Allowed actions includes `draft-commit-message`. The 9-question self-check block is in `payload` per MB-T-COMMIT Green acceptance and ratified P-0.3 Q5. `rationale` field contains only routing justification. Build doc sections consulted: #tickets-mb-t-commit, #tickets-mb-t-cycle.",
+      "free_form_prompt": "Approve to propose this red commit message to clit06-spike-002; decline to halt."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "card"
+  },
+  "pass_result": {
+    "pass": false,
+    "detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "self_check": {
+      "found_in_payload": false,
+      "payload_match_count": 0,
+      "rationale_match_count": 0,
+      "payload_matches": [],
+      "rationale_matches": [],
+      "detail": "payload=0/9 (), rationale=0/9 ()"
+    }
+  },
+  "result": {
+    "scenario_id": "S-05-06",
+    "scenario_file": "05-self-check.json",
+    "expected_output_type": "card",
+    "ttft_ms": 1132,
+    "total_ms": 17834,
+    "input_tokens": 7430,
+    "output_tokens": 803,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "card",
+    "pass": false,
+    "pass_detail": "self-check absent from payload (payload=0/9 (), rationale=0/9 ())",
+    "error": null
+  }
+}

@@ -1,0 +1,100 @@
+# MB-S01 spike run summary
+
+- Timestamp: 2026-04-30T05:24:06.589Z
+- Model: claude-sonnet-4-6
+
+## Aggregate metrics
+
+```json
+{
+  "call_count": 35,
+  "pass_count": 22,
+  "parse_ok_rate": 1,
+  "parse_strict_ok_rate": 1,
+  "schema_ok_rate": 1,
+  "ttft_p50_ms": 940,
+  "ttft_p95_ms": 19931,
+  "total_p50_ms": 13208,
+  "total_p95_ms": 25532,
+  "input_tokens_avg": 7422,
+  "output_tokens_avg": 438,
+  "input_tokens_total": 259765,
+  "output_tokens_total": 15347
+}
+```
+
+## Pass breakdown by scenario file
+
+```json
+{
+  "01-normal-actions": {
+    "total": 10,
+    "pass": 7,
+    "fail_ids": [
+      "S-01-06",
+      "S-01-07",
+      "S-01-08"
+    ]
+  },
+  "02-escape-blocks": {
+    "total": 5,
+    "pass": 5,
+    "fail_ids": []
+  },
+  "03-multi-choice": {
+    "total": 5,
+    "pass": 5,
+    "fail_ids": []
+  },
+  "04-ambiguity-escapes": {
+    "total": 5,
+    "pass": 5,
+    "fail_ids": []
+  },
+  "05-self-check": {
+    "total": 10,
+    "pass": 0,
+    "fail_ids": [
+      "S-05-01",
+      "S-05-02",
+      "S-05-03",
+      "S-05-04",
+      "S-05-05",
+      "S-05-06",
+      "S-05-07",
+      "S-05-08",
+      "S-05-09",
+      "S-05-10"
+    ]
+  }
+}
+```
+
+## Cost projections
+
+Pricing inputs (MODELED, operator-verifiable at https://www.anthropic.com/pricing for Sonnet 4.6):
+- Input: $3/M tokens
+- Output: $15/M tokens
+
+```json
+{
+  "calls_per_day_100": {
+    "calls_per_month": 3000,
+    "input_cost_usd": 66.8,
+    "output_cost_usd": 19.71,
+    "total_cost_usd": 86.51
+  },
+  "calls_per_day_200": {
+    "calls_per_month": 6000,
+    "input_cost_usd": 133.6,
+    "output_cost_usd": 39.42,
+    "total_cost_usd": 173.02
+  },
+  "calls_per_day_500": {
+    "calls_per_month": 15000,
+    "input_cost_usd": 333.99,
+    "output_cost_usd": 98.55,
+    "total_cost_usd": 432.54
+  }
+}
+```

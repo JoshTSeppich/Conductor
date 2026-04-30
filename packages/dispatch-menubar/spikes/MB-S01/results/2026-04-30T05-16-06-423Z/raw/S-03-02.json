@@ -1,0 +1,88 @@
+{
+  "scenario": {
+    "id": "S-03-02",
+    "description": "MB-T-COMMIT two test files passing — matches MC-commit-message-scope",
+    "current_ticket_id": "MB-T-COMMIT",
+    "expected_output_type": "multi-choice-card",
+    "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-002 reports tests passing for both test_send_routes_to_daemon.spec.ts AND test_send_payload_merge.spec.ts. The build doc does not specify which subset the green commit should reference. This matches the MC-commit-message-scope trigger condition.",
+    "session_filter": [
+      "clit06-spike-002"
+    ],
+    "pass_criteria": {
+      "type": "multi-choice-card",
+      "options_count_in": [
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "context_lengths": {
+    "system_prompt_chars": 10810,
+    "user_message_chars": 15540
+  },
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "invocation": {
+    "model_string_used": "claude-sonnet-4-6",
+    "ttft_ms": 12208,
+    "total_ms": 16815,
+    "input_tokens": 7425,
+    "output_tokens": 262,
+    "error": null,
+    "error_class": null,
+    "raw": "{\"type\":\"multi-choice-card\",\"question\":\"Which scope should the commit message reference?\",\"options\":[{\"label\":\"A: First test file only (test_send_routes_to_daemon.spec.ts)\",\"value\":\"test_send_routes_to_daemon\"},{\"label\":\"B: Second test file only (test_send_payload_merge.spec.ts)\",\"value\":\"test_send_payload_merge\"},{\"label\":\"C: Both test files (combined message)\",\"value\":\"both\"},{\"label\":\"D: Escape — different scoping required\",\"value\":\"other\"}],\"context\":\"Triggered by MC-commit-message-scope template in build doc §multi-choice-templates. MB-T-COMMIT green event on clit06-spike-002 reports two distinct test files passing (test_send_routes_to_daemon.spec.ts and test_send_payload_merge.spec.ts) with no build-doc guidance on commit scope. Operator's choice routes back as the scope qualifier for the draft-commit-message payload on next call. Build doc sections consulted: #tickets-mb-t-commit, #mc-commit-message-scope.\"}"
+  },
+  "parse": {
+    "ok": true,
+    "stripped_fences": false,
+    "json_error": null,
+    "parsed": {
+      "type": "multi-choice-card",
+      "question": "Which scope should the commit message reference?",
+      "options": [
+        {
+          "label": "A: First test file only (test_send_routes_to_daemon.spec.ts)",
+          "value": "test_send_routes_to_daemon"
+        },
+        {
+          "label": "B: Second test file only (test_send_payload_merge.spec.ts)",
+          "value": "test_send_payload_merge"
+        },
+        {
+          "label": "C: Both test files (combined message)",
+          "value": "both"
+        },
+        {
+          "label": "D: Escape — different scoping required",
+          "value": "other"
+        }
+      ],
+      "context": "Triggered by MC-commit-message-scope template in build doc §multi-choice-templates. MB-T-COMMIT green event on clit06-spike-002 reports two distinct test files passing (test_send_routes_to_daemon.spec.ts and test_send_payload_merge.spec.ts) with no build-doc guidance on commit scope. Operator's choice routes back as the scope qualifier for the draft-commit-message payload on next call. Build doc sections consulted: #tickets-mb-t-commit, #mc-commit-message-scope."
+    }
+  },
+  "schema": {
+    "ok": true,
+    "error": null,
+    "type": "multi-choice-card"
+  },
+  "pass_result": {
+    "pass": true,
+    "detail": "ok"
+  },
+  "result": {
+    "scenario_id": "S-03-02",
+    "scenario_file": "03-multi-choice.json",
+    "expected_output_type": "multi-choice-card",
+    "ttft_ms": 12208,
+    "total_ms": 16815,
+    "input_tokens": 7425,
+    "output_tokens": 262,
+    "parse_ok": true,
+    "parse_stripped_fences": false,
+    "schema_ok": true,
+    "detected_type": "multi-choice-card",
+    "pass": true,
+    "pass_detail": "ok",
+    "error": null
+  }
+}
