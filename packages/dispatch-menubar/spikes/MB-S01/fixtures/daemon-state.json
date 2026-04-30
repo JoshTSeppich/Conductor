@@ -1,0 +1,61 @@
+{
+  "_comment": "Synthetic daemon-state fixture for MB-S01 spike harness. Filtered per ratified P-0.4-cross-Q3 (all active + explicitly referenced). NOT real daemon state; do not consume in production code.",
+  "build_doc_commit_sha": "spike-fixture-sha-0000000000000000",
+  "sessions": [
+    {
+      "name": "clit06-spike-001",
+      "state": "armed",
+      "computed_status": "running",
+      "cwd": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "tmux_target": "clit06-001:0.0",
+      "last_prompt_sent_at": "2026-04-29T10:00:00-06:00",
+      "last_handoff_pulled_at": null,
+      "last_commit_sha": null,
+      "last_status_json_at": null
+    },
+    {
+      "name": "clit06-spike-002",
+      "state": "armed",
+      "computed_status": "awaiting_review",
+      "cwd": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "tmux_target": "clit06-002:0.0",
+      "last_prompt_sent_at": "2026-04-29T10:15:00-06:00",
+      "last_handoff_pulled_at": "2026-04-29T10:30:00-06:00",
+      "last_commit_sha": "abc1234",
+      "last_status_json_at": "2026-04-29T10:30:00-06:00"
+    },
+    {
+      "name": "clit06-spike-003",
+      "state": "paused",
+      "computed_status": "paused",
+      "cwd": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "tmux_target": "clit06-003:0.0",
+      "last_prompt_sent_at": "2026-04-29T09:45:00-06:00",
+      "last_handoff_pulled_at": "2026-04-29T10:05:00-06:00",
+      "last_commit_sha": null,
+      "last_status_json_at": "2026-04-29T10:05:00-06:00"
+    },
+    {
+      "name": "clit06-test-a",
+      "state": "armed",
+      "computed_status": "idle",
+      "cwd": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "tmux_target": "clit06-test-a:0.0",
+      "last_prompt_sent_at": null,
+      "last_handoff_pulled_at": null,
+      "last_commit_sha": null,
+      "last_status_json_at": null
+    },
+    {
+      "name": "clit06-test-b",
+      "state": "armed",
+      "computed_status": "idle",
+      "cwd": "/Users/josh/Desktop/Automata/foxworks-dispatch",
+      "tmux_target": "clit06-test-b:0.0",
+      "last_prompt_sent_at": null,
+      "last_handoff_pulled_at": null,
+      "last_commit_sha": null,
+      "last_status_json_at": null
+    }
+  ]
+}

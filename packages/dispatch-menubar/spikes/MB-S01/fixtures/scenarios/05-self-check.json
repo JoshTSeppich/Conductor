@@ -1,0 +1,95 @@
+{
+  "_comment": "10 commit-message proposal scenarios for MB-T-COMMIT (which has draft-commit-message in allowed_actions). Pass criterion: Sonnet produces a card with action=draft-commit-message; the 9-question self-check block per CONDUCTOR_API_CONTRACT.md §10.5 appears in the card's PAYLOAD field, NOT in rationale. The harness checks for the 9 numbered questions verbatim or paraphrased per detection rules in src/self-check-detect.ts.",
+  "scenarios": [
+    {
+      "id": "S-05-01",
+      "description": "Green commit for MB-T05 — single test passing",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-001 reports test_spawn_creates_registered_session.spec.ts passing for MB-T05 Green. Per MB-T-COMMIT, propose draft-commit-message with the green commit message INCLUDING the 9-question self-check block in payload.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-02",
+      "description": "Red commit for MB-T06 — failing test established",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-002 just authored test_send_routes_to_daemon.spec.ts as a Red test (failing). Per cairn five-verb commit grammar, propose draft-commit-message with a 'red(MB-T06): ...' commit message, including the 9-question self-check block in payload.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-03",
+      "description": "Refactor commit for MB-T06 after green",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-T06 green commit landed (sha=def5678). Refactor pass complete per MB-T06 Refactor section. Propose draft-commit-message with a 'refactor(MB-T06): ...' commit message including the 9-question self-check block in payload.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-04",
+      "description": "Spike commit for MB-S02",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-S02 spike harness produced enumerated divergence matrix and ADR draft. Propose draft-commit-message with a 'spike(MB-S02): ...' commit message including the 9-question self-check block in payload.",
+      "session_filter": [],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-05",
+      "description": "Green commit for MB-T05 — multiple tests passing (combined message acceptable)",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-001 reports both test_spawn_creates_registered_session.spec.ts AND test_spawn_failure_mode.spec.ts passing for MB-T05 Green. Operator inline-answer (in chat history fixture) selected combined-scope. Propose draft-commit-message with the combined commit message including the 9-question self-check block in payload.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-06",
+      "description": "Red commit for MB-T-CYCLE — recovery test established",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-002 authored test_cycle_recovery_no_kill.spec.ts as a Red test for MB-T-CYCLE. Propose draft-commit-message with a 'red(MB-T-CYCLE): ...' commit message including the 9-question self-check block in payload.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-07",
+      "description": "Green commit for MB-T-CYCLE",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-T-CYCLE Red passed; MB-T-CYCLE Green implementation lands recovery routing. Tests pass. Propose draft-commit-message with a 'green(MB-T-CYCLE): ...' commit message including the 9-question self-check block in payload.",
+      "session_filter": [],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-08",
+      "description": "Contract commit for build-doc schema amendment",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: operator approved a build-doc schema amendment adding an optional ticket field. Propose draft-commit-message with a 'contract(build-doc-schema): ...' commit message including the 9-question self-check block in payload.",
+      "session_filter": [],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-09",
+      "description": "Green commit for MB-T-COMMIT itself (self-referential)",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-T-COMMIT Red passed (test_self_check_in_payload.spec.ts asserts the 9-q block lives in payload). MB-T-COMMIT Green implements the prompt-engineering instruction. Propose draft-commit-message with a 'green(MB-T-COMMIT): ...' commit message including the 9-question self-check block in payload.",
+      "session_filter": [],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    },
+    {
+      "id": "S-05-10",
+      "description": "Refactor commit for MB-T-CYCLE after green",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: MB-T-CYCLE green landed (sha=ghi9012). Refactor pass extracts a recovery helper. Propose draft-commit-message with a 'refactor(MB-T-CYCLE): ...' commit message including the 9-question self-check block in payload.",
+      "session_filter": [],
+      "pass_criteria": { "type": "card", "action_in": ["draft-commit-message"], "self_check_in_payload": true }
+    }
+  ]
+}

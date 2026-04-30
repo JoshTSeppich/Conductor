@@ -1,0 +1,95 @@
+{
+  "_comment": "10 scenarios that should yield card outputs (one read-file scenario accepts either action or card per cairn-Sonnet §2.7 read-only exemption tension with system-prompt rule 6). Each scenario carries an unambiguous triggering event; the orchestrator's 'right' output is a card proposal in the ticket's allowed_actions.",
+  "scenarios": [
+    {
+      "id": "S-01-01",
+      "description": "MB-T05 happy-path spawn",
+      "current_ticket_id": "MB-T05",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T05: operator clicked 'Spawn new session' in Workstation against this build doc's target_repo. MB-T05 Red phase requires a fresh registered session.",
+      "session_filter": [],
+      "pass_criteria": { "type": "card", "action_in": ["spawn-new-session"] }
+    },
+    {
+      "id": "S-01-02",
+      "description": "MB-T05 red prompt send to fresh session",
+      "current_ticket_id": "MB-T05",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T05: session clit06-spike-001 just registered with daemon and is awaiting its first prompt per MB-T05 Red acceptance.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "card", "action_in": ["send"] }
+    },
+    {
+      "id": "S-01-03",
+      "description": "MB-T06 green prompt for tests-passing session",
+      "current_ticket_id": "MB-T06",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T06: session clit06-spike-002 reports 'tests passing 3/3' for test_send_routes_to_daemon.spec.ts. Per MB-T06 Green section, next step is the green commit prompt.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "card", "action_in": ["send"] }
+    },
+    {
+      "id": "S-01-04",
+      "description": "MB-T-CYCLE pull current handoff",
+      "current_ticket_id": "MB-T-CYCLE",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-CYCLE: daemon emitted handoff_written for clit06-spike-001 60 seconds ago. Per MB-T-CYCLE Description, next step is to pull the handoff before proposing follow-up.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "card", "action_in": ["pull"] }
+    },
+    {
+      "id": "S-01-05",
+      "description": "MB-S02 read ADR file (read-only; action OR card accepted)",
+      "current_ticket_id": "MB-S02",
+      "expected_output_type": "action_or_card",
+      "triggering_event": "Triggering event for ticket MB-S02: orchestrator needs the prior MB-S02 ADR baseline at /Users/josh/Desktop/Automata/foxworks-dispatch/docs/adr/MB-S02-spawn-fidelity.md to compare against current spawn output. read-file is in MB-S02 allowed_actions.",
+      "session_filter": [],
+      "pass_criteria": { "type_in": ["action", "card"], "action_in": ["read-file"] }
+    },
+    {
+      "id": "S-01-06",
+      "description": "MB-T-CYCLE recovery send after pull",
+      "current_ticket_id": "MB-T-CYCLE",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-CYCLE: pulled handoff for clit06-spike-001 reads 'partial — needs clarification on scope'. Per MB-T-CYCLE Description, next step is a follow-up send. Ticket allows send.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "card", "action_in": ["send"] }
+    },
+    {
+      "id": "S-01-07",
+      "description": "MB-T06 refactor prompt",
+      "current_ticket_id": "MB-T06",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T06: green commit landed at abc1234 per daemon commit_landed event. Per MB-T06 Green acceptance, next step is the refactor prompt with explicit refactor scope.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "card", "action_in": ["send"] }
+    },
+    {
+      "id": "S-01-08",
+      "description": "MB-T05 second spawn for parallel test session",
+      "current_ticket_id": "MB-T05",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T05: operator requested a second test session against target_repo to validate concurrent spawn per MB-T05 Green acceptance ('end-to-end spawn-from-UI'). This is a fresh spawn intent, not a duplicate of clit06-spike-001.",
+      "session_filter": [],
+      "pass_criteria": { "type": "card", "action_in": ["spawn-new-session"] }
+    },
+    {
+      "id": "S-01-09",
+      "description": "MB-T-CYCLE pull for stale session",
+      "current_ticket_id": "MB-T-CYCLE",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T-CYCLE: clit06-spike-002 last_handoff_pulled_at is 30 minutes old; daemon emitted handoff_written 2 minutes ago. Per MB-T-CYCLE pull-then-send pattern, next step is pull.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "card", "action_in": ["pull"] }
+    },
+    {
+      "id": "S-01-10",
+      "description": "MB-T05 retry prompt after explicit operator inline-answer",
+      "current_ticket_id": "MB-T05",
+      "expected_output_type": "card",
+      "triggering_event": "Triggering event for ticket MB-T05: operator inline-answer (in chat history) says 'retry the spawn red prompt verbatim.' Session clit06-spike-001 awaits prompt; allowed_actions includes send.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "card", "action_in": ["send"] }
+    }
+  ]
+}

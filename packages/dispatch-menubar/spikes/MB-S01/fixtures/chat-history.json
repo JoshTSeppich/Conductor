@@ -1,0 +1,16 @@
+{
+  "_comment": "Synthetic 10-turn chat-history fixture for MB-S01 spike harness per ratified P-0.4-cross-Q4 (turn-count + summary). Older-turn summary is operator-arbitrated implementation detail (COARCH-T02); for the spike, the summary is a single literal string that exercises the structured-output discipline without claiming real provenance.",
+  "older_turns_summary": "Earlier conversation: operator configured the build doc and uploaded MB-S01 spike fixture. Prior turns covered onboarding, schema validation walkthrough, and the first three spawn proposals (all approved).",
+  "turns": [
+    { "role": "operator", "content": "Status check on the spike fixture sessions. Anything outstanding?" },
+    { "role": "orchestrator", "content": "{\"type\":\"card\",\"action\":\"pull\",\"target\":\"clit06-spike-001\",\"rationale\":\"Build doc MB-T-CYCLE allows pull; session reported new output 5 min ago.\",\"free_form_prompt\":\"Approve to pull current handoff.\"}" },
+    { "role": "operator", "content": "Approved." },
+    { "role": "orchestrator", "content": "{\"type\":\"card\",\"action\":\"send\",\"target\":\"clit06-spike-002\",\"payload\":\"Run the green commit per MB-T05 acceptance.\",\"rationale\":\"MB-T05 reports tests passing; allowed_actions includes send.\",\"free_form_prompt\":\"Approve to dispatch green prompt.\"}" },
+    { "role": "operator", "content": "Approved." },
+    { "role": "orchestrator", "content": "{\"type\":\"card\",\"action\":\"send\",\"target\":\"clit06-spike-002\",\"payload\":\"Refactor handoff prose for clarity per MB-T06 §Refactor.\",\"rationale\":\"MB-T05 green commit landed; per build doc next step is refactor.\",\"free_form_prompt\":\"Approve to dispatch refactor prompt.\"}" },
+    { "role": "operator", "content": "Decline. Please escape — I want to review the green commit before refactor." },
+    { "role": "orchestrator", "content": "{\"type\":\"escape-block\",\"build_doc_path\":\"/Users/josh/Desktop/Automata/foxworks-dispatch/packages/dispatch-menubar/spikes/MB-S01/fixtures/build-doc.build.md\",\"build_doc_commit_sha\":\"spike-fixture-sha-0000000000000000\",\"triggering_event\":\"Operator declined refactor prompt; reason: review-first.\",\"what_i_tried\":\"Reviewed MB-T05 and MB-T06 sections; MB-T06 Refactor is the next acceptance step.\",\"where_im_stuck\":\"Operator wants review-first ordering not encoded in build doc; need explicit guidance.\",\"build_doc_sections_consulted\":[\"#tickets-mb-t05\",\"#tickets-mb-t06\"]}" },
+    { "role": "operator", "content": "Got it — please pull current state, then wait for the next daemon event before proposing." },
+    { "role": "orchestrator", "content": "{\"type\":\"card\",\"action\":\"pull\",\"target\":\"clit06-spike-002\",\"rationale\":\"Operator inline directive selects MB-T-CYCLE pull action (in allowed_actions); waiting per §7.7 inline-answer path until next state_changed event.\",\"free_form_prompt\":\"Approve to pull current handoff.\"}" }
+  ]
+}

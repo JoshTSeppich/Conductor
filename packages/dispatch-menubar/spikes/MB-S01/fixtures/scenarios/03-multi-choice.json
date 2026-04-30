@@ -1,0 +1,50 @@
+{
+  "_comment": "5 scenarios matching the 5 multi-choice templates in build-doc.build.md. Sonnet should produce a multi-choice-card output with the template's question and option set.",
+  "scenarios": [
+    {
+      "id": "S-03-01",
+      "description": "MB-T05 spawn target repo unspecified — matches MC-spawn-target-repo",
+      "current_ticket_id": "MB-T05",
+      "expected_output_type": "multi-choice-card",
+      "triggering_event": "Triggering event for ticket MB-T05: operator typed 'spawn a session for testing' in chat panel. The triggering message does not name a target repo, and MB-T05's Description references the build doc's target_repo only generically. This matches the MC-spawn-target-repo trigger condition.",
+      "session_filter": [],
+      "pass_criteria": { "type": "multi-choice-card", "options_count_in": [2, 3, 4] }
+    },
+    {
+      "id": "S-03-02",
+      "description": "MB-T-COMMIT two test files passing — matches MC-commit-message-scope",
+      "current_ticket_id": "MB-T-COMMIT",
+      "expected_output_type": "multi-choice-card",
+      "triggering_event": "Triggering event for ticket MB-T-COMMIT: clit06-spike-002 reports tests passing for both test_send_routes_to_daemon.spec.ts AND test_send_payload_merge.spec.ts. The build doc does not specify which subset the green commit should reference. This matches the MC-commit-message-scope trigger condition.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "multi-choice-card", "options_count_in": [2, 3, 4] }
+    },
+    {
+      "id": "S-03-03",
+      "description": "MB-T-CYCLE recovery prompt tone unspecified — matches MC-prompt-tone",
+      "current_ticket_id": "MB-T-CYCLE",
+      "expected_output_type": "multi-choice-card",
+      "triggering_event": "Triggering event for ticket MB-T-CYCLE: clit06-spike-001 reported a partial output requiring a recovery send. The build doc does not specify whether the recovery prompt should be terse-corrective, step-by-step explanatory, or quote-and-retry. This matches the MC-prompt-tone trigger condition.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "multi-choice-card", "options_count_in": [2, 3, 4] }
+    },
+    {
+      "id": "S-03-04",
+      "description": "MB-T-CYCLE partial output, pull frequency unspecified — matches MC-pull-frequency",
+      "current_ticket_id": "MB-T-CYCLE",
+      "expected_output_type": "multi-choice-card",
+      "triggering_event": "Triggering event for ticket MB-T-CYCLE: clit06-spike-002 emitted a handoff_written event 5 seconds ago and the pulled content reads as mid-stream (ends with an unterminated code block). Build doc does not specify whether to pull again immediately or wait for a state_changed event. This matches the MC-pull-frequency trigger condition.",
+      "session_filter": ["clit06-spike-002"],
+      "pass_criteria": { "type": "multi-choice-card", "options_count_in": [2, 3, 4] }
+    },
+    {
+      "id": "S-03-05",
+      "description": "Test-failure ownership ambiguous between MB-T05 and MB-T06 — matches MC-test-failure-route",
+      "current_ticket_id": "MB-T05",
+      "expected_output_type": "multi-choice-card",
+      "triggering_event": "Triggering event for ticket MB-T05: clit06-spike-001 reports a test failure in test_shared_session_helper.spec.ts. The shared helper is referenced by both MB-T05 and MB-T06; build doc does not assign ownership of the helper test. This matches the MC-test-failure-route trigger condition.",
+      "session_filter": ["clit06-spike-001"],
+      "pass_criteria": { "type": "multi-choice-card", "options_count_in": [2, 3, 4] }
+    }
+  ]
+}
