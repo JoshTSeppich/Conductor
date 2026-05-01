@@ -104,6 +104,25 @@ _Append-only. Format: timestamp | event | citation_
 
 2026-04-30T00:00Z | TSCONFIG_NOTE | src/coarchitect/ excluded from tsconfig.json include scope; renderer code (.tsx) processed by esbuild only — existing tsconfig has types:["node"] with no DOM lib and no jsx option; adding DOM+jsx to shared tsconfig would pollute main-process type scope; clean separation: exclude src/coarchitect from tsc, esbuild owns renderer transpilation; disclosed per §8.6 transparency; no frozen export signatures changed | implementation detail per contract §5
 
+2026-04-30T00:00Z | RED COMMIT 84bd679 | chat-panel-renders.test.ts + chat-input-emits-event.test.ts; RED confirmed: 2 failed / 3 passed (existsSync pre-check on dist/coarchitect/chat-panel.html → false); no fixture file at red (committed at green) | §5.8 red criterion
+
+2026-04-30T00:00Z | SELF_CORRECTION | per-path git add with full repo-root paths failed from packages/dispatch-workstation/ CWD (same double-prefix pattern as Session C §3.8 / notes.md framing correction); remediated via git -C repo-root flag; disclosed per §8.6; this is Round 1 Incident 8 discipline executing as designed, not novel
+
+2026-04-30T00:00Z | GREEN | pnpm build clean (tsc 0 errors), pnpm typecheck clean, pnpm test → 5 passed (5): MB-T01 2019ms, MB-T02 1873ms, MB-T03 2432ms, COARCH-T02 chat-panel-renders 2014ms (RENDER_OK), COARCH-T02 chat-input-emits-event 2005ms (MESSAGE_SENT). Frozen exports §5.2–§5.4 match exactly. Structural compatibility check (§9.5) in green commit body. FOLLOWUPS.md: MB-F-COARCH-T02-REAL-DAEMON-WIRING filed | §5 green criterion
+
+2026-04-30T00:00Z | SESSION_COMPLETE | COARCH-T02 deliverables complete per §2 territory matrix:
+  - src/coarchitect/daemon-client.ts: committed at a4b720b ✓
+  - src/coarchitect/chat-panel.tsx: committed at a4b720b ✓
+  - src/coarchitect/mount.ts: committed at a4b720b ✓
+  - src/coarchitect/chat-panel.html: committed at a4b720b ✓
+  - scripts/build-coarchitect.mjs: committed at a4b720b ✓
+  - test/integration/coarch-t02/coarch-t02-fixture.mjs: committed at a4b720b ✓
+  - test/integration/coarch-t02/chat-panel-renders.test.ts: committed at 84bd679 ✓
+  - test/integration/coarch-t02/chat-input-emits-event.test.ts: committed at 84bd679 ✓
+  - docs/FOLLOWUPS.md MB-F-COARCH-T02-REAL-DAEMON-WIRING: committed (docs commit) ✓
+  - main.ts: NOT touched ✓ (Zipper-1 at 68e6528; Session D territory invariant holds)
+  Zipper-2 pre-conditions met: frozen exports match §5.2–§5.4 exactly; pnpm test 5 passed (5). | §8.3 session close
+
 ---
 
 ## Zipper-1 — main-process wiring (B + C)
