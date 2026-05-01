@@ -252,7 +252,7 @@ Zipper-1 modifies `main.ts` to wire both session C modules:
 
 1. Add imports: `{ buildMenuTemplate, registerApplicationMenu }` from `'./menu.js'`.
 2. Add imports: `{ createManagedWindow, registerLifecycleHooks }` from `'./window-lifecycle.js'`.
-3. Replace `new BrowserWindow({ width: 1024, height: 768, ... })` with `createManagedWindow({ defaultWidth: 1024, defaultHeight: 768, ... })`.
+3. Replace `new BrowserWindow({ width: 1024, height: 768, ... })` with `createManagedWindow({ width: 1024, height: 768, ... })`.
 4. Remove inline `app.on('window-all-closed', () => app.quit())`.
 5. In `app.whenReady()` callback, add: `registerApplicationMenu()` and `registerLifecycleHooks(app, () => mainWindow, createWindow)`.
 
@@ -484,7 +484,7 @@ FINAL INTEGRATION — serial, after both zippers complete and merge:
 1. Add imports for `loadDispatchWeb` and `WEB_UI_URL` from `'./webview-loader.js'`.
 2. Add imports for `registerApplicationMenu` from `'./menu.js'`.
 3. Add imports for `createManagedWindow`, `registerLifecycleHooks` from `'./window-lifecycle.js'`.
-4. Replace `new BrowserWindow({ width: 1024, height: 768, ... })` with `createManagedWindow({ defaultWidth: 1024, defaultHeight: 768, ... })`.
+4. Replace `new BrowserWindow({ width: 1024, height: 768, ... })` with `createManagedWindow({ width: 1024, height: 768, ... })`.
 5. Add `await loadDispatchWeb(mainWindow)` after window construction in `createWindow()`.
 6. Remove the inline `app.on('window-all-closed', () => app.quit())`.
 7. In `app.whenReady()`: add `registerApplicationMenu()`.
@@ -718,3 +718,15 @@ WORKSTATION_CONTRACT.md §5.1: "horizontal bottom drawer below the kanban, expan
 ---
 
 *End of contract. Three operator resolutions applied 2026-04-30 (RESOLUTION-1/2/3). Operator commits; sessions do not. This file has not been `git add`-ed or committed.*
+
+---
+
+## Amendment 2026-04-30 — §4.7 step 3 + §7.2 step 4 field naming
+
+**Authority:** Operator (post-hoc reconciliation of contract example with shipped frozen file).
+
+**Change:** Field names in `createManagedWindow({ ... })` example call sites changed from `defaultWidth: 1024, defaultHeight: 768` to `width: 1024, height: 768`.
+
+**Reason:** Session C `865b80f` shipped `WindowSizeDefaults` interface with `width: number; height: number;` fields rather than the `defaultWidth`/`defaultHeight` names the contract example specified. Zipper-1 `68e6528` correctly followed the frozen file as authority per anti-fabrication discipline (project instructions §3.1). Semantics identical (both refer to the size to use when no persisted geometry exists; persisted state overrides via `saved?.width ?? opts.width`).
+
+**Future note:** This event surfaces a §3.4 gap — frozen contracts are protected against CC modification of the contract document itself but are not currently protected against CC implementation diverging from the contract document. Session C should have halted and surfaced the divergence at green-commit time. Filed as cairn-findings candidate for Round 3 prompt-level forward primitive.
