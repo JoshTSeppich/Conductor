@@ -179,3 +179,75 @@ MB-S03 (the first spike to consume §8.1's persistence claims) caught the contra
 
 **Companion to §3.1 anti-fabrication:** anti-fabrication says "read actual sources before claiming what they say." Finding #55 extends this to authored documents: "verify actual sources before claiming what they say in operator-authored frozen artifacts."
 
+
+---
+
+## Finding #56: Build session misframing of existing primitives as novel
+
+**Round:** Round 2 (foxworks-dispatch, 2026-04-30)
+**Session:** Session C (MB-T03)
+**Status:** Surfaced and corrected within round
+
+### What happened
+
+Round 2 Session C encountered a Round 1 Incident 8 condition: Session B's untracked test file appeared in the shared git index during Session C's per-path `git add` operation. Session C correctly applied the existing primitive (per-path add + git status check + git restore --staged unstage) and no contamination landed in C's commits.
+
+However, Session C framed the event in commit body `0bf4722` as a "novel §9.x candidate" requiring contract amendment, and noted "anticipated failure modes don't cover shared index" — both incorrect against the existing methodology corpus.
+
+Operator review at chat layer caught the misframing. Framing correction landed at `4bbd2f2` with explicit retraction of the contract-amendment recommendation and re-characterization as Round 1 Incident 8 (project instructions §3.8 + §8 methodology observations).
+
+### Pattern
+
+Build sessions that read their Round 2 contract document (a derived artifact) without reading the methodology corpus (project instructions §3.8 + §8) experience an event the contract didn't *explicitly enumerate* and frame it as novel. The contract text is treated as authoritative about the methodology rather than as one expression of it.
+
+### Why it matters
+
+Cross-session methodology propagation is real (§8 methodology observations). If a misframed primitive lands in cross-session coordination notes and propagates laterally to other sessions, the wrong primitive spreads. Wrong primitive propagating is worse than no primitive.
+
+### Forward primitive
+
+Cross-session note framing of any "new finding" requires explicit citation against project instructions and prior cairn-findings entries *before* being filed as novel. Build-session prompts in subsequent rounds should include a verify-against-existing-corpus check before any claim of novelty.
+
+Proposed Round 3 prompt addition (operator-arbitrated, draft only):
+
+> Before claiming a finding as novel or recommending contract amendment, verify against project instructions §3 (cairn primitives), §8 (methodology observations), and existing cairn-findings.md entries. Cite the closest existing primitive in your finding entry. If no existing primitive applies, surface to operator before framing as novel.
+
+---
+
+## Finding #57: Green commit body claiming files not actually staged
+
+**Round:** Round 2 (foxworks-dispatch, 2026-04-30)
+**Sessions:** Session C (MB-T03) and Session B (MB-T02) — both instances
+**Status:** Both sessions self-corrected before push
+
+### What happened
+
+Two of three Round 2 build sessions exhibited the same primitive failure: a green commit whose body claimed shipping files that were not actually in the commit's file set.
+
+**Session C (5acadef → 865b80f):** Commit `5acadef` titled `green(MB-T03): menu.ts + window-lifecycle.ts — native menu + window state persistence` contained only `notes.md` (1 file changed, 21 insertions). The four claimed implementation files (menu.ts, window-lifecycle.ts, lifecycle-fixture-main.mjs, FOLLOWUPS.md) were absent. Session C disclosed: `git add` ran from the packages/dispatch-workstation/ subdirectory cwd (established by the prior `pnpm build` command), paths passed included the packages/dispatch-workstation/ prefix → resolved paths were double-prefixed and nonexistent. Subsequent `git status` between add and commit appears to have showed staged state from a prior shell invocation, not the one just executed. Self-corrected at `865b80f` with files staged from repo root explicitly.
+
+**Session B (7ef8e44 → 93d7fda):** Commit `7ef8e44` titled `green(MB-T02): webview-loader.ts — loadDispatchWeb + WEB_UI_URL frozen exports` cited FOLLOWUPS.md additions in body but did not include the file in the actual file set (only notes.md + webview-loader.ts landed). Session B did not investigate the cause. Self-corrected at `93d7fda` with FOLLOWUPS.md staged separately.
+
+Both sessions self-corrected before push (no contaminated history landed in remote). Both green commits are functionally complete via the corrective commit immediately following.
+
+### Pattern
+
+The 9-question self-check (CONDUCTOR_API_CONTRACT.md §10.5) Q7 ("territory check against actual git status output") exists to catch exactly this case. In both Round 2 instances, Q7 either was not run or was run against an unsynchronized status reading captured at the wrong timing — *before* `git add`, *between* `git add` and `git commit` from a different shell context, or *after* a status output that was stale relative to the current working tree state.
+
+The cwd hazard surfaced by Session C is also worth naming independently: `pnpm` subcommands (especially `pnpm build`, `pnpm --filter X test`) can establish a working directory in a subpackage that persists for subsequent commands in the same shell. A `git add` issued after such a command may resolve paths against the subdirectory cwd, not the repo root. Path arguments that *include* the subdirectory prefix become double-prefixed and resolve to nonexistent paths.
+
+### Why it matters
+
+Green commits whose body asserts shipping files that aren't in the file set are MODELED-passing-as-KNOWN failures (§3.5). Even when self-corrected immediately after, they create commit-history records where the title and body do not match the diff. Future readers (zipper sessions, final integration, post-mortem) reading the title will incorrectly believe the deliverable landed at the original commit.
+
+Two-of-three Round 2 sessions hitting the same pattern is sufficient evidence the underlying primitive (Q7) is under-specified, not just that two sessions made independent mistakes.
+
+### Forward primitive
+
+Self-check Q7 must cite *specific git status --short output captured between `git add` and `git commit`*, not before either, and not from a different shell context. The captured output should be either included in the commit body or referenced by the diff verification that follows.
+
+Additionally: build sessions must run `git rev-parse --show-toplevel` or equivalent at the start of any commit-staging sequence to confirm cwd, especially after any `pnpm` invocation that may have changed shell working directory.
+
+Proposed Round 3 prompt addition (operator-arbitrated, draft only):
+
+> Before any `git add`: run `pwd` and confirm you are at repo root (the directory containing the top-level `.git/`). If not at repo root, `cd` to it before staging. After `git add` and immediately before `git commit`: run `git status --short` and include the exact output in your commit body, or in chat for operator review, as evidence of Q7. The status output is your KNOWN evidence that the files you intended to stage are actually in the index.
