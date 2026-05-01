@@ -185,6 +185,34 @@ ARCHITECTURE DECISIONS:
 
 Per-path stage notes.md alone for session-start commit. | §8.1 session start discipline
 
+2026-04-30T00:00Z | RED COMMIT 28cd6a7 — red(zipper-2): wrapper-renders + splitter-persists test files | §7.3 red criterion satisfied
+
+RED verification: pnpm test → 5 passed / 2 failed. wrapper-renders: existsSync(dist/main/workstation-shell.html) → false. splitter-persists: existsSync(dist/main/splitter-state.js) → false. 5 prior tests unaffected. Pre-implementation files absent as required.
+
+2026-04-30T00:00Z | IMPLEMENTATION — preload ESM finding | §8.6 transparency
+
+ESM PRELOAD FAILURE (CRITICAL, resolved): src/main/preload.mts compiled to dist/main/preload.mjs by tsc; Electron 41 sandboxed renderer throws `SyntaxError: Cannot use import statement outside a module` — sandbox cannot load ESM preloads regardless of .mjs extension or package.json "type":"module". Diagnosed via MB_TEST_HOOKS stderr forwarding: `[renderer-error] Unable to load preload script: .../preload.mjs / shellBridge not available in renderer`. Fix: scripts/build-preload.mjs uses esbuild `format:'cjs'` → dist/main/preload.cjs. PRELOAD_PATH updated to preload.cjs. Filed as MB-F-ZIPPER-2-ESM-PRELOAD.
+
+2026-04-30T00:00Z | GREEN COMMIT 039721f — green(zipper-2): bottom-drawer layout — shell, splitter, IPC bridge, preload | §7.3 green criterion
+
+pnpm build clean (tsc, build-coarchitect.mjs, build-shell.mjs, build-preload.mjs). pnpm typecheck clean. pnpm test → 7 passed (7): MB-T01 2319ms, MB-T02 2054ms, MB-T03 3776ms, COARCH-T02 chat-panel-renders 1949ms, COARCH-T02 chat-input-emits-event 1938ms, zipper-2 wrapper-renders 2312ms (SHELL_READY + RENDER_OK), zipper-2 splitter-persists 3983ms (SPLITTER_SAVED 350 + SPLITTER_LOADED 350). All 5 prior tests unregressed. FOLLOWUPS.md: MB-F-ZIPPER-2-ESM-PRELOAD + MB-F-ZIPPER-2-COARCH-T03-IPC filed.
+
+2026-04-30T00:00Z | SESSION_COMPLETE | Zipper-2 deliverables per §7.3 + Amendment 2026-04-30 (b):
+  - src/main/workstation-shell.html: committed at 039721f ✓
+  - src/main/splitter-state.ts: committed at 039721f ✓
+  - src/main/coarchitect-ipc.ts: committed at 039721f ✓
+  - src/main/preload.mts (renamed from preload.ts): committed at 039721f ✓
+  - scripts/build-preload.mjs: committed at 039721f ✓
+  - scripts/build-shell.mjs: committed at 039721f ✓
+  - src/main/main.ts (modified): committed at 039721f ✓
+  - test/integration/zipper-2/wrapper-renders.test.ts: committed at 28cd6a7 ✓
+  - test/integration/zipper-2/splitter-persists.test.ts: committed at 28cd6a7 (red) / 039721f (stderr diagnostic) ✓
+  - docs/FOLLOWUPS.md MB-F-ZIPPER-2-ESM-PRELOAD + MB-F-ZIPPER-2-COARCH-T03-IPC: committed (docs commit) ✓
+  Pattern B IPC bridge (RESOLUTION-3) wired: coarchitectBridge + shellBridge via contextBridge.
+  Splitter persistence: MB_SPLITTER_STATE_DIR test isolation confirmed (two-spawn cycle).
+  loadDispatchWeb() removed per Amendment 2026-04-30 (b). wrapper layout active.
+  Operator exit gate: manual `pnpm --filter dispatch-workstation dev` to verify layout visually. | §8.3 session close
+
 ---
 
 ## Cross-session methodology propagation log
