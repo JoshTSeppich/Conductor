@@ -730,3 +730,31 @@ WORKSTATION_CONTRACT.md §5.1: "horizontal bottom drawer below the kanban, expan
 **Reason:** Session C `865b80f` shipped `WindowSizeDefaults` interface with `width: number; height: number;` fields rather than the `defaultWidth`/`defaultHeight` names the contract example specified. Zipper-1 `68e6528` correctly followed the frozen file as authority per anti-fabrication discipline (project instructions §3.1). Semantics identical (both refer to the size to use when no persisted geometry exists; persisted state overrides via `saved?.width ?? opts.width`).
 
 **Future note:** This event surfaces a §3.4 gap — frozen contracts are protected against CC modification of the contract document itself but are not currently protected against CC implementation diverging from the contract document. Session C should have halted and surfaced the divergence at green-commit time. Filed as cairn-findings candidate for Round 3 prompt-level forward primitive.
+
+---
+
+## Amendment 2026-04-30 (b) — OPEN-Q-ZIPPER-1 resolution + loadDispatchWeb interaction
+
+**Authority:** Operator.
+
+**Resolution of OPEN-Q-ZIPPER-1:** Option (a) — full bottom-drawer layout with resize UI. Zipper-2 builds a single BrowserWindow that hosts both dispatch-web (top region, kanban) and chat-panel.html (bottom region, COARCH-T02 stub) as sibling regions with a draggable splitter between them. Splitter position persists across launches per the same pattern as window-state persistence (JSON in `app.getPath('userData')`).
+
+Option (b) (separate BrowserWindow) is not chosen. `MB-F-COARCH-T02-DRAWER-LAYOUT` is not filed (was conditional on choosing b).
+
+**loadDispatchWeb interaction guidance:** B's frozen export `loadDispatchWeb(win: BrowserWindow): Promise<void>` (committed at `7ef8e44`) loads `WEB_UI_URL` into the passed BrowserWindow's webContents directly. Under option (a), the BrowserWindow's webContents loads a wrapper page (e.g., a local HTML file containing two `<webview>` or BrowserView regions plus splitter UI), not dispatch-web directly. Therefore Zipper-2 is **not** the correct caller for B's `loadDispatchWeb(win)` — calling it would replace the wrapper with dispatch-web alone.
+
+Zipper-2 is authorized to load dispatch-web into the kanban region by other means (webview tag with `src={WEB_UI_URL}`, or BrowserView with `loadURL(WEB_UI_URL)`, or equivalent). B's `loadDispatchWeb` export remains valid and unmodified — preserved for future call sites that load dispatch-web as the BrowserWindow's primary content (none in Round 2 production after Zipper-2; the export's presence in main.ts via Zipper-1's wiring is removed by Zipper-2 as part of the wrapper-layout refactor).
+
+**Zipper-1 wiring impact:** Zipper-2 will need to remove or refactor Zipper-1's direct `await loadDispatchWeb(mainWindow)` call (currently in `createWindow()` at `68e6528`) since `mainWindow` will load the wrapper page, not dispatch-web. This is a Zipper-2 territory modification of main.ts — within Zipper-2's declared territory per §7.3 (Zipper-2 modifies main.ts). Zipper-1's exit gate (kanban renders in BrowserWindow) was met against the pre-wrapper layout; Zipper-2 transitions to the wrapper layout and the kanban renders inside the wrapper's top region.
+
+**v4 forward note:** This wrapping-the-web architecture is intentional v3 MVP. Operator pre-commitment 2026-04-30: V4 absorbs complete Electron containment — no localhost HTTP for user-facing surface, native renderer for kanban + chat panel, IPC-only daemon access from renderer. V3 ships the Electron shell with web content; V4 ships the Electron-native rewrite. The loadDispatchWeb integration question and the wrapper-layout shape are both v3-tactical and resolved here for Round 2; v4 contract authoring will redesign from native-first principles.
+
+**Zipper-2 scope expansion (informational):** Option (a) is a meaningfully larger Zipper-2 than option (b) would have been. Zipper-2 deliverables now include:
+1. Wrapper HTML file (new, location at Zipper-2 discretion — likely `src/main/workstation-shell.html` or similar)
+2. Splitter UI implementation (CSS + JS in the wrapper file or a separate bundle)
+3. Splitter-position persistence (JSON file in userData, read/write helpers)
+4. main.ts refactor: remove direct `loadDispatchWeb` call, load wrapper instead
+5. Original Zipper-2 scope: preload.ts contextBridge expose, coarchitect-ipc.ts new file
+6. Tests verifying both regions render and splitter persists position
+
+If any of items 1-4 force a frozen contract change (especially the dispatch-web loading mechanism if BrowserView is needed and that requires main.ts to handle webContents lifecycle differently), Zipper-2 must halt and surface for operator amendment.
