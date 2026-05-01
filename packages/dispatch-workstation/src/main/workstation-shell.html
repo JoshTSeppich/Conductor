@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Foxworks Workstation</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #1a1a1a;
+      }
+      #shell {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      #kanban-region {
+        flex: 1;
+        min-height: 80px;
+        overflow: hidden;
+      }
+      #kanban-region webview {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #splitter {
+        height: 6px;
+        background: #3a3a3a;
+        cursor: ns-resize;
+        flex-shrink: 0;
+        transition: background 0.1s;
+      }
+      #splitter:hover,
+      #splitter.dragging {
+        background: #5a5a5a;
+      }
+      #chat-region {
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      #root {
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="shell">
+      <div id="kanban-region">
+        <webview id="kanban-webview" allowpopups></webview>
+      </div>
+      <div id="splitter" role="separator" aria-label="Resize panel" data-testid="splitter"></div>
+      <div id="chat-region" style="height: 280px">
+        <div id="root"></div>
+      </div>
+    </div>
+
+    <script>
+      const kanbanWebview = document.getElementById('kanban-webview');
+      const chatRegion = document.getElementById('chat-region');
+      const splitter = document.getElementById('splitter');
+
+      const DEFAULT_CHAT_HEIGHT = 280;
+      let chatHeight = DEFAULT_CHAT_HEIGHT;
+
+      // WEB_UI_URL passed from main.ts via loadFile({ query: { webUiUrl: '...' } }).
+      const params = new URLSearchParams(window.location.search);
+      const webUiUrl = params.get('webUiUrl') || 'http://localhost:7878';
+      kanbanWebview.setAttribute('src', webUiUrl);
+
+      async function initSplitter() {
+        if (window.shellBridge) {
+          try {
+            const saved = await window.shellBridge.getSplitterPos();
+            if (typeof saved === 'number' && saved > 80) {
+              chatHeight = saved;
+              chatRegion.style.height = chatHeight + 'px';
+            }
+          } catch (err) {
+            console.error('initSplitter getSplitterPos error: ' + err);
+          }
+        } else {
+          console.error('shellBridge not available in renderer');
+        }
+        // Sentinel: forwarded by main.ts console-message handler (MB_TEST_HOOKS gated).
+        console.log('SPLITTER_LOADED ' + chatHeight);
+      }
+
+      // Draggable splitter — drag up to expand chat, drag down to shrink.
+      let isDragging = false;
+      let dragStartY = 0;
+      let dragStartHeight = 0;
+
+      splitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStartY = e.clientY;
+        dragStartHeight = chatRegion.offsetHeight;
+        splitter.classList.add('dragging');
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const delta = dragStartY - e.clientY;
+        const maxHeight = window.innerHeight - 100;
+        chatHeight = Math.max(80, Math.min(maxHeight, dragStartHeight + delta));
+        chatRegion.style.height = chatHeight + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        splitter.classList.remove('dragging');
+        document.body.style.userSelect = '';
+        if (window.shellBridge) {
+          window.shellBridge.saveSplitterPos(chatHeight);
+        }
+      });
+
+      initSplitter().then(() => {
+        console.log('SHELL_READY');
+      });
+    </script>
+    <!-- D's renderer bundle: auto-mounts ChatPanel into #root with stub DaemonClient.
+         Round 2: contextBridge bridge wired in preload.ts for COARCH-T03 consumption. -->
+    <script src="../coarchitect/renderer.js"></script>
+  </body>
+</html>

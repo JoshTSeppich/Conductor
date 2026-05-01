@@ -1,17 +1,22 @@
-// Foxworks Workstation Electron entry — wired by Zipper-1 (Round 2).
+// Foxworks Workstation Electron entry — wired by Zipper-1 (B+C) + Zipper-2 (D).
 //
-// Composes B's webview-loader (loadDispatchWeb) + C's menu (registerApplicationMenu)
-// and window-lifecycle (createManagedWindow, registerLifecycleHooks) per
-// parallel-cairn-round-2-contract.md §3.6 + §4.7 + §7.2.
+// Zipper-1 (68e6528): wired B's webview-loader + C's menu/window-lifecycle.
+// Zipper-2: refactored to load wrapper page (workstation-shell.html) that hosts
+// both dispatch-web kanban (top, <webview>) and COARCH-T02 chat panel (bottom).
+// loadDispatchWeb() removed from this call site per Amendment 2026-04-30 (b);
+// WEB_UI_URL forwarded to the wrapper via loadFile query param.
 import { app, BrowserWindow } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { loadDispatchWeb } from './webview-loader.js';
+import { WEB_UI_URL } from './webview-loader.js';
 import { registerApplicationMenu } from './menu.js';
 import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.js';
+import { registerIpcHandlers } from './coarchitect-ipc.js';
+import { writeSplitterPosition } from './splitter-state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PRELOAD_PATH = resolve(__dirname, 'preload.js');
+const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
+const SHELL_PATH = resolve(__dirname, 'workstation-shell.html');
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -25,33 +30,73 @@ async function createWindow(): Promise<void> {
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
+      // webviewTag required for the kanban <webview> region in workstation-shell.html.
+      webviewTag: true,
     },
   });
 
-  // Register WINDOW_READY sentinel before loadDispatchWeb so the listener
-  // exists when loadURL commences (did-finish-load timing discipline).
+  // Register WINDOW_READY sentinel before loadFile so the listener exists when
+  // the wrapper page's did-finish-load fires (did-finish-load timing discipline).
   mainWindow.webContents.on('did-finish-load', () => {
     process.stdout.write('WINDOW_READY\n');
   });
+
+  // MB_TEST_HOOKS: forward renderer console-message events to stdout so vitest tests
+  // can observe SHELL_READY, SPLITTER_LOADED, and RENDER_OK sentinels.
+  // MB-S05 ADR K6 (CRITICAL): event-object form (event.message) — positional args
+  // deprecated in Electron 41.
+  if (process.env.MB_TEST_HOOKS === '1') {
+    mainWindow.webContents.on('console-message', (event) => {
+      const msg = (event as { message: string }).message;
+      if (
+        msg === 'SHELL_READY' ||
+        msg === 'RENDER_OK' ||
+        msg.startsWith('SPLITTER_LOADED ') ||
+        msg.startsWith('MESSAGE_SENT ')
+      ) {
+        process.stdout.write(msg + '\n');
+      }
+      // Diagnostic: forward console.error to stderr for test diagnostics.
+      if ((event as unknown as { level?: string }).level === 'error') {
+        process.stderr.write('[renderer-error] ' + msg + '\n');
+      }
+    });
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
-  await loadDispatchWeb(mainWindow);
+  // Load the wrapper page. WEB_UI_URL passed as query param; the shell HTML reads
+  // it via URLSearchParams and sets the kanban <webview> src attribute.
+  await mainWindow.loadFile(SHELL_PATH, { query: { webUiUrl: WEB_UI_URL } });
 }
 
 app.whenReady().then(async () => {
   registerApplicationMenu();
+  registerIpcHandlers();
   await createWindow();
   registerLifecycleHooks(app, () => mainWindow, createWindow);
 });
 
-// stdin "QUIT" channel for the MB-T01 Red criterion (MB-S04 ADR K3).
-// Deterministic exit code 0; preferred over SIGTERM (K4 non-deterministic).
+// stdin channel for deterministic exit (MB-S04 ADR K3) and test hooks.
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk: string | Buffer) => {
-  if (chunk.toString().trim() === 'QUIT') {
+  const line = chunk.toString().trim();
+
+  if (line === 'QUIT') {
     app.quit();
+    return;
+  }
+
+  // MB_TEST_HOOKS: SAVE_SPLITTER <pos> — writes splitter position to userData JSON.
+  // Used by splitter-persists.test.ts two-spawn cycle.
+  if (process.env.MB_TEST_HOOKS === '1') {
+    const m = /^SAVE_SPLITTER (\d+)$/.exec(line);
+    if (m) {
+      const pos = parseInt(m[1], 10);
+      writeSplitterPosition(pos);
+      process.stdout.write(`SPLITTER_SAVED ${pos}\n`);
+    }
   }
 });

@@ -12,6 +12,7 @@
     "rootDir": "./src",
     "types": ["node"]
   },
+  "files": ["src/coarchitect/daemon-client.ts"],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "spikes", "test", "src/coarchitect"]
 }

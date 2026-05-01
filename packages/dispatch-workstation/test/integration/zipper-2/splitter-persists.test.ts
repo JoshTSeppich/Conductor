@@ -137,7 +137,7 @@ describe('Zipper-2: splitter position persists across launches', () => {
 
         expect(
           loadedPos,
-          `expected restored splitter pos 350, got ${loadedPos}; line="${loadedLine}"`,
+          `expected restored splitter pos 350, got ${loadedPos}; line="${loadedLine}"; stderr="${h2.getStderr().slice(0, 800)}"`,
         ).toBe(350);
 
         h2.child.stdin?.write('QUIT\n');
