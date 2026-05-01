@@ -161,6 +161,32 @@ ZIPPER-1 SESSION COMPLETE. Deliverables: packages/dispatch-workstation/src/main/
 
 ---
 
+## Zipper-2 — wrapper layout + IPC bridge (COARCH-T02 integration)
+
+_Append-only. Format: timestamp | event | citation_
+
+2026-04-30T00:00Z | SESSION_START | Zipper-2 launching, baseline reads complete, OPEN-Q-ZIPPER-1 resolved as (a) per Amendment 2026-04-30 (b), proceeding to verify COARCH-T02 exports before red commit. Contract §7.3, both amendments, cairn-findings #56/#57, all D source files read. No halt conditions triggered at session start. | contract §7.3 / §8.1
+
+COARCH-T02 EXPORT VERIFICATION (per §5.2–§5.4, file-as-authority):
+- daemon-client.ts: ChatMessage ✓, ChatMessageInput ✓, DaemonClient ✓, createStubDaemonClient() ✓ — matches contract §5.2 exactly
+- chat-panel.tsx: ChatPanelProps ✓, ChatPanel(props) ✓ — matches contract §5.3 exactly
+- mount.ts: ChatPanelMountOptions ✓, mountChatPanel(opts: ChatPanelMountOptions): () => void ✓ — matches contract §5.4 exactly. NOTE: briefing summary says "container: HTMLElement" but contract §5.4 and actual file both say "opts: ChatPanelMountOptions" — file and contract agree; briefing was imprecise. No halt.
+- dist/coarchitect/: chat-panel.html ✓, renderer.js ✓ — both exist
+- IPC method names: fetchHistory / postMessage match DaemonClient interface. mount.ts auto-mounts with stub directly (per comment "Zipper-2 replaces this block") — but Zipper-2 scope is "do NOT modify mount.ts". For Round 2, auto-mount with stub is correct behavior; contextBridge bridge is wired as infrastructure for COARCH-T03. No halt.
+
+ARCHITECTURE DECISIONS:
+- webview tag for dispatch-web region (webviewTag: true required in webPreferences)
+- chat panel embedded directly in wrapper via renderer.js (same file:// origin, no iframe needed)
+- WEB_UI_URL passed via loadFile({ query: { webUiUrl: WEB_UI_URL } }) URL params (avoids preload import of webview-loader in preload context)
+- tsconfig.json: add "files": ["src/coarchitect/daemon-client.ts"] so tsc compiles it standalone and coarchitect-ipc.ts can import from it (daemon-client.ts has no DOM/JSX, zero type pollution risk)
+- splitter state: MB_SPLITTER_STATE_DIR env var overrides userData path for test isolation (same pattern as MB_WINDOW_STATE_DIR in window-lifecycle.ts)
+- package.json build script extended to run build-coarchitect.mjs + build-shell.mjs after tsc
+- Sentinel protocol additions for test hooks (MB_TEST_HOOKS=1): SHELL_READY, SPLITTER_LOADED <pos>, SPLITTER_SAVED <pos> via console-message forwarding + stdin SAVE_SPLITTER command
+
+Per-path stage notes.md alone for session-start commit. | §8.1 session start discipline
+
+---
+
 ## Cross-session methodology propagation log
 
 _Append-only. Sessions log when they adopt a discipline change observed in another session's notes._
