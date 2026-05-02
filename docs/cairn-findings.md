@@ -451,3 +451,22 @@ Round-contract authoring (operator-only, §3.4) should explicitly distinguish:
 Both gate types must be cleared before round close. UX-quality gates that are not named in the contract become discovered manual checks (as in Round 2), which works but is inconsistent. Naming them upfront as part of the contract makes the close criteria deterministic.
 
 For UI-rendering tickets specifically, "looks like X" is a valid acceptance criterion that lives in the manual-gate layer and requires operator visual reference (screenshot, Figma, named comparison product) at contract-authoring time.
+
+## #64 — Relay-drafted ticket prompts that contradicted frozen vision; halt-discipline + §3.4 caught it before any code shipped (2026-05-02)
+
+**Context.** During Batch 2 setup, the operator-Opus relay drafted three CC session prompts (CONSOLE-T01, CONSOLE-T02, COARCH-T04) by reading vision §10, §4.7 amendment, build-doc-schema-spec, and prior ADRs. The CONSOLE-T02 prompt's RED cluster 1 specified test directions that contradicted vision §10.7 — specifically, tests asserted `shell receives console:open from webview` while vision §10.7 specifies `console:open (shell → webview) — instruct webview to open a CC-console panel`. Two of five message-type directions were inverted in the prompt; three were correct.
+
+**Detection.** Session B (CONSOLE-T02) opened, read vision §10.7 per the prompt's "read these documents before starting" instruction, read its own RED cluster 1 specification, detected the contradiction. Halted before writing any RED test, any production code, or touching any non-coord file. Wrote a halt ADR at `docs/adr/CONSOLE-T02-direction-halt.md` enumerating three resolution options labeled (a)/(b)/(c). Closed the session under §3.7 halt discipline with honest "0 of 4 clusters" framing.
+
+**Resolution.** Operator arbitrated (a) Vision authoritative — vision §10.7 stays as ratified, the relay redrafts the ticket prompt to align tests with vision direction. The open-trigger source (what causes shell to emit `console:open`) becomes a CONSOLE-T03 design decision, likely a native menu entry under the existing application menu shipped by MB-T03.
+
+**Cairn primitives validated.** The §3.4 frozen-contract primitive correctly placed authority with the operator-arbitrated vision §10.7 over the relay-drafted ticket prompt. The §3.7 halt discipline correctly fired — Session B did not infer past the contradiction, did not silently pick one direction, did not do "useful prep" while halted. The §3.1 anti-fabrication primitive worked at the session boundary — Session B treated vision text as authoritative ground truth and the relay-drafted prompt as untrusted-when-contradictory.
+
+**Key learning: bidirectional fence applies to the operator-relay layer too.** Cairn primitives have previously been documented as defending the work from session mistakes (Round 1 Incident 8 shared-working-tree drift, multiple halt violations) and from operator mistakes (Round 1 misdirected-instruction incident). This finding documents that the same primitives defend against operator-relay mistakes — drafted ticket prompts, suggested batch compositions, recommended arbitrations. The operator-relay (Claude Opus, in this case) is not infallible and is not exempt from the fence. Sessions that read frozen contracts as authoritative correctly catch relay-introduced contradictions before they propagate into code.
+
+**Anti-fabrication self-correction by the relay.** The relay (Opus) had vision §10.7 in its context window when drafting the CONSOLE-T02 prompt and inverted the direction anyway. This is a §3.1 violation at the relay layer: the relay treated its modeled understanding of "how IPC routing should work" as if it were grounded in the cited vision text. The model was wrong; the cited text said the opposite. Future relay drafting of ticket prompts that specify test directions against frozen vision/contract surfaces should explicitly cross-reference the vision text at draft time, not rely on the relay's modeled recall of it.
+
+**Operational implication.** The 3-session-batch ratchet (validated KNOWN at Batch 1 close) holds despite this incident. B halted cleanly without polluting any other session's territory. A and C continued working unaffected. The degraded 2-session execution for the remainder of Batch 2 is a known fallback, not a discipline failure.
+
+**Filed:** 2026-05-02 mid-Batch-2.
+
