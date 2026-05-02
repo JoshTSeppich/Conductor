@@ -61,6 +61,10 @@ import { registerOrchestratorAuditRoutes } from '../routes/v3/orchestrator-audit
 import { registerOrchestratorHistoryRoutes } from '../routes/v3/orchestrator-history.js';
 import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
 import { registerTicketsStateRoutes } from '../routes/v3/tickets-state.js';
+import { registerConsoleRoutes } from '../routes/v3/console.js';
+import { pasteRawBytes as defaultPasteRawBytes } from '../console/paste-raw-bytes.js';
+import { createConsoleStateCoordinator } from '../console/state.js';
+import type { ConsoleOps } from '../console/console-ops.js';
 import { shutdown } from './shutdown.js';
 
 function defaultTokenPath(): string {
@@ -167,6 +171,14 @@ export interface StartupOpts {
    * archiveRoot defense-in-depth pattern. Added in COARCH-T01 B2.
    */
   dbPath?: string;
+  /**
+   * CONSOLE-T01: ConsoleOps injector for §4.7 CC-console PTY side
+   * effects. Default delegates to the production `pasteRawBytes`
+   * helper (tmux paste-buffer -r). Tests inject a recording stub so
+   * they observe the bytes-faithful round-trip without spawning real
+   * tmux. Mirrors the established TmuxOps injection pattern.
+   */
+  consoleOps?: ConsoleOps;
 }
 
 export interface StartupHandle {
@@ -374,6 +386,22 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // MB-S03 §6 (composite PK upsert; build_doc_id REQUIRED on single
   // GET).
   await registerTicketsStateRoutes(app, { db });
+
+  // CONSOLE-T01: /v3/sessions/:name/console/* surface per
+  // CONDUCTOR_API_CONTRACT.md §4.7 (frozen at a7e8d4f, v2.2.0).
+  // Cluster 2 ships POST /stdin; subsequent clusters add WS /stream,
+  // POST /signal, GET /buffer, GET /status. Auth-gated via the same
+  // onRequest hook as the rest of /v3/* per auth.ts:91. Console state
+  // coordinator is daemon-singleton (one map per daemon process).
+  const consoleState = createConsoleStateCoordinator();
+  const consoleOps: ConsoleOps = opts.consoleOps ?? {
+    pasteRawBytes: defaultPasteRawBytes,
+  };
+  await registerConsoleRoutes(app, {
+    registryPath: opts.registryPath,
+    consoleOps,
+    state: consoleState,
+  });
 
   // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.
   // Subscribes per-connection; emit fan-out goes through bus.

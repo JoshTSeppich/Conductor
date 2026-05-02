@@ -177,6 +177,14 @@ export interface SpawnTestServerOpts {
    * Added in COARCH-T01 B2.
    */
   dbPath?: string;
+  /**
+   * CONSOLE-T01: ConsoleOps injector for §4.7 CC-console PTY side
+   * effects. Default = startup's production helper (which uses real
+   * tmux). Tests for /v3/sessions/:name/console/* endpoints supply a
+   * recording stub so the bytes-faithful round-trip is observable
+   * without spawning a real tmux session in CI.
+   */
+  consoleOps?: import('../../src/console/console-ops.js').ConsoleOps;
 }
 
 /**
@@ -348,6 +356,7 @@ export async function spawnTestServer(
     notificationsAvailable: opts.notificationsAvailable ?? false,
     staticRoot: opts.staticRoot,
     dbPath,
+    consoleOps: opts.consoleOps,
   });
 
   const triggerHandoffWrite = async (
