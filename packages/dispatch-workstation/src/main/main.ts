@@ -53,8 +53,11 @@ async function createWindow(): Promise<void> {
         msg === 'SHELL_READY' ||
         msg === 'RENDER_OK' ||
         msg === 'SPAWN_MODAL_OPENED' ||
+        msg === 'STREAM_START' ||
         msg.startsWith('SPLITTER_LOADED ') ||
-        msg.startsWith('MESSAGE_SENT ')
+        msg.startsWith('MESSAGE_SENT ') ||
+        msg.startsWith('STREAM_DONE ') ||
+        msg.startsWith('STREAM_ERROR ')
       ) {
         process.stdout.write(msg + '\n');
       }
@@ -148,6 +151,26 @@ process.stdin.on('data', (chunk: string | Buffer) => {
         )
         .catch((err: Error) => {
           process.stderr.write('FILL_AND_SUBMIT_SPAWN error: ' + err.message + '\n');
+        });
+      return;
+    }
+
+    // COARCH-T03: TYPE_AND_SEND <content> — sets chat-input value and clicks send button.
+    const typeAndSend = /^TYPE_AND_SEND (.+)$/.exec(line);
+    if (typeAndSend && mainWindow) {
+      const contentEsc = JSON.stringify(typeAndSend[1]);
+      mainWindow.webContents
+        .executeJavaScript(
+          `(function() {
+            var input = document.querySelector('[data-testid="chat-input"]');
+            var btn = document.querySelector('[data-testid="send-button"]');
+            if (!input || !btn) { console.error('FIXTURE: chat-input or send-button not found'); return; }
+            input.value = ${contentEsc};
+            btn.click();
+          })();`,
+        )
+        .catch((err: Error) => {
+          process.stderr.write('TYPE_AND_SEND error: ' + err.message + '\n');
         });
       return;
     }
