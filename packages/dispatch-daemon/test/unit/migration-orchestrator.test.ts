@@ -29,7 +29,7 @@ import { describe, expect, it } from 'vitest';
 import { runMigrations } from '../../src/lifecycle/db.js';
 
 describe('COARCH-T01 B1+B2 — orchestrator SQLite migration runner', () => {
-  it('P1 fresh :memory: DB + runMigrations() creates the three tables', () => {
+  it('P1 fresh :memory: DB + runMigrations() creates the three orchestrator tables', () => {
     const db = new Database(':memory:');
     const result = runMigrations(db);
 
@@ -43,11 +43,11 @@ describe('COARCH-T01 B1+B2 — orchestrator SQLite migration runner', () => {
     const userTables = tables
       .map((t) => t.name)
       .filter((n) => !n.startsWith('sqlite_'));
-    expect(userTables).toEqual([
-      'orchestrator_audit',
-      'orchestrator_messages',
-      'orchestrator_ticket_state',
-    ]);
+    // The three orchestrator tables MUST be present; additive
+    // migrations (e.g., CONSOLE-T01's cc_console_buffer) may add more.
+    expect(userTables).toContain('orchestrator_audit');
+    expect(userTables).toContain('orchestrator_messages');
+    expect(userTables).toContain('orchestrator_ticket_state');
     db.close();
   });
 
@@ -64,7 +64,11 @@ describe('COARCH-T01 B1+B2 — orchestrator SQLite migration runner', () => {
     )
       .map((t) => t.name)
       .filter((n) => !n.startsWith('sqlite_'));
-    expect(userTables.length).toBe(3);
+    // ≥3 because CONSOLE-T01 ships cc_console_buffer additively.
+    expect(userTables.length).toBeGreaterThanOrEqual(3);
+    expect(userTables).toContain('orchestrator_audit');
+    expect(userTables).toContain('orchestrator_messages');
+    expect(userTables).toContain('orchestrator_ticket_state');
     db.close();
   });
 
