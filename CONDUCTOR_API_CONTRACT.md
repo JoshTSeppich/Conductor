@@ -181,6 +181,122 @@ This contract does not duplicate `/v3/*` shape definitions. Readers wanting the 
 
 ---
 
+### §4.7 — `/v3/sessions/:name/console/*` (CC-console surface)
+
+**Authority:** vision §10 (frozen at eac381e), MB-S06 spike evidence (frozen at b641e58).
+**Version:** Introduced in v2.2.0.
+**Surface scope:** CC-console direct-chat panel per vision §10. Operator-driven typing surface. No LLM in this loop. Distinct from §4.6 (`/v3/orchestrator/*`) which routes through the Sonnet 4.6 co-architect.
+
+#### §4.7.1 Coordination invariants
+
+These invariants apply across all five §4.7 endpoints.
+
+**Authentication.** All HTTP endpoints require `X-Conductor-Token` header per §3 token auth. WebSocket endpoint accepts `?token=` query parameter (browser WebSocket API does not support custom headers; query parameter is the standard workaround for browser-side WS auth). Token validation logic identical to §4.6 token check.
+
+**Error envelope.** HTTP error responses use the existing error envelope shape from §4.4. The `error.type` for §4.7-specific failures is one of: `SessionNotFound`, `SessionNotRunning`, `ConsoleBufferUnavailable`, `SignalNotSupported`, `EncodingInvalid`, `BackpressureRejected`. Vision §10's `WorkstationError` discriminated union covers the workstation-side surface; the daemon-side error envelope wraps it.
+
+**Route registration order.** All §4.7 routes register before SPA fall-through per the precedent established by `6ae23ff` (COARCH-T01's /v3/* exclusion). Specifically: §4.7 routes register after §4.6 routes and before the catch-all 404 handler. Unmatched paths under `/v3/sessions/:name/console/*` return 404 with the JSON error envelope (NOT the SPA HTML fall-through).
+
+**404 JSON shape for unmatched /v3/sessions/:name/console/* paths.** Mirrors `d38c8b5` regression precedent: error envelope with `type` `NotFound` and message `Unknown route: <method> <path>` returned with HTTP 404.
+
+**Sequence-number space.** STDIN writes and STDOUT reads use disjoint monotonic counters per session: `stdin_seq` (incremented on each successful POST /stdin) and `stdout_seq` (incremented on each line emitted on the WS stream). Counters are session-scoped and persist across daemon restarts via the `cc_console_buffer` table (DDL deferred to CONSOLE-T01). Counters are 64-bit unsigned integers.
+
+**PTY reader sharing.** A single daemon-side `pipe-pane` reader per tmux session fans out STDOUT bytes to N WebSocket subscribers. Subscribers do NOT each spawn a `pipe-pane` — that would duplicate the byte stream and risk tmux-side state corruption. Disconnection of one subscriber does not affect others. Validated KNOWN at N=2 in MB-S06 §6; MODELED at N=4 (vision §10.11 Q3 panel cap).
+
+**Ring buffer storage.** Per-session daemon-side ring buffer for STDOUT lines, default 50,000 lines (vision §10.5). Backed by `cc_console_buffer` SQLite table; DDL ships in CONSOLE-T01. Eviction is FIFO; eviction-window gaps surface to subscribers via the WS backfill protocol (see §4.7.3).
+
+**Signal dispatch table.** §4.7.4 (POST /console/signal) maps each supported signal to one of three dispatch mechanisms based on MB-S06 §3 evidence:
+
+- `SIGINT` — PTY byte 0x03 (preferred) OR `tmux send-keys C-c` (fallback). Both KNOWN-working per MB-S06 §3; PTY byte preferred for fidelity.
+- `SIGTERM` — `kill(2)` on pane PID. No PTY-byte mapping per MB-S06 §3; tmux pane PID required.
+- `SIGHUP` — `kill(2)` on pane PID OR `tmux kill-session`. Both work; `kill(2)` preferred for granularity.
+
+Other signals (SIGUSR1, SIGUSR2, SIGKILL, etc.) are NOT supported in v3.0 per ratified vision §10.11 Q2.
+
+#### §4.7.2 POST /v3/sessions/:name/console/stdin
+
+Write bytes to the named session's tmux PTY STDIN.
+
+**Path parameters:** `:name` — session name registered in daemon (must match an existing session in RUNNING, IDLE, AWAITING REVIEW, or HELD state per §6 state machine; sessions in KILLED state return `SessionNotRunning`).
+
+**Headers:** `X-Conductor-Token` required.
+
+**Request body fields:** `bytes` (string, required), `encoding` (string enum `utf8` or `base64`, defaults to `utf8` if omitted). Use `base64` when `bytes` contains non-UTF-8-safe binary sequences (e.g., raw signal bytes other than 0x03; arbitrary control bytes that don't form valid UTF-8). The daemon decodes per the declared encoding before writing to the PTY.
+
+**Response (success, HTTP 200) fields:** `accepted` (boolean true), `stdin_seq` (integer; the session's per-write monotonic counter after this write).
+
+**Response (failure):** error envelope with `type` of `SessionNotFound`, `SessionNotRunning`, `EncodingInvalid`, or `BackpressureRejected`. `BackpressureRejected` returns when the daemon-side write buffer to the PTY is saturated (MB-S06 §2 KNOWN backpressure behavior); client should retry with exponential backoff.
+
+**Implementation note for CONSOLE-T01:** This endpoint MUST use a new `pasteRawBytes(target, bytes)` helper distinct from the existing `sendKeys` helper. Per MB-S06 §1 KNOWN finding, `sendKeys` (no `-r` flag on tmux paste-buffer) intentionally translates LF (0x0A) to CR (0x0D) to support prompt-submit semantics. `pasteRawBytes` MUST use `tmux paste-buffer -r` to preserve byte-identical round-trip. Conflating the two would silently corrupt operator-typed multi-line input.
+
+#### §4.7.3 WS /v3/sessions/:name/console/stream
+
+WebSocket channel streaming raw STDOUT bytes from the named session's tmux PTY as they arrive.
+
+**Path parameters:** `:name` — session name as above.
+**Query parameters:** `?token=<token>` — required (browser WS auth limitation per §4.7.1).
+
+**Connection handshake.** On connect, client sends a `subscribe` message with type `subscribe` and field `last_seq` (integer; highest `stdout_seq` the client has previously received, 0 for first connection or full reset).
+
+Daemon responds with a `backfill_meta` message with type `backfill_meta` and fields: `current_seq` (integer; latest `stdout_seq` in the session), `available_from_seq` (integer; oldest `stdout_seq` still in the ring buffer), `backfill_complete` (boolean; `true` if `available_from_seq <= last_seq + 1` (no eviction-window gap), `false` if `last_seq + 1 < available_from_seq` (some lines were evicted before client could receive them — operator-visible gap)).
+
+Daemon then sends backfill messages (one per buffered line from `max(available_from_seq, last_seq + 1)` to `current_seq`), each with type `line` and fields: `stdout_seq` (integer), `bytes` (string), `encoding` (`utf8` for lines that decode cleanly as UTF-8; `base64` for lines containing invalid UTF-8 sequences). Default expectation is `utf8` per MB-S06 §1 KNOWN-clean round-trip across all six tested payload classes including CJK and emoji.
+
+Daemon then transitions to live streaming, sending `line` messages as new STDOUT bytes arrive from the PTY.
+
+**Subscriber-side reconnection.** Client reconnects with new `subscribe` message including the `last_seq` it had received before disconnect. Daemon handles per the same handshake protocol (validated KNOWN in MB-S06 §5). If `backfill_complete: false`, the client SHOULD surface the gap to the operator. Specific UI rendering of the gap-warning is CONSOLE-T03 territory; this contract specifies only the signal.
+
+**Disconnection semantics.** Either side may close the WS at any time. Daemon-side cleanup: subscriber removed from the per-session fan-out list. PTY reader continues if other subscribers remain (per §4.7.1 PTY reader sharing); PTY reader pauses if no subscribers remain AND ring buffer hits its high-water mark.
+
+#### §4.7.4 POST /v3/sessions/:name/console/signal
+
+Send a signal to the CC process running in the named session's tmux pane.
+
+**Path parameters:** `:name` — session name as above.
+**Headers:** `X-Conductor-Token` required.
+**Request body fields:** `signal` (string enum `SIGINT`, `SIGTERM`, or `SIGHUP`). Other signal names return `SignalNotSupported`.
+
+**Response (success, HTTP 200) fields:** `accepted` (boolean true), `dispatch_method` (string enum `pty_byte`, `send_keys`, `kill_2`, or `tmux_kill_session`; reports which mechanism the daemon used per the §4.7.1 signal dispatch table).
+
+**Response (failure):** error envelope with `type` of `SessionNotFound`, `SessionNotRunning`, or `SignalNotSupported`.
+
+#### §4.7.5 GET /v3/sessions/:name/console/buffer
+
+Fetch a bounded slice of the session's STDOUT ring buffer for backfill or scrollback (HTTP-side complement to the WS stream; useful for non-WS clients or for one-shot scrollback queries).
+
+**Path parameters:** `:name` — session name as above.
+**Headers:** `X-Conductor-Token` required.
+**Query parameters:** `before_seq` (optional integer; return lines with `stdout_seq < before_seq`; omit for "from the latest"), `max_lines` (optional integer, default 100, max 5000).
+
+**Response (success, HTTP 200) fields:** `lines` (array of objects each with `stdout_seq` integer, `bytes` string, `encoding` enum), `earliest_in_buffer_seq` (integer), `latest_in_buffer_seq` (integer). The latter two let the client detect eviction-window gaps without needing the WS handshake.
+
+**Response (failure):** error envelope with `type` of `SessionNotFound` or `ConsoleBufferUnavailable` (the latter when daemon-side buffering is operator-disabled per vision §10.5 setting).
+
+#### §4.7.6 GET /v3/sessions/:name/console/status
+
+Fetch CC-console state for the named session.
+
+**Path parameters:** `:name` — session name as above.
+**Headers:** `X-Conductor-Token` required.
+
+**Response (success, HTTP 200) fields:** `session_name` (string), `buffer_enabled` (boolean; whether daemon-side ring buffer is active for this session, operator-configurable per vision §10.5), `buffer_line_count` (integer; current count of lines in the ring buffer), `earliest_in_buffer_seq` (integer), `latest_in_buffer_seq` (integer), `current_subscribers` (integer; number of WS subscribers currently connected), `last_stdout_activity_at` (ISO 8601 timestamp or null), `last_stdin_activity_at` (ISO 8601 timestamp or null).
+
+**Response (failure):** error envelope with `type` of `SessionNotFound`.
+
+#### §4.7.7 Implementation deferral list
+
+The following are explicitly deferred to CONSOLE-T01 (daemon implementation), CONSOLE-T02 (IPC layer), or CONSOLE-T03 (UI panel) and are NOT part of the §4.7 contract surface:
+
+- SQLite DDL for `cc_console_buffer` table (CONSOLE-T01).
+- Daemon-side broadcast / fan-out implementation specifics (CONSOLE-T01).
+- 60-second sustained backpressure soak test that ratchets MB-S06 §2 from MODELED to KNOWN at production scale (CONSOLE-T01).
+- IPC message types `console:open`, `console:close`, `console:send-stdin`, `console:stdout-chunk`, `console:signal` per vision §10.7 (CONSOLE-T02; specified in vision §10.7, not duplicated here).
+- Operator-facing rendering of `backfill_complete: false` gap warning (CONSOLE-T03).
+- xterm.js integration for ANSI color and cursor-control rendering per vision §10.11 Q4 (CONSOLE-T03).
+- Settings UI for buffer size + buffer-enabled toggle per vision §10.5 (MB-T11/W-T19).
+- Audit log integration per vision §10.11 Q5 (separate `console_prompts` table, may amend §4.7 in v3.x; not in v3.0 scope).
+
+
 ## §5 — WebSocket events
 
 ### §5.1 Endpoint
