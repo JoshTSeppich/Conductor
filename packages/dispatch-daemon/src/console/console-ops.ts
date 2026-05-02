@@ -54,4 +54,23 @@ export interface ConsoleOps {
    * the spawnTestServer.triggerConsoleLine helper.
    */
   attachStream(target: string, onLine: (line: Buffer) => void): ConsoleStreamHandle;
+
+  /**
+   * Send `signal` to the process running in the tmux pane at `target`.
+   * Returns the dispatch_method used per the §4.7.1 signal dispatch
+   * table.
+   *
+   * Per §4.7.1 + MB-S06 §3 KNOWN findings:
+   *   SIGINT  → tmux send-keys C-c (PTY byte 0x03 via tmux key-name);
+   *             returns 'send_keys'.
+   *   SIGTERM → process.kill(panePid, SIGTERM); returns 'kill_2'.
+   *   SIGHUP  → process.kill(panePid, SIGHUP);  returns 'kill_2'.
+   *
+   * SIGUSR1/2 + SIGKILL etc. are NOT supported in v3.0 (vision §10.11
+   * Q2); the route handler rejects with SignalNotSupported BEFORE
+   * calling this method.
+   */
+  sendSignal(target: string, signal: 'SIGINT' | 'SIGTERM' | 'SIGHUP'): Promise<DispatchMethod>;
 }
+
+export type DispatchMethod = 'pty_byte' | 'send_keys' | 'kill_2' | 'tmux_kill_session';

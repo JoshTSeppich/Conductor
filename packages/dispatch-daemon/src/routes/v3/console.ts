@@ -151,6 +151,55 @@ export async function registerConsoleRoutes(
     },
   );
 
+  // ── POST /v3/sessions/:name/console/signal ────────────────────────
+  // Per §4.7.4 + §4.7.1 signal dispatch table.
+  app.post<{ Params: { name: string } }>(
+    '/v3/sessions/:name/console/signal',
+    async (request, reply) => {
+      const { name } = request.params;
+      const raw = request.body as { signal?: unknown } | null;
+      const sig = raw && typeof raw.signal === 'string' ? raw.signal : null;
+      if (sig !== 'SIGINT' && sig !== 'SIGTERM' && sig !== 'SIGHUP') {
+        reply.code(422).send({
+          error: `signal must be one of: SIGINT, SIGTERM, SIGHUP (got: ${sig})`,
+          type: 'SignalNotSupported',
+        });
+        return;
+      }
+      const registry = await readRegistryV2(deps.registryPath);
+      const session = registry.sessions[name];
+      if (!session) {
+        reply.code(404).send({
+          error: `no session registered as "${name}"`,
+          type: 'SessionNotFound',
+        });
+        return;
+      }
+      if (session.state === 'killed') {
+        reply.code(422).send({
+          error: `session "${name}" is in killed state`,
+          type: 'SessionNotRunning',
+        });
+        return;
+      }
+      try {
+        const dispatch_method = await deps.consoleOps.sendSignal(
+          session.tmux_target,
+          sig,
+        );
+        reply.code(200).send({ accepted: true, dispatch_method });
+      } catch (err) {
+        request.log.warn(
+          { target: session.tmux_target, err: (err as Error).message, signal: sig },
+          'sendSignal failed',
+        );
+        reply.code(503).send({
+          error: `failed to deliver ${sig}: ${(err as Error).message}`,
+        });
+      }
+    },
+  );
+
   // ── WS /v3/sessions/:name/console/stream ──────────────────────────
   // Per §4.7.3: subscribe → backfill_meta → replay → live.
   // Auth handled upstream by the auth hook (?token= query branch added

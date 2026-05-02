@@ -64,6 +64,7 @@ import { registerTicketsStateRoutes } from '../routes/v3/tickets-state.js';
 import { registerConsoleRoutes } from '../routes/v3/console.js';
 import { pasteRawBytes as defaultPasteRawBytes } from '../console/paste-raw-bytes.js';
 import { defaultAttachStream } from '../console/pipe-pane-stream.js';
+import { defaultSendSignal } from '../console/send-signal.js';
 import { createConsoleStateCoordinator } from '../console/state.js';
 import { createBroadcastRegistry } from '../console/broadcaster.js';
 import type { ConsoleOps } from '../console/console-ops.js';
@@ -409,6 +410,7 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   const consoleOps: ConsoleOps = opts.consoleOps ?? {
     pasteRawBytes: defaultPasteRawBytes,
     attachStream: defaultAttachStream,
+    sendSignal: defaultSendSignal,
   };
   const broadcasters = createBroadcastRegistry({
     db,
