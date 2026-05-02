@@ -236,6 +236,116 @@ BASELINE READ FINDINGS (pre-commit):
 - Cairn-findings #56–#63 present, format consistent, no modifications to #51–#55.
 - Commit chain coherent: no orphan commits, no force-push markers in git log.
 
+2026-05-02T00:00Z | SESSION_START COMMIT 3590385 | docs(final-integration): session-start notes + Final subsection scaffold | §8.3
+
+2026-05-02T00:00Z | AUTOMATED VERIFICATION RESULTS | §7.4 steps 2-4
+
+  a. pnpm --filter dispatch-workstation typecheck → CLEAN (0 errors)
+  b. pnpm --filter dispatch-workstation build → CLEAN
+       tsc: 0 errors
+       build-coarchitect.mjs: renderer.js 1.1mb, BUILD_COMPLETE
+       build-shell.mjs: BUILD_SHELL_COMPLETE
+       build-preload.mjs: preload.cjs 580b, PRELOAD_BUILD_COMPLETE
+  c. pnpm --filter dispatch-workstation test → 7/7 PASSED
+       MB-T01 app-launches-clean: 3357ms ✓
+       MB-T02 webview-loader-callable: 2595ms ✓
+       MB-T03 window-state-persists: 3825ms ✓
+       COARCH-T02 chat-panel-renders: 3369ms ✓
+       COARCH-T02 chat-input-emits-event: 3377ms ✓
+       zipper-2 wrapper-renders: 3370ms ✓ (SHELL_READY + RENDER_OK)
+       zipper-2 splitter-persists: 3923ms ✓ (SPLITTER_SAVED 350 + SPLITTER_LOADED 350)
+  d. pnpm --filter dispatch-daemon test → 153/153 PASSED (32 test files)
+       No regressions. All dispatch-daemon tests unaffected by Round 2.
+
+  HALT CHECK: No failures, no typecheck errors, no build failures. No code
+  modification appeared in git status. Proceeding to contract exit-gate verification.
+
+2026-05-02T00:00Z | CONTRACT EXIT-GATE VERIFICATION | §7.4 / §7.2 / §7.3
+
+  §7.2 Zipper-1 exit gate: kanban renders in BrowserWindow — OPERATOR VERIFIED
+  per chat (prior session). Operator confirmed macOS menu bar (File/Edit/View/
+  Window/Help with correct items) and dispatch-web webview loading. Gate cleared.
+
+  §7.3 Zipper-2 exit gate: chat panel renders with stub data, kanban and chat
+  panel coexist without crash — OPERATOR VERIFIED per chat (Zipper-2 manual gate,
+  abe3bbe commit message). Operator confirmed: wrapper architecture functional,
+  IPC bridge functional, splitter functional + persistent across quit/relaunch.
+  Three UX followups filed (MB-F-COARCH-T02-STYLING, MB-F-DISPATCH-WEB-AUTH-
+  PERSISTENCE, MB-F-COARCH-T02-DEFAULT-LAYOUT) per finding #63 (automated gates
+  verify contract; UX gates surface what contracts don't specify). Gates cleared.
+
+2026-05-02T00:00Z | NEW FINDINGS CHECK | §7.4 step 6
+
+  No new methodology findings surfaced during Final verification:
+  - main.ts import state clean (no dead-import issue; WEB_UI_URL used)
+  - Commit chain clean (no territory violations, no orphans)
+  - All test suites pass without remediation
+  - No unexpected staged files or working-tree modifications observed
+
+  No #64 candidate to surface. Proceeding to close declaration.
+
+2026-05-02T00:00Z | ROUND 2 CLOSE DECLARATION | §7.4
+
+ROUND 2 COMPLETE. All automated and operator-verified gates cleared.
+
+COMMIT CHAIN IN EXECUTION ORDER:
+  99b68e7 contract(round-2): export signatures + territory matrix
+  [pre-launch operator chore: React deps + esbuild added]
+  470a065 red(MB-T03): window-state-persists test
+  5acadef green(MB-T03): menu.ts + window-lifecycle.ts [partial — self-corrected]
+  865b80f green(MB-T03): implementation files (remediation commit)
+  0bf4722 docs(MB-T03): session complete notes + framing correction
+  4bbd2f2 docs(MB-T03): framing correction (shared-index is Incident 8)
+  ac38567 red(MB-T02): webview-loader-callable test + harness fixture
+  7ef8e44 green(MB-T02): webview-loader.ts
+  93d7fda docs(MB-T02): FOLLOWUPS MB-F-MB-T02-PRODUCTION-LOADING + DOM-ASSERTION
+  84bd679 red(COARCH-T02): chat-panel-renders + chat-input-emits-event tests
+  a4b720b green(COARCH-T02): daemon-client, chat-panel, mount, HTML, esbuild
+  95a993e docs(COARCH-T02): FOLLOWUPS MB-F-COARCH-T02-REAL-DAEMON-WIRING + session-D notes
+  8842d4a docs(cairn-findings): #56 + #57 — Round 2 evidence
+  74a5a64 contract(round-2-amendment): §4.7 + §7.2 width/height reconciliation
+  33d1279 contract(round-2-amendment-b): OPEN-Q-ZIPPER-1 resolved as (a)
+  24b2bb8 docs(zipper-1): session-start notes
+  68e6528 refactor(zipper-1): wire B + C into main.ts
+  9def541 docs(zipper-1): session-complete notes
+  ae0aec4 docs(zipper-2): session-start notes
+  28cd6a7 red(zipper-2): wrapper-renders + splitter-persists tests
+  039721f green(zipper-2): bottom-drawer layout — shell, splitter, IPC bridge, preload
+  2a49707 docs(zipper-2): session complete + FOLLOWUPS MB-F-ZIPPER-2-ESM-PRELOAD + COARCH-T03-IPC
+  8f7c31b docs(round-2-close): three followups from Zipper-2 manual gate [initial, duped]
+  abe3bbe docs(round-2-close): three followups from Zipper-2 manual gate [corrected]
+  b08fe95 docs(round-2-close): dedup FOLLOWUPS.md (cairn-finding #60 fired during remediation)
+  3b635d8 docs(cairn-findings): #58–#63 Round 2 retrospective findings
+  3590385 docs(final-integration): session-start notes [this session]
+
+OPERATOR-ARBITRATED AMENDMENTS:
+  74a5a64 — §4.7/§7.2 width/height naming reconciliation
+  33d1279 — OPEN-Q-ZIPPER-1 resolved as (a); loadDispatchWeb integration guidance
+
+CAIRN-FINDINGS ADDED THIS ROUND: 8 findings (#56–#63)
+
+MB-F-* FOLLOWUPS FILED THIS ROUND (all in docs/FOLLOWUPS.md):
+  MB-F-MB-T03-DOCK-BADGE (MB-T03 green)
+  MB-F-MB-T02-PRODUCTION-LOADING (MB-T02 green)
+  MB-F-MB-T02-DOM-ASSERTION (MB-T02 green)
+  MB-F-COARCH-T02-REAL-DAEMON-WIRING (COARCH-T02 green)
+  MB-F-ZIPPER-2-ESM-PRELOAD (Zipper-2 green)
+  MB-F-ZIPPER-2-COARCH-T03-IPC (Zipper-2 green)
+  MB-F-COARCH-T02-STYLING (operator post-manual-gate)
+  MB-F-DISPATCH-WEB-AUTH-PERSISTENCE (operator post-manual-gate)
+  MB-F-COARCH-T02-DEFAULT-LAYOUT (operator post-manual-gate)
+  Total: 9 followups
+
+AUTOMATED GATE SUMMARY (this session's runs):
+  dispatch-workstation typecheck: CLEAN
+  dispatch-workstation build: CLEAN
+  dispatch-workstation test: 7/7
+  dispatch-daemon test: 153/153
+
+MANUAL GATE SUMMARY (operator-verified, prior sessions):
+  Zipper-1: macOS menu bar + kanban webview verified
+  Zipper-2: bottom-drawer layout + splitter drag/persistence verified
+
 ---
 
 ## Operator interventions
