@@ -5,6 +5,14 @@ import { HttpDaemonClient } from './http-daemon-client.js';
 import { createAnthropicClient, classifyAnthropicError } from './anthropic-client.js';
 import { readSplitterPosition, writeSplitterPosition } from './splitter-state.js';
 import type { ChatMessageInput } from '../coarchitect/daemon-client.js';
+import {
+  readBuildDocConfig,
+  writeBuildDocConfig,
+  clearBuildDocConfig,
+  type BuildDocConfig,
+} from '../coarchitect/build-doc-state.js';
+import { readBuildDoc } from '../coarchitect/build-doc-reader.js';
+import { buildContext } from '../coarchitect/context-builder.js';
 
 const MOCK_RESPONSES: Record<string, string> = {
   self_check: `I'll analyze the current state and surface the self-check block.
@@ -60,9 +68,24 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  ipcMain.handle('coarchitect:getBuildDocConfig', () => {
+    return readBuildDocConfig();
+  });
+
+  ipcMain.handle('coarchitect:setBuildDocConfig', (_event, config: unknown) => {
+    writeBuildDocConfig(config as BuildDocConfig);
+  });
+
+  ipcMain.handle('coarchitect:clearBuildDocConfig', () => {
+    clearBuildDocConfig();
+  });
+
   // One-way streaming handler: renderer sends, main pushes chunks back via webContents.send.
+  // Fetches history before posting user message so triggering event is not duplicated in Tier 4.
   ipcMain.on('coarchitect:sendAndStream', (event, content: string) => {
     void (async () => {
+      const historyRows = await daemonClient.fetchHistory().catch(() => []);
+
       try { await daemonClient.postMessage({ role: 'user', content }); } catch {}
 
       const isMock = process.env['MB_MOCK_ANTHROPIC'] === '1';
@@ -72,7 +95,8 @@ export function registerIpcHandlers(): void {
         const key = process.env['MB_MOCK_ANTHROPIC_RESPONSE'] ?? 'default';
         stream = mockStreamChunks(MOCK_RESPONSES[key] ?? MOCK_RESPONSES['default']!);
       } else {
-        const chatClient = createAnthropicClient(loadSystemPrompt());
+        const systemPrompt = loadSystemPrompt();
+        const chatClient = createAnthropicClient(systemPrompt);
         if (!chatClient) {
           event.sender.send('coarchitect:streamError', {
             code: 'auth_error',
@@ -80,7 +104,36 @@ export function registerIpcHandlers(): void {
           });
           return;
         }
-        stream = chatClient.streamMessage(content);
+
+        const buildDocConfig = readBuildDocConfig();
+        if (buildDocConfig) {
+          try {
+            const buildDocResult = await readBuildDoc(
+              buildDocConfig.repoRoot,
+              buildDocConfig.relativePath,
+            );
+            const chatHistory = historyRows
+              .filter((m) => m.role === 'user' || m.role === 'assistant')
+              .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+            const context = buildContext({
+              systemPrompt,
+              buildDocContent: buildDocResult.content,
+              buildDocSha: buildDocResult.sha,
+              daemonState: null,
+              chatHistory,
+              triggeringEvent: content,
+            });
+            const apiMessages = context.messages.filter(
+              (m): m is { role: 'user' | 'assistant'; content: string } =>
+                m.role === 'user' || m.role === 'assistant',
+            );
+            stream = chatClient.streamMessages(context.systemPrompt, apiMessages);
+          } catch {
+            stream = chatClient.streamMessage(content);
+          }
+        } else {
+          stream = chatClient.streamMessage(content);
+        }
       }
 
       let fullResponse = '';

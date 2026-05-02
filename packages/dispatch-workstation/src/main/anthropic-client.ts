@@ -28,11 +28,18 @@ export class AnthropicChatClient {
   ) {}
 
   async *streamMessage(content: string): AsyncIterable<string> {
+    yield* this.streamMessages(this.systemPrompt, [{ role: 'user', content }]);
+  }
+
+  async *streamMessages(
+    systemPrompt: string,
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  ): AsyncIterable<string> {
     const stream = await this.client.messages.create({
       model: CHAT_MODEL,
       max_tokens: MAX_TOKENS,
-      system: this.systemPrompt,
-      messages: [{ role: 'user', content }],
+      system: systemPrompt,
+      messages,
       stream: true,
     });
 

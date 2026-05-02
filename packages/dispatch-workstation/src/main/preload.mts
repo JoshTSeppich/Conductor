@@ -1,10 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 // COARCH-T03: streaming bridge methods added (sendAndStream, onStreamChunk/Done/Error).
+// COARCH-T04: build-doc config bridge methods added (getBuildDocConfig/setBuildDocConfig/clearBuildDocConfig).
 contextBridge.exposeInMainWorld('coarchitectBridge', {
   fetchHistory: () => ipcRenderer.invoke('coarchitect:fetchHistory'),
   postMessage: (msg: unknown) => ipcRenderer.invoke('coarchitect:postMessage', msg),
   sendAndStream: (content: string) => ipcRenderer.send('coarchitect:sendAndStream', content),
+  getBuildDocConfig: () => ipcRenderer.invoke('coarchitect:getBuildDocConfig'),
+  setBuildDocConfig: (config: unknown) => ipcRenderer.invoke('coarchitect:setBuildDocConfig', config),
+  clearBuildDocConfig: () => ipcRenderer.invoke('coarchitect:clearBuildDocConfig'),
   onStreamChunk: (cb: (chunk: string) => void) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const h = (_: unknown, chunk: string) => cb(chunk);
