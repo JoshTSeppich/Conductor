@@ -25,7 +25,7 @@ import { readRegistryV2 } from '../../migration/schema-v2.js';
 import type { ConsoleOps } from '../../console/console-ops.js';
 import type { ConsoleStateCoordinator } from '../../console/state.js';
 import type { BroadcastRegistry } from '../../console/broadcaster.js';
-import { earliestStdoutSeq, getLinesAfter, maxStdoutSeq } from '../../console/buffer.js';
+import { earliestStdoutSeq, getLinesAfter, getLinesBefore, getStats, maxStdoutSeq } from '../../console/buffer.js';
 import type Database from 'better-sqlite3';
 
 export interface ConsoleRoutesDeps {
@@ -148,6 +148,83 @@ export async function registerConsoleRoutes(
       const stdin_seq = deps.state.recordStdinWrite(name, atIso);
 
       reply.code(200).send({ accepted: true, stdin_seq });
+    },
+  );
+
+  // ── GET /v3/sessions/:name/console/buffer ─────────────────────────
+  // Per §4.7.5: paginated scrollback. before_seq + max_lines query
+  // params; default 100, max 5000.
+  app.get<{ Params: { name: string }; Querystring: { before_seq?: string; max_lines?: string } }>(
+    '/v3/sessions/:name/console/buffer',
+    async (request, reply) => {
+      const { name } = request.params;
+      const { before_seq, max_lines } = request.query;
+      const beforeSeq = before_seq != null ? parseInt(before_seq, 10) : null;
+      let maxLines = max_lines != null ? parseInt(max_lines, 10) : 100;
+      if (!Number.isFinite(maxLines) || maxLines <= 0) maxLines = 100;
+      if (maxLines > 5000) maxLines = 5000;
+
+      const registry = await readRegistryV2(deps.registryPath);
+      const session = registry.sessions[name];
+      if (!session) {
+        reply.code(404).send({
+          error: `no session registered as "${name}"`,
+          type: 'SessionNotFound',
+        });
+        return;
+      }
+      const s = deps.state.state(name);
+      if (!s.buffer_enabled) {
+        reply.code(422).send({
+          error: `daemon-side buffering disabled for session "${name}"`,
+          type: 'ConsoleBufferUnavailable',
+        });
+        return;
+      }
+
+      const rows = getLinesBefore(deps.db, name, beforeSeq, maxLines);
+      const stats = getStats(deps.db, name);
+      reply.code(200).send({
+        lines: rows.map((r) => ({
+          stdout_seq: r.stdout_seq,
+          bytes: r.encoding === 'utf8'
+            ? Buffer.from(r.bytes).toString('utf8')
+            : Buffer.from(r.bytes).toString('base64'),
+          encoding: r.encoding,
+        })),
+        earliest_in_buffer_seq: stats.earliest_in_buffer_seq,
+        latest_in_buffer_seq: stats.latest_in_buffer_seq,
+      });
+    },
+  );
+
+  // ── GET /v3/sessions/:name/console/status ─────────────────────────
+  // Per §4.7.6: 8-field status response.
+  app.get<{ Params: { name: string } }>(
+    '/v3/sessions/:name/console/status',
+    async (request, reply) => {
+      const { name } = request.params;
+      const registry = await readRegistryV2(deps.registryPath);
+      const session = registry.sessions[name];
+      if (!session) {
+        reply.code(404).send({
+          error: `no session registered as "${name}"`,
+          type: 'SessionNotFound',
+        });
+        return;
+      }
+      const s = deps.state.state(name);
+      const stats = getStats(deps.db, name);
+      reply.code(200).send({
+        session_name: name,
+        buffer_enabled: s.buffer_enabled,
+        buffer_line_count: stats.count,
+        earliest_in_buffer_seq: stats.earliest_in_buffer_seq,
+        latest_in_buffer_seq: stats.latest_in_buffer_seq,
+        current_subscribers: s.subscriber_count,
+        last_stdout_activity_at: s.last_stdout_activity_at,
+        last_stdin_activity_at: s.last_stdin_activity_at,
+      });
     },
   );
 
