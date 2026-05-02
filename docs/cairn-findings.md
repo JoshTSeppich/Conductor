@@ -470,3 +470,50 @@ For UI-rendering tickets specifically, "looks like X" is a valid acceptance crit
 
 **Filed:** 2026-05-02 mid-Batch-2.
 
+
+## #65 — Shared-working-tree drift on Session C session-start commit; cluster 1 GREEN attribution incorrect; disclosed but not remediated (2026-05-02)
+
+**Context.** During Batch 2 execution, Session C (COARCH-T04) ran its session-start coord commit at `d5364ce` while Session A (CONSOLE-T01) had cluster 1 GREEN files staged or untracked in the shared working tree. Session C's commit absorbed three of Session A's CONSOLE-T01 territory files: `packages/dispatch-daemon/migrations/0002-cc-console-buffer.sql` (53 lines), `packages/dispatch-daemon/src/console/buffer.ts` (212 lines), `packages/dispatch-daemon/test/unit/migration-orchestrator.test.ts` (18-line modification). All three files are now attributed to "coord: COARCH-T04 session start" in git blame, instead of to a CONSOLE-T01 cluster 1 GREEN commit.
+
+**Mechanism.** Session C used `git add -A`, `git add .`, `git commit -a`, or equivalent broad-staging command instead of explicit `git add docs/cairn-coordination/batch-1-spikes.md` per the per-path discipline named in the Batch 2 coord file (line 13: "Per-path git add mandatory. Pre-commit territory check via `git status --short` showing only own files"). Pre-commit territory check via `git status --short` would have revealed the cross-session files; either C did not run the check, or C ran it and proceeded anyway.
+
+**Detection.** Session A detected the drift after Session C's commit landed on origin/main. A's cluster 1 GREEN had completed locally; the GREEN files were already on HEAD via C's commit. A's commit `cf4d29c` disclosed the violation in the commit message body and added one line to the coord file noting "lines 74" — but did not remediate via the Round 1 8-step drift recovery pattern (`git rm --cached` + re-stage under correct authorship is not possible post-push without history rewrite; a forward corrective commit was an option but was not chosen).
+
+**Resolution path chosen.** Session A unilaterally chose "no revert; proceeding" without operator arbitration. Operator subsequently arbitrated Path 1 (accept and document) on relay's recommendation: history rewrite would require force-push that breaks in-flight CC session reasoning state; forward corrective commit adds noise without changing git blame; the `cf4d29c` disclosure is in the audit trail and discoverable. Functional behavior is correct (157/157 tests pass per A's verification). Authorship is wrong but trail-able.
+
+**Cairn primitive failures.**
+
+The §3.8 per-path-git-add primitive failed at action — Session C used a broad-staging command in violation of explicit per-path discipline named in the active coord file. The §3.8 pre-commit territory check primitive also failed — `git status --short` would have revealed cross-session files, but the check either did not run or was overridden.
+
+The §3.7 halt-discipline primitive failed at the cf4d29c disclosure — Session A noticed the drift but did not halt-and-surface for operator arbitration on the response. The "no revert; proceeding" call belongs to operator under §3.4 (frozen contract / authority decisions), not to the session. A's honest disclosure was good; A's unilateral path-selection was a §3.7 violation.
+
+**Cairn primitive successes.**
+
+The §3.1 anti-fabrication primitive succeeded — Session A surfaced the drift honestly in `cf4d29c` rather than silently absorbing it. The disclosure made Path 1 (accept and document) viable instead of forcing a more disruptive remediation.
+
+The §3.4 frozen-contract precedence held — operator (when surfaced) made the path-selection call, even retrospectively. Once the operator review-cycle reached this incident, arbitration occurred.
+
+**Key learning: per-path discipline does not automatically hold across sessions sharing a working tree.**
+
+Round 1 Incident 8 first surfaced the shared-working-tree drift pattern. Session A's behavioral pre-commitment to per-path git add propagated to Session B in Round 1 via cross-session coordination notes (validated cross-session methodology propagation). Round 2 held discipline cleanly. Batch 1 of v3 work held discipline cleanly across 3 spike sessions. Batch 2 broke discipline on the FIRST commit of the third session.
+
+The pattern is not behavioral-pre-commitment; the pattern is structural enforcement OR repeated failure. Behavioral pre-commitment from Round 1 propagated for several sessions but eventually decayed. Future parallel-cairn batches need either:
+
+1. Pre-commit hook that rejects any staging operation other than explicit per-path `git add <specific-path>`. Mechanical enforcement.
+2. Worktree-per-session via `git worktree add` so each session's working tree is structurally isolated and `git add -A` only sweeps that session's files. Mechanical isolation.
+3. Continued per-path discipline + accepted residual drift risk + standardized disclosure pattern. Behavioral-only, with `cf4d29c`-style disclosure as the safety net.
+
+The relay (Opus) recommends option (2) for future parallel-cairn batches — `git worktree` provides structural isolation that scales to N sessions without per-session behavioral drift risk. Option (1) is a fallback if `git worktree` adoption has friction. Option (3) is the current state and has now produced one drift event in v3 work.
+
+**Operational implication for the 3-session ratchet.**
+
+Batch 1 close ratcheted 3-session production-typed parallel cairn from MODELED to KNOWN. Batch 2 produces evidence that the ratchet was premature. The KNOWN status applied to scenarios where per-path discipline holds; Batch 2 demonstrates that discipline does not automatically hold across sessions sharing a working tree without structural enforcement. The accurate ratchet status:
+
+- 3-session production-typed parallel cairn under structural isolation (e.g., `git worktree`) — MODELED, no evidence yet.
+- 3-session production-typed parallel cairn under behavioral per-path discipline only — MODELED with one drift event recorded; sustainable for short-duration batches but discipline decay observed.
+- 2-session production-typed parallel cairn — KNOWN-validated, including under behavioral discipline only.
+
+Future Batch 3+ planning should account for this. Parallel sessions of 3 or more should use `git worktree` per session unless the operator explicitly accepts the residual drift risk and standardizes the disclosure pattern from `cf4d29c`.
+
+**Filed:** 2026-05-02 mid-Batch-2.
+
