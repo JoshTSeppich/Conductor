@@ -223,6 +223,21 @@ _Append-only. Sessions log when they adopt a discipline change observed in anoth
 
 ---
 
+## Final integration
+
+_Append-only. Format: timestamp | event | citation_
+
+2026-05-02T00:00Z | SESSION_START | Final integration session launching. Baseline reads complete: contract (full + both amendments), cairn-findings #51–#63, notes.md all session subsections (B, C, D, Zipper-1, Zipper-2), main.ts current state, FOLLOWUPS.md. No other active sessions. Proceeding to session-start commit, then automated verification. | contract §7.4 / §8.1
+
+BASELINE READ FINDINGS (pre-commit):
+- main.ts chain verified: 151897f (MB-T01) → 68e6528 (Zipper-1) → 039721f (Zipper-2). No build session appears as main.ts modifier. Chain clean.
+- main.ts imports: WEB_UI_URL used at line 72 (query param to loadFile). loadDispatchWeb NOT imported — Zipper-2 correctly removed it per Amendment 2026-04-30 (b). No dead imports.
+- FOLLOWUPS.md: MB-F-COARCH-T02-STYLING, MB-F-DISPATCH-WEB-AUTH-PERSISTENCE, MB-F-COARCH-T02-DEFAULT-LAYOUT all present at lines 93-95 (dedup at b08fe95 holding). Three close-out followups verified once each.
+- Cairn-findings #56–#63 present, format consistent, no modifications to #51–#55.
+- Commit chain coherent: no orphan commits, no force-push markers in git log.
+
+---
+
 ## Operator interventions
 
 _Append-only. Operator logs ad-hoc decisions, halt arbitrations, scope adjustments._
