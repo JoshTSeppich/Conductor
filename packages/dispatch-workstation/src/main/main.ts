@@ -12,6 +12,7 @@ import { WEB_UI_URL } from './webview-loader.js';
 import { registerApplicationMenu } from './menu.js';
 import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.js';
 import { registerIpcHandlers } from './coarchitect-ipc.js';
+import { registerSpawnIpcHandlers } from './spawn-ipc.js';
 import { writeSplitterPosition } from './splitter-state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -51,6 +52,7 @@ async function createWindow(): Promise<void> {
       if (
         msg === 'SHELL_READY' ||
         msg === 'RENDER_OK' ||
+        msg === 'SPAWN_MODAL_OPENED' ||
         msg.startsWith('SPLITTER_LOADED ') ||
         msg.startsWith('MESSAGE_SENT ')
       ) {
@@ -75,6 +77,7 @@ async function createWindow(): Promise<void> {
 app.whenReady().then(async () => {
   registerApplicationMenu();
   registerIpcHandlers();
+  registerSpawnIpcHandlers();
   await createWindow();
   registerLifecycleHooks(app, () => mainWindow, createWindow);
 });
@@ -97,6 +100,56 @@ process.stdin.on('data', (chunk: string | Buffer) => {
       const pos = parseInt(m[1], 10);
       writeSplitterPosition(pos);
       process.stdout.write(`SPLITTER_SAVED ${pos}\n`);
+      return;
+    }
+
+    // MB-T04: CLICK_SPAWN_BUTTON — clicks header [+ Spawn Session] via DOM,
+    // exercising the modal-open path used by spawn-modal-opens.test.ts.
+    if (line === 'CLICK_SPAWN_BUTTON') {
+      if (!mainWindow) return;
+      mainWindow.webContents
+        .executeJavaScript(
+          `(function() {
+            var b = document.querySelector('[data-testid="spawn-button"]');
+            if (!b) { console.error('FIXTURE: spawn-button not found'); return; }
+            b.click();
+          })();`,
+        )
+        .catch((err: Error) => {
+          process.stderr.write('CLICK_SPAWN_BUTTON error: ' + err.message + '\n');
+        });
+      return;
+    }
+
+    // MB-T04: FILL_AND_SUBMIT_SPAWN <repoPath>|<sessionName> — fills the spawn
+    // modal inputs and clicks [Spawn]; exercises the IPC fire-path used by
+    // spawn-modal-emits-intent.test.ts. Pipe separator chosen so shell paths
+    // (which can contain spaces) survive intact; pipe is excluded by the
+    // strict regex below to keep the parse unambiguous.
+    const fillMatch = /^FILL_AND_SUBMIT_SPAWN ([^|]+)\|(.+)$/.exec(line);
+    if (fillMatch) {
+      if (!mainWindow) return;
+      const repoEsc = JSON.stringify(fillMatch[1]);
+      const nameEsc = JSON.stringify(fillMatch[2]);
+      mainWindow.webContents
+        .executeJavaScript(
+          `(function() {
+            var rp = document.querySelector('[data-testid="spawn-repo-path"]');
+            var sn = document.querySelector('[data-testid="spawn-session-name"]');
+            var sb = document.querySelector('[data-testid="spawn-confirm-button"]');
+            if (!rp || !sn || !sb) {
+              console.error('FIXTURE: spawn modal inputs not found');
+              return;
+            }
+            rp.value = ${repoEsc};
+            sn.value = ${nameEsc};
+            sb.click();
+          })();`,
+        )
+        .catch((err: Error) => {
+          process.stderr.write('FILL_AND_SUBMIT_SPAWN error: ' + err.message + '\n');
+        });
+      return;
     }
   }
 });
