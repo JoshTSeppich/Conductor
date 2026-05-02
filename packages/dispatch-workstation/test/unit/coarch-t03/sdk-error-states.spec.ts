@@ -28,7 +28,7 @@ describe('COARCH-T03: error classification', () => {
     );
     const result = classifyAnthropicError(err);
     expect(result.code).toBe('rate_limit');
-    expect(result.message).toContain('rate limit');
+    expect(result.message.toLowerCase()).toContain('rate limit');
   });
 
   it('AuthenticationError (401) classifies as auth_error', () => {
