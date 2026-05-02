@@ -1,0 +1,16 @@
+{
+  "socket": "mb-s06-exp4-52038-95735",
+  "target": "exp4:0.0",
+  "capacity": 100,
+  "measurements": {
+    "total_lines_received": 500,
+    "ring_size": 100,
+    "ring_total_evictions": 400,
+    "ring_first_line": "401",
+    "ring_last_line": "500",
+    "ring_matches_tail_100": true,
+    "newest_line_in_ring_is_500": true,
+    "oldest_line_in_ring_is_401": true,
+    "no_crash": true
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "socket": "mb-s06-exp2-51288-542975",
+  "tmp": "/var/folders/2w/74bl5mvj1jg7dwd_7h004glw0000gn/T/mb-s06-exp2-Jmgi3l",
+  "target": "exp2:0.0",
+  "phases": [
+    {
+      "stage": "measured",
+      "burst_ms": 2000,
+      "bytes_to_consumer_during": 77824,
+      "bytes_to_consumer_after_stop": 81920,
+      "expected_consumer_capacity_bytes": 81920,
+      "observed_lt_unbounded": true,
+      "tmux_server_pid": 51291,
+      "tmux_rss_kb_before": 4048,
+      "tmux_rss_kb_during": 30048,
+      "tmux_rss_kb_after": 30128,
+      "rss_growth_kb_during": 26000,
+      "rss_growth_bounded": true
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "socket": "mb-s06-exp3-51812-296745",
+  "target": "exp3:0.0",
+  "trials": [
+    {
+      "id": "A1_SIGINT_via_PTY_byte_0x03",
+      "mechanism": "paste-buffer with single byte 0x03 (Ctrl-C); PTY ISIG translates to SIGINT for foreground pgrp",
+      "pid_before": 51826,
+      "alive_before": true,
+      "alive_after": false,
+      "look_for": "SIGINT_TRAPPED",
+      "sentinel_match_ms": 0,
+      "sentinel_contains_look_for": true,
+      "sentinel_content": "READY\nSIGINT_TRAPPED\n",
+      "deliver_error": null
+    },
+    {
+      "id": "A2_SIGINT_via_send_keys_C-c",
+      "mechanism": "tmux send-keys -t target C-c (equivalent to byte 0x03)",
+      "pid_before": 51845,
+      "alive_before": true,
+      "alive_after": false,
+      "look_for": "SIGINT_TRAPPED",
+      "sentinel_match_ms": 0,
+      "sentinel_contains_look_for": true,
+      "sentinel_content": "READY\nSIGINT_TRAPPED\n",
+      "deliver_error": null
+    },
+    {
+      "id": "B1_SIGINT_via_kill_pane_pid",
+      "mechanism": "process.kill(panePid, SIGINT) — bash is foreground (using read builtin)",
+      "pid_before": 51861,
+      "alive_before": true,
+      "alive_after": false,
+      "look_for": "SIGINT_TRAPPED",
+      "sentinel_match_ms": 41,
+      "sentinel_contains_look_for": true,
+      "sentinel_content": "READY\nSIGINT_TRAPPED\n",
+      "deliver_error": null
+    },
+    {
+      "id": "A3_SIGTERM_via_PTY_bytes_NOT_DELIVERABLE",
+      "mechanism": "no PTY byte translates to SIGTERM — sends arbitrary text instead; expects SIGTERM_TRAPPED to NOT appear",
+      "pid_before": 51876,
+      "alive_before": true,
+      "alive_after": true,
+      "look_for": "SIGTERM_TRAPPED",
+      "sentinel_match_ms": null,
+      "sentinel_contains_look_for": false,
+      "sentinel_content": "READY\nGOT:attempt-via-text\n",
+      "deliver_error": null
+    },
+    {
+      "id": "B2_SIGTERM_via_kill_pane_pid",
+      "mechanism": "process.kill(panePid, SIGTERM)",
+      "pid_before": 51894,
+      "alive_before": true,
+      "alive_after": false,
+      "look_for": "SIGTERM_TRAPPED",
+      "sentinel_match_ms": 40,
+      "sentinel_contains_look_for": true,
+      "sentinel_content": "READY\nSIGTERM_TRAPPED\n",
+      "deliver_error": null
+    },
+    {
+      "id": "B3_SIGHUP_via_kill_pane_pid",
+      "mechanism": "process.kill(panePid, SIGHUP)",
+      "pid_before": 51909,
+      "alive_before": true,
+      "alive_after": false,
+      "look_for": "SIGHUP_TRAPPED",
+      "sentinel_match_ms": 41,
+      "sentinel_contains_look_for": true,
+      "sentinel_content": "READY\nSIGHUP_TRAPPED\n",
+      "deliver_error": null
+    },
+    {
+      "id": "B4_SIGHUP_via_tmux_kill_session",
+      "mechanism": "tmux kill-session — tears down PTY, kernel raises SIGHUP to controlling pgrp",
+      "pid_before": 51924,
+      "alive_before": true,
+      "alive_after": false,
+      "look_for": "SIGHUP_TRAPPED",
+      "sentinel_match_ms": 0,
+      "sentinel_contains_look_for": true,
+      "sentinel_content": "READY\nSIGHUP_TRAPPED\n",
+      "deliver_error": null
+    }
+  ],
+  "summary": {
+    "total_trials": 7,
+    "sigint_via_pty_byte": true,
+    "sigint_via_send_keys_Cc": true,
+    "sigint_via_kill": true,
+    "sigterm_via_pty_byte": true,
+    "sigterm_via_kill": true,
+    "sighup_via_kill": true,
+    "sighup_via_kill_session": true
+  }
+}

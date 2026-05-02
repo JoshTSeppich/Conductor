@@ -1,0 +1,27 @@
+{
+  "socket": "mb-s06-exp5-52100-877219",
+  "target": "exp5:0.0",
+  "measurements": {
+    "client1_lines_received": 50,
+    "client1_last_seq": 50,
+    "client2_meta": [
+      {
+        "type": "backfill_meta",
+        "ring_oldest": 1,
+        "ring_newest": 79,
+        "missed_count": 29,
+        "requested_last_seq": 50,
+        "backfill_complete": true
+      }
+    ],
+    "client2_lines_received": 60,
+    "reconstructed_min_seq": 1,
+    "reconstructed_max_seq": 110,
+    "reconstructed_count": 110,
+    "no_gap_after_dedupe": true,
+    "overlap_count_between_clients": 0,
+    "ring_oldest_at_reconnect": 1,
+    "ring_newest_at_reconnect": 79,
+    "missed_count_at_reconnect": 29
+  }
+}

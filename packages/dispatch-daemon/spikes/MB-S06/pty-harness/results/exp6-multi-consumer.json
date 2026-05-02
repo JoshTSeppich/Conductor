@@ -1,0 +1,14 @@
+{
+  "socket": "mb-s06-exp6-52245-812345",
+  "target": "exp6:0.0",
+  "measurements": {
+    "reader_invocations_total": 91,
+    "lines_a_at_close": 60,
+    "lines_b_at_close": 60,
+    "a_b_identical_in_overlap": true,
+    "overlap_max_seq": 60,
+    "lines_a_after_close_did_not_grow": true,
+    "lines_b_kept_growing": true,
+    "lines_b_final": 91
+  }
+}

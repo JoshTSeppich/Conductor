@@ -1,0 +1,185 @@
+{
+  "socket": "mb-s06-exp1-51236-272913",
+  "tmp": "/var/folders/2w/74bl5mvj1jg7dwd_7h004glw0000gn/T/mb-s06-exp1-GUvl16",
+  "target": "exp1:0.0",
+  "cases": [
+    {
+      "name": "ascii_short",
+      "expected_len": 13,
+      "captured_len": 13,
+      "captured_total_after": 13,
+      "match": true,
+      "expected_hex_first_64": "68656c6c6f2c20776f726c640a",
+      "captured_hex_first_64": "68656c6c6f2c20776f726c640a"
+    },
+    {
+      "name": "utf8_cjk",
+      "expected_len": 22,
+      "captured_len": 22,
+      "captured_total_after": 35,
+      "match": true,
+      "expected_hex_first_64": "e38193e38293e381abe381a1e381afe4b896e7958c0a",
+      "captured_hex_first_64": "e38193e38293e381abe381a1e381afe4b896e7958c0a"
+    },
+    {
+      "name": "utf8_emoji",
+      "expected_len": 12,
+      "captured_len": 12,
+      "captured_total_after": 47,
+      "match": true,
+      "expected_hex_first_64": "f09fa68af09f9a80e29ca80a",
+      "captured_hex_first_64": "f09fa68af09f9a80e29ca80a"
+    },
+    {
+      "name": "esc_ansi",
+      "expected_len": 13,
+      "captured_len": 13,
+      "captured_total_after": 60,
+      "match": true,
+      "expected_hex_first_64": "1b5b33316d5245441b5b306d0a",
+      "captured_hex_first_64": "1b5b33316d5245441b5b306d0a"
+    },
+    {
+      "name": "large_8kb",
+      "expected_len": 8191,
+      "captured_len": 8191,
+      "captured_total_after": 8251,
+      "match": true,
+      "expected_hex_first_64": "41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141",
+      "captured_hex_first_64": "41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141"
+    },
+    {
+      "name": "mixed_binary_ish",
+      "expected_len": 9,
+      "captured_len": 9,
+      "captured_total_after": 8260,
+      "match": true,
+      "expected_hex_first_64": "09207ec3a9e298830a",
+      "captured_hex_first_64": "09207ec3a9e298830a"
+    }
+  ],
+  "modes": {
+    "default_lf_translation": [
+      {
+        "name": "ascii_short",
+        "expected_len": 13,
+        "captured_len": 13,
+        "captured_total_after": 13,
+        "match": false,
+        "expected_hex_first_64": "68656c6c6f2c20776f726c640a",
+        "captured_hex_first_64": "68656c6c6f2c20776f726c640d"
+      },
+      {
+        "name": "utf8_cjk",
+        "expected_len": 22,
+        "captured_len": 22,
+        "captured_total_after": 35,
+        "match": false,
+        "expected_hex_first_64": "e38193e38293e381abe381a1e381afe4b896e7958c0a",
+        "captured_hex_first_64": "e38193e38293e381abe381a1e381afe4b896e7958c0d"
+      },
+      {
+        "name": "utf8_emoji",
+        "expected_len": 12,
+        "captured_len": 12,
+        "captured_total_after": 47,
+        "match": false,
+        "expected_hex_first_64": "f09fa68af09f9a80e29ca80a",
+        "captured_hex_first_64": "f09fa68af09f9a80e29ca80d"
+      },
+      {
+        "name": "esc_ansi",
+        "expected_len": 13,
+        "captured_len": 13,
+        "captured_total_after": 60,
+        "match": false,
+        "expected_hex_first_64": "1b5b33316d5245441b5b306d0a",
+        "captured_hex_first_64": "1b5b33316d5245441b5b306d0d"
+      },
+      {
+        "name": "large_8kb",
+        "expected_len": 8191,
+        "captured_len": 8191,
+        "captured_total_after": 8251,
+        "match": false,
+        "expected_hex_first_64": "41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141",
+        "captured_hex_first_64": "41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141"
+      },
+      {
+        "name": "mixed_binary_ish",
+        "expected_len": 9,
+        "captured_len": 9,
+        "captured_total_after": 8260,
+        "match": false,
+        "expected_hex_first_64": "09207ec3a9e298830a",
+        "captured_hex_first_64": "09207ec3a9e298830d"
+      }
+    ],
+    "no_replace_dash_r": [
+      {
+        "name": "ascii_short",
+        "expected_len": 13,
+        "captured_len": 13,
+        "captured_total_after": 13,
+        "match": true,
+        "expected_hex_first_64": "68656c6c6f2c20776f726c640a",
+        "captured_hex_first_64": "68656c6c6f2c20776f726c640a"
+      },
+      {
+        "name": "utf8_cjk",
+        "expected_len": 22,
+        "captured_len": 22,
+        "captured_total_after": 35,
+        "match": true,
+        "expected_hex_first_64": "e38193e38293e381abe381a1e381afe4b896e7958c0a",
+        "captured_hex_first_64": "e38193e38293e381abe381a1e381afe4b896e7958c0a"
+      },
+      {
+        "name": "utf8_emoji",
+        "expected_len": 12,
+        "captured_len": 12,
+        "captured_total_after": 47,
+        "match": true,
+        "expected_hex_first_64": "f09fa68af09f9a80e29ca80a",
+        "captured_hex_first_64": "f09fa68af09f9a80e29ca80a"
+      },
+      {
+        "name": "esc_ansi",
+        "expected_len": 13,
+        "captured_len": 13,
+        "captured_total_after": 60,
+        "match": true,
+        "expected_hex_first_64": "1b5b33316d5245441b5b306d0a",
+        "captured_hex_first_64": "1b5b33316d5245441b5b306d0a"
+      },
+      {
+        "name": "large_8kb",
+        "expected_len": 8191,
+        "captured_len": 8191,
+        "captured_total_after": 8251,
+        "match": true,
+        "expected_hex_first_64": "41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141",
+        "captured_hex_first_64": "41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141"
+      },
+      {
+        "name": "mixed_binary_ish",
+        "expected_len": 9,
+        "captured_len": 9,
+        "captured_total_after": 8260,
+        "match": true,
+        "expected_hex_first_64": "09207ec3a9e298830a",
+        "captured_hex_first_64": "09207ec3a9e298830a"
+      }
+    ]
+  },
+  "summary": {
+    "mode_default": {
+      "passed": 0,
+      "failed": 6
+    },
+    "mode_no_replace": {
+      "passed": 6,
+      "failed": 0
+    }
+  }
+}
