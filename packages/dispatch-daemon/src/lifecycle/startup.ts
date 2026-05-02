@@ -63,7 +63,9 @@ import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-me
 import { registerTicketsStateRoutes } from '../routes/v3/tickets-state.js';
 import { registerConsoleRoutes } from '../routes/v3/console.js';
 import { pasteRawBytes as defaultPasteRawBytes } from '../console/paste-raw-bytes.js';
+import { defaultAttachStream } from '../console/pipe-pane-stream.js';
 import { createConsoleStateCoordinator } from '../console/state.js';
+import { createBroadcastRegistry } from '../console/broadcaster.js';
 import type { ConsoleOps } from '../console/console-ops.js';
 import { shutdown } from './shutdown.js';
 
@@ -179,6 +181,13 @@ export interface StartupOpts {
    * tmux. Mirrors the established TmuxOps injection pattern.
    */
   consoleOps?: ConsoleOps;
+  /**
+   * CONSOLE-T01: per-session ring buffer cap override. Default
+   * 50_000 per vision §10.5. Tests use a small value (e.g. 50) to
+   * exercise eviction-window-gap signaling without producing many
+   * thousands of lines.
+   */
+  consoleBufferCap?: number;
 }
 
 export interface StartupHandle {
@@ -389,18 +398,30 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
 
   // CONSOLE-T01: /v3/sessions/:name/console/* surface per
   // CONDUCTOR_API_CONTRACT.md §4.7 (frozen at a7e8d4f, v2.2.0).
-  // Cluster 2 ships POST /stdin; subsequent clusters add WS /stream,
-  // POST /signal, GET /buffer, GET /status. Auth-gated via the same
-  // onRequest hook as the rest of /v3/* per auth.ts:91. Console state
-  // coordinator is daemon-singleton (one map per daemon process).
+  // Cluster 2 ships POST /stdin; cluster 3 adds WS /stream + the
+  // shared per-session BroadcastRegistry (PTY-reader-sharing
+  // invariant per §4.7.1). Subsequent clusters add POST /signal,
+  // GET /buffer, GET /status. Auth-gated via the same onRequest
+  // hook as the rest of /v3/* per auth.ts:91, with the WS path
+  // additionally accepting ?token= per the auth.ts:97 branch added
+  // for this surface.
   const consoleState = createConsoleStateCoordinator();
   const consoleOps: ConsoleOps = opts.consoleOps ?? {
     pasteRawBytes: defaultPasteRawBytes,
+    attachStream: defaultAttachStream,
   };
+  const broadcasters = createBroadcastRegistry({
+    db,
+    consoleOps,
+    state: consoleState,
+    bufferCap: opts.consoleBufferCap,
+  });
   await registerConsoleRoutes(app, {
     registryPath: opts.registryPath,
     consoleOps,
     state: consoleState,
+    broadcasters,
+    db,
   });
 
   // DAEMON-T12: WS /v2/events/stream — real-time event broadcast.

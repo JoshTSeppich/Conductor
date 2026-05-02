@@ -36,7 +36,10 @@ export function recordingConsoleOps(): RecordingConsoleOps {
   const callbacks = new Map<string, (line: Buffer) => void>();
   const attachCounts = new Map<string, number>();
 
-  const ops: ConsoleOps = {
+  // The __fireLine property is the integration point for
+  // spawnTestServer.triggerConsoleLine — fixture-side convention so
+  // server.ts can fire lines without importing this module.
+  const ops: ConsoleOps & { __fireLine?: (target: string, line: Buffer) => void } = {
     async pasteRawBytes(target: string, bytes: Buffer): Promise<void> {
       pastes.push({ target, bytes: Buffer.from(bytes) });
     },
@@ -48,6 +51,13 @@ export function recordingConsoleOps(): RecordingConsoleOps {
           if (callbacks.get(target) === onLine) callbacks.delete(target);
         },
       };
+    },
+    __fireLine(target: string, line: Buffer): void {
+      const cb = callbacks.get(target);
+      if (!cb) {
+        throw new Error(`recordingConsoleOps.__fireLine: no stream attached for ${target}`);
+      }
+      cb(line);
     },
   };
 

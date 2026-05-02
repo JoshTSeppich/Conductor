@@ -95,6 +95,15 @@ export interface TestServer {
    * Added in COARCH-T01 B2.
    */
   db: Database.Database;
+  /**
+   * CONSOLE-T01 cluster 3: synthesize a "pipe-pane delivered a line"
+   * event for the named session. Looks up the session's tmux_target
+   * from the seeded registry and invokes the ConsoleOps stub's
+   * registered onLine callback. Throws if no stream attached
+   * (i.e. no WS subscriber connected yet — tests should subscribe
+   * BEFORE firing lines). Mirrors triggerHandoffWrite ergonomics.
+   */
+  triggerConsoleLine: (sessionName: string, line: Buffer) => Promise<void>;
   close: () => Promise<void>;
 }
 
@@ -185,6 +194,12 @@ export interface SpawnTestServerOpts {
    * without spawning a real tmux session in CI.
    */
   consoleOps?: import('../../src/console/console-ops.js').ConsoleOps;
+  /**
+   * CONSOLE-T01: per-session ring buffer cap override. Default
+   * 50,000 (vision §10.5). Cluster 3 P4 uses a tiny value (50) to
+   * exercise eviction-window-gap signaling cheaply.
+   */
+  consoleBufferCap?: number;
 }
 
 /**
@@ -357,6 +372,7 @@ export async function spawnTestServer(
     staticRoot: opts.staticRoot,
     dbPath,
     consoleOps: opts.consoleOps,
+    consoleBufferCap: opts.consoleBufferCap,
   });
 
   const triggerHandoffWrite = async (
@@ -431,6 +447,38 @@ export async function spawnTestServer(
     }
   };
 
+  // CONSOLE-T01 cluster 3: triggerConsoleLine resolves the session's
+  // tmux_target from the registry and fires the ConsoleOps stub's
+  // registered onLine callback. Only meaningful when the test passed
+  // a recordingConsoleOps stub via opts.consoleOps; otherwise the
+  // production attachStream is in play (no synthetic injection
+  // available — tests using real tmux drive lines via tmux directly).
+  const triggerConsoleLine = async (
+    sessionName: string,
+    line: Buffer,
+  ): Promise<void> => {
+    const reg = await readRegistryV2(registryPath);
+    const session = reg.sessions[sessionName];
+    if (!session) {
+      throw new Error(
+        `triggerConsoleLine: session "${sessionName}" not in registry`,
+      );
+    }
+    const ops = opts.consoleOps as
+      | { __fireLine?: (target: string, line: Buffer) => void }
+      | undefined;
+    // The fixture's recordingConsoleOps exposes a `fireLine(target,
+    // line)` for direct injection. To avoid coupling the fixture to a
+    // specific helper module here, we look it up by convention via the
+    // optional __fireLine property the stub may attach.
+    if (typeof ops?.__fireLine !== 'function') {
+      throw new Error(
+        'triggerConsoleLine: opts.consoleOps does not expose __fireLine. Pass a recordingConsoleOps stub.',
+      );
+    }
+    ops.__fireLine(session.tmux_target, line);
+  };
+
   return {
     app: server,
     port,
@@ -441,6 +489,7 @@ export async function spawnTestServer(
     triggerHandoffWrite,
     triggerGitCommit,
     triggerStatusJsonUpdate,
+    triggerConsoleLine,
     notifyCalls,
     db,
     close,

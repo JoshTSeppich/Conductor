@@ -24,11 +24,27 @@ import type { FastifyInstance } from 'fastify';
 import { readRegistryV2 } from '../../migration/schema-v2.js';
 import type { ConsoleOps } from '../../console/console-ops.js';
 import type { ConsoleStateCoordinator } from '../../console/state.js';
+import type { BroadcastRegistry } from '../../console/broadcaster.js';
+import { earliestStdoutSeq, getLinesAfter, maxStdoutSeq } from '../../console/buffer.js';
+import type Database from 'better-sqlite3';
 
 export interface ConsoleRoutesDeps {
   registryPath?: string;
   consoleOps: ConsoleOps;
   state: ConsoleStateCoordinator;
+  broadcasters: BroadcastRegistry;
+  db: Database.Database;
+}
+
+interface SubscribeMsg {
+  type: 'subscribe';
+  last_seq: number;
+}
+
+function isSubscribeMsg(v: unknown): v is SubscribeMsg {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
+  return o.type === 'subscribe' && typeof o.last_seq === 'number';
 }
 
 interface StdinBody {
@@ -132,6 +148,128 @@ export async function registerConsoleRoutes(
       const stdin_seq = deps.state.recordStdinWrite(name, atIso);
 
       reply.code(200).send({ accepted: true, stdin_seq });
+    },
+  );
+
+  // ── WS /v3/sessions/:name/console/stream ──────────────────────────
+  // Per §4.7.3: subscribe → backfill_meta → replay → live.
+  // Auth handled upstream by the auth hook (?token= query branch added
+  // for this path in lifecycle/auth.ts). PTY reader sharing per
+  // §4.7.1 enforced by BroadcastRegistry (single attachStream per
+  // session regardless of subscriber count).
+  app.get<{ Params: { name: string } }>(
+    '/v3/sessions/:name/console/stream',
+    { websocket: true },
+    (socket, request) => {
+      const { name } = request.params;
+      let unsubscribe: (() => void) | null = null;
+      let subscribed = false;
+
+      const sendJSON = (obj: unknown): void => {
+        try { socket.send(JSON.stringify(obj)); } catch { /* socket closed */ }
+      };
+
+      const teardown = (): void => {
+        if (unsubscribe) {
+          unsubscribe();
+          unsubscribe = null;
+        }
+      };
+      socket.on('close', teardown);
+      socket.on('error', teardown);
+
+      // Register the message handler SYNCHRONOUSLY before any await.
+      // The ws library does NOT buffer messages received before the
+      // 'message' listener is attached; if the client sends subscribe
+      // immediately on open and the server is still awaiting registry
+      // I/O, the message would be dropped. Per-message handler reads
+      // the registry on demand.
+      socket.on('message', (raw) => {
+        if (subscribed) return; // Subsequent subscribes ignored.
+        let msg: unknown;
+        try { msg = JSON.parse(raw.toString('utf8')); }
+        catch { return; }
+        if (!isSubscribeMsg(msg)) {
+          sendJSON({ type: 'error', error: 'expected {type:"subscribe", last_seq:number}' });
+          return;
+        }
+        subscribed = true;
+
+        // Async pipeline: lookup session, attach broadcaster, replay,
+        // go live. The handler doesn't await — we kick it off and let
+        // the WS lifecycle run.
+        void (async () => {
+          try {
+            const registry = await readRegistryV2(deps.registryPath);
+            const session = registry.sessions[name];
+            if (!session) {
+              sendJSON({
+                type: 'error',
+                error: `no session registered as "${name}"`,
+                error_type: 'SessionNotFound',
+              });
+              socket.close(4404, 'SessionNotFound');
+              return;
+            }
+            if (session.state === 'killed') {
+              sendJSON({
+                type: 'error',
+                error: `session "${name}" is in killed state`,
+                error_type: 'SessionNotRunning',
+              });
+              socket.close(4422, 'SessionNotRunning');
+              return;
+            }
+
+            const lastSeq = (msg as SubscribeMsg).last_seq;
+            const currentSeq = maxStdoutSeq(deps.db, name);
+            const earliest = earliestStdoutSeq(deps.db, name);
+            // backfill_complete = true iff there's NO eviction-window
+            // gap between the client's last_seq and what's still in
+            // the ring. If the buffer is empty, no gap by definition.
+            const backfillComplete =
+              earliest == null ? true : earliest <= lastSeq + 1;
+            sendJSON({
+              type: 'backfill_meta',
+              current_seq: currentSeq,
+              available_from_seq: earliest ?? 0,
+              backfill_complete: backfillComplete,
+            });
+
+            // Replay backfill (lines with stdout_seq > lastSeq).
+            const backfill = getLinesAfter(deps.db, name, lastSeq, 50_000);
+            for (const row of backfill) {
+              sendJSON({
+                type: 'line',
+                stdout_seq: row.stdout_seq,
+                bytes: row.encoding === 'utf8'
+                  ? Buffer.from(row.bytes).toString('utf8')
+                  : Buffer.from(row.bytes).toString('base64'),
+                encoding: row.encoding,
+              });
+            }
+
+            // Subscribe to live broadcast.
+            const broadcaster = deps.broadcasters.forSession(name, session.tmux_target);
+            unsubscribe = broadcaster.subscribe((live) => {
+              sendJSON({
+                type: 'line',
+                stdout_seq: live.stdout_seq,
+                bytes: live.encoding === 'utf8'
+                  ? live.bytes.toString('utf8')
+                  : live.bytes.toString('base64'),
+                encoding: live.encoding,
+              });
+            });
+          } catch (err) {
+            request.log.error(
+              { err: (err as Error).message },
+              'console stream subscribe pipeline error',
+            );
+            try { socket.close(1011, 'internal error'); } catch {}
+          }
+        })();
+      });
     },
   );
 }

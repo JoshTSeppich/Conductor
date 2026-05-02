@@ -13,6 +13,11 @@
  * with sendSignal. Each cluster grows the interface additively.
  */
 
+export interface ConsoleStreamHandle {
+  /** Stop the stream; idempotent. */
+  close(): void;
+}
+
 export interface ConsoleOps {
   /**
    * Write `bytes` to the tmux pane at `target` via `tmux paste-buffer
@@ -29,4 +34,24 @@ export interface ConsoleOps {
    * `BackpressureRejected` per the §4.7 error envelope.
    */
   pasteRawBytes(target: string, bytes: Buffer): Promise<void>;
+
+  /**
+   * Open a STDOUT byte stream from the tmux pane at `target` and call
+   * `onLine` for each newline-terminated line as it arrives. Returns
+   * a handle whose `close()` stops the stream.
+   *
+   * Per CONDUCTOR_API_CONTRACT.md §4.7.1 PTY-reader-sharing invariant:
+   * the route handler maintains AT MOST ONE active stream per
+   * tmux target across N WS subscribers. Subscribers consume the
+   * daemon-side broadcast; they do NOT each spawn their own stream.
+   * Validated KNOWN at MB-S06 §6 (single shared pipe-pane reader
+   * fans out to multiple consumers, no double-read).
+   *
+   * Production impl wraps `tmux pipe-pane -O -t <target> 'cat > <fifo>'`
+   * with a Node readline over the fifo (KNOWN pattern from MB-S06
+   * harness exp4/5/6). Tests inject a recording stub whose attachStream
+   * registers a callback that the test can fire synthetically via
+   * the spawnTestServer.triggerConsoleLine helper.
+   */
+  attachStream(target: string, onLine: (line: Buffer) => void): ConsoleStreamHandle;
 }

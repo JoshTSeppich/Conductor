@@ -93,7 +93,12 @@ export function createAuthHook(
     }
 
     let presented: string | undefined;
-    if (pathOnly === '/v2/events/stream') {
+    // CONSOLE-T01: §4.7.3 + §4.7.1 — WS /v3/sessions/:name/console/stream
+    // also takes ?token= per browser-WebSocket-API limitation. Path
+    // shape: /v3/sessions/<name>/console/stream.
+    const isV3ConsoleStreamWs =
+      pathOnly.startsWith('/v3/sessions/') && pathOnly.endsWith('/console/stream');
+    if (pathOnly === '/v2/events/stream' || isV3ConsoleStreamWs) {
       const url = new URL(request.url, 'http://localhost');
       presented = url.searchParams.get('token') ?? undefined;
     } else {
