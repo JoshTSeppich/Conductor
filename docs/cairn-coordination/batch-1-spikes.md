@@ -14,3 +14,24 @@ First to draft claims §11. Second accepts §12. Append claim notice below when 
 
 (append below this line)
 
+
+---
+
+## Batch update — 2026-05-02
+
+Original Batch 1 plan (4 spike sessions MB-S01/S02/S03/S04) is OBSOLETE — all five MB-S0X spikes already shipped (MB-S01-S05 ADRs on disk). MB-S04 ADR slot occupied by vitest-electron-spawn (different scope).
+
+NEW batch composition: 3 parallel sessions on different territories of the v3 build.
+
+- Session A: MB-S06 — tmux PTY stdin/stdout bidirectional streaming (CC-console new-work spike per vision §10).
+- Session B: MB-T04 — spawn button + repo picker modal in shell (Tier B spawn flow start).
+- Session C: COARCH-T03 — Anthropic SDK + Sonnet 4.6 real wiring of COARCH-T02 chat panel scaffold.
+
+Coordination surfaces:
+- Session A territory: docs/adr/MB-S06-*, packages/dispatch-daemon/spikes/MB-S06/. Disjoint from B and C.
+- Session B territory: packages/dispatch-workstation/src/spawn/ (or per shell layout), docs/adr/MB-T04-*. Disjoint from A and C.
+- Session C territory: packages/dispatch-workstation/coarchitect/ (existing scaffold). Disjoint from A and B.
+- Shared read-only: WORKSTATION_CONTRACT.md, CONDUCTOR_API_CONTRACT.md (both frozen at v2.1.0), v3 schema (frozen at 232fbaa), SECTION_10_CC_CONSOLE.md (frozen at eac381e), all MB-S0X ADRs (read-only reference).
+
+Per-commit-push mandatory. Per-path git add mandatory. Pre-commit territory check via `git status --short` showing only own files.
+
