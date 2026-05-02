@@ -21,6 +21,7 @@
     "esbuild": "^0.25.12"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.92.0",
     "dispatch-core": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
