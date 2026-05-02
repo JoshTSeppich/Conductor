@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@electron/packager": "^18.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "electron": "^41.3.0",
@@ -23,6 +24,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
     "dispatch-core": "workspace:*",
+    "js-yaml": "^4.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }
