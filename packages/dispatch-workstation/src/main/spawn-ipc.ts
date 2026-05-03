@@ -32,6 +32,7 @@ import {
   type SpawnErrorType,
 } from './spawn-handler.js';
 import type { SpawnEnv } from './spawn-env.js';
+import { HttpSessionListClient } from './session-cap.js';
 
 const execFileP = promisify(execFile);
 
@@ -49,6 +50,10 @@ export interface SpawnErrorReply {
     message: string;
     sessionName?: string;
     stderr?: string;
+    /** Active session count at cap-check time (SessionCapExceeded only). */
+    activeCount?: number;
+    /** Configured cap (SessionCapExceeded only). */
+    cap?: number;
   };
 }
 
@@ -63,6 +68,8 @@ function toErrorReply(err: unknown): SpawnErrorReply {
       message: e.message ?? String(err),
       sessionName: e.sessionName,
       stderr: e.stderr,
+      activeCount: e.activeCount,
+      cap: e.cap,
     },
   };
 }
@@ -203,6 +210,9 @@ export function defaultSpawnHandlerDeps(opts: DefaultDepsOpts = {}): SpawnHandle
     registerSession: defaultRegisterSession,
     sourceEnv: process.env,
     apiKey: readApiKey(opts.persistedApiKey ?? null),
+    // MB-T06: production cap-check wiring against GET /v2/sessions.
+    // sessionCap omitted → DEFAULT_SESSION_CAP=5 from session-cap.ts applies.
+    sessionListClient: new HttpSessionListClient(),
   };
 }
 
