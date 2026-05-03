@@ -517,3 +517,24 @@ Future Batch 3+ planning should account for this. Parallel sessions of 3 or more
 
 **Filed:** 2026-05-02 mid-Batch-2.
 
+
+## #66 — Second relay-drafted ticket prompt contradicted frozen contracts (MB-T07); pattern of escalating divergence; cascade verification failure (2026-05-02)
+
+**Context.** During Batch 5 setup, the operator-Opus relay drafted three CC session prompts (MB-T06, MB-T07, MB-T08). The MB-T07 prompt invented a REST proposal surface (`GET /v3/orchestrator/proposals`, `POST .../accept`, `POST .../reject`), a WebSocket proposal-stream protocol (`proposal:created`, `proposal:status-changed`, `proposal:removed`), a `Proposal` data shape, an "Orchestrator Proposals" lane, "Accept/Reject" pill naming, and an optimistic `proposed → in-progress → complete` status state machine. None of these surfaces exist in the frozen contracts or the frozen runtime schema. They contradict the frozen V3_TICKETS.md MB-T07 spec across 11 of 11 axes per Session B's halt ADR.
+
+**Detection.** Session B (MB-T07) opened, read WORKSTATION_CONTRACT.md §5/§6/§7 + dispatch-core/src/v3/schema.ts + CONDUCTOR_API_CONTRACT.md §4.6 + V3_TICKETS.md MB-T07 per the prompt's "read these documents before starting" instruction, detected the contradiction across 11 axes. Halted before writing any RED test, any production code, or touching any frozen-contract file. Wrote a halt ADR at docs/adr/MB-T07-prompt-contract-divergence-halt.md enumerating the per-axis divergence + three resolution options. Closed under §3.7 halt discipline with honest "0 of 5 clusters started" framing.
+
+**Resolution.** Operator arbitrated (a) contract authoritative — relay redrafts the prompt to align with frozen surfaces. The actual MB-T07 surface is IPC card events (orchestrator-card-rendered/-superseded/-update shell→webview; card-approved/card-declined/multi-choice-selected webview→shell) per WC §7.1, with audit-log writes via POST /v3/orchestrator/audit per WC §6.2 when operator clicks pills. CardOutput / MultiChoiceCardOutput shapes per dispatch-core/src/v3/schema.ts. Approve/Decline naming per WC §5.3. No dedicated PROPOSALS column per WC §5.5.
+
+**Pattern: two relay-drafted prompts in two batches contradicted frozen contracts.** Finding #64 documented the first event (CONSOLE-T02 direction error, 2 of 5 axes wrong). This finding documents the second event (MB-T07 surface error, 11 of 11 axes wrong). Failure mode is escalating: 2/5 → 11/11. The relay's modeled understanding of v3 endpoint surfaces and IPC contracts is structurally unreliable.
+
+**Cascade observation: relay verification commands also failed.** When the operator asked the relay to verify Session B's halt analysis, the relay ran a sed command with broken regex pattern that returned empty output for §5/§6/§7. The relay almost dismissed Session B's halt as fabricated section numbers before recognizing the regex error and verifying with a corrected grep command. Three layers of relay error in one sequence: original prompt drafted from modeled recall, verification command miscalled, empty output almost interpreted as evidence Session B was wrong. Anti-fabrication discipline must hold for verification commands too — empty results from a verification command are far more likely to mean the command is wrong than that the substance being verified is wrong.
+
+**Cairn primitives validated.** §3.4 frozen-contract precedence correctly placed authority with WC §5/§6/§7 + v3/schema.ts + V3_TICKETS.md MB-T07 over the relay-drafted prompt. §3.7 halt discipline correctly fired. §3.1 anti-fabrication held at the session boundary.
+
+**Mitigation: relay must read frozen contract sections and schema files at draft time.** Going forward, any relay drafting of a ticket prompt that touches a frozen contract surface MUST be preceded by a cat or sed-with-correct-line-ranges read of the actual frozen text, not by modeled recall. Two events in two batches puts the failure mode at predictable enough that the verification overhead is now load-bearing.
+
+**Operational implication.** Sessions A (MB-T06) and C (MB-T08) are in different territories and unaffected. The redrafted MB-T07 fires after A and C close as a single-session worktree run on a fresh branch (session-B/mb-t07-redraft).
+
+**Filed:** 2026-05-02 mid-Batch-5.
+
