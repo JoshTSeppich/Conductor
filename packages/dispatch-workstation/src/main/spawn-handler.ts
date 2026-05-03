@@ -1,0 +1,205 @@
+// MB-T05 — spawn handler: tmux new-session + daemon registration.
+//
+// Per WORKSTATION_CONTRACT.md §8.1 amended (cf1848a) three-clause bar:
+//   (a) registered session structurally identical to CLI-spawned (KNOWN per MB-S02 §5)
+//   (b) PTY identity (KNOWN per MB-S02 §4)
+//   (c) env compatibility within documented allowlist (this module)
+//
+// Per WORKSTATION_CONTRACT.md §3.3: spawn-new-session payload =
+// repoPath + sessionName (+ optional initialPrompt deferred per
+// MB-F-MB-T04-INITIAL-PROMPT followup).
+//
+// Cluster 2 ships tmux spawn execution; cluster 3 adds the daemon
+// registration step. Both are in this single module so the handler
+// is one cohesive read-end-to-end pipeline.
+//
+// Dependencies are injected for testability — production startup wires
+// the real tmux + daemon-client implementations; unit tests inject
+// recording stubs.
+
+import type { SpawnEnv } from './spawn-env.js';
+import { buildSpawnEnv } from './spawn-env.js';
+
+/**
+ * Workstation-side error types per WORKSTATION_CONTRACT.md §6.5
+ * discriminated-union shape. The error_type field is the discriminator;
+ * additional fields per type carry context for the renderer.
+ */
+export type SpawnErrorType =
+  | 'SpawnFailed'
+  | 'SessionNameExists'
+  | 'DaemonUnreachable'
+  | 'SessionAlreadyRegistered';
+
+export interface WorkstationSpawnError extends Error {
+  error_type: SpawnErrorType;
+  sessionName?: string;
+  stderr?: string;
+}
+
+function makeError(
+  error_type: SpawnErrorType,
+  message: string,
+  extra: Partial<WorkstationSpawnError> = {},
+): WorkstationSpawnError {
+  const e = new Error(message) as WorkstationSpawnError;
+  e.error_type = error_type;
+  Object.assign(e, extra);
+  return e;
+}
+
+/**
+ * Daemon registration response shape (subset of v2 SessionV2 per
+ * dispatch-core/src/v2/schema.ts). The handler returns the daemon-
+ * acknowledged session for the renderer to display.
+ */
+export interface RegisteredSession {
+  name: string;
+  cwd: string;
+  tmux_target: string;
+  handoff_path: string;
+  state: string;
+}
+
+export interface SpawnSessionRequest {
+  /** Absolute path to the repo cwd for the spawned tmux session. */
+  repoPath: string;
+  /** Operator-chosen session name; uniqueness enforced both tmux-side and daemon-side. */
+  sessionName: string;
+}
+
+export interface SpawnHandlerDeps {
+  /**
+   * Run `tmux new-session` with the given args + env. Throws on
+   * non-zero exit; the thrown Error MAY have a `stderr` field carrying
+   * the tmux stderr output for SessionNameExists detection.
+   */
+  runTmuxNewSession(args: readonly string[], env: SpawnEnv): Promise<void>;
+  /**
+   * Run `tmux kill-session -t <sessionName>`. Best-effort cleanup;
+   * errors are swallowed by the caller.
+   */
+  runTmuxKillSession(sessionName: string): Promise<void>;
+  /**
+   * POST to daemon /v2/sessions; throws WorkstationSpawnError on failure
+   * (or a plain Error wrapped by the handler).
+   */
+  registerSession(req: {
+    name: string;
+    cwd: string;
+    tmux_target: string;
+  }): Promise<RegisteredSession>;
+  /**
+   * Source env (typically Electron's process.env). Filtered through
+   * buildSpawnEnv per the §8.1 amended allowlist.
+   */
+  sourceEnv: NodeJS.ProcessEnv | Record<string, string | undefined>;
+  /**
+   * Anthropic API key decrypted from Electron safeStorage per
+   * WORKSTATION_CONTRACT.md §8.3. Injected into the spawned env.
+   */
+  apiKey: string;
+}
+
+export interface SpawnSessionResult {
+  sessionName: string;
+  /** Daemon-side identifier (currently same as sessionName per v2 schema). */
+  sessionId: string;
+  /**
+   * Whether the CC-console panel is mounted in the renderer. CONSOLE-T03
+   * mounts the panel separately; spawn-handler does NOT auto-mount.
+   */
+  panelMounted: false;
+}
+
+/**
+ * Heuristic: tmux's "duplicate session" stderr is the canonical signal
+ * for name collision. Match case-insensitively to be robust against
+ * tmux-version variations.
+ */
+function isDuplicateSessionError(stderr: string | undefined): boolean {
+  if (!stderr) return false;
+  return /duplicate session/i.test(stderr);
+}
+
+/**
+ * Construct the tmux argv for spawning a new claude-running session.
+ * Args are stable contract per cluster 2 P1.
+ */
+function buildTmuxArgs(req: SpawnSessionRequest): readonly string[] {
+  return [
+    'new-session',
+    '-d',
+    '-s', req.sessionName,
+    '-c', req.repoPath,
+    'claude',
+  ];
+}
+
+/**
+ * Spawn a new tmux session running `claude` in `repoPath`, then
+ * register it with the daemon.
+ *
+ * Failure modes (per WORKSTATION_CONTRACT.md §6.5 typed error union):
+ *   SessionNameExists       — tmux refused due to existing session of same name
+ *   SpawnFailed             — tmux exited non-zero for any other reason
+ *   DaemonUnreachable       — fetch to daemon failed; tmux session killed for cleanup
+ *   SessionAlreadyRegistered— daemon returned 409; tmux session killed for cleanup
+ */
+export async function spawnSession(
+  req: SpawnSessionRequest,
+  deps: SpawnHandlerDeps,
+): Promise<SpawnSessionResult> {
+  const env = buildSpawnEnv(deps.sourceEnv, deps.apiKey);
+  const args = buildTmuxArgs(req);
+
+  // Step 1: tmux new-session.
+  try {
+    await deps.runTmuxNewSession(args, env);
+  } catch (err) {
+    const stderr = (err as Error & { stderr?: string }).stderr;
+    if (isDuplicateSessionError(stderr)) {
+      throw makeError(
+        'SessionNameExists',
+        `tmux session "${req.sessionName}" already exists`,
+        { sessionName: req.sessionName, stderr },
+      );
+    }
+    throw makeError(
+      'SpawnFailed',
+      `tmux new-session failed: ${(err as Error).message}`,
+      { sessionName: req.sessionName, stderr },
+    );
+  }
+
+  // Step 2: daemon registration. Tmux target is conventionally
+  // <sessionName>:0.0 (window 0, pane 0) for a freshly-created
+  // detached session.
+  const tmuxTarget = `${req.sessionName}:0.0`;
+  let registered: RegisteredSession;
+  try {
+    registered = await deps.registerSession({
+      name: req.sessionName,
+      cwd: req.repoPath,
+      tmux_target: tmuxTarget,
+    });
+  } catch (err) {
+    // Cleanup: kill the tmux session so we don't orphan it.
+    await deps.runTmuxKillSession(req.sessionName).catch(() => {});
+    const we = err as Partial<WorkstationSpawnError>;
+    if (we.error_type === 'DaemonUnreachable' || we.error_type === 'SessionAlreadyRegistered') {
+      throw err;
+    }
+    throw makeError(
+      'DaemonUnreachable',
+      `daemon registration failed: ${(err as Error).message}`,
+      { sessionName: req.sessionName },
+    );
+  }
+
+  return {
+    sessionName: registered.name,
+    sessionId: registered.name,
+    panelMounted: false,
+  };
+}
