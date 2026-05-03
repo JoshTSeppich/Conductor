@@ -50,6 +50,10 @@ export interface SpawnErrorReply {
     message: string;
     sessionName?: string;
     stderr?: string;
+    /** Active session count at cap-check time (SessionCapExceeded only). */
+    activeCount?: number;
+    /** Configured cap (SessionCapExceeded only). */
+    cap?: number;
   };
 }
 
@@ -64,6 +68,8 @@ function toErrorReply(err: unknown): SpawnErrorReply {
       message: e.message ?? String(err),
       sessionName: e.sessionName,
       stderr: e.stderr,
+      activeCount: e.activeCount,
+      cap: e.cap,
     },
   };
 }
