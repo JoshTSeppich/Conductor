@@ -47,12 +47,16 @@ describe('MB-T07 cluster 1 — OrchestratorCard rendering', () => {
     it('renders action, target, rationale text', () => {
       render(<OrchestratorCard card_id="card-1" card={baseCard} />);
       expect(screen.getByTestId('orchestrator-card')).toBeInTheDocument();
-      // action surfaces in the proposal text — shown in uppercase as a badge
-      // similar to how SessionCard renders state. The token "SEND" is the
-      // discriminator the operator scans for.
-      expect(screen.getByText(/send/i)).toBeInTheDocument();
+      // Action surfaces as a uppercase badge (data-testid stable contract for
+      // the operator's action discriminator). Token rendered is the lowercase
+      // ActionTypeEnum value; CSS `uppercase` handles the visual treatment.
+      expect(screen.getByTestId('orchestrator-card-action')).toHaveTextContent(
+        'send',
+      );
       expect(screen.getByText('sherpa-001')).toBeInTheDocument();
-      expect(screen.getByText(/triggering event maps to send/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/triggering event maps to send/i),
+      ).toBeInTheDocument();
     });
 
     it('renders Decline (red) and Approve (green) pills per WC §5.3', () => {
