@@ -30,6 +30,14 @@ export interface OrchestratorCardProps {
    * envelope on receipt.
    */
   is_stale?: boolean;
+  /**
+   * True when the operator declined the card and the audit-write
+   * confirmed. Pills + free-form field collapse to a "Declined"
+   * lifecycle-outcome badge so the decision is visible without taking
+   * up active card real-estate. Parent owns the actual
+   * remove-from-list behavior; this is the in-place visual surface.
+   */
+  is_dismissed?: boolean;
   onApprove?: (free_form_text: string) => void;
   onDecline?: (reason: string) => void;
   onMultiChoiceSelect?: (
@@ -46,6 +54,7 @@ const ORCHESTRATOR_CARD_TINT_CLASSES =
   'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800';
 
 const STALE_CLASSES = 'opacity-60 grayscale';
+const DISMISSED_CLASSES = 'opacity-50';
 
 function CardActionProposal({
   card,
@@ -187,16 +196,21 @@ export function OrchestratorCard({
   card,
   superseded_card_ids,
   is_stale,
+  is_dismissed,
   onApprove,
   onDecline,
   onMultiChoiceSelect,
 }: OrchestratorCardProps): ReactNode {
-  const staleClass = is_stale ? ` ${STALE_CLASSES}` : '';
+  const lifecycleClass = is_dismissed
+    ? ` ${DISMISSED_CLASSES}`
+    : is_stale
+      ? ` ${STALE_CLASSES}`
+      : '';
   return (
     <div
       data-testid="orchestrator-card"
       data-card-id={card_id}
-      className={`p-2 rounded shadow border ${ORCHESTRATOR_CARD_TINT_CLASSES} flex flex-col gap-1${staleClass}`}
+      className={`p-2 rounded shadow border ${ORCHESTRATOR_CARD_TINT_CLASSES} flex flex-col gap-1${lifecycleClass}`}
     >
       {superseded_card_ids && superseded_card_ids.length > 0 && (
         <p
@@ -206,7 +220,9 @@ export function OrchestratorCard({
           supersedes: {superseded_card_ids.join(', ')}
         </p>
       )}
-      {card.type === 'card' ? (
+      {is_dismissed ? (
+        <DismissedBody card={card} />
+      ) : card.type === 'card' ? (
         <CardVariant
           card_id={card_id}
           card={card}
@@ -221,5 +237,27 @@ export function OrchestratorCard({
         />
       )}
     </div>
+  );
+}
+
+function DismissedBody({
+  card,
+}: {
+  card: CardOutput | MultiChoiceCardOutput;
+}): ReactNode {
+  return (
+    <>
+      {card.type === 'card' ? (
+        <CardActionProposal card={card} />
+      ) : (
+        <p className="text-sm font-medium">{card.question}</p>
+      )}
+      <span
+        data-testid="orchestrator-card-dismissed-badge"
+        className="self-start text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+      >
+        Declined
+      </span>
+    </>
   );
 }
