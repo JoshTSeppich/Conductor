@@ -57,8 +57,12 @@ export function ConsolePanel({
       consoleBridge.onConsoleClose(() => {
         setState(INITIAL_STATE);
       }),
-      consoleBridge.onStdoutChunk(() => {
-        // Cluster 2 fills this in.
+      consoleBridge.onStdoutChunk((p) => {
+        const t = terminalAdapterRef.current;
+        if (!t) return; // No adapter yet — chunk arrived before console:open.
+        const data =
+          p.encoding === 'base64' ? decodeBase64Utf8(p.bytes) : p.bytes;
+        t.write(data);
       }),
       consoleBridge.onGap(() => {
         // Cluster 4 fills this in.
@@ -103,4 +107,24 @@ export function ConsolePanel({
       <div data-testid="console-terminal" ref={terminalContainerRef} />
     </div>
   );
+}
+
+/** Base64 → UTF-8 decoder usable in browser + Node. atob handles bytes; we
+ * then re-decode through TextDecoder for valid UTF-8. Used by the
+ * onStdoutChunk handler when the daemon tags a chunk as base64-encoded
+ * (CONDUCTOR_API_CONTRACT.md §4.7.3: lines containing invalid UTF-8 sequences
+ * are sent base64 so the JSON envelope stays well-formed). xterm.js
+ * tolerates malformed UTF-8 via its own decoder + replacement-character
+ * fallback, so the worst case for an actually-malformed chunk is rendered
+ * U+FFFDs in the terminal — never a panel crash. */
+function decodeBase64Utf8(b64: string): string {
+  if (typeof atob === 'function') {
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new TextDecoder('utf-8', { fatal: false }).decode(arr);
+  }
+  // Node fallback (build target is browser; this branch is defensive for
+  // unit-test environments where atob may be absent on older Node releases).
+  return Buffer.from(b64, 'base64').toString('utf8');
 }
