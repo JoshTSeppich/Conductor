@@ -19,6 +19,11 @@
 
 import type { SpawnEnv } from './spawn-env.js';
 import { buildSpawnEnv } from './spawn-env.js';
+import {
+  checkSpawnCapacity,
+  SessionCapExceededError,
+  type SessionListClient,
+} from './session-cap.js';
 
 /**
  * Workstation-side error types per WORKSTATION_CONTRACT.md §6.5
@@ -29,12 +34,17 @@ export type SpawnErrorType =
   | 'SpawnFailed'
   | 'SessionNameExists'
   | 'DaemonUnreachable'
-  | 'SessionAlreadyRegistered';
+  | 'SessionAlreadyRegistered'
+  | 'SessionCapExceeded';
 
 export interface WorkstationSpawnError extends Error {
   error_type: SpawnErrorType;
   sessionName?: string;
   stderr?: string;
+  /** Active session count at cap-check time (SessionCapExceeded only). */
+  activeCount?: number;
+  /** Configured cap (SessionCapExceeded only). */
+  cap?: number;
 }
 
 function makeError(
@@ -99,6 +109,23 @@ export interface SpawnHandlerDeps {
    * WORKSTATION_CONTRACT.md §8.3. Injected into the spawned env.
    */
   apiKey: string;
+  /**
+   * Daemon session-list client for the MB-T06 pre-spawn cap check.
+   * Production wiring uses HttpSessionListClient against GET /v2/sessions
+   * (defaultSpawnHandlerDeps in spawn-ipc.ts always supplies it).
+   *
+   * Optional for the test affordance: legacy MB-T05 unit tests that
+   * exercise tmux/daemon paths and do not assert cap-check behavior may
+   * omit this; cap check then no-ops (safe under test only). Cluster 3
+   * tests explicitly supply it to verify cap behavior.
+   */
+  sessionListClient?: SessionListClient;
+  /**
+   * Concurrent-session cap (default DEFAULT_SESSION_CAP from session-cap.ts).
+   * Configurable per MB-F-MB-T06-CAP-SETTINGS followup; threaded through
+   * for tests + future settings UI.
+   */
+  sessionCap?: number;
 }
 
 export interface SpawnSessionResult {
@@ -150,6 +177,39 @@ export async function spawnSession(
   req: SpawnSessionRequest,
   deps: SpawnHandlerDeps,
 ): Promise<SpawnSessionResult> {
+  // MB-T06 pre-spawn cap check. Fires BEFORE buildSpawnEnv + tmux invocation
+  // to avoid spawning a tmux session that would immediately need to be
+  // killed for cap violation (per ticket spec ordering invariant).
+  // Daemon-unreachable failures fail closed per WORKSTATION_CONTRACT.md §6.5
+  // — we route them through the same DaemonUnreachable typed envelope used
+  // by the registration step. If sessionListClient is absent (legacy test
+  // fixtures), the cap check is skipped — production always supplies it.
+  if (deps.sessionListClient) {
+    try {
+      await checkSpawnCapacity(deps.sessionListClient, deps.sessionCap);
+    } catch (err) {
+      if (err instanceof SessionCapExceededError) {
+        // Attach sessionName for the IPC envelope; the error already
+        // carries error_type='SessionCapExceeded' + activeCount + cap as
+        // typed fields per session-cap.ts.
+        (err as SessionCapExceededError & { sessionName?: string }).sessionName =
+          req.sessionName;
+        throw err;
+      }
+      const we = err as Partial<WorkstationSpawnError>;
+      if (we.error_type === 'DaemonUnreachable') {
+        throw makeError('DaemonUnreachable', (err as Error).message, {
+          sessionName: req.sessionName,
+        });
+      }
+      throw makeError(
+        'DaemonUnreachable',
+        `cap check failed: ${(err as Error).message}`,
+        { sessionName: req.sessionName },
+      );
+    }
+  }
+
   const env = buildSpawnEnv(deps.sourceEnv, deps.apiKey);
   const args = buildTmuxArgs(req);
 
