@@ -9,11 +9,15 @@ import { app, BrowserWindow } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { WEB_UI_URL } from './webview-loader.js';
-import { registerApplicationMenu } from './menu.js';
+import { registerApplicationMenu, rebuildApplicationMenu } from './menu.js';
 import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.js';
 import { registerIpcHandlers } from './coarchitect-ipc.js';
 import { registerSpawnIpcHandlers } from './spawn-ipc.js';
-import { registerConsoleIpcHandlers } from './console-ipc.js';
+import {
+  registerConsoleIpcHandlers,
+  DEFAULT_PANEL_CAP,
+  type ConsoleIpcController,
+} from './console-ipc.js';
 import { writeSplitterPosition } from './splitter-state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -78,19 +82,46 @@ async function createWindow(): Promise<void> {
   await mainWindow.loadFile(SHELL_PATH, { query: { webUiUrl: WEB_UI_URL } });
 }
 
+let consoleController: ConsoleIpcController | null = null;
+
+/** Refresh the "CC Console" native menu with current daemon sessions +
+ * controller panel count. Daemon-session-list subscription (so the menu
+ * tracks /v2/sessions changes automatically) is a CONSOLE-T03 followup —
+ * see FOLLOWUPS.md MB-F-CONSOLE-T03-MENU-SUBSCRIPTION. For v3.0 ship the
+ * caller invokes refreshConsoleMenu() with whatever session list it has;
+ * default empty list at app start is the safe fallback. */
+function refreshConsoleMenu(sessions: readonly string[] = []): void {
+  rebuildApplicationMenu({
+    consoleMenu: {
+      sessions,
+      panelCount: consoleController?.panelCount() ?? 0,
+      panelCap: DEFAULT_PANEL_CAP,
+      onOpen: (sessionName) => {
+        void consoleController?.openConsolePanel(sessionName).catch(() => {
+          /* Swallow PanelCapExceeded / PanelAlreadyOpen here — the menu UI
+           * disables items at cap. Surfacing a dialog is a future UX pass. */
+        });
+        // Refresh after attempting open so the cap-status item updates.
+        refreshConsoleMenu(sessions);
+      },
+    },
+  });
+}
+
 app.whenReady().then(async () => {
   registerApplicationMenu();
   registerIpcHandlers();
   registerSpawnIpcHandlers();
-  // CONSOLE-T02: console-ipc handlers send shell→webview events through the
-  // active mainWindow's webContents. CONSOLE-T03 will add the renderer-side
-  // panel mount + open-trigger surface; this registration lets the IPC layer
-  // be exercised before the renderer surface lands.
-  registerConsoleIpcHandlers({
+  // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
+  consoleController = registerConsoleIpcHandlers({
     getWebContents: () => mainWindow?.webContents ?? null,
   });
   await createWindow();
   registerLifecycleHooks(app, () => mainWindow, createWindow);
+  // CC Console menu — initial empty session list; refresh wiring is a
+  // followup. Operator can still see the menu's cap-status hint when the
+  // panel cap is reached even with an empty session list.
+  refreshConsoleMenu([]);
 });
 
 // stdin channel for deterministic exit (MB-S04 ADR K3) and test hooks.
