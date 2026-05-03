@@ -32,7 +32,7 @@ function makeFakeController() {
 }
 
 describe('MB-T08 cluster 4 — SmokeHarness.spawnSession', () => {
-  it('opens the modal, fills the form, and waits for SPAWN_MODAL_OPENED + spawn-result', async () => {
+  it('opens the modal, waits for SPAWN_MODAL_OPENED, then fires the fill-submit', async () => {
     const ctrl = makeFakeController();
     const harness = new SmokeHarness({ processController: ctrl });
     await harness.spawnSession({
@@ -44,8 +44,10 @@ describe('MB-T08 cluster 4 — SmokeHarness.spawnSession', () => {
       'CLICK_SPAWN_BUTTON',
       'FILL_AND_SUBMIT_SPAWN /Users/test/code/sherpa|smoke-session-1',
     ]);
-    // SPAWN_MODAL_OPENED is the existing main.ts sentinel; SPAWN_RESULT_OK
-    // is a new MB-T08 sentinel surfaced once the spawn-result IPC reply lands.
-    expect(ctrl.sentinelsAwaited).toEqual(['SPAWN_MODAL_OPENED', 'SPAWN_RESULT_OK']);
+    // Only SPAWN_MODAL_OPENED today — a spawn-completion sentinel is
+    // followup-tracked as MB-F-MB-T08-SPAWN-RESULT-SENTINEL (renderer would
+    // need to subscribe to workstation:spawn-result; that wiring crosses
+    // MB-T05 territory and is excluded from MB-T08 scope).
+    expect(ctrl.sentinelsAwaited).toEqual(['SPAWN_MODAL_OPENED']);
   });
 });

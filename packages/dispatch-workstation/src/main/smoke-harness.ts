@@ -81,8 +81,11 @@ export class SmokeHarness {
   /**
    * Open spawn modal, fill it, submit. Reuses existing CLICK_SPAWN_BUTTON +
    * FILL_AND_SUBMIT_SPAWN <repoPath>|<sessionName> stdin commands wired in
-   * main.ts:148–195. SPAWN_RESULT_OK is a new MB-T08 sentinel emitted by the
-   * spawn-result IPC reply path.
+   * main.ts:148–195. The harness only waits for SPAWN_MODAL_OPENED today;
+   * a "spawn-result completed" sentinel is followup-tracked
+   * (MB-F-MB-T08-SPAWN-RESULT-SENTINEL) — the renderer currently does not
+   * subscribe to workstation:spawn-result, so MB-T08 cannot wire the
+   * completion sentinel without crossing into MB-T05/MB-T06 territory.
    */
   async spawnSession(opts: SpawnSessionOpts): Promise<void> {
     await this.ctrl.sendStdin('CLICK_SPAWN_BUTTON');
@@ -90,7 +93,6 @@ export class SmokeHarness {
     await this.ctrl.sendStdin(
       `FILL_AND_SUBMIT_SPAWN ${opts.repoPath}|${opts.sessionName}`,
     );
-    await this.ctrl.waitForSentinel('SPAWN_RESULT_OK');
   }
 
   async exit(): Promise<number | null> {
