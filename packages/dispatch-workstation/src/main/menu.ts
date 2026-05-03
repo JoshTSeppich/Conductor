@@ -1,9 +1,18 @@
 import { Menu, type MenuItemConstructorOptions } from 'electron';
+import { buildConsoleMenu, type ConsoleMenuOpts } from './console-menu.js';
 
 let menuRegistered = false;
 
-export function buildMenuTemplate(): MenuItemConstructorOptions[] {
-  return [
+/** Optional CC Console submenu opts. When provided, buildMenuTemplate
+ * inserts the CONSOLE-T03 menu between "View" and "Window". */
+export interface ApplicationMenuOpts {
+  readonly consoleMenu?: ConsoleMenuOpts;
+}
+
+export function buildMenuTemplate(
+  opts: ApplicationMenuOpts = {},
+): MenuItemConstructorOptions[] {
+  const template: MenuItemConstructorOptions[] = [
     {
       // First menu on macOS is always the application menu (app name in menu bar).
       label: 'Foxworks Workstation',
@@ -70,11 +79,31 @@ export function buildMenuTemplate(): MenuItemConstructorOptions[] {
       ],
     },
   ];
+
+  if (opts.consoleMenu) {
+    // Insert "CC Console" before "Window" — view-related controls grouped on the left.
+    const windowIdx = template.findIndex((m) => m.label === 'Window');
+    template.splice(windowIdx, 0, buildConsoleMenu(opts.consoleMenu));
+  }
+
+  return template;
 }
 
-export function registerApplicationMenu(): void {
-  if (menuRegistered) return;
+export function registerApplicationMenu(opts: ApplicationMenuOpts = {}): void {
+  if (menuRegistered) {
+    // Allow rebuild via rebuildApplicationMenu rather than wedging the gate.
+    return;
+  }
   menuRegistered = true;
-  const menu = Menu.buildFromTemplate(buildMenuTemplate());
+  const menu = Menu.buildFromTemplate(buildMenuTemplate(opts));
+  Menu.setApplicationMenu(menu);
+}
+
+/** Rebuild the application menu in-place. Used by CONSOLE-T03 main.ts to
+ * refresh the "CC Console" submenu when daemon's session list or panel
+ * count changes. Bypasses the menuRegistered gate intentionally. */
+export function rebuildApplicationMenu(opts: ApplicationMenuOpts = {}): void {
+  menuRegistered = true;
+  const menu = Menu.buildFromTemplate(buildMenuTemplate(opts));
   Menu.setApplicationMenu(menu);
 }
