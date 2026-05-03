@@ -101,7 +101,16 @@ export class WorkstationError extends Error {
 interface PanelState {
   socket: ConsoleWebSocket | null;
   lastSeq: number;
+  reconnectPending: boolean;
+  closedByOperator: boolean;
 }
+
+// CONDUCTOR_API_CONTRACT.md §4.7.3 close-code semantics:
+// 4404 (SessionNotFound) and 4422 (SessionNotRunning) are terminal — the
+// session is structurally not available, so retrying the WS would loop.
+// 1000 normal close is operator-initiated and should not retry. Anything
+// else (1006 abnormal, 1011 internal error, network blips) is retried.
+const TERMINAL_CLOSE_CODES = new Set<number>([1000, 4404, 4422]);
 
 export class ConsoleIpcController {
   private readonly daemonClient: ConsoleDaemonClient;
@@ -135,21 +144,24 @@ export class ConsoleIpcController {
       );
     }
 
-    const state: PanelState = { socket: null, lastSeq: 0 };
+    const state: PanelState = {
+      socket: null,
+      lastSeq: 0,
+      reconnectPending: false,
+      closedByOperator: false,
+    };
     this.panels.set(sessionName, state);
 
     this.emitToWebview('console:open', { sessionName });
 
-    const url = this.daemonClient.streamUrl(sessionName);
-    const sock = this.wsFactory(url);
-    state.socket = sock;
-    this.wireSocket(sessionName, sock, state);
+    this.connectSocket(sessionName, state);
   }
 
   async closeConsolePanel(sessionName: string): Promise<void> {
     const state = this.panels.get(sessionName);
     if (!state) return;
 
+    state.closedByOperator = true;
     if (state.socket) {
       try {
         state.socket.close(1000, 'panel-closed');
@@ -159,6 +171,21 @@ export class ConsoleIpcController {
     }
     this.panels.delete(sessionName);
     this.emitToWebview('console:close', { sessionName });
+  }
+
+  /** Test seam: synchronously fire a pending reconnect (cluster 2 RED). */
+  testReconnectNow(sessionName: string): void {
+    const state = this.panels.get(sessionName);
+    if (!state || !state.reconnectPending) return;
+    state.reconnectPending = false;
+    this.connectSocket(sessionName, state);
+  }
+
+  private connectSocket(sessionName: string, state: PanelState): void {
+    const url = this.daemonClient.streamUrl(sessionName);
+    const sock = this.wsFactory(url);
+    state.socket = sock;
+    this.wireSocket(sessionName, sock, state);
   }
 
   async handleSendStdin(
@@ -196,15 +223,31 @@ export class ConsoleIpcController {
       });
     });
 
-    sock.on('close', () => {
-      // Cluster 2 adds reconnection. For cluster 1 the close is recorded as a
-      // diagnostic event so renderer-side state can clear its panel busy
-      // indicator; reconnection logic is added without breaking this surface.
+    sock.on('close', (code: number) => {
       const stillOpen = this.panels.get(sessionName);
-      if (stillOpen) {
-        stillOpen.socket = null;
-      }
+      if (!stillOpen) return;
+      stillOpen.socket = null;
+      if (stillOpen.closedByOperator) return;
+      // Per §4.7.3 reconnection semantics: only retry on non-terminal codes.
+      // Production reconnect uses a small backoff (cluster 2 GREEN ships
+      // 1s fixed; production may revisit). Tests fire reconnects via
+      // testReconnectNow().
+      if (TERMINAL_CLOSE_CODES.has(code)) return;
+      this.scheduleReconnect(sessionName, stillOpen);
     });
+  }
+
+  private scheduleReconnect(sessionName: string, state: PanelState): void {
+    if (state.reconnectPending) return;
+    state.reconnectPending = true;
+    // Production timer; ignored in tests (testReconnectNow drives synchronously).
+    setTimeout(() => {
+      // Re-check at fire time: panel may have been closed in the interim.
+      const live = this.panels.get(sessionName);
+      if (!live || !live.reconnectPending) return;
+      live.reconnectPending = false;
+      this.connectSocket(sessionName, live);
+    }, 1_000).unref?.();
   }
 
   private handleWsMessage(sessionName: string, raw: string, state: PanelState): void {
