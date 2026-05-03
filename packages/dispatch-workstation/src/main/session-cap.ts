@@ -121,3 +121,66 @@ export async function checkSpawnCapacity(
     throw new SessionCapExceededError(activeCount, cap);
   }
 }
+
+// ── Production HTTP implementation ────────────────────────────────────────
+//
+// HttpSessionListClient consumes GET /v2/sessions per
+// CONDUCTOR_API_CONTRACT.md §4.2. Mirrors the http-daemon-client.ts
+// (COARCH-T03) and spawn-ipc.ts defaultRegisterSession (MB-T05) auth
+// pattern — token from ~/.foxworks-dispatch/token, X-Conductor-Token
+// header, fail-closed on missing token / unreachable daemon.
+//
+// Failure surfacing: throws Error with .error_type = 'DaemonUnreachable'
+// so the spawn-handler caller can route through the existing
+// WorkstationSpawnError envelope (see spawn-handler.ts §6.5 typed error
+// union) without an additional shim.
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+
+const DEFAULT_DAEMON_URL =
+  process.env['FOXWORKS_DAEMON_URL'] ?? 'http://localhost:7878';
+
+function readDaemonToken(): string | null {
+  try {
+    return readFileSync(join(homedir(), '.foxworks-dispatch', 'token'), 'utf8').trim();
+  } catch {
+    return null;
+  }
+}
+
+function makeUnreachable(message: string): Error & { error_type: string } {
+  const e = new Error(message) as Error & { error_type: string };
+  e.error_type = 'DaemonUnreachable';
+  return e;
+}
+
+export class HttpSessionListClient implements SessionListClient {
+  private readonly daemonUrl: string;
+  private readonly token: string | null;
+
+  constructor(opts?: { daemonUrl?: string; token?: string | null }) {
+    this.daemonUrl = opts?.daemonUrl ?? DEFAULT_DAEMON_URL;
+    this.token = opts?.token !== undefined ? opts.token : readDaemonToken();
+  }
+
+  async listSessions(): Promise<SessionListResponse> {
+    if (!this.token) {
+      throw makeUnreachable('Daemon token not found at ~/.foxworks-dispatch/token');
+    }
+    let res: Response;
+    try {
+      res = await fetch(`${this.daemonUrl}/v2/sessions`, {
+        headers: { 'X-Conductor-Token': this.token },
+      });
+    } catch (e) {
+      throw makeUnreachable(`fetch failed: ${(e as Error).message}`);
+    }
+    if (!res.ok) {
+      throw makeUnreachable(`daemon returned HTTP ${res.status}`);
+    }
+    const body = (await res.json()) as SessionListResponse;
+    return body;
+  }
+}
