@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { makeConsoleBridge, type ConsoleBridgeIpc } from './console-bridge.js';
 
 // COARCH-T03: streaming bridge methods added (sendAndStream, onStreamChunk/Done/Error).
 // COARCH-T04: build-doc config bridge methods added (getBuildDocConfig/setBuildDocConfig/clearBuildDocConfig).
@@ -45,3 +46,20 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   requestSpawn: (payload: { repoPath: string; sessionName: string }) =>
     ipcRenderer.send('workstation:spawn-requested', payload),
 });
+
+// CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
+// Direction-corrected post operator arbitration of CONSOLE-T02 halt:
+//   shell→webview (on*): console:open, console:close, console:stdout-chunk,
+//                        console:gap-detected, console:error
+//   webview→shell (invoke): console:send-stdin, console:signal
+// makeConsoleBridge factory lives in console-bridge.ts so the shape can be
+// unit-tested without booting electron.
+const consoleIpcAdapter: ConsoleBridgeIpc = {
+  invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+  send: (channel, ...args) => ipcRenderer.send(channel, ...args),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on: (channel, listener) => { ipcRenderer.on(channel, listener as any); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  removeListener: (channel, listener) => { ipcRenderer.removeListener(channel, listener as any); },
+};
+contextBridge.exposeInMainWorld('consoleBridge', makeConsoleBridge(consoleIpcAdapter));
