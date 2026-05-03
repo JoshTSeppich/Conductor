@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type FormEvent,
   type RefObject,
 } from 'react';
 import type { ConsoleBridge } from '../main/console-bridge.js';
@@ -45,6 +46,16 @@ export function ConsolePanel({
   const [state, setState] = useState<PanelState>(INITIAL_STATE);
   const terminalContainerRef: RefObject<HTMLDivElement | null> = useRef(null);
   const terminalAdapterRef = useRef<TerminalAdapter | null>(null);
+  const inputRef: RefObject<HTMLTextAreaElement | null> = useRef(null);
+
+  async function handleSendPrompt(e: FormEvent<HTMLFormElement>): Promise<void> {
+    e.preventDefault();
+    if (!state.sessionName) return;
+    const text = inputRef.current?.value ?? '';
+    if (text.length === 0) return; // empty input is a no-op
+    if (inputRef.current) inputRef.current.value = '';
+    await consoleBridge.sendStdin(state.sessionName, text, 'utf8');
+  }
 
   // Bridge subscriptions — five listeners, one per shell→webview channel.
   // Cluster 1 only acts on open/close; chunk/gap/error are intentional no-ops
@@ -105,6 +116,17 @@ export function ConsolePanel({
         <span>{state.sessionName}</span>
       </div>
       <div data-testid="console-terminal" ref={terminalContainerRef} />
+      <form data-testid="console-prompt-form" onSubmit={handleSendPrompt}>
+        <textarea
+          ref={inputRef}
+          data-testid="console-prompt-input"
+          rows={2}
+          placeholder="Type a prompt; Send writes to STDIN."
+        />
+        <button type="submit" data-testid="console-prompt-send">
+          Send
+        </button>
+      </form>
     </div>
   );
 }
