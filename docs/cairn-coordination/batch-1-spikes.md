@@ -91,3 +91,23 @@ Territory: `packages/dispatch-workstation/src/main/console-ipc.ts` (NEW), `packa
 [2026-05-02 17:53] Session A (CONSOLE-T02-resume, single-session worktree) starting. Worktree: ~/Desktop/Automata/foxworks-worktrees/session-A. Branch: session-A/console-t02-resume. HEAD SHA: 78034f98e16411ae78566f45f4a250ae16e2313e.
 [2026-05-02 18:20] Session A (CONSOLE-T02-resume) complete. Final SHA: 63d335d (with this coord commit pending). Tests passing: 72 of 72 unit tests in dispatch-workstation (33 baseline + 39 new across 4 clusters: cluster 1 IPC routing 12, cluster 2 WS lifecycle 13, cluster 3 preload bridge 9, cluster 4 panel cap 5). Typecheck clean. consoleBridge exposed in webview context via preload.mts. /v3/sessions/:name/console/* IPC bridge live: openConsolePanel/closeConsolePanel emit shell→webview console:open/console:close; handleSendStdin/handleSignal forward webview→shell to daemon POST endpoints; WS line/error/backfill_meta forward to webview as console:stdout-chunk/console:error/console:gap-detected. WS reconnects on abnormal close codes (1006, 1011, etc.) with last_seq carrying highest stdout_seq; terminal codes (1000, 4404, 4422) suppress retry. Multi-panel cap=4 enforced per ratified vision §10.11 Q3 with WorkstationError type=PanelCapExceeded. main.ts wires registerConsoleIpcHandlers at app start. 4 Tier-2 followups filed (RECONNECT-BACKOFF, PANEL-CAP-SETTINGS, V3-SCHEMA-INTEGRATION, INTEGRATION-TEST). No HALT surfaced. CONSOLE-T03 readiness: window.consoleBridge surface live, ipcMain handlers registered; CONSOLE-T03 builds the renderer-side panel mount (xterm.js per §10.11 Q4) + open-trigger source (likely menu item under registerApplicationMenu).
 
+
+---
+
+## Batch 4 — 2026-05-02
+
+§8.1 amendment landed at cf1848a (env allowlist + three-clause spawn parity bar). MB-T05 unblocked.
+
+CONSOLE-T02 merged at b138548. consoleBridge live in webview context. CONSOLE-T03 unblocked.
+
+2-session worktree composition (worktree pattern KNOWN-validated single-session per CONSOLE-T02 resume run; multi-session worktree validation now in flight):
+
+- Session A: MB-T05 — spawn handler implementation per WORKSTATION_CONTRACT.md §8.1 amended (cf1848a) + MB-T05-env-allowlist-amendment.md ADR. Worktree: ~/Desktop/Automata/foxworks-worktrees/session-A. Branch: session-A/mb-t05. Territory: packages/dispatch-workstation/src/main/spawn-* + extension to spawn-ipc.ts.
+- Session B: CONSOLE-T03 — CC-console UI panel renderer per vision §10.11 Q4 (xterm.js). Worktree: ~/Desktop/Automata/foxworks-worktrees/session-B. Branch: session-B/console-t03. Territory: packages/dispatch-workstation/src/console-panel/ (new subdirectory) + main.ts open-trigger menu integration.
+
+Shared read-only references: WORKSTATION_CONTRACT.md (frozen at cf1848a), CONDUCTOR_API_CONTRACT.md (frozen at v2.2.0), v3 schema (frozen at 232fbaa), vision §10 (frozen at eac381e), MB-S02 ADR (spawn fidelity), MB-S06 ADR (PTY streaming), MB-T05 env-allowlist ADR.
+
+Per-path git add MANDATORY with pre-commit `git diff --cached --stat` verification before EVERY commit. Per-commit-push MANDATORY with branch-aware verification (git log --oneline origin/<your-branch>..HEAD empty after push).
+
+Worktree-isolated. Each session works in its own directory. No shared-working-tree drift risk per finding #65.
+
