@@ -116,10 +116,17 @@ export function emitMultiChoiceSelected(
 ): void {
   const bridge = getBridge();
   if (!bridge) return;
+  // WebviewToShellMessageSchema (v3/schema.ts:424-432) constrains
+  // selected_index to int 0..3. The renderer uses -1 as a sentinel
+  // for the "none of the above" free-form path; clamp at the
+  // boundary so the wire envelope respects the schema. The
+  // shell-side audit-row builder discriminates the free-form path
+  // via free_form_text non-null + maps to operator_response='pending'.
+  const clamped = Math.max(0, Math.min(3, Math.trunc(selected_index)));
   bridge.multiChoiceSelect({
     type: 'multi-choice-selected',
     card_id,
-    selected_index,
+    selected_index: clamped,
     free_form_text,
     timestamp: new Date().toISOString(),
   });
