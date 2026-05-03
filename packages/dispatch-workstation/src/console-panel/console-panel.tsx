@@ -5,7 +5,12 @@ import {
   type FormEvent,
   type RefObject,
 } from 'react';
-import type { ConsoleBridge } from '../main/console-bridge.js';
+import type {
+  ConsoleBridge,
+  GapPayload,
+  ErrorPayload,
+  SignalName,
+} from '../main/console-bridge.js';
 import type { TerminalAdapter } from './terminal-adapter.js';
 
 // CONSOLE-T03 — operator-facing CC-console panel.
@@ -35,9 +40,11 @@ export interface ConsolePanelProps {
 
 interface PanelState {
   sessionName: string | null;
+  gap: GapPayload | null;
+  error: ErrorPayload | null;
 }
 
-const INITIAL_STATE: PanelState = { sessionName: null };
+const INITIAL_STATE: PanelState = { sessionName: null, gap: null, error: null };
 
 export function ConsolePanel({
   consoleBridge,
@@ -57,13 +64,21 @@ export function ConsolePanel({
     await consoleBridge.sendStdin(state.sessionName, text, 'utf8');
   }
 
+  async function handleSignal(signal: SignalName): Promise<void> {
+    if (!state.sessionName) return;
+    await consoleBridge.signal(state.sessionName, signal);
+  }
+
   // Bridge subscriptions — five listeners, one per shell→webview channel.
   // Cluster 1 only acts on open/close; chunk/gap/error are intentional no-ops
   // so cluster 2-4 RED tests can fail before each GREEN expands the body.
   useEffect(() => {
     const cleanups = [
       consoleBridge.onConsoleOpen((p) => {
-        setState({ sessionName: p.sessionName });
+        // Reset gap + error state on each open so a fresh session has a
+        // clean banner area; otherwise a prior session's transient errors
+        // would bleed into the rebound view.
+        setState({ sessionName: p.sessionName, gap: null, error: null });
       }),
       consoleBridge.onConsoleClose(() => {
         setState(INITIAL_STATE);
@@ -75,11 +90,11 @@ export function ConsolePanel({
           p.encoding === 'base64' ? decodeBase64Utf8(p.bytes) : p.bytes;
         t.write(data);
       }),
-      consoleBridge.onGap(() => {
-        // Cluster 4 fills this in.
+      consoleBridge.onGap((p) => {
+        setState((s) => ({ ...s, gap: p }));
       }),
-      consoleBridge.onError(() => {
-        // Cluster 4 fills this in.
+      consoleBridge.onError((p) => {
+        setState((s) => ({ ...s, error: p }));
       }),
     ];
     return () => {
@@ -114,7 +129,39 @@ export function ConsolePanel({
     <div data-testid="console-panel-root">
       <div data-testid="console-panel-header">
         <span>{state.sessionName}</span>
+        <button
+          type="button"
+          data-testid="signal-sigint"
+          onClick={() => void handleSignal('SIGINT')}
+        >
+          Ctrl-C (SIGINT)
+        </button>
+        <button
+          type="button"
+          data-testid="signal-sigterm"
+          onClick={() => void handleSignal('SIGTERM')}
+        >
+          SIGTERM
+        </button>
+        <button
+          type="button"
+          data-testid="signal-sighup"
+          onClick={() => void handleSignal('SIGHUP')}
+        >
+          SIGHUP
+        </button>
       </div>
+      {state.gap && (
+        <div role="alert" data-testid="console-gap-warning">
+          Some output dropped while disconnected (lines{' '}
+          {state.gap.availableFromSeq}+ available; {state.gap.currentSeq} latest).
+        </div>
+      )}
+      {state.error && (
+        <div role="alert" data-testid="console-error-banner">
+          Error: {state.error.message}
+        </div>
+      )}
       <div data-testid="console-terminal" ref={terminalContainerRef} />
       <form data-testid="console-prompt-form" onSubmit={handleSendPrompt}>
         <textarea
