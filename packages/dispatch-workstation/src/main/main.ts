@@ -13,6 +13,7 @@ import { registerApplicationMenu } from './menu.js';
 import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.js';
 import { registerIpcHandlers } from './coarchitect-ipc.js';
 import { registerSpawnIpcHandlers } from './spawn-ipc.js';
+import { registerConsoleIpcHandlers } from './console-ipc.js';
 import { writeSplitterPosition } from './splitter-state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -81,6 +82,13 @@ app.whenReady().then(async () => {
   registerApplicationMenu();
   registerIpcHandlers();
   registerSpawnIpcHandlers();
+  // CONSOLE-T02: console-ipc handlers send shell→webview events through the
+  // active mainWindow's webContents. CONSOLE-T03 will add the renderer-side
+  // panel mount + open-trigger surface; this registration lets the IPC layer
+  // be exercised before the renderer surface lands.
+  registerConsoleIpcHandlers({
+    getWebContents: () => mainWindow?.webContents ?? null,
+  });
   await createWindow();
   registerLifecycleHooks(app, () => mainWindow, createWindow);
 });
