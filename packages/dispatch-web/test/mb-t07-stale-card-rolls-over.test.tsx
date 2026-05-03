@@ -238,14 +238,17 @@ describe('MB-T07 cluster 5 — useOrchestratorCards hook', () => {
 });
 
 describe('MB-T07 cluster 5 — OrchestratorCardsLane (existing-column placement helper)', () => {
-  it('renders cards by status; stale cards carry the supersedes lineage', () => {
+  it('renders cards by status; awaiting cards have no stale visual', () => {
     render(
       <OrchestratorCardsLane
         status="awaiting"
         entries={[{ card_id: 'a', card: cardA, status: 'awaiting' }]}
       />,
     );
-    expect(screen.getByText(/sherpa-001/i)).toBeInTheDocument();
+    // Card renders (action+target surface visible via the action testid).
+    expect(screen.getByTestId('orchestrator-card-action')).toHaveTextContent(
+      'send',
+    );
     // Awaiting cards should NOT show stale visual.
     const card = screen.getByTestId('orchestrator-card');
     expect(card.className).not.toMatch(/grayscale/);
