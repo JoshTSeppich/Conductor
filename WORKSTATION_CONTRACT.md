@@ -354,6 +354,24 @@ Per ratified §0.7, chat history, audit log, and ticket state persist in a daemo
 
 **Coexistence with sessions.json:** The daemon retains JSON-file persistence for `sessions.json` (registry of active CC sessions). The new SQLite database is for v3.0 orchestrator-and-ticket state only. The two persistence layers are independent; no synchronization is required.
 
+
+**Amended 2026-04-29 per MB-T05 sub-task 1 evidence + Path B operator arbitration.** The pre-amendment vision §8.1 wording for the spawn parity capability bar — "every env var, every PTY behavior matches" — was demonstrated unreachable by MB-S02 spike evidence at `docs/adr/MB-S02-tmux-spawn-fidelity.md`: env vars diverge in every measured spawn context, including the realistic shipped-`.app`-from-Finder context (B2 launchd-minimal mode, 20 divergences with PATH-resolution-breaking gaps for `claude` and `tmux`). PTY parity DOES hold (byte-identical in spike) and registration parity DOES hold (structurally identical in spike). Only env handling required a ratification decision.
+
+Per Path B operator arbitration (2026-04-29, parallel cairn round 2), the spawn capability bar is amended to:
+
+The Workstation spawn handler (MB-T05) MUST construct the env passed to `tmux new-session` from a documented closed allowlist at `docs/adr/MB-T05-env-allowlist-amendment.md`. The spawn handler MUST NOT inherit `process.env` indiscriminately. The allowlist comprises: PATH (constructed with /opt/homebrew/bin and /usr/local/bin prepended ahead of system paths), HOME, USER, LOGNAME, SHELL, LANG, LC_ALL (passthrough if set), TERM (= xterm-256color), TMPDIR, and ANTHROPIC_API_KEY (injected from Electron safeStorage per §8.3).
+
+The capability bar for §8.1 "spawn-from-UI bit-identical" is hereby replaced with the three-clause bar:
+
+(a) Tmux session spawned by Workstation registers a session structurally identical at the registration layer (KNOWN per MB-S02 ADR §5);
+(b) Tmux session spawned by Workstation has PTY behavior identical to CLI-spawned (KNOWN per MB-S02 ADR §4);
+(c) Tmux session spawned by Workstation has env compatible within the documented allowlist (MODELED-with-allowlist per MB-S02 ADR + this amendment; refines to KNOWN per-var as dogfood evidence accumulates per allowlist ADR §6).
+
+Bit-identical env-var parity is NOT a v3.0 ship requirement. Allowlist scope IS. Vars outside the allowlist do not propagate to spawned sessions; behavioral differences relative to CLI-spawned sessions for operators relying on excluded vars are documented divergence per Path B, not bug.
+
+Refinement of the allowlist follows the process at allowlist ADR §6; each addition is operator-arbitrated and lands via paired docs: + feat: commits.
+
+
 ### §8.2 Build-doc storage
 
 Per §4.3: build docs are NOT persisted by the daemon. They live in operator-configured git repos. Workstation reads from disk; daemon never sees the content.
