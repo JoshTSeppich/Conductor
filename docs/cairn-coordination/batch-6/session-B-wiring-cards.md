@@ -143,6 +143,28 @@ Brief F1 step 1 says "Pattern after existing console-bridge.ts" (a factory) and 
 
 If operator-relay arbitrates differently on §4.3 (e.g. "rename existing `card:*` channels to `workstation:card-*` for namespace consistency"), F1 work must rebase on the new contract. KNOWN risk; will halt + redo if so directed.
 
+### 2026-05-03 — Pre-existing test flake observed during F3 GREEN sanity-check
+
+**§4.7 (Session A territory adjacency, informational): `test/integration/mb-t04/spawn-modal-emits-intent.test.ts` times out**
+
+Running the full `pnpm --filter dispatch-workstation test` suite during F3 GREEN sanity-check surfaced 1 failed test: `MB-T04: spawn modal emits workstation:spawn-requested IPC intent > fills modal with repo + session name, clicks Spawn, IPC fires with correct payload`. Times out after ~11s waiting for an IPC sentinel after `FILL_AND_SUBMIT_SPAWN`. Reproduces deterministically (re-ran twice).
+
+**Verified pre-existing, not a regression from F1 or F3:**
+- Stashed F3 GREEN code (uncommitted at the time).
+- Reverted `src/main/workstation-shell.html` to commit `89cfb95` (pre-F1 state, no `preload="./card-bridge.cjs"` attribute).
+- Re-ran the integration test → identical 1/1 timeout failure.
+- Restored both files; wiring-cards spec files remained 9/9 passing.
+
+KNOWN: failure reproduces on pre-F1/F3 file state. The flake is unrelated to my work.
+
+The flake is in **Session A's adjacent territory** (mb-t04 spawn flow involves `spawn-ipc.ts` + `spawn-handler.ts` + `main.ts`, all owned by Session A). Two possibilities:
+1. It's a pre-existing issue Session A's followups will already address (e.g. MB-F-MB-T05-PATH-ALLOWLIST-CLAUDE-RESOLUTION changes spawn-handler argv, which could shift the test's child process behavior).
+2. It's an unrelated flake that should be triaged separately.
+
+Recommendation: surfacing for operator-relay visibility. No action required from Session B; not blocking my session-end test-suite validation since the failure is documented as pre-existing. If Session A's session-end run shows the same flake, they can triage at their session-end. If it persists post-merge, file as a Tier 2 followup.
+
+Will note in session-end summary §5 that the full-suite count includes this 1 pre-existing failure, with reference to this §4.7 entry.
+
 ---
 
 ## §5 Session-end summary
