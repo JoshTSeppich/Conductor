@@ -35,6 +35,8 @@ function recordingDeps() {
     runTmuxKillSession: async (sessionName: string): Promise<void> => {
       tmuxKillCalls.push(sessionName);
     },
+    // cairn #73: liveness check stub (no-op success).
+    runTmuxHasSession: async (_sessionName: string): Promise<void> => {},
     registerSession: async (req: RecordedRegisterCall) => {
       registerCalls.push(req);
       // Default success: daemon mirrors back the registration.
@@ -48,6 +50,11 @@ function recordingDeps() {
     },
     sourceEnv: { HOME: '/h', USER: 'u' },
     apiKey: 'k',
+    // cairn #72: stand-in absolute path; production wiring resolves
+    // via `which claude` at workstation startup.
+    claudeBinPath: '/test/bin/claude',
+    // cairn #73: 0ms delay keeps unit tests fast; production default 500ms.
+    livenessCheckDelayMs: 0,
   };
 }
 

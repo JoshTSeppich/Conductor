@@ -33,6 +33,8 @@ function makeDeps(activeCount: number, cap: number): SpawnHandlerDeps & {
       tmuxCalls += 1;
     },
     runTmuxKillSession: async () => {},
+    // cairn #73: liveness check stub (no-op success).
+    runTmuxHasSession: async () => {},
     registerSession: async (req) => {
       registerCalls += 1;
       return {
@@ -45,6 +47,11 @@ function makeDeps(activeCount: number, cap: number): SpawnHandlerDeps & {
     },
     sourceEnv: { HOME: '/h', USER: 'u' },
     apiKey: 'sk-ant-test',
+    // cairn #72: stand-in absolute claude path; production wires via
+    // resolveClaudeBin() at workstation startup.
+    claudeBinPath: '/test/bin/claude',
+    // cairn #73: 0ms delay keeps unit tests fast.
+    livenessCheckDelayMs: 0,
     get tmuxCalls() {
       return tmuxCalls;
     },

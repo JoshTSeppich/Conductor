@@ -26,6 +26,8 @@ function makeAtCapDeps(activeCount: number, cap: number): SpawnHandlerDeps {
     sessionCap: cap,
     runTmuxNewSession: async () => {},
     runTmuxKillSession: async () => {},
+    // cairn #73: liveness check stub (no-op success).
+    runTmuxHasSession: async () => {},
     registerSession: async (req) => ({
       name: req.name,
       cwd: req.cwd,
@@ -35,6 +37,10 @@ function makeAtCapDeps(activeCount: number, cap: number): SpawnHandlerDeps {
     }),
     sourceEnv: { HOME: '/h', USER: 'u' },
     apiKey: 'sk-ant-test',
+    // cairn #72: stand-in absolute claude path.
+    claudeBinPath: '/test/bin/claude',
+    // cairn #73: 0ms delay keeps unit tests fast.
+    livenessCheckDelayMs: 0,
   };
 }
 

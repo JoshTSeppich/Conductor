@@ -31,6 +31,11 @@ describe('MB-T06 cluster 3 — capacity check fires before env build / tmux / da
       runTmuxKillSession: async () => {
         calls.push('runTmuxKillSession');
       },
+      // cairn #73: liveness check stub. Recorded into call sequence so
+      // the order assertion includes it (post-tmux-new, pre-register).
+      runTmuxHasSession: async () => {
+        calls.push('runTmuxHasSession');
+      },
       registerSession: async (req) => {
         calls.push('registerSession');
         return {
@@ -43,13 +48,25 @@ describe('MB-T06 cluster 3 — capacity check fires before env build / tmux / da
       },
       sourceEnv: { HOME: '/h', USER: 'u' },
       apiKey: 'sk-ant-test',
+      // cairn #72: stand-in absolute claude path; production wires via
+      // resolveClaudeBin() at workstation startup.
+      claudeBinPath: '/test/bin/claude',
+      // cairn #73: 0ms delay keeps unit tests fast.
+      livenessCheckDelayMs: 0,
     };
 
     await spawnSession({ repoPath: '/r', sessionName: 'sherpa' }, deps);
 
-    // listSessions MUST be first; the pipeline order is:
-    //   listSessions → buildSpawnEnv (pure, no dep call) → runTmuxNewSession → registerSession.
+    // listSessions MUST be first; the pipeline order (cairn #73 inserts
+    // runTmuxHasSession between tmux-new and register):
+    //   listSessions → buildSpawnEnv (pure, no dep call) →
+    //   runTmuxNewSession → runTmuxHasSession → registerSession.
     expect(calls[0]).toBe('listSessions');
-    expect(calls).toEqual(['listSessions', 'runTmuxNewSession', 'registerSession']);
+    expect(calls).toEqual([
+      'listSessions',
+      'runTmuxNewSession',
+      'runTmuxHasSession',
+      'registerSession',
+    ]);
   });
 });
