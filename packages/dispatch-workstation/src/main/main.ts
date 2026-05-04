@@ -47,6 +47,9 @@ import {
   type ConsoleMountWebSocket,
 } from './console-mount.js';
 // === END: Fix-C ===
+// === BEGIN: Fix-92 webview token bootstrap (cairn finding #92, do not modify outside this block) ===
+import { readDaemonTokenForBootstrap } from './daemon-token-bootstrap.js';
+// === END: Fix-92 ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
@@ -201,6 +204,19 @@ app.whenReady().then(async () => {
   // populated env.
   bootstrapApiKey({ configDir: configDir(), safeStorage });
   // === END: Fix-A ===
+  // === BEGIN: Fix-92 webview token bootstrap (cairn finding #92, do not modify outside this block) ===
+  // Cairn #92: register the IPC channel the kanban webview's preload
+  // (card-bridge-preload.mts, attached via workstation-shell.html:237)
+  // invokes at preload-load time to bootstrap localStorage['x-conductor-
+  // token']. Must register before createWindow() so the handler is live
+  // when the webview attaches and its preload fires ipcRenderer.invoke.
+  // Returns the trimmed file contents from ~/.foxworks-dispatch/token, or
+  // null if absent / unreadable. Failure case leaves the webview's
+  // localStorage untouched and TokenPrompt remains the fallback.
+  ipcMain.handle('workstation:get-daemon-token', () =>
+    readDaemonTokenForBootstrap(),
+  );
+  // === END: Fix-92 ===
   registerIpcHandlers();
   registerSpawnIpcHandlers();
   // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
