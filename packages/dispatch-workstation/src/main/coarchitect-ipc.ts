@@ -1,6 +1,7 @@
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, webContents as allWebContents } from 'electron';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { HttpDaemonClient } from './http-daemon-client.js';
 import { createAnthropicClient, classifyAnthropicError } from './anthropic-client.js';
 import { readSplitterPosition, writeSplitterPosition } from './splitter-state.js';
@@ -13,6 +14,8 @@ import {
 } from '../coarchitect/build-doc-state.js';
 import { readBuildDoc } from '../coarchitect/build-doc-reader.js';
 import { buildContext } from '../coarchitect/context-builder.js';
+import { routeOrchestratorOutput } from './orchestrator-output-router.js';
+import { cardContextCache } from './card-context-cache.js';
 
 const MOCK_RESPONSES: Record<string, string> = {
   self_check: `I'll analyze the current state and surface the self-check block.
@@ -90,6 +93,10 @@ export function registerIpcHandlers(): void {
 
       const isMock = process.env['MB_MOCK_ANTHROPIC'] === '1';
       let stream: AsyncIterable<string>;
+      // F5 routing context needs buildDocConfig outside the !isMock branch.
+      // Reading outside the branch adds one cheap file-IO under MB_MOCK_ANTHROPIC=1
+      // but no behavioral change.
+      const buildDocConfig = readBuildDocConfig();
 
       if (isMock) {
         const key = process.env['MB_MOCK_ANTHROPIC_RESPONSE'] ?? 'default';
@@ -105,7 +112,6 @@ export function registerIpcHandlers(): void {
           return;
         }
 
-        const buildDocConfig = readBuildDocConfig();
         if (buildDocConfig) {
           try {
             const buildDocResult = await readBuildDoc(
@@ -141,6 +147,23 @@ export function registerIpcHandlers(): void {
         for await (const chunk of stream) {
           fullResponse += chunk;
           event.sender.send('coarchitect:streamChunk', chunk);
+        }
+        // F5: parse the full response and route variant. card / multi-choice-card
+        // populate the cache + emit orchestrator-card-rendered to all webContents
+        // (the dispatch-web React app in the kanban webview is the only consumer
+        // with a registered listener for this channel; shell renderer + devtools
+        // ignore). escape-block / action / non-JSON paths leave existing chat-
+        // panel streaming as-is.
+        const decision = routeOrchestratorOutput(fullResponse, {
+          triggerEvent: content,
+          buildDocId: buildDocConfig?.relativePath ?? 'unknown',
+          uuidGen: () => randomUUID(),
+        });
+        if (decision.kind === 'card-or-multi-choice') {
+          cardContextCache.set(decision.cardId, decision.context);
+          for (const wc of allWebContents.getAllWebContents()) {
+            wc.send('orchestrator-card-rendered', decision.payload);
+          }
         }
         try { await daemonClient.postMessage({ role: 'assistant', content: fullResponse }); } catch {}
         event.sender.send('coarchitect:streamDone', fullResponse.trimEnd().slice(0, 120));
