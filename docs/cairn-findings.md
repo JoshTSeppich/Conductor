@@ -911,3 +911,71 @@ src/components/PanelErrorBoundary.tsx(36,7): error TS2322: Type 'React.ReactNode
 7. Touched a file another session may modify? no parallel session active in this dogfood pass; modified file: docs/cairn-findings.md, single append.
 8. Pre-push protocol? docs-only; per-finding-file pattern; no build/typecheck gate required for docs.
 9. Confidence labeling matches evidence? yes — KNOWN labels throughout, single dogfood-arbitration recommendation explicitly deferred.
+
+---
+
+## Finding #83 — MB-F-MB-T05-SPAWN-FAILURE-SILENTLY-SWALLOWED
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (ship-gate blocker — operator cannot determine spawn success/failure for the primary v3.0 workstation flow)
+**Origin:** Batch-6 dogfood T4 (spawn end-to-end via UI) at HEAD 3ac350e (post-finding-#82)
+**Discovered by:** dogfood operator session, repeatable observation across three FILL_AND_SUBMIT_SPAWN attempts
+**Resolution status:** New finding documenting dogfood-observed UX defect that composes the existing followup `MB-F-MB-T08-SPAWN-RESULT-SENTINEL` (smoke-harness sentinel followup) into an operator-facing ship-gate concern. The sentinel followup is currently scoped only to test-fixture observability; this finding broadens it to a production UX defect.
+
+**Symptom (KNOWN — observed live).** Submitting the spawn modal triggers `workstation:spawn-requested` IPC, the main process processes it (success or error), and the renderer **never** subscribes to `workstation:spawn-result`. The modal closes via `closeSpawnModal()` immediately on click (workstation-shell.html:367) regardless of outcome. Operator-facing result: zero feedback on success or failure. Three reproducer paths:
+
+1. **Cap-blocked spawn** (the path I hit). Daemon `/v2/sessions` returns 5 active (state='armed') sessions. `DEFAULT_SESSION_CAP = 5` (session-cap.ts:23). `checkSpawnCapacity` throws `SessionCapExceededError` synchronously — before tmux is touched. The error envelope returns via `workstation:spawn-result`. Renderer never sees it. Modal closed, no tmux session created, no daemon entry. Operator UX: identical to a no-op — modal flashed and closed.
+2. **Daemon-unreachable**: per spawn-handler.ts:240-249, throws `DaemonUnreachable`. Same envelope path. Same silent UX.
+3. **claude-bin not resolvable**: per spawn-handler.ts:260-266, throws `SpawnFailed`. Same.
+
+**Root cause.** Renderer-side gap. `workstation:spawn-result` is only `event.sender.send`'d by `spawn-ipc.ts:297` and `:308`. No consumer in `workstation-shell.html`, no consumer exposed via `preload.mts:44-48` (`workstationBridge` exposes `requestSpawn` but no `onSpawnResult` handler). The "fire-and-forget UI" pattern was never closed.
+
+**Compounding evidence (KNOWN — direct daemon inspection during dogfood).** Of the 5 daemon-armed sessions blocking the cap during T4, **only 1 has a backing tmux session**. The other 4 are orphans — daemon registry retains state='armed' for sessions whose tmux server has long since killed the session. Enumeration from `/tmp/dogfood-t4-sessions.json` snapshot:
+```
+tmux sessions actually alive: ['heytest6', 'newTest1']
+daemon armed:
+  ddd target=ddd:0.0 ... backed=False  (orphan)
+  heytest target=heytest:0.0 ... backed=False  (orphan)
+  newTest1 target=newTest1:0.0 ... backed=True
+  pa target=pa:0.0 ... backed=False  (orphan)
+  papapapapa target=papapapapa:0.0 ... backed=False  (orphan)
+```
+Four orphans, one alive. Cap counts orphans toward the limit because `isActiveSession` (session-cap.ts:103) only filters `'archived'` and `'killed'` states; an orphaned 'armed' record is fully counted. Combined with the silent-failure UX above: the operator hits the cap from accumulated orphans and has no way to discover why their spawn isn't working.
+
+**Practical impact.** Tier-1 ship-gate concern. The spawn flow is v3.0 workstation's primary creation surface. An operator running batch-6 main HEAD encounters one of:
+- Modal flashes closed, no session anywhere → silent cap-block (this dogfood)
+- Modal flashes closed, tmux runs but daemon registration fails → orphan tmux + no UI evidence
+- Modal flashes closed, daemon registers but tmux dies on exec → cairn #72-style ghost (already documented as cleaned up via `runTmuxHasSession` liveness check, but the UX failure mode persists if anything ELSE goes wrong)
+
+Without renderer subscription to `workstation:spawn-result`, every failure mode is invisible. Even the success case is invisible — the operator has no UI confirmation that the session was registered.
+
+**Recommendation (deferred — operator arbitration).** Three composable fixes:
+
+1. **Subscribe to `workstation:spawn-result` in the shell** (workstation-shell.html, after spawnConfirmButton handler, line ~370). Surface success in a toast/inline status; surface error envelope's `error_type` + message via the same channel. Single integration point. Closes the silent-UX defect for all error paths simultaneously.
+2. **Add `onSpawnResult` to `workstationBridge`** in `preload.mts` so the shell can subscribe via the contextBridge surface (mirrors the consoleBridge subscription pattern at console-bridge.ts:84-88). Lower-level dependency for #1.
+3. **Daemon-side orphan reaper** — separate concern, but the cap-blocking-by-orphans symptom is its own defect class. Reaper could be a periodic `tmux has-session` sweep over armed sessions, or driven by /v2/events tmux-server-died signal. Out of workstation scope; would be filed against dispatch-daemon.
+
+**Fix-ordering note.** The followup `MB-F-MB-T08-SPAWN-RESULT-SENTINEL` (smoke-harness.ts:85-88) is the same root cause framed as a test-observability gap. Recommend resolving it by composition with #1 above: once the renderer surfaces spawn-result, the smoke harness can read the surfaced state via DOM querySelector or a dedicated test-only sentinel emit. Both followups close in one shot.
+
+**Confidence:** KNOWN.
+- Symptom: directly observed three times in dogfood T4 (CLICK_SPAWN_BUTTON → SPAWN_MODAL_OPENED → FILL_AND_SUBMIT_SPAWN → no tmux, no daemon entry, no log evidence).
+- Cap-block specifically: confirmed via /v2/sessions 5-active-armed snapshot and DEFAULT_SESSION_CAP = 5 cross-reference.
+- Orphan count: confirmed via tmux ls vs daemon /v2/sessions diff (snapshot at /tmp/dogfood-t4-sessions.json).
+- Renderer non-subscription: confirmed via grep of `workstation-shell.html` and `preload.mts` — no consumer of `workstation:spawn-result` exists.
+
+**Cross-references.**
+- `MB-F-MB-T08-SPAWN-RESULT-SENTINEL` (smoke-harness.ts:85-88) — same defect framed as test-observability; resolve in same patch
+- Cairn #72 (PATH-allowlist resolution) — partial mitigation already shipped via `runTmuxHasSession` liveness check; addresses the tmux-died-on-exec case but does not surface the SpawnFailed result to the operator
+- Cairn #73 (post-spawn liveness check) — adjacent ship pattern; same UX gap
+- Vision §10.x spawn flow — primary v3.0 ship-gate surface; this finding directly impacts ship-gate readiness
+
+**§10.5 self-check (docs-only commit):**
+1. API verified by spike? n/a — documentation only.
+2. Test exercises behavior or mocks? n/a — finding cites three live dogfood reproductions + grep-confirmed renderer non-subscription.
+3. Implementation deleted, test still passes? n/a.
+4. Anything outside contract? no — documentation only; no code change.
+5. Modified contract? no.
+6. Unlabeled claims? no — all KNOWN; recommendation is explicitly deferred for operator arbitration.
+7. Touched a file another session may modify? no parallel session active; single append to docs/cairn-findings.md.
+8. Pre-push protocol? docs-only; per-finding-file pattern.
+9. Confidence labeling matches evidence? yes — all four evidence components KNOWN with reproduction paths.
