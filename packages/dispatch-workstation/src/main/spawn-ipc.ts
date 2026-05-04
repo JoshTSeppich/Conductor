@@ -131,6 +131,15 @@ async function defaultRunTmuxKillSession(sessionName: string): Promise<void> {
 }
 
 /**
+ * Production runTmuxHasSession (cairn #73). Resolves on exit-0,
+ * rejects on non-zero (Node's execFile rejects non-zero by default).
+ * Caller wraps the rejection in SpawnFailed.
+ */
+async function defaultRunTmuxHasSession(sessionName: string): Promise<void> {
+  await execFileP(TMUX_BIN, ['has-session', '-t', sessionName]);
+}
+
+/**
  * Production registerSession via daemon POST /v2/sessions. Mirrors the
  * shape from packages/dispatch-cli/src/lib/daemon-client.ts:206
  * runInitV2 (KNOWN-correct per CLI v1 + DAEMON-T07). 409 conflict
@@ -229,6 +238,7 @@ export async function defaultSpawnHandlerDeps(
   return {
     runTmuxNewSession: defaultRunTmuxNewSession,
     runTmuxKillSession: defaultRunTmuxKillSession,
+    runTmuxHasSession: defaultRunTmuxHasSession,
     registerSession: defaultRegisterSession,
     sourceEnv: process.env,
     apiKey: readApiKey(opts.persistedApiKey ?? null),
@@ -236,6 +246,8 @@ export async function defaultSpawnHandlerDeps(
     // sessionCap omitted → DEFAULT_SESSION_CAP=5 from session-cap.ts applies.
     sessionListClient: new HttpSessionListClient(),
     claudeBinPath,
+    // cairn #73: livenessCheckDelayMs unset → spawn-handler default
+    // 500ms applies. A future ticket may wire this through settings UI.
   };
 }
 

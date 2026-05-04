@@ -32,6 +32,9 @@ function recordingDeps() {
     runTmuxKillSession: async (sessionName: string): Promise<void> => {
       tmuxKillCalls.push(sessionName);
     },
+    // cairn #73: liveness check stub (no-op success). Real liveness
+    // semantics covered in test/unit/wiring-spawn/test_post_spawn_liveness_check.spec.ts.
+    runTmuxHasSession: async (_sessionName: string): Promise<void> => {},
     registerSession: async (req: {
       name: string;
       cwd: string;
@@ -50,6 +53,8 @@ function recordingDeps() {
     // cairn #72: fixed test-stand-in absolute path. Real production
     // wiring resolves via `which claude` at startup (binary-resolver.ts).
     claudeBinPath: '/test/bin/claude',
+    // cairn #73: 0ms delay keeps unit tests fast; production default 500ms.
+    livenessCheckDelayMs: 0,
   };
 }
 

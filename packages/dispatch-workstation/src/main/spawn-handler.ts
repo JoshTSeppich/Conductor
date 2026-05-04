@@ -91,6 +91,14 @@ export interface SpawnHandlerDeps {
    */
   runTmuxKillSession(sessionName: string): Promise<void>;
   /**
+   * Run `tmux has-session -t <sessionName>`. Resolves if the session
+   * exists; rejects if not. Used for the cairn-#73 post-spawn liveness
+   * check: tmux's `new-session` exit-0 only proves session-created,
+   * not program-running. After a configurable sleep, has-session
+   * confirms the program inside the session is still alive.
+   */
+  runTmuxHasSession(sessionName: string): Promise<void>;
+  /**
    * POST to daemon /v2/sessions; throws WorkstationSpawnError on failure
    * (or a plain Error wrapped by the handler).
    */
@@ -126,6 +134,18 @@ export interface SpawnHandlerDeps {
    * for tests + future settings UI.
    */
   sessionCap?: number;
+  /**
+   * Delay (milliseconds) between `runTmuxNewSession` resolving and the
+   * post-spawn `runTmuxHasSession` liveness check (cairn #73). Default
+   * 500ms in production; tests inject 0 for fast unit runs.
+   *
+   * 500ms is a heuristic: long enough for tmux's child-process exec
+   * attempt to have happened and for an immediate-exit failure to
+   * tear down the session, short enough to keep the spawn user-action
+   * latency acceptable. Tunable via a future ticket with measured data
+   * (per cairn #73 tradeoff note).
+   */
+  livenessCheckDelayMs?: number;
   /**
    * Absolute path to the `claude` executable. Resolved once at
    * workstation startup via `resolveClaudeBin()` (binary-resolver.ts)
@@ -264,6 +284,35 @@ export async function spawnSession(
       'SpawnFailed',
       `tmux new-session failed: ${(err as Error).message}`,
       { sessionName: req.sessionName, stderr },
+    );
+  }
+
+  // Step 1.5 (cairn #73): post-spawn liveness check.
+  // tmux's `new-session` exit-0 proves session-created, NOT program-
+  // running. tmux returns 0 once the session struct exists; the child
+  // process attempts exec asynchronously after that point. If the
+  // child dies immediately (binary missing, license refused, crash),
+  // the session ends silently. Without this check, the workstation
+  // would proceed to register the session with the daemon — leaving an
+  // orphaned daemon record once the session-died-on-exec event ripples
+  // through.
+  //
+  // Sleep then `tmux has-session -t <name>`. If has-session rejects,
+  // surface SpawnFailed; daemon registration is skipped via the throw.
+  // Best-effort tmux kill-session is NOT issued here — has-session
+  // failing means the session is already gone (or never properly
+  // started), so no cleanup is needed.
+  const livenessDelay = deps.livenessCheckDelayMs ?? 500;
+  if (livenessDelay > 0) {
+    await new Promise<void>((resolve) => setTimeout(resolve, livenessDelay));
+  }
+  try {
+    await deps.runTmuxHasSession(req.sessionName);
+  } catch (err) {
+    throw makeError(
+      'SpawnFailed',
+      `tmux session created but program died on exec — claude binary may be missing or crashed (has-session check failed: ${(err as Error).message})`,
+      { sessionName: req.sessionName },
     );
   }
 
