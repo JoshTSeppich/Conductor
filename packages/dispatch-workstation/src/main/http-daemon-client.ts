@@ -1,4 +1,6 @@
 import type { DaemonClient, ChatMessage, ChatMessageInput } from '../coarchitect/daemon-client.js';
+import type { DaemonAuditClient } from './card-ipc.js';
+import type { OrchestratorAuditWriteRequest } from 'dispatch-core/src/v3/schema.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -15,14 +17,52 @@ function readDaemonToken(): string | null {
 }
 
 /**
+ * Pure-function POST helper for /v3/orchestrator/audit (COARCH-T01 endpoint).
+ * Extracted to a top-level export so unit tests can exercise the call shape
+ * with an injected fetchImpl, without mocking globals or node:fs.
+ *
+ * Audit is fire-and-forget per WORKSTATION_CONTRACT.md §6.2: any failure path
+ * (no token, daemon 401/422/500, network error) returns null and does not
+ * throw. The card-ipc handler awaits this call but discards the result.
+ */
+export async function postAuditViaFetch(
+  baseUrl: string,
+  token: string | null,
+  req: OrchestratorAuditWriteRequest,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  if (!token) {
+    return null;
+  }
+  try {
+    const res = await fetchImpl(`${baseUrl}/v3/orchestrator/audit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Conductor-Token': token,
+      },
+      body: JSON.stringify(req),
+    });
+    if (!res.ok) {
+      return null;
+    }
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Real DaemonClient implementation that persists messages via POST /v3/orchestrator/messages
- * and fetches history via GET /v3/orchestrator/history.
+ * and fetches history via GET /v3/orchestrator/history. Also implements
+ * DaemonAuditClient for the MB-T07 card-ipc audit-write path.
  *
  * Fails gracefully when daemon is unreachable: fetchHistory returns empty array,
- * postMessage returns a synthetic local-only ChatMessage. This allows chat to work
- * even when the daemon isn't running (e.g. in tests or offline scenarios).
+ * postMessage returns a synthetic local-only ChatMessage, postAudit returns null.
+ * This allows the workstation to function even when the daemon isn't running
+ * (e.g. in tests or offline scenarios).
  */
-export class HttpDaemonClient implements DaemonClient {
+export class HttpDaemonClient implements DaemonClient, DaemonAuditClient {
   private readonly token: string | null;
 
   constructor() {
@@ -68,5 +108,9 @@ export class HttpDaemonClient implements DaemonClient {
     } catch {
       return fallback;
     }
+  }
+
+  async postAudit(req: OrchestratorAuditWriteRequest): Promise<unknown> {
+    return postAuditViaFetch(DAEMON_URL, this.token, req);
   }
 }
