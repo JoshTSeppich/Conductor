@@ -816,3 +816,55 @@ Workstation main was the canary because it's the only **unbundled Node ESM entry
 
 **Cross-references:** Resolved by composition with #79 (workstation now patched). #67 is the same defect-class precedent (build-passes-but-runtime-fails; mocks/bundlers/tests hide the gap until production composition surfaces it).
 
+---
+
+## Finding #81 — MB-F-DISPATCH-WEB-TYPES-REACT-BIGINT-REACTNODE-DRIFT
+
+**Date filed:** 2026-05-04 (stub; full triage deferred)
+**Tier:** 3 (latent baseline; no current ship-gate impact)
+**Origin:** Surfaced during #79 regression scan 2026-05-04
+**Discovered by:** #79 triage — 4-package typecheck regression scan
+**Resolution status:** STUB — full triage deferred.
+
+**Symptom.** `pnpm --filter dispatch-web typecheck` reports 2 errors:
+
+```
+src/App.tsx(48,22): error TS2322: Type '({ error, resetErrorBoundary, }: { error: Error; resetErrorBoundary: () => void; }) => ReactNode' is not assignable to type 'ComponentType<FallbackProps> | undefined'.
+  Type '({ error, resetErrorBoundary, }: ...) => ReactNode' is not assignable to type 'FunctionComponent<FallbackProps>'.
+    Type 'React.ReactNode' is not assignable to type 'import("/.../@types+react@18.3.28/...").ReactNode'.
+      Type 'bigint' is not assignable to type 'ReactNode'.
+
+src/components/PanelErrorBoundary.tsx(36,7): error TS2322: Type 'React.ReactNode' is not assignable to type 'import("/.../@types+react@18.3.28/...").ReactNode'.
+  Type 'bigint' is not assignable to type 'ReactNode'.
+```
+
+**Verified pre-existing on baseline.** During #79 triage, ran `git stash && pnpm --filter dispatch-web typecheck` on baseline SHA 8551f76 (the RED commit, before any code change in #79). Same two errors reproduced. NOT caused by the dispatch-core `"declaration": true` change shipped at cc89fa2. Confirmed by re-running typecheck post-#79 on cc89fa2 — error shape identical.
+
+**Likely root cause (SPECULATIVE).** `@types/react` version drift introduced `bigint` into the `ReactNode` union (visible in modern @types/react 18.3.x), but at least one consumer in dispatch-web's dependency graph still pulls a narrower `ReactNode` type that doesn't accept `bigint`. The error message points to a path through `node_modules/.pnpm/@types+react@18.3.28/...`, suggesting the resolution mismatch is between the React-error-boundary package's internal `FallbackProps` and dispatch-web's local `ReactNode`. May be a single `@types/react` version pin in dispatch-web's package.json, a workspace-level peerDependency mismatch, or a tsconfig `lib`/`types` adjustment.
+
+**Triage required.**
+1. Read `packages/dispatch-web/src/App.tsx:48` and `packages/dispatch-web/src/components/PanelErrorBoundary.tsx:36` — identify the `bigint`/`ReactNode` boundary.
+2. Inspect `packages/dispatch-web/package.json` for `@types/react` version pin and `react-error-boundary` (or equivalent) dep version.
+3. Run `pnpm why @types/react` from `packages/dispatch-web/` to enumerate type-resolution paths and version conflicts.
+4. Determine whether fix is (a) type-cast at call site, (b) `@types/react` version pin alignment, (c) `react-error-boundary` version bump, or (d) tsconfig adjustment.
+5. Likely 1–5 line fix; budget triage as fast-fix once a session is allocated.
+
+**Practical impact.** Zero today. dispatch-web ships through Vite (per #80's bundler enumeration), and Vite + esbuild do not run TypeScript type-checking as a build gate. The errors only surface to operators running `pnpm --filter dispatch-web typecheck` explicitly. Production builds and runtime are unaffected.
+
+**Confidence:** KNOWN (errors reproduced on both baseline 8551f76 and post-#79 HEAD cc89fa2 — confirmed not caused by #79 fix). Root cause SPECULATIVE pending dependency-graph triage.
+
+**Cross-references:** Surfaced by #79 (regression scan). Independent of #79's defect class — that was a runtime resolution gap; this is a type-system declaration mismatch. No cross-package coupling like #80.
+
+§10.5 self-check (docs-only commit):
+1. API verified by spike? n/a — documentation only; no API touched.
+2. Test exercises behavior or mocks? n/a — no test added; finding cites `pnpm --filter dispatch-web typecheck` as the reproduction command.
+3. Implementation deleted, test still passes? n/a — no implementation.
+4. Anything outside contract? no — finding documentation; no code change, no contract surface touched.
+5. Modified contract? no.
+6. Unlabeled claims? no — symptom KNOWN (reproduced on two SHAs), root cause SPECULATIVE (labeled).
+7. Touched a file another session may modify? Q7 territory check against `git status`:
+     modified: docs/cairn-findings.md
+   Single file, append-only delta in the findings section. No parallel-session shared-tree concern.
+8. Pre-push protocol? this is a docs-only commit closing the #79 triage session per operator scope ("documentation-only commit. No code changes. No further work after this commit"). No build/typecheck gate required for docs.
+9. Confidence labeling matches evidence? yes — KNOWN for symptom + reproduced-on-baseline claim; SPECULATIVE for root cause; n/a labels on no-code self-check questions.
+
