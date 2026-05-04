@@ -188,4 +188,65 @@ Test count: 289 / 290 (1 fail + 1 file failure = both pre-existing, coord §4 C-
 
 ## §5 Session-end summary
 
-(populated at session end)
+**Session:** Batch 6 — Session C — wiring-mounts. **Wall-clock:** ~2h 2026-05-03 22:18 → 2026-05-03 23:35 (single sitting; no cross-session pause beyond the §3 main.ts push gate). **Branch:** `session-C/wiring-mounts`, force-pushed post-rebase to `194226c` on top of `origin/main` HEAD `41786a5` (Session-B merge).
+
+### Final commit list (post-rebase, 8 commits)
+
+```
+194226c coord(session-C): add C-8 + C-9 rebase-resolution findings
+60058a1 green(main.ts): Onboarding + Console mount sentinel regions
+d1b1c66 coord(session-C): halt-state surface + app-launches-clean test fix
+7bd0199 green(MB-F-CONSOLE-T03-SHELL-INTEGRATION): tile region + mount factory
+b78d8be red(MB-F-CONSOLE-T03-SHELL-INTEGRATION): tile region + mount factory
+a89e52a green(MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT): orchestration + bundle
+93c474b red(MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT): wiring-mounts unit specs
+fc2543f coord(session-C): batch-6 wiring-mounts session-start
+```
+
+Plus this session-end-summary commit landing on top.
+
+### Followups closed
+
+- **MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT** (Tier 1, vision §8.1 ship-gate). Bundle + mount on first launch. RED at 93c474b, GREEN at a89e52a.
+- **MB-F-CONSOLE-T03-SHELL-INTEGRATION** (Tier 1, vision §10.10 ship-gate). Tile region in shell, single-panel-in-shell. RED at b78d8be, GREEN at 7bd0199. Multi-panel tiling deferred to MB-T12 (re-scope) per finding C-5 — honest framing: "console panel renders in shell when operator opens via menu; spawn-auto-mount + multi-panel are downstream tickets".
+
+### Test counts
+
+- **Pre-rebase Session-C-only:** 21/21 wiring-mounts unit specs GREEN; full dispatch-workstation suite 243/244 (2 pre-existing failures unchanged from C-1 baseline).
+- **Post-rebase merged:** 289/290 (1 fail + 1 file failure = both pre-existing, C-1 baseline). Up from 243/244 due to Session B's merge contributing ~46 new passing tests.
+- **New tests added by Session C:** 21 (wiring-mounts unit specs across 5 files: test_check_first_launch / test_mount_onboarding_factory / test_run_onboarding_if_needed / test_shell_has_console_tile_region / test_mount_console_tile_grid).
+- **Pre-existing failures (unchanged):**
+  - `test/unit/coarch-t04/build-doc-validator.spec.ts` — `MB-F-MB-T05-PRE-EXISTING-VALIDATOR-IMPORT` (FOLLOWUPS.md:117)
+  - `test/integration/mb-t04/spawn-modal-emits-intent.test.ts` — undocumented baseline flake (filed as cross-session finding C-1; recommend `MB-F-MB-T04-SPAWN-MODAL-INTEGRATION-FLAKE`)
+
+### Halt-discipline events
+
+1. **C-7 halt (~22:55–23:30):** main.ts push gated on Session B merge per scaffold §3. Surface posted in coord §4 finding C-7 + via this conversation channel. Operator-relay confirmed Session B merged at 41786a5; cleared to proceed with rebase.
+2. **C-8 conflict halt (~23:32):** rebase produced unexpected conflict on `package.json` `build` script (both sessions appended). Surfaced full conflict output, did NOT resolve unilaterally. Operator-relay arbitrated both-sessions-append, alphabetical (card-bridge before onboarding). Resolved at a89e52a.
+3. **C-9 conflict halt (~23:33):** rebase produced unexpected conflict on `main.ts` imports section (both sessions added new imports at the same lineage point). The function-body sentinel pattern WORKED — only the import section was unprotected. Surfaced full conflict output, did NOT resolve unilaterally. Operator-relay arbitrated both-sessions-append, B's bare import preserved + C's three sentinel groups appended. Resolved at 60058a1.
+4. **Force-push gate (~23:38):** rebase publish naturally requires `--force-with-lease`. Per Bash safety protocol, surfaced + awaited authorization despite the rebase workflow being implicitly authorized. Operator confirmed; pushed.
+
+### Cross-session findings filed
+
+- **C-1** Pre-existing test baseline (build-doc-validator import + spawn-modal-emits-intent timeout; both reproduce on pristine HEAD).
+- **C-2** Line-level edits to ancillary shared files (`package.json` build script line — explicitly owned per prompt; `tsconfig.json` exclude list — surgical additive entry mirroring existing pattern, not in prompt's owned list).
+- **C-3** Coord scaffold §0.4 sibling-session coord-file gap (Session-A and Session-B coord files not created pre-flight; Session-C created its own from §3 template).
+- **C-4** `onboarding.html` source location (placed at `src/onboarding/onboarding.html` per console-panel precedent, not at the literal package-root path named in prompt).
+- **C-5** Console mount production wiring deferral. `mountConsoleTileGrid` unit-tested as observable factory; production wires NO-OP panel-event sources because `ConsoleIpcController` doesn't surface panel-state observers and the menu callback wiring lives outside Session-C territory. v3.0 single-panel-in-shell ship-gate satisfied via shell's inline-script subscription on `consoleBridge.onConsoleOpen`. Operator-arbitrated: matches MB-T12 deferral in re-scope doc.
+- **C-6** `test/integration/app-launches-clean.test.ts` regression introduced by new production-onboarding-modal path; fixed via `MB_ONBOARDING_STATE_DIR` pre-population (simulates returning operator). Operator-arbitrated: accepted.
+- **C-7** HALT-STATE: main.ts push gated on Session B merge. Cleared.
+- **C-8** `package.json` append-collision during rebase. Operator-arbitrated: both-sessions-append, alphabetical. Post-merge followup: scaffold §1 needs an "append-shared-line" pattern.
+- **C-9** `main.ts` imports section append-collision during rebase. Operator-arbitrated: both-sessions-append, B's bare import preserved + C's sentinel groups appended. Post-merge followup: scaffold §2.1 needs explicit sentinel guidance for top-of-file shared regions.
+
+### Honest framing per §5 of launch instruction
+
+- **MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT:** vision §8.1 ship-gate satisfied for the API-key path. Project-list config remains a separate followup (MB-F-MB-T08-VISION-PROJECT-LIST-CONFIG, operator-arbitrated path A vs B per FOLLOWUPS.md:75).
+- **MB-F-CONSOLE-T03-SHELL-INTEGRATION:** ships single-panel-in-shell capability. Multi-panel tiling deferred to MB-T12 (re-scope batch 10). Console panel renders in shell when operator opens console via menu; spawn-auto-mount + multi-panel are downstream tickets.
+
+### Sentinel-region post-mortem
+
+The function-body sentinel pattern HELD perfectly across both sessions: B's `// === MB-T07 card wiring ===` block, my Onboarding mount block, and my Console mount block were textually disjoint and merged without conflict. The two collisions (C-8 + C-9) occurred at lineage points the scaffold §2.1 didn't address: a single-line build script (no sentinel surface available) and the imports section (sentinels named for function-body regions only). Both classes of gap surfaced as operator-arbitration moments rather than session errors.
+
+### Halt for operator merge
+
+Session-C work ships at `194226c` on `origin/session-C/wiring-mounts`. Per scaffold §4 / launch §4, this is the third and final batch-6 merge. Halting per §3.7 discipline: no other work, no context absorption for next batch. Awaiting operator merge.
