@@ -52,6 +52,24 @@
         height: 100%;
         display: block;
       }
+      /* === MB-F-CONSOLE-T03 console tile region — Session C / Batch 6 === */
+      #console-tile-region {
+        flex-shrink: 0;
+        border-top: 1px solid #303030;
+        background: #0a0a0a;
+        overflow: hidden;
+      }
+      #console-tile-grid {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      #console-root {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      /* === end MB-F-CONSOLE-T03 console tile region === */
       #splitter {
         height: 6px;
         background: #3a3a3a;
@@ -171,6 +189,17 @@
       <div id="kanban-region">
         <webview id="kanban-webview" allowpopups preload="./card-bridge.cjs"></webview>
       </div>
+      <!-- === MB-F-CONSOLE-T03 console tile region — Session C / Batch 6 ===
+           Hidden by default; flipped to display:block by the inline script
+           when the main process emits console-tile:show. Single-panel-in-
+           shell scope (vision §10.10 ship-gate); multi-panel tiling is
+           MB-T12 (re-scope). -->
+      <div id="console-tile-region" data-testid="console-tile-region" style="height: 240px; display: none;">
+        <div id="console-tile-grid" data-testid="console-tile-grid">
+          <div id="console-root"></div>
+        </div>
+      </div>
+      <!-- === end MB-F-CONSOLE-T03 console tile region === -->
       <div id="splitter" role="separator" aria-label="Resize panel" data-testid="splitter"></div>
       <div id="chat-region" style="height: 280px">
         <div id="root"></div>
@@ -344,6 +373,33 @@
         if (e.key === 'Escape' && !spawnModal.hidden) closeSpawnModal();
       });
 
+      // ────────────────────────────────────────────────────────────────────────
+      // MB-F-CONSOLE-T03-SHELL-INTEGRATION (Session C / Batch 6).
+      //
+      // Subscribe to consoleBridge open/close so the tile region toggles
+      // visibility. The bridge is exposed by preload.mts via contextBridge;
+      // these subscriptions fire whether the open trigger came from the
+      // native CC Console menu (CONSOLE-T03 menu surface) or from a future
+      // spawn-auto-mount path (batch 7+). Single-panel scope: each open/close
+      // simply flips the region's display; MB-T12 will replace this with
+      // per-tile mount/unmount inside #console-tile-grid.
+      //
+      // The console-panel React tree auto-mounts into #console-root when
+      // ../console-panel/renderer.js loads (mount.ts auto-mount path). The
+      // panel itself listens to the same consoleBridge surface so it
+      // updates its own header / terminal on open/close — the shell's
+      // job is just to make the region visible.
+      // ────────────────────────────────────────────────────────────────────────
+      const consoleTileRegion = document.getElementById('console-tile-region');
+      if (window.consoleBridge && consoleTileRegion) {
+        window.consoleBridge.onConsoleOpen(() => {
+          consoleTileRegion.style.display = 'block';
+        });
+        window.consoleBridge.onConsoleClose(() => {
+          consoleTileRegion.style.display = 'none';
+        });
+      }
+
       initSplitter().then(() => {
         console.log('SHELL_READY');
       });
@@ -351,5 +407,8 @@
     <!-- D's renderer bundle: auto-mounts ChatPanel into #root with stub DaemonClient.
          Round 2: contextBridge bridge wired in preload.ts for COARCH-T03 consumption. -->
     <script src="../coarchitect/renderer.js"></script>
+    <!-- MB-F-CONSOLE-T03 console-panel renderer: auto-mounts ConsolePanel into
+         #console-root via window.consoleBridge (preload.mts contextBridge surface). -->
+    <script src="../console-panel/renderer.js"></script>
   </body>
 </html>

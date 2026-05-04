@@ -25,10 +25,23 @@ import {
 } from '../onboarding/first-launch-detector.js';
 import { saveApiKey } from '../onboarding/api-key-storage.js';
 import { wireCardIpc } from './card-wiring.js';
+// === Onboarding mount imports (Session C / Batch 6 / wiring-mounts) ===
+import {
+  checkFirstLaunch,
+  electronOnboardingDeps,
+  runOnboardingIfNeeded,
+} from './onboarding-mount.js';
+// === end Onboarding mount imports ===
+// === Console mount imports (Session C / Batch 6 / wiring-mounts) ===
+import { mountConsoleTileGrid } from './console-mount.js';
+// === end Console mount imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
 const SHELL_PATH = resolve(__dirname, 'workstation-shell.html');
+// === Onboarding mount path (Session C / Batch 6 / wiring-mounts) ===
+const ONBOARDING_PRELOAD_PATH = resolve(__dirname, 'preload-onboarding.cjs');
+// === end Onboarding mount path ===
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -156,13 +169,28 @@ app.whenReady().then(async () => {
   // === end MB-T07 card wiring ===
   registerOnboardingIpc();
 
-  if (isFirstLaunch({ configDir: configDir() })) {
-    if (process.env.MB_TEST_HOOKS === '1') {
-      process.stdout.write('ONBOARDING_REQUIRED\n');
+  // === Onboarding mount (Session C / Batch 6 / wiring-mounts) ===
+  // Closes MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT (vision §8.1 ship-gate).
+  // Smoke-harness path (MB_TEST_HOOKS=1): preserve existing sentinel-only
+  // behavior — the harness drives onboarding via stdin (ONBOARDING_API_KEY,
+  // ONBOARDING_DONE) so the headless test loop does not block on a real
+  // BrowserWindow modal. Production path: open the onboarding window via
+  // electronOnboardingDeps and await operator completion before continuing
+  // to createWindow().
+  {
+    const cfgDir = configDir();
+    if (await checkFirstLaunch({ configDir: cfgDir })) {
+      if (process.env.MB_TEST_HOOKS === '1') {
+        process.stdout.write('ONBOARDING_REQUIRED\n');
+      } else {
+        await runOnboardingIfNeeded({
+          configDir: cfgDir,
+          ...electronOnboardingDeps({ preloadPath: ONBOARDING_PRELOAD_PATH }),
+        });
+      }
     }
-    // The renderer-side modal mount is followup-tracked; for v3.0 the smoke
-    // harness drives onboarding via the MB_TEST_HOOKS stdin commands below.
   }
+  // === end Onboarding mount ===
 
   await createWindow();
   registerLifecycleHooks(app, () => mainWindow, createWindow);
@@ -170,6 +198,47 @@ app.whenReady().then(async () => {
   // followup. Operator can still see the menu's cap-status hint when the
   // panel cap is reached even with an empty session list.
   refreshConsoleMenu([]);
+
+  // === Console mount (Session C / Batch 6 / wiring-mounts) ===
+  // Closes MB-F-CONSOLE-T03-SHELL-INTEGRATION (vision §10.10 ship-gate).
+  //
+  // v3.0 single-panel-in-shell: the shell's inline script subscribes to
+  // window.consoleBridge.onConsoleOpen / onConsoleClose directly (see
+  // workstation-shell.html), so the tile region's visibility tracks
+  // panel state without requiring main-process panel-event observability.
+  // mountConsoleTileGrid is wired here for the parallel
+  // console-tile:show / console-tile:hide IPC channels that MB-T12
+  // multi-panel tiling will consume; in v3.0 it stays quiescent because
+  // ConsoleIpcController does not surface panel-event observability and
+  // the menu callback wiring (refreshConsoleMenu's onOpen) lives outside
+  // Session-C's sentinel territory.
+  //
+  // The CONSOLE_TILE_GRID_MOUNTED stdout sentinel is emitted on mount so
+  // the smoke harness can validate the wiring chain even though no panel
+  // events fire in v3.0. Future MB-T12 will replace the no-op event
+  // sources with controller-derived subscriptions.
+  const consoleMountDispose = mountConsoleTileGrid({
+    onPanelOpen: () => () => {
+      /* v3.0: no panel-event source on controller; MB-T12 wires this. */
+    },
+    onPanelClose: () => () => {
+      /* v3.0: no panel-event source on controller; MB-T12 wires this. */
+    },
+    sendToShell: (channel, payload) => {
+      const wc = mainWindow?.webContents;
+      if (wc && !wc.isDestroyed()) wc.send(channel, payload);
+    },
+    emitTestSentinel: (sentinel) => {
+      if (process.env.MB_TEST_HOOKS === '1') {
+        process.stdout.write(sentinel + '\n');
+      }
+    },
+  });
+  // Capture the dispose handle so future window-close lifecycle hooks
+  // can release subscriptions cleanly. No-op in v3.0 (subscriptions are
+  // empty), but keeps the symmetry for MB-T12.
+  void consoleMountDispose;
+  // === end Console mount ===
 
   // ONBOARDING_READY sentinel is emitted after createWindow returns so the
   // smoke harness's runOnboarding() can wait deterministically.
