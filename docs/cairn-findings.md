@@ -730,19 +730,89 @@ Future Batch 3+ planning should account for this. Parallel sessions of 3 or more
 
 ## Finding #79 — MB-F-MB-T07-ORCHESTRATOR-OUTPUT-ROUTER-IMPORT-PATH
 
-**Date filed:** 2026-05-04 (stub; full triage deferred)
+**Date filed:** 2026-05-04 (stub); RESOLVED 2026-05-04 at green commit cc89fa2.
 **Tier:** 1 (ship-gate; workstation cannot launch)
 **Origin:** 2026-05-04 post-batch-6-merge launch attempt
 **Discovered by:** Operator dogfood
-**Resolution status:** STUB — full triage deferred to fresh session.
+**Resolution status:** RESOLVED at cc89fa2 (red 8551f76 → green cc89fa2, operator §3.4 arbitration on dispatch-core build config).
 
 **Symptom.** `pnpm --filter dispatch-workstation dev` builds cleanly but Electron throws `ERR_MODULE_NOT_FOUND` at runtime: `Cannot find module 'node_modules/dispatch-core/src/v3/schema.js'` imported from `dist/main/orchestrator-output-router.js`. Workstation never reaches main loop.
 
 **Defect class.** Build-passes-but-runtime-fails. Same anti-fabrication failure pattern as cairn findings #67 (xterm dep declared but not installed) and the relay drafting failures B caught — TypeScript compilation succeeded, unit tests mocked the import, production module-resolution at runtime exposes the gap.
 
-**Likely root cause (MODELED, untriaged).** orchestrator-output-router.ts (shipped by Session B at f8c57f7 GREEN) imports v3 schema via a path that TS path-maps at build time but Node ESM loader cannot resolve at runtime. Possibilities: (a) pnpm workspace symlink doesn't expose src/ subpath, (b) missing .js extension Node ESM strict mode requires, (c) wrong package export path.
+**Root cause (KNOWN, post-triage).** Two coupled defects:
 
-**Triage required:** Read orchestrator-output-router.ts import statement. Check dispatch-core package.json exports field. Check pnpm workspace config. Likely a one-line fix in the import statement.
+1. `orchestrator-output-router.ts:26` (shipped by Session B at f8c57f7 GREEN) imports `OrchestratorOutputSchema` (a runtime VALUE, not type) from `'dispatch-core/src/v3/schema.js'`. TypeScript NodeNext resolution maps `.js`→`.ts` source at compile time, so `tsc` and vitest both succeed. At Electron runtime, Node ESM resolves the path literally — looking for `node_modules/dispatch-core/src/v3/schema.js` — but the symlinked workspace package's `src/` directory contains only `.ts` files. The compiled JS lives at `dispatch-core/dist/v3/schema.js`.
 
-**Confidence:** KNOWN (symptom reproduced 2026-05-04). Root cause SPECULATIVE.
+2. `dispatch-core/tsconfig.json` was missing `"declaration": true`, so `tsc` emitted `.js` for every src file but `.d.ts` only for a historical subset. `dist/v2/schema.d.ts` was a stale artifact from an earlier build configuration; v3 (added later) was never accompanied by `.d.ts` emission. This is what made the obvious one-line fix (flip import to `dist/v3/schema.js`) fail with `TS7016: Could not find a declaration file for module 'dispatch-core/dist/v3/schema.js'` — the runtime-correct path had no types.
+
+The two defects compose: the workstation main process is the only consumer in the monorepo that runs as raw `tsc` ESM output via Electron. Every other consumer (dispatch-daemon, dispatch-web, dispatch-cli) is bundled by esbuild/vite/tsx and so the `src/.../*.js` import convention worked for them only because their bundlers resolve the path at build time. See finding #80 for the systemic followup.
+
+**Fix.** Two coupled changes in green commit cc89fa2:
+- `packages/dispatch-core/tsconfig.json` — add `"declaration": true`. Operator §3.4 arbitration: tsconfig.json is build configuration, not part of the frozen API contract; enabling declaration emission is operator-supervised mechanical translation that does not change the exported API surface.
+- `packages/dispatch-workstation/src/main/orchestrator-output-router.ts:26` — flip import specifier from `dispatch-core/src/v3/schema.js` to `dispatch-core/dist/v3/schema.js`.
+
+**Verification.**
+- RED smoke test (8551f76: `test/integration/orchestrator-output-router-imports.test.ts`) reproduces failure pre-fix with exact `ERR_MODULE_NOT_FOUND` error; GREEN post-fix.
+- `pnpm --filter dispatch-workstation dev` launches Electron, reaches WINDOW_READY sentinel in 3.05s, exits clean (verified via existing `app-launches-clean.test.ts`).
+- 4-package typecheck regression scan: dispatch-core ✓, dispatch-daemon ✓, dispatch-cli ✓; dispatch-web has 2 pre-existing baseline errors unrelated to this fix (App.tsx:48, PanelErrorBoundary.tsx:36; `@types/react` `bigint`/ReactNode drift; verified by stash-and-rerun on baseline SHA 8551f76).
+- v2 .d.ts shape preserved: 47 src exports → 47 dist .d.ts exports, identical names. v3 .d.ts: 72 src exports → 72 dist .d.ts exports (was 0 pre-fix).
+- MB-T07 unit suite: 28/28 passed.
+
+**Confidence:** KNOWN (root cause reproduced + fix verified 2026-05-04 across 4 packages).
+
+**Methodology lesson.** Compounds finding #67's lesson: tests + tsc green ≠ production-validated under composition (project instructions §3.5). The bundler/no-bundler boundary is a hidden composition gate. Latent risk: any future unbundled consumer in this monorepo (a CLI binary shipping raw `tsc` output, a server worker, etc.) will recur this defect class until the systemic fix in finding #80 lands.
+
+---
+
+## Finding #80 — MB-F-SYSTEMIC-MONOREPO-UNBUNDLED-CONSUMER-FRAGILITY
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (latent risk; no current ship-gate impact post-#79 fix)
+**Origin:** Surfaced during finding #79 triage 2026-05-04
+**Discovered by:** Triage of #79 (post-batch-6 dogfood)
+**Resolution status:** New finding; systemic followup deferred to v3.0 ship-gate batch or v3.1.
+
+**Symptom.** Every package in the monorepo uses the import convention `from 'dispatch-core/src/<subpath>/<file>.js'` for *value* imports (not just type-only). At runtime, Node ESM resolves these specifiers literally — looking for `node_modules/dispatch-core/src/<subpath>/<file>.js`, which does not exist (the symlinked workspace package's `src/` directory contains `.ts` only; compiled JS lives in `dist/`).
+
+**Why this hasn't broken everywhere yet.** Three of the four consumer packages ship through bundlers that resolve the path at build time:
+- `dispatch-daemon` — esbuild bundle (or `tsx` in dev) ✓
+- `dispatch-web` — Vite ✓
+- `dispatch-cli` — `tsx`/esbuild ✓
+- `dispatch-workstation` main process — raw `tsc` output, loaded by Node ESM via Electron ✗
+
+Workstation main was the canary because it's the only **unbundled Node ESM entrypoint** in the monorepo. Finding #79 patched it (the orchestrator-output-router.ts site that surfaced); the convention itself remains in 30+ other call sites across daemon/web/cli, where it works only because of the bundler.
+
+**Latent call-sites (KNOWN, enumerated 2026-05-04 via `grep -rn "from 'dispatch-core" packages/`):**
+- `packages/dispatch-daemon/src/migration/schema-v2.ts:48` — value import (`from 'dispatch-core/src/v2/schema.js'`)
+- `packages/dispatch-daemon/src/state/transitions.ts:31` — value (`'dispatch-core/src/transport/tmux.js'`)
+- `packages/dispatch-daemon/src/routes/v3/orchestrator-history.ts:21` — value (`OrchestratorHistoryQuerySchema`)
+- `packages/dispatch-daemon/src/routes/v3/orchestrator-messages.ts:16` — value
+- `packages/dispatch-daemon/src/routes/prompts.ts:26-28` — three value imports
+- `packages/dispatch-daemon/src/routes/sessions.ts:27,32` — two value imports
+- `packages/dispatch-daemon/src/routes/v3/tickets-state.ts:28` — value
+- `packages/dispatch-daemon/src/routes/violations.ts:45` — value
+- `packages/dispatch-daemon/src/routes/handoff.ts:27-28` — two value imports
+- `packages/dispatch-daemon/src/routes/v3/orchestrator-audit.ts:22` — value
+- `packages/dispatch-daemon/src/watchers/status-json.ts:39` — value
+- `packages/dispatch-web/src/query/useHealth.ts:5`, `usePatchState.ts:10`, `usePostPrompt.ts:9`, `useSession.ts:5` — value
+- `packages/dispatch-cli/src/commands/init.ts:2-3`, `send.ts:3-7`, `lib/tui-state.ts:43` — value
+- `packages/dispatch-workstation/src/main/card-ipc.ts:22`, `http-daemon-client.ts:3` — type-only (silently safe)
+- `packages/dispatch-workstation/test/unit/mb-t07/*.spec.ts` (3 files) — value, but vitest's resolver hides the bug at test time
+
+**Practical impact.** Zero today (post-#79 patch). Latent: any future unbundled consumer — a standalone CLI binary, a server-side worker, an Electron renderer that bypasses esbuild, a cron-triggered Node script — will recur the same defect class.
+
+**Defect class.** Cross-package "works only because of bundler" coupling. Convention-level latent fragility, not a localized bug. Same family as cairn finding #67 (xterm dep declared but not installed; tests + bundler hid the gap until production esbuild surfaced it).
+
+**Recommendation (deferred — operator arbitration required before proceeding).** Two viable paths, listed least-to-most invasive:
+
+1. **Migrate the convention monorepo-wide:** rewrite all `dispatch-core/src/.../*.js` value imports to `dispatch-core/dist/.../*.js`. Mechanical sed-style change across ~30 call sites. Each change is identical in shape to the #79 fix. Makes every consumer Node-ESM-resolvable without a bundler. Doesn't address the underlying convention-encourages-fragility issue but eliminates the latent risk surface.
+
+2. **Add an `exports` map to dispatch-core/package.json** — a proper Node-conditional-export surface (`./v3/schema` → `dist/v3/schema.js` runtime + `dist/v3/schema.d.ts` types). Then consumers import from `'dispatch-core/v3/schema'` (no `src/`/`dist/` distinction). Cleanest long-term fix; affects the package surface and so requires §3.4 frozen-contract arbitration. Higher risk of ripple effects on existing imports.
+
+3. **Bundle workstation main with esbuild** matching the pattern already used in workstation for shell/console-panel/preload/onboarding/card-bridge (see `packages/dispatch-workstation/package.json:11` build script). Isolated to workstation — doesn't propagate the fix to daemon/web/cli (they're already bundled). Useful only if more unbundled consumers are anticipated.
+
+**Confidence:** KNOWN (call sites enumerated; runtime divergence at unbundled consumer reproduced via #79; bundler-vs-no-bundler boundary verified by inspection of build scripts in each package).
+
+**Cross-references:** Resolved by composition with #79 (workstation now patched). #67 is the same defect-class precedent (build-passes-but-runtime-fails; mocks/bundlers/tests hide the gap until production composition surfaces it).
 
