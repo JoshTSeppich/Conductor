@@ -877,7 +877,7 @@ src/components/PanelErrorBoundary.tsx(36,7): error TS2322: Type 'React.ReactNode
 **Tier:** 2 (meaningful defect — blocks operator-facing v3.0 console-panel-in-shell experience; cross-reference to existing followup `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`)
 **Origin:** Batch-6 dogfood T3 (console panel inside shell) at HEAD 58140bd
 **Discovered by:** dogfood operator session, live menu inspection of running workstation
-**Resolution status:** New finding documenting dogfood-confirmation of an existing followup. The followup `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION` was triaged Tier 2 and self-described as "land before v3.0 ship-gate"; this finding closes the gap of validating it is in fact unresolved at HEAD 58140bd and quantifying operator impact.
+**Resolution status:** PARTIAL-RESOLUTION at 8348033 (Fix-C green-bridge head) — wiring shipped + unit-test-and-helper-level GREEN; visual outcome blocked by newly discovered finding #85. See Resolution section below.
 
 **Symptom (KNOWN — observed live).** Workstation main HEAD 58140bd ships the full console-panel-in-shell wiring chain (`console:open-panel` IPC → `controller.openConsolePanel()` → `console:open` → shell visibility toggle → ConsolePanel React mount), but no operator-reachable trigger exists to fire it. Live verification (T3 dogfood):
 
@@ -911,6 +911,107 @@ src/components/PanelErrorBoundary.tsx(36,7): error TS2322: Type 'React.ReactNode
 7. Touched a file another session may modify? no parallel session active in this dogfood pass; modified file: docs/cairn-findings.md, single append.
 8. Pre-push protocol? docs-only; per-finding-file pattern; no build/typecheck gate required for docs.
 9. Confidence labeling matches evidence? yes — KNOWN labels throughout, single dogfood-arbitration recommendation explicitly deferred.
+
+### Resolution (2026-05-04, Fix-C session)
+
+**Status:** PARTIAL-RESOLUTION at 8348033.
+
+Wiring layer GREEN at the unit-test-and-helper level. Visual layer
+blocked by newly discovered finding #85
+(`MB-F-WORKSTATION-MENU-REBUILD-NO-OP`). The menu rebuild path
+through `Menu.setApplicationMenu` does not propagate to the macOS
+menu bar after `app.whenReady` settles, so the operator-trigger
+surface remains unreachable in production despite Fix-C's wiring.
+
+Fix-Batch-1 Session C on branch `fix-C/console-panel-trigger`.
+Operator-arbitrated three-way parallel batch; Fix-A merged first
+(commit `e6698d9`), Fix-C rebased onto Fix-A and is at HEAD `8348033`
+awaiting Fix-B merge before its own merge per scaffold §2 order.
+
+**Fix-1 — menu subscription, green at 54a244d** (red at 953c75f, post-rebase SHAs).
+
+New helper `subscribeConsoleMenuToDaemon(deps)` in
+`packages/dispatch-workstation/src/main/console-mount.ts`. Hybrid
+pattern (operator-arbitrated): bootstrap `GET /v2/sessions` populates
+the menu with active session names (state ∉ {'killed','archived'});
+WS `/v2/events/stream` consumed as a "something changed → refetch"
+trigger because the daemon emits no `session_created`/`session_removed`
+events on the bus (filed as cairn finding #88). Refetch debounced
+150ms to collapse bursts of `state_changed`/`prompt_sent`/etc events
+into a single fetch.
+
+Refinements baked in per operator arbitration:
+- Bootstrap-only fallback: if WS connect fails, the bootstrap fetch
+  already populated the menu; no timer-based polling falls back.
+- Burst debounce as described above.
+
+Wired in `main.ts` `app.whenReady()` inside a CONSOLE_TRIGGER
+sentinel-marked region per scaffold §1 function-body sentinel pattern,
+immediately after the existing `refreshConsoleMenu([])` safety-net
+call. Imports also sentinel-marked at top of file.
+
+Unit-tested: 6 probes in
+`test/unit/fix-console-trigger/test_menu_subscription.spec.ts`. Cover
+bootstrap fetch + active-filter, debounce-after-WS-event,
+debounce-of-burst, WS-failure-bootstrap-survives, dispose-cleanup.
+All 6/6 GREEN.
+
+**Fix-2 — consoleBridge.openPanel, green at 8348033** (red at 9d2cd11, post-rebase SHAs).
+
+`ConsoleBridge` interface (`console-bridge.ts:58-67`) gains
+`openPanel(sessionName: string): Promise<void>`. Factory wires it to
+`ipc.invoke('console:open-panel', {sessionName})`. The IPC channel
+already existed at `console-ipc.ts:429-432` and routes to
+`ConsoleIpcController.openConsolePanel(sessionName)` which accepts
+arbitrary sessionName — no main-side change required. `preload.mts`
+exposes the bridge via existing `contextBridge.exposeInMainWorld`
+call; comment block updated to enumerate the new channel with
+provenance.
+
+Unit-tested: 4 probes in
+`test/unit/fix-console-trigger/test_console_bridge_open_panel.spec.ts`.
+Cover surface presence, invoke channel + payload shape, Promise
+resolution, error propagation. All 4/4 GREEN.
+
+**Integration verification.** Standalone node script imported
+`dist/main/console-mount.js`, ran `subscribeConsoleMenuToDaemon`
+against the live daemon (19 sessions, 1 active `newTest1`); helper
+correctly invoked `refreshMenu(["newTest1"])` once on bootstrap. Live
+Electron launch with diagnostic stderr instrumentation confirmed full
+wiring chain fires inside `app.whenReady()`: HTTP fetch returns 200,
+session filter selects `["newTest1"]`, `refreshConsoleMenu(["newTest1"])`
+is invoked. AppleScript enumeration of the live "CC Console" submenu,
+however, still reports `1 items: No sessions registered`. Diagnostic
+edits since reverted; branch HEAD `8348033` is clean. The discovered
+downstream defect is filed as finding #85.
+
+`consoleBridge.openPanel` surface is unaffected by #85 because it
+bypasses the menu entirely — a renderer-side button calling
+`window.consoleBridge.openPanel('newTest1')` would work today. No such
+button exists yet (vision §10 designated the menu as primary).
+
+**Followup status.** `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`
+(FOLLOWUPS.md:131) is updated to PARTIALLY CLOSED with a cross-
+reference to this resolution + finding #85. Closure is not full
+because the followup's stated outcome ("operator-driven menu open
+path actually surfaces sessions") still does not hold in production.
+
+**Commits on `fix-C/console-panel-trigger`** (post-rebase, on top of
+Fix-A merge `e6698d9`):
+
+```
+953c75f red(MB-F-#82-menu): console menu subscription
+54a244d green(MB-F-#82-menu): subscribe menu to /v2/events/stream
+9d2cd11 red(MB-F-#82-bridge): consoleBridge.openPanel method
+8348033 green(MB-F-#82-bridge): wire openPanel to console-mount
+```
+
+Plus docs:
+
+```
+a99cc82 docs(cairn): file finding #85 — Menu.setApplicationMenu post-ready no-op
+<this commit> docs(cairn): finding #82 PARTIAL-RESOLVED + findings #87, #88
+```
 
 ---
 
@@ -1450,3 +1551,124 @@ Evidence pointing at hypothesis (1): the hardcoded synchronous test `setTimeout(
 7. Touched a file another session may modify? No parallel session active in this dogfood pass; modified file: `docs/cairn-findings.md`, single append. Fix-C branch HEAD `8348033` working tree was clean before this commit.
 8. Pre-push protocol? Docs-only; per-finding-file pattern; no build/typecheck gate required for docs.
 9. Confidence labeling matches evidence? Yes — KNOWN labels for direct observations, MODELED for inferences (root cause, forward-compat impact).
+
+---
+
+## Finding #87 — MB-F-FIX-BATCH-WORKTREE-PRE-SCAFFOLD-CUT
+
+**Date filed:** 2026-05-04
+**Tier:** 3 (process / methodology — preventable scaffold-ordering issue with low operator impact)
+**Origin:** Fix-Batch-1 Session C (Fix-C/console-panel-trigger) at HEAD `8348033`
+**Discovered by:** Fix-C session, operator-pre-instructed to file as part of resolution surface
+**Resolution status:** Methodology amendment only; no code. Operator pre-instructed.
+
+**Symptom (KNOWN — observed live).** Fix-C worktree `fix-C/console-panel-trigger` was cut from commit `332bec1` (the dogfood summary commit). The fix-batch coordination scaffold lives at commit `626e2a9` on `main`, AFTER `332bec1`. Fix-C therefore had no visibility into the scaffold file `docs/cairn-coordination/fix-batch-1/00_COORDINATION_SCAFFOLD.md` from inside its own worktree. The operator briefed Fix-C with the file-ownership scope inline in the prompt, so this did not block Fix-C's work — but it did create an extra surface area for confusion (Fix-C noticed the missing scaffold during diagnose phase and surfaced for arbitration; operator confirmed the inline scope was canonical).
+
+**Root cause (KNOWN — git ordering).** Branch creation sequence was:
+
+1. `626e2a9` lands on main: scaffold file added.
+2. `332bec1` is `626e2a9`'s parent (or earlier) on main.
+3. Fix-C branch cut: `git checkout -b fix-C/console-panel-trigger 332bec1` instead of `git checkout -b fix-C/console-panel-trigger main`.
+
+Reading the operator's pre-instruction: the scaffold lives on main at `626e2a9` but Fix-C was cut from `332bec1` (pre-scaffold). The remedy is one-line: cut fix branches from the post-scaffold commit, not the pre-scaffold one.
+
+**Practical impact.**
+
+- Fix-C diagnose phase spent one extra round-trip surfacing the missing scaffold file before continuing. Mitigated by inline scope in prompt; no work lost.
+- If a future fix-batch had a more complex scaffold (e.g., test-isolation seams, shared mocks), the worktree-cut-from-pre-scaffold pattern could cause more substantive breakage.
+
+**Recommendation (deferred — methodology-only).**
+
+When setting up a fix-batch with parallel sessions:
+
+```
+git checkout main
+git pull
+# scaffold commit lands on main first
+git commit -m "scaffold: fix-batch-N coordination scaffold"
+# THEN cut the fix branches:
+git worktree add ../foxworks-worktrees/fix-A fix-A/<topic>
+git worktree add ../foxworks-worktrees/fix-B fix-B/<topic>
+git worktree add ../foxworks-worktrees/fix-C fix-C/<topic>
+```
+
+Each worktree should then have visibility into the scaffold file from the start.
+
+**Confidence:** KNOWN. Operator pre-instructed during Fix-C session; root cause is plain git history; remedy is mechanical.
+
+**Cross-references.**
+
+- Fix-A and Fix-B worktrees may have the same issue at this batch. Worth confirming (operator's call) whether their scaffold visibility was achieved by the same inline-prompt mechanism.
+- Future fix-batch operator runbook should incorporate the post-scaffold-cut ordering.
+
+**§10.5 self-check (docs-only commit):**
+
+1. API verified by spike? n/a — methodology finding.
+2. Test exercises behavior or mocks? n/a.
+3. Implementation deleted, test passes? n/a.
+4. Anything outside contract? No.
+5. Modified contract? No.
+6. Unlabeled claims? No — KNOWN throughout.
+7. Touched a file another session may modify? Single docs append.
+8. Pre-push protocol? Docs-only; per-finding pattern.
+9. Confidence labeling matches evidence? Yes — KNOWN.
+
+---
+
+## Finding #88 — MB-F-DAEMON-SESSION-LIFECYCLE-EVENTS-MISSING
+
+**Date filed:** 2026-05-04
+**Tier:** 3 (forward-compat enhancement — does not block any current consumer; consumers work around via /v2/sessions refetch)
+**Origin:** Fix-C diagnose phase, code-confirmed via grep across `packages/dispatch-daemon/src/routes/`
+**Discovered by:** Fix-C session, operator-pre-instructed to file as part of resolution surface
+**Resolution status:** New finding documenting a daemon-side contract gap that necessitates the hybrid pattern Fix-C ships in `subscribeConsoleMenuToDaemon`. Future enhancement; not blocking.
+
+**Symptom (KNOWN — code-confirmed).** Daemon `/v2/events/stream` (`packages/dispatch-daemon/src/routes/ws.ts:50`) emits events of type `state_changed`, `prompt_sent`, `handoff_written`, `commit_landed`, `test_status_updated`, `cairn_violation_detected`, `gate_trip`. **No `session_created` or `session_removed` event types are emitted.** Specifically:
+
+- `POST /v2/sessions` (`sessions.ts:134-184`) writes a new session to the registry but does NOT call `deps.emit?.(...)` afterward. The new session becomes visible only via subsequent `GET /v2/sessions`.
+- `PATCH /v2/sessions/:name/state` to `state='killed'` (`sessions.ts:243-251`) emits `state_changed` with `from`/`to`/`triggered_by` but does NOT emit a separate `session_removed` event. Consumers wanting a clean "session disappeared" signal must infer it from the `state==='killed'` transition.
+
+**Root cause (KNOWN — design).** DAEMON-T08 / DAEMON-T12 ratified the seven-event taxonomy listed above; session-lifecycle events were not in scope. The omission was deliberate at ticket scope but creates a contract gap for downstream consumers that want push-based session-list refresh.
+
+**Practical impact.**
+
+- **Fix-C `subscribeConsoleMenuToDaemon`:** falls back to the hybrid pattern (WS event = "something changed" trigger → REST refetch of `/v2/sessions`). Operator-arbitrated 2026-05-04 as the correct trade-off given the daemon HEAD constraint.
+- **dispatch-cli `tui-state.ts:99-115`:** explicit comment at line 105 (`if (!existing) return state;`) — the TUI ignores events for sessions it doesn't already know about, deferring new-session discovery to the bootstrap fetch path. Same pattern.
+- **dispatch-web `useDaemonEvents.ts:127-128`:** runs preflight (which fetches gap-fill events) on every reconnect, partially covering this via gap-fill. Less affected because it has its own resync path.
+
+Net effect: every consumer that wants a live session list reimplements bootstrap-fetch + WS-event-trigger refetch. Code duplication risk; no behavior bug.
+
+**Recommendation (deferred — daemon-side enhancement).**
+
+Add two event types to the DAEMON-T12 taxonomy:
+
+- `session_created` — emitted from `POST /v2/sessions` after `writeRegistryV2` succeeds. Data: `{ name, cwd, tmux_target, handoff_path, state }`.
+- `session_removed` — emitted when a session is fully removed from the registry (not just transitioned to `killed`). Data: `{ name }`.
+
+(Alternative: emit `session_lifecycle` with a `phase: 'created' | 'removed'` field for forward extensibility.)
+
+Once shipped, downstream consumers can drop the bootstrap-fetch + refetch pattern in favor of pure event-driven state.
+
+**Confidence:** KNOWN.
+
+- Symptom: code-confirmed via grep across `packages/dispatch-daemon/src/routes/` (only 3 emit sites: `sessions.ts:243` state-changed, `prompts.ts:104` prompt-sent, `violations.ts:113` state-changed).
+- Root cause: design choice traceable to DAEMON-T12 ticket prompt (event taxonomy ratified at 7 types).
+- Workaround pattern: validated in 3 production consumers (Fix-C, dispatch-cli, dispatch-web).
+
+**Cross-references.**
+
+- **#82 / #85** — Fix-C ships the workaround in `subscribeConsoleMenuToDaemon`; this finding documents the daemon-side gap that necessitated it.
+- **DAEMON-T12** — original ticket that ratified the seven-event taxonomy.
+- **`MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`** — followup that recommended `/v2/events/stream` subscription; #88 explains why that subscription cannot be pure event-driven without daemon-side change.
+
+**§10.5 self-check (docs-only commit):**
+
+1. API verified by spike? n/a — finding.
+2. Test exercises behavior or mocks? n/a.
+3. Implementation deleted, test passes? n/a.
+4. Anything outside contract? No.
+5. Modified contract? No — proposes a future contract addition.
+6. Unlabeled claims? No — KNOWN throughout.
+7. Touched a file another session may modify? Single docs append.
+8. Pre-push protocol? Docs-only.
+9. Confidence labeling matches evidence? Yes — KNOWN.
