@@ -23,7 +23,7 @@ import {
   type EscapeBlockOutput,
   type CardOutput,
   type MultiChoiceCardOutput,
-} from 'dispatch-core/src/v3/schema.js';
+} from 'dispatch-core/dist/v3/schema.js';
 import type { CardContext } from './card-ipc.js';
 
 export type RouteDecision =
