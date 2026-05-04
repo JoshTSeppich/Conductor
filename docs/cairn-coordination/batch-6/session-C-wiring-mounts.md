@@ -65,7 +65,31 @@ Confirmed. I am the SECOND session to commit to main.ts. Discipline:
 
 ## §4 Cross-session findings
 
-(populated as work progresses)
+### Finding C-1 (2026-05-03) — pre-existing test baseline
+
+`pnpm --filter dispatch-workstation test` shows 232/233 tests passing with two failure modes that REPRODUCE on pristine HEAD (b74954b RED commit) when my GREEN files are stash-popped:
+
+1. `test/unit/coarch-t04/build-doc-validator.spec.ts` — `Cannot find package 'dispatch-core/dist/v3/schema.js'`. Already documented in `docs/FOLLOWUPS.md` as `MB-F-MB-T05-PRE-EXISTING-VALIDATOR-IMPORT` (cited at FOLLOWUPS.md:117). Not Session-C territory; surfaced for completeness.
+2. `test/integration/mb-t04/spawn-modal-emits-intent.test.ts` — timeout waiting for `SPAWN_REQUESTED` sentinel; stdout shows the app boots cleanly through SHELL_READY / RENDER_OK / WINDOW_READY but the spawn modal interaction never produces the expected IPC fire. UNDOCUMENTED in FOLLOWUPS.md as far as I can tell — appears to be uncaptured pre-existing flake / regression on origin/main. Likely Session-A territory (spawn-* family) or batch-7+ orchestration. Recommendation: file as `MB-F-MB-T04-SPAWN-MODAL-INTEGRATION-FLAKE` for arbitration if it's not already on operator-relay's radar.
+
+Neither failure is caused by Session-C changes. Both reproduced on pristine HEAD via `git stash` round-trip.
+
+### Finding C-2 (2026-05-03) — line-level edits to ancillary shared files
+
+Session-C's GREEN for MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT touches two files NOT explicitly listed in the §1 owned-files territory fence:
+
+- `packages/dispatch-workstation/package.json` — appended `node scripts/build-onboarding.mjs` to the `build` script (one line, additive). This was named in the prompt §2 as "owned (only build script line)". So this is in scope.
+- `packages/dispatch-workstation/tsconfig.json` — added `src/onboarding/mount.tsx` to the `exclude` array, mirroring the existing `src/onboarding/onboarding-modal.tsx` entry. NOT in the prompt's owned list. Necessary because tsc has no `--jsx` flag set (esbuild handles JSX); without the exclude, mount.tsx fails typecheck with `--jsx` not set.
+
+Sessions A and B do not edit these files per scaffold §1 (Session A's territory is spawn-*; Session B owns card-* + http-daemon-client + coarchitect-ipc + new build-card-bridge.mjs). Surfacing as a finding so operator-relay can flag if a stricter file-level fence was intended; the edits are surgical, additive, and pattern-matching existing entries.
+
+### Finding C-3 (2026-05-03) — coord scaffold §0.4 status (sibling sessions)
+
+At session-C start, neither `session-A-wiring-spawn.md` nor `session-B-wiring-cards.md` was present in `docs/cairn-coordination/batch-6/`. Operator confirmed §0 satisfied in launch instructions; Session C interpreted this as authorization to create its own coord file from the §3 template as the session-start act. Sibling sessions presumably do the same. No action required; surfaced for awareness since scaffold §0.4 named operator pre-flight creation.
+
+### Finding C-4 (2026-05-03) — onboarding.html source location
+
+Prompt §1 + §2 owned-files list both name the new HTML at `packages/dispatch-workstation/onboarding.html` (package root). Session C placed it at `packages/dispatch-workstation/src/onboarding/onboarding.html` instead, following the existing `src/console-panel/console-panel.html` precedent (src as source-of-truth, dist as build-output). Build script copies src → dist on every build, so loadFile() at runtime still resolves to dist/onboarding/onboarding.html. If operator preference is the literal package-root location named in the prompt, refactor is one-file move + one-line edit in build-onboarding.mjs. Surfacing for confirmation.
 
 ## §5 Session-end summary
 
