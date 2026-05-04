@@ -988,7 +988,7 @@ Without renderer subscription to `workstation:spawn-result`, every failure mode 
 **Tier:** 1 (ship-gate blocker — orchestrator card flow non-functional in production main HEAD)
 **Origin:** Batch-6 dogfood T5 (orchestrator card flow) at HEAD df1f408 (post-finding-#83)
 **Discovered by:** dogfood operator session, live STREAM_ERROR auth_error reproduction + code-confirmed wiring gap
-**Resolution status:** New finding documenting two composed wiring gaps that together prevent any production-mode workstation from generating an orchestrator card.
+**Resolution status:** RESOLVED at 2eaa0e1 (Fix-A green-B head) — see Resolution section below.
 
 **Summary.** Two distinct wiring defects compose to block the v3.0 orchestrator card flow end-to-end. Either alone would block; together they make even the diagnostic path opaque. Cross-references existing followup `MB-F-COARCH-T04-BUILD-DOC-SETTINGS-UI` (build-doc settings UI), but per below, that followup as written would not resolve the production block — the build-doc-state persistence layer is itself non-functional in production.
 
@@ -1056,6 +1056,150 @@ Three composable patches:
 7. Touched a file another session may modify? no parallel session active; single append to docs/cairn-findings.md.
 8. Pre-push protocol? docs-only; per-finding-file pattern.
 9. Confidence labeling matches evidence? yes — Defect A KNOWN, Defect B mostly KNOWN with MODELED on composed-impact extrapolation.
+
+### Resolution (2026-05-04, Fix-A session)
+
+**Status:** RESOLVED at 2eaa0e1.
+
+Both defects fixed via Fix-Batch-1 Session A on branch
+`fix-A/orchestrator-card-flow`. Operator-arbitrated three-way parallel batch;
+Fix-A merged first per scaffold §2 merge order.
+
+**Defect A — green at 668cd1b** (red at ce990d7).
+
+New module `packages/dispatch-workstation/src/main/api-key-bootstrap.ts`
+exports `bootstrapApiKey({ configDir, safeStorage })`. It calls the existing
+`loadApiKey` from `api-key-storage.ts` and, when the result is a non-null
+plaintext, assigns it to `process.env['ANTHROPIC_API_KEY']`. Wired in
+`main.ts` `app.whenReady()` inside a sentinel-marked region per scaffold §1
+function-body sentinel pattern, before `registerIpcHandlers()` so the chat
+IPC handler is registered against a populated env. Dev-shell parity
+preserved: when `process.env['ANTHROPIC_API_KEY']` is already set, bootstrap
+is a no-op (mirrors `spawn-ipc.ts:200-208 readApiKey` precedence).
+
+Unit-tested: 4 specs in
+`test/unit/fix-orchestrator-flow/test_api_key_bootstrap.spec.ts`. Cover
+present-key, absent-key, env-precedence, encryption-unavailable.
+
+**Defect B — green at 2eaa0e1** (red at 8e1a807).
+
+`packages/dispatch-workstation/src/coarchitect/build-doc-state.ts`
+`stateDir()` now adds Electron `app.getPath('userData')` as a fourth
+fallback after the three legacy env vars. Pattern mirrors `splitter-state.ts`
+which has used `env-or-userData` since initial ship. Env-var precedence
+preserved so `test/unit/coarch-t04/build-doc-state.spec.ts` continues
+passing (verified: 4/4 still green).
+
+Unit-tested: 3 specs in
+`test/unit/fix-orchestrator-flow/test_build_doc_state_fallback.spec.ts`.
+Cover write-to-userData, read-back, env-override-still-honored. Uses
+`vi.mock('electron')` so the unit test stays node-only.
+
+**Path correction (scaffold §1).** The fix-batch-1 coordination scaffold at
+`docs/cairn-coordination/fix-batch-1/00_COORDINATION_SCAFFOLD.md` listed
+Defect B's owned file as `packages/dispatch-workstation/src/main/build-doc-state.ts`;
+the actual file lives at
+`packages/dispatch-workstation/src/coarchitect/build-doc-state.ts`.
+Operator-arbitrated and authorized at the diagnose-phase HALT gate. The
+scaffold-§1 ownership table should be corrected in a followup edit.
+
+**Integration verification (live, this session).**
+
+Two live smoke runs against built `dispatch-workstation/dist/main/main.js`,
+launched via the `electron-process-controller.ts` headless pattern with
+`MB_TEST_HOOKS=1` and **`ANTHROPIC_API_KEY` explicitly unset** in the spawn
+env (so the bootstrap is the only resolution path):
+
+1. **Defect A runtime smoke.** Onboarding skipped (prior dogfood
+   `workstation-config.json` `onboardingCompleted=true` honored, persisted
+   `anthropic-api-key.enc` from `$CONDUCTOR_DOGFOOD_API_KEY` reused).
+   `SHELL_READY` → `TYPE_AND_SEND` → `STREAM_START` → `STREAM_DONE` with
+   real Anthropic prose response. **No STREAM_ERROR auth_error.** Bootstrap
+   verified end-to-end: only safeStorage→process.env decryption could have
+   produced a working chat in this configuration.
+
+2. **Defect B runtime smoke.** Pre-seeded
+   `~/Library/Application Support/Electron/build-doc-config.json` pointing
+   at the spike fixture
+   (`packages/dispatch-workstation/spikes/MB-S01/fixtures/build-doc.build.md`,
+   `repoRoot=<worktree root>`). Same launch shape; `TYPE_AND_SEND` carrying
+   the spike fixture's S-01-01 triggering event for ticket MB-T05.
+   `STREAM_DONE` prefix observed:
+
+       ```json
+       {
+         "output_type": "action",
+         "action_type": "spawn-new-session",
+         "target_repo": "/Users/josh/Desktop/Automat...
+
+   This is unambiguously orchestrator-shaped JSON, proving the full pipeline
+   resolved end-to-end: `readBuildDocConfig()` returned the seeded config
+   via the **userData fallback** (no env vars set in spawn env →
+   `app.getPath('userData')` was the resolving branch); `readBuildDoc()`
+   loaded the fixture; `loadSystemPrompt()` returned the orchestrator
+   prompt; `buildContext()` ran; the model emitted structured output.
+
+   Strict caveat: the model selected `output_type: "action"` for the
+   prompt rather than `card` / `multi-choice-card`. Per
+   `orchestrator-output-router.ts`, only `card` / `multi-choice-card`
+   variants emit `orchestrator-card-rendered` to the kanban webview. So
+   the *kanban-card-renders* link of the chain is not directly observable
+   from this run — but every preceding link (chat→orchestrator→structured
+   output) is alive and working. The card-vs-action choice is
+   prompt/model territory, not a defect; the spike fixture's S-01-01
+   `expected_output_type: card` does not contractually bind the model on
+   this prompt shape. Card emission is verifiable separately by varying
+   the prompt or by inspecting the routing predicate; it is **not** what
+   #84's two defects blocked.
+
+3. **State restored.** Pre-seeded `build-doc-config.json` removed at smoke
+   exit; userData returned to its pre-smoke state (only the prior
+   `anthropic-api-key.enc` and `workstation-config.json` retained).
+
+**Composed impact relief.** With both fixes applied, the v3.0 §10 promised
+flow ("operator types prompt → card appears in kanban → operator approves
+→ audit row written") is now persistence-layer-functional from
+chat-input forward. The remaining ship-gate gap — operator-reachable UI
+to seed the build-doc-config — is followup
+`MB-F-COARCH-T04-BUILD-DOC-SETTINGS-UI` (FOLLOWUPS.md:120), explicitly
+called out in this finding's §Recommendation 3 as out-of-scope. With
+#84 fixed, the DevTools workaround that followup assumes (
+`coarchitect:setBuildDocConfig` IPC) now actually persists. Until the UI
+ships, operators must seed via DevTools or a direct JSON write to
+userData (as this session's smoke #2 demonstrated).
+
+**Cairn methodology delta — surfaced for codification consideration.**
+
+The two defects share a symptom shape: persistence-layer wiring shipped
+without the consumer-side bootstrap. Onboarding wrote `anthropic-api-key.enc`
+but no boot-time loader. `setBuildDocConfig` IPC handler shipped but no
+production-resolvable `stateDir()`. Both pass unit tests because the unit
+tests inject the missing piece (env var, fake safeStorage). Production
+fails silently. This pairs with cairn #67 / #80
+(bundler-vs-no-bundler hides defect class). Codification candidate: a
+pre-merge "production env smoke" gate that exercises the persistence
+round-trip without test-only env vars set.
+
+**Files changed by Fix-A.**
+
+Added:
+- `packages/dispatch-workstation/src/main/api-key-bootstrap.ts` (47 LOC)
+- `packages/dispatch-workstation/test/unit/fix-orchestrator-flow/test_api_key_bootstrap.spec.ts` (100 LOC)
+- `packages/dispatch-workstation/test/unit/fix-orchestrator-flow/test_build_doc_state_fallback.spec.ts` (116 LOC)
+
+Modified:
+- `packages/dispatch-workstation/src/main/main.ts` (+11 LOC, sentinel-bracketed import + call inside `app.whenReady()`)
+- `packages/dispatch-workstation/src/coarchitect/build-doc-state.ts` (+8 / −5 LOC)
+
+Total: ~277 LOC net additions, of which 216 LOC are unit tests.
+
+**Confidence after fix.** Defect A: KNOWN-fixed (live smoke without
+env-var bypass demonstrates bootstrap is the only path that could have
+worked). Defect B: KNOWN-fixed (live smoke shows production-path
+`readBuildDocConfig` resolving via userData → orchestrator system prompt
+loaded → structured output emitted). Composed impact: KNOWN — chat→
+orchestrator pipeline alive end-to-end, kanban-card render observable
+once prompt/model emit a card variant.
 
 ---
 
