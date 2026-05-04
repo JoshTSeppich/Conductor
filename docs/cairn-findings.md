@@ -538,3 +538,192 @@ Future Batch 3+ planning should account for this. Parallel sessions of 3 or more
 
 **Filed:** 2026-05-02 mid-Batch-5.
 
+## Finding #67 — MB-F-CONSOLE-T03-XTERM-DEP-MISSING
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (ship-gate blocker)
+**Origin:** 2026-05-03 dogfood test, attempted `pnpm dev` from `packages/dispatch-workstation/`
+**Discovered by:** Operator dogfood
+**Resolution status:** Diagnosed; immediate workaround applied; permanent fix folded into batch-6 wiring.
+
+**Symptom.** Production build of `dispatch-workstation` fails with `esbuild [ERROR] Could not resolve "@xterm/xterm"` from `src/console-panel/terminal-adapter.ts:28`. The dep is declared in `packages/dispatch-workstation/package.json:30` (`"@xterm/xterm": "^5.5.0"`) but `node_modules/@xterm/` does not exist in the workspace. Vitest unit tests pass because the dep is mocked; production esbuild bundle has no such mock and fails on the import.
+
+**Root cause.** CONSOLE-T03 added the `@xterm/xterm` dep to `package.json` but `pnpm install` was never run after the change. The lockfile entry exists; the actual package was never materialized to `node_modules`. CI test runs hit the mocked path; no production-build verification step in the CONSOLE-T03 acceptance gate.
+
+**Workaround (2026-05-03).** `cd ~/Desktop/Automata/foxworks-dispatch && pnpm install` materialized the dep. Production build then succeeded.
+
+**Permanent fix.** Out of batch-6 scope. Recommend adding a CI step to the workstation package that runs `pnpm build` (not just `pnpm test`) on every commit, so missing-install issues fail at commit-time rather than dogfood-time. File as Tier 2 followup `MB-F-CI-PRODUCTION-BUILD-GATE` for v3.0 ship-gate batch.
+
+**Methodology lesson.** Unit-test green is necessary but not sufficient. Production-buildable is a distinct gate. Per cairn project instructions §3.5, "tests green ≠ production-validated under composition" — this is the same primitive at the build layer.
+
+**Confidence:** KNOWN (reproduced + workaround validated 2026-05-03).
+
+---
+
+## Finding #68 — MB-F-MB-T02-WEB-UI-URL-NO-DEV-PROD-SWITCH
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (operator-blocking)
+**Origin:** 2026-05-03 dogfood test, attempted to launch workstation against running Vite dev server
+**Discovered by:** Operator dogfood
+**Resolution status:** Existing followup `MB-F-MB-T02-PRODUCTION-LOADING` documents the gap; practical impact higher than original Tier; recommend escalation.
+
+**Symptom.** `WEB_UI_URL` in `packages/dispatch-workstation/src/main/webview-loader.ts` is hardcoded to `http://localhost:7878`. To run the workstation against a Vite dev server (which binds 5173 by default), the operator must edit the source file, rebuild, and relaunch. There is no env-var override, no dev/prod mode switch, no config fallback.
+
+**Root cause.** MB-T02 ratified the dev-only `loadURL('http://localhost:7878')` per contract §3.4 (IMPORTANT-5 operator resolution 2026-04-30). Production-mode loading was scoped out and filed as `MB-F-MB-T02-PRODUCTION-LOADING`. The followup framing assumed the gap was about production-mode resolution; the dogfood discovered the gap is also about dev-mode developer experience.
+
+**Practical impact.** Any operator who wants to run the workstation against `pnpm dev` (Vite on 5173) cannot do so without editing source. Yesterday's dogfood test required hand-patching `webview-loader.ts` via sed, rebuilding, relaunching — multiple full-build cycles to test one config change.
+
+**Recommendation.** Escalate `MB-F-MB-T02-PRODUCTION-LOADING` from current tier (Tier 2 implied) to Tier 1 ship-gate. Implementation: read `WEB_UI_URL` from `process.env.FOXWORKS_WEB_UI_URL` with fallback to existing hardcoded value. Single-line change in webview-loader.ts. Document in workstation-shell launch instructions.
+
+**Confidence:** KNOWN (reproduced 2026-05-03; workaround required source edit).
+
+---
+
+## Finding #69 — MB-F-WORKSTATION-DEV-ORCHESTRATION-MISSING
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (operator-experience)
+**Origin:** 2026-05-03 dogfood test, attempted to launch full workstation stack
+**Discovered by:** Operator dogfood
+**Resolution status:** New finding; defer to v3.0 ship-gate batch or v3.1.
+
+**Symptom.** No `pnpm dev:all` script or equivalent that starts daemon + Vite + workstation in correct order with correct config. Operator must launch each component manually in three+ terminals, in the right order, with the right config. Architecture is undocumented for new operators (or new sessions of existing operators).
+
+**Root cause.** Each package has its own `pnpm dev` that does its own thing. There is no monorepo-level orchestration. The composition is operator-tribal-knowledge.
+
+**Practical impact.** Yesterday's dogfood spent meaningful operator time juggling: kill old processes, start daemon, verify daemon, start Vite (on the right port), verify Vite, start workstation, verify the embedded webview loaded. Each step a separate command. Each step independently failable.
+
+**Recommendation.** Add a `pnpm dev:all` script at monorepo root that uses concurrently or similar to spin up daemon + Vite + workstation in the right order with the right env vars. Document the architecture in `docs/GETTING-STARTED.md` (file already exists per repo inspection).
+
+**Confidence:** KNOWN.
+
+---
+
+## Finding #70 — MB-F-PORT-COLLISION-IPV4-IPV6
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (operator-fragile state)
+**Origin:** 2026-05-03 dogfood test, port-collision diagnosis
+**Discovered by:** Operator dogfood
+**Resolution status:** New finding; root cause documented; permanent fix deferred to v3.0 ship-gate batch.
+
+**Symptom.** Two processes can bind `localhost:7878` simultaneously on macOS via different protocols. Daemon binds IPv4 `127.0.0.1:7878`. A second process can bind IPv6 `[::1]:7878`. macOS treats them as different sockets. Whatever a `curl` resolves first wins. Daemon `/v2/health` returns 500 or empty when this happens.
+
+**Root cause.** macOS allows IPv4/IPv6 dual-bind when sockets are created with default flags. Node's default `server.listen()` binds to whatever is configured; daemon binds IPv4-only by default. A second Node process binding the same port name with default settings binds IPv6. Both succeed at the OS level. Operator confusion follows.
+
+**Practical impact.** Yesterday's dogfood: rogue Vite process bound `[::1]:7878` while daemon held `127.0.0.1:7878`. Daemon health checks failed intermittently. Diagnosis required `lsof -nP -iTCP:7878 -sTCP:LISTEN` to see both PIDs. Fix required `kill -9` on both, restart from scratch.
+
+**Recommendation.** Daemon startup should bind both IPv4 AND IPv6 on the configured port (or fail-fast if either is unavailable). This prevents another process from sneaking in on the unbound protocol. Implementation in `packages/dispatch-daemon/src/lifecycle/startup.ts`. Cross-cutting with `MB-F-WORKSTATION-DEV-ORCHESTRATION-MISSING` (a `pnpm dev:all` orchestration would catch port-already-bound at startup, surfacing the conflict immediately).
+
+**Confidence:** KNOWN.
+
+---
+
+## Finding #71 — MB-F-DISPATCH-WEB-AUTH-PERSISTENCE (escalation)
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (escalated from existing followup)
+**Origin:** 2026-05-03 dogfood test, "Daemon unreachable" red banner in workstation
+**Discovered by:** Operator dogfood (existing followup, practical impact understated)
+**Resolution status:** Existing followup `MB-F-DISPATCH-WEB-AUTH-PERSISTENCE` documents the gap; recommend escalation to Tier 1.
+
+**Symptom.** When the workstation Electron BrowserWindow loads dispatch-web in the embedded webview, dispatch-web shows "Conductor authentication" screen on every fresh launch. Workstation main process correctly reads `~/.foxworks-dispatch/token` and sends `X-Conductor-Token` header on its own daemon calls (verified via curl); but dispatch-web webview runs in a separate Electron session context with its own cookie/session-based auth scheme and no token bridge from workstation main process to webview.
+
+**Root cause.** dispatch-web was originally designed for browser-based access where the user logs in via a cookie/session flow. Workstation embeds dispatch-web as a webview but doesn't bridge the workstation's daemon-token auth into the webview's cookie/session expectation. Two auth schemes, no bridge.
+
+**Practical impact.** Without auth bridge: kanban literally cannot render in the workstation. Dogfood-validated: red "Daemon unreachable" banner on every fresh workstation launch until auth bridge or session-cookie persistence is implemented.
+
+**Recommendation.** Escalate to Tier 1 ship-gate blocker. Implementation options per the existing followup: (a) IPC token-injection at workstation launch from `~/.foxworks-dispatch/token`, (b) auth-bypass for workstation context, (c) accept as workstation onboarding step. (a) is cleanest but requires daemon-side dual-auth (cookie OR token header) AND workstation-side webview-preload that injects the cookie. File scope-detail followup if (a) selected.
+
+**Confidence:** KNOWN.
+
+---
+
+## Finding #72 — MB-F-MB-T05-PATH-ALLOWLIST-CLAUDE-RESOLUTION
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (ship-gate blocker)
+**Origin:** 2026-05-03 dogfood test, spawn-from-workstation appears successful but produces no tmux session
+**Discovered by:** Operator dogfood
+**Resolution status:** Diagnosed + workaround validated. Permanent fix is batch-6 Session A scope.
+
+**Symptom.** Operator clicks "+ Spawn Session" in workstation, fills modal, clicks confirm. Daemon record created; no corresponding tmux session. Reproducible 100% for any operator with claude installed outside `/opt/homebrew/bin`. Symptom-clear-but-cause-opaque from operator perspective: spawn appears to succeed (modal closes, no error toast), kanban shows armed-but-orphaned sessions, none active.
+
+**Root cause.** `spawn-env.ts` `ALLOWLIST_PATH` excludes `~/.local/bin` (Anthropic's official installer location). Workstation `tmux new-session -d -s <name> -c <repoPath> claude` runs with this restricted PATH. tmux successfully creates the session (returns exit-0), then forks and tries to exec `claude` — fails because `claude` not in PATH. tmux session ends asynchronously after the workstation has already received exit-0 success. Daemon registration step proceeds based on (false) success signal. Daemon record created. tmux session orphaned.
+
+**Reproduction (validated 2026-05-03).** `env -i PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" tmux new-session -d -s testname -c <repoPath> claude` returns exit-0; `tmux list-sessions | grep testname` returns nothing 1 second later. Same command with full PATH (including `~/.local/bin`): session alive, claude running.
+
+**Workaround (2026-05-03).** Sed-patched `ALLOWLIST_PATH` to prepend `$HOME/.local/bin`. Rebuilt workstation. Spawn-from-modal then created live tmux sessions. Validated end-to-end.
+
+**Permanent fix (batch-6 Session A).** Resolve `claude` to absolute path via `which claude` at workstation startup. Pass absolute path to tmux argv. Bypass PATH lookup entirely. Spec'd in `MB-F-MB-T05-PATH-ALLOWLIST-CLAUDE-RESOLUTION` followup.
+
+**Confidence:** KNOWN. Operator-environment-dogfood-validated. Symptom + reproduction + workaround all observed in single session.
+
+---
+
+## Finding #73 — MB-F-MB-T05-POST-SPAWN-LIVENESS-CHECK
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (defense-in-depth)
+**Origin:** 2026-05-03 dogfood test, root-cause analysis of finding #72
+**Discovered by:** Operator dogfood (companion to #72)
+**Resolution status:** Spec'd; permanent fix is batch-6 Session A scope.
+
+**Symptom.** Even after fixing the PATH-allowlist bug (#72), the spawn handler architecture has no mechanism to detect post-spawn child-process death. The handler trusts `tmux new-session` exit-0 as proof of spawn success. tmux returns 0 once the session is created, before its child process attempts exec. If the child dies for any future reason (corrupt binary, license refused, immediate crash, future dep gap), the session ends asynchronously with no signal to the workstation. Daemon record orphaned silently. Same symptom shape as #72, different root cause.
+
+**Root cause.** Architectural assumption that tmux exit-0 means program-running. False assumption. tmux exit-0 means session-created, nothing about the program inside.
+
+**Recommended fix.** Post-spawn liveness verification: after `runTmuxNewSession` returns success, sleep 500ms, run `tmux has-session -t <sessionName>`. If has-session fails, throw `SpawnFailed('claude exited immediately — check binary installation')`. Daemon registration skipped via existing throw-cleanup path.
+
+**Implementation status.** Spec'd in `MB-F-MB-T05-POST-SPAWN-LIVENESS-CHECK` followup; batch-6 Session A scope.
+
+**Tradeoff note.** 500ms delay is heuristic. Adds 500ms to every spawn. Operator-impact minor (spawn is already a multi-second user action). A future ticket might tune with measured data; for v3.0 ship, the heuristic is sufficient.
+
+**Confidence:** MODELED (root-cause analysis, not separately reproduced under non-PATH-bug failure modes).
+
+---
+
+## Finding #74 — MB-F-MB-T05-SPIKE-ENVIRONMENT-VALIDATION
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (methodology)
+**Origin:** 2026-05-03 dogfood retrospective on findings #72 + #73
+**Discovered by:** Operator dogfood (methodology lesson)
+**Resolution status:** Spec'd as ADR amendment; batch-6 Session A scope.
+
+**Symptom.** MB-S02 spike — the basis for `spawn-env.ts` `ALLOWLIST_PATH` — was run on a system with claude installed via Homebrew at `/opt/homebrew/bin`. Allowlist baked into production code with the assumption that claude is at `/opt/homebrew/bin`. No spike step verified the assumption holds across operator install variations. The spike was true-but-incomplete.
+
+**Root cause.** Spike methodology focused on validating the binding decision in the spike-runner's environment. Did not enumerate the install-method variation space. Did not validate the binding decision against alternate installs.
+
+**Methodology lesson.** Spike evidence about operator-installed binaries needs validation across at least the documented install methods (Homebrew, official installer, manual install), not the spike-runner's environment alone.
+
+**Binding decision.** Future spikes touching operator-environment-dependent assumptions MUST enumerate the install/configuration variations covered AND explicitly call out which are not. Spike ADRs MUST note any environment dependencies that could vary across operators.
+
+**Implementation.** ADR amendment at `docs/adr/MB-S02-spike-environment-validation-amendment.md`. No code change. Cross-references findings #72 + #73.
+
+**Confidence:** KNOWN (methodology lesson directly grounded in #72 evidence).
+
+---
+
+## Finding #75 — MB-F-DAEMON-SESSION-DELETE-ROUTE
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (operator-experience, blocking cleanup workflows)
+**Origin:** 2026-05-03 dogfood test, attempted cleanup of orphaned sessions from #72
+**Discovered by:** Operator dogfood
+**Resolution status:** New finding; permanent fix deferred (likely v3.0 ship-gate batch or v3.1).
+
+**Symptom.** `DELETE /v2/sessions/:name` returns `{"error":"Not found"}` for sessions that exist in the daemon's `GET /v2/sessions` response. Operator cannot clean up orphaned daemon records via the documented API.
+
+**Reproduction (2026-05-03).** With session `papapapapa` visible in `GET /v2/sessions` response (state=armed): `curl -s -X DELETE -H "X-Conductor-Token: $TOKEN" http://localhost:7878/v2/sessions/papapapapa` returns `{"error":"Not found"}`. Same for `pa`, `ddd`. All three remained in daemon DB.
+
+**Possible root causes (untriangulated).** (a) DELETE route doesn't exist (route not implemented), (b) DELETE route exists but uses different URL pattern (e.g., needs query param, different verb), (c) The sessions are in some sub-table the DELETE handler doesn't query, (d) Auth check passing but route lookup failing because "killed" state required first.
+
+**Practical impact.** Operator cannot clean up orphaned sessions through the API. Either need to manually edit `data.db` SQLite (unsafe, undocumented), OR live with the orphaned records (clutters kanban view, confuses subsequent dogfood).
+
+**Recommendation.** Triage the daemon route table (`packages/dispatch-daemon/src/routes/`). Either fix the existing DELETE handler or document the actual cleanup workflow. Likely small scope (single route handler). File as Tier 2 followup for v3.0 ship-gate batch.
+
+**Confidence:** KNOWN (symptom reproduced); root cause SPECULATIVE (multiple hypotheses, not triangulated).
+
+---
