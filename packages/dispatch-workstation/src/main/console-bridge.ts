@@ -58,6 +58,13 @@ export interface ErrorPayload {
 export interface ConsoleBridge {
   sendStdin(sessionName: string, bytes: string, encoding?: Encoding): Promise<StdinAck>;
   signal(sessionName: string, signal: SignalName): Promise<SignalAck>;
+  /** Fix-C / cairn finding #82 — renderer-driven console-open path.
+   * Invokes the existing 'console:open-panel' main-side IPC handler
+   * (console-ipc.ts:429-432) which routes to
+   * ConsoleIpcController.openConsolePanel(sessionName). Native menu
+   * is the v3.0 primary trigger; this method is the optional
+   * secondary surface (per-card buttons, future spawn-auto-mount). */
+  openPanel(sessionName: string): Promise<void>;
   onConsoleOpen(handler: (p: OpenPayload) => void): Cleanup;
   onConsoleClose(handler: (p: ClosePayload) => void): Cleanup;
   onStdoutChunk(handler: (p: StdoutChunkPayload) => void): Cleanup;
@@ -81,6 +88,8 @@ export function makeConsoleBridge(ipc: ConsoleBridgeIpc): ConsoleBridge {
       ipc.invoke('console:send-stdin', { sessionName, bytes, encoding }) as Promise<StdinAck>,
     signal: (sessionName, signal) =>
       ipc.invoke('console:signal', { sessionName, signal }) as Promise<SignalAck>,
+    openPanel: (sessionName) =>
+      ipc.invoke('console:open-panel', { sessionName }) as Promise<void>,
     onConsoleOpen: (h) => listener<OpenPayload>(ipc, 'console:open', h),
     onConsoleClose: (h) => listener<ClosePayload>(ipc, 'console:close', h),
     onStdoutChunk: (h) => listener<StdoutChunkPayload>(ipc, 'console:stdout-chunk', h),
