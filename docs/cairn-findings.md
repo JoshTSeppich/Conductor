@@ -1377,3 +1377,76 @@ Three findings, ordered by ship-gate impact:
 - 4 prior orphan sessions (`ddd`, `heytest`, `pa`, `papapapapa`) marked killed during T4 to free cap; not restored.
 - Workstation userData has `anthropic-api-key.enc` populated with `CONDUCTOR_DOGFOOD_API_KEY` ciphertext + `workstation-config.json` with `onboardingCompleted=true`. Pre-dogfood originals preserved at `*.dogfood-bak`. Operator may `mv ...bak ...` to restore if desired.
 - No screenshots persisted on disk (deleted to avoid capturing operator-side desktop background).
+
+---
+
+## Finding #85 — MB-F-WORKSTATION-MENU-REBUILD-NO-OP
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (ship-gate blocker — blocks Fix-C from delivering its visual outcome despite all wiring verified GREEN; any operator-facing native-menu refresh path through `rebuildApplicationMenu` is silently inert)
+**Origin:** Fix-C integration verification at branch `fix-C/console-panel-trigger` HEAD `8348033` (post-rebase onto Fix-A merge `e6698d9`)
+**Discovered by:** Fix-C end-to-end integration verification — diagnostic stderr instrumentation + AppleScript UI introspection of the live Electron menu bar
+**Resolution status:** New finding. Discovered while attempting integration verification of Fix-C's resolution of finding #82. Fix-C's wiring is unit-test-and-helper-level GREEN but the operator-facing visual outcome remains unrealized due to this defect.
+
+**Symptom (KNOWN — observed live).** `Menu.setApplicationMenu(menu)` invoked from inside `rebuildApplicationMenu` (menu.ts:108) after `app.whenReady().then(...)` settles does NOT propagate to the macOS menu bar. The "CC Console" submenu remains pinned to its initial-build state regardless of subsequent rebuilds.
+
+Repro at HEAD `8348033`:
+
+1. Launch workstation: `MB_TEST_HOOKS=1 ./node_modules/.bin/electron dist/main/main.js` with daemon running on :7878 and at least one non-killed session in `/v2/sessions`.
+2. Wait for sentinel sequence: `WINDOW_STATE`, `SPLITTER_LOADED`, `SHELL_READY`, `RENDER_OK`, `WINDOW_READY`, `CONSOLE_TILE_GRID_MOUNTED`, `ONBOARDING_READY`.
+3. Fix-C's `subscribeConsoleMenuToDaemon` bootstrap fetch resolves and calls `refreshConsoleMenu(activeSessionNames)` (verified via diagnostic stderr emit during this verification: `refresh names=["newTest1"]` → `refreshConsoleMenu(["newTest1"]) start` → `refreshConsoleMenu returned`).
+4. AppleScript-introspect the CC Console submenu (same technique used in finding #82's discovery):
+   ```
+   tell process "Electron"
+     set ccMenuBar to menu bar item "CC Console" of menu bar 1
+     click ccMenuBar
+     -- enumerate menu items of menu 1 of ccMenuBar
+   end tell
+   ```
+   Result: `1 items: No sessions registered` — the initial empty-state menu, not the rebuilt one.
+
+**Root cause (MODELED — three hypotheses, not yet investigated).**
+
+1. **Electron submenu identity caching** (most plausible). macOS native menu bar items are reference-tracked by the OS menu server. Electron's `Menu.setApplicationMenu` with a freshly constructed `Menu` may not invalidate cached submenu pointers held by the OS once the menu bar has been "first-attached" by the OS during `app.activate`. Workaround pattern in published Electron projects: `Menu.setApplicationMenu(null)` then `Menu.setApplicationMenu(newMenu)` to force OS-level re-attachment.
+
+2. **Initial-menu sticky on first activation.** `registerApplicationMenu()` runs at line 175 of main.ts BEFORE `mainWindow` exists; `rebuildApplicationMenu` from inside `app.whenReady().then(async () => ...)` may race with menu-bar-attachment. Workaround: defer initial registration until after `mainWindow.on('ready-to-show')`.
+
+3. **`menuRegistered` gate semantic mismatch in menu.ts:92-100.** `rebuildApplicationMenu` sets `menuRegistered = true` unconditionally. The gate in `registerApplicationMenu` only short-circuits — there's no inverse path that forces a rebuild when state is desynced. Probably benign relative to (1) but worth ruling out.
+
+Evidence pointing at hypothesis (1): the hardcoded synchronous test `setTimeout(() => refreshConsoleMenu(['DIAG-HARDCODE']), 3000)` (added during verification, since reverted) ALSO failed to update the menu, ruling out async-timing hypotheses. Both my Fix-C subscribe path and the synchronous direct-call path produce identical visible-menu-stale outcomes.
+
+**Practical impact.**
+
+- **Fix-C operator-trigger path:** the CC Console submenu cannot populate with daemon sessions even after Fix-C wiring is shipped. `consoleBridge.openPanel(sessionId)` (the renderer-driven secondary surface added by Fix-C) is unaffected by this defect — it bypasses the menu entirely — but no renderer-side button exists yet that calls it (vision §10 designated the menu as primary).
+- **MB-F-CONSOLE-T03-MENU-SUBSCRIPTION followup:** wiring alone is insufficient. Closure of that followup now also requires resolution of this finding.
+- **Any future operator-facing menu refresh** that depends on `rebuildApplicationMenu` to surface state changes: blocked by this defect. (For example, a future "Window > Recent Sessions" submenu, dynamic plugin registration, etc.)
+
+**Recommendation (deferred — operator arbitration).** Three composable directions:
+
+1. **Test hypothesis (1) first** by patching `rebuildApplicationMenu` to call `Menu.setApplicationMenu(null)` before `Menu.setApplicationMenu(newMenu)`. ~2 LOC. Verify with the same AppleScript repro. If the menu updates, ship as the fix.
+2. **If (1) fails, test hypothesis (2)** by deferring `registerApplicationMenu()` until after `mainWindow.on('ready-to-show')` fires. Slightly larger refactor since two call sites rebuild after that point.
+3. **If both fail**, fall back to a Menu-level workaround: rebuild `MenuItemConstructorOptions` with a dynamic `submenu` callback per the Electron docs' on-the-fly submenu pattern, or accept that the menu bar is initial-state-only and shift the operator-trigger primary surface to a renderer-side affordance (per-card "Open console" button using `consoleBridge.openPanel` — the surface Fix-C already exposed for exactly this contingency).
+
+**Confidence:**
+
+- Symptom: KNOWN. Three independent observation sequences during Fix-C integration verification, plus the prior dogfood pass at HEAD `58140bd` (finding #82) which observed identical AppleScript output albeit attributed to a different upstream cause.
+- Root cause: MODELED. Three hypotheses enumerated, not narrowed by experiment. Hypothesis (1) is the most cited Electron pattern and the cheapest to verify.
+- Practical impact: KNOWN for Fix-C scope; MODELED for forward-compatibility scope (future menu rebuilds).
+
+**Cross-references.**
+
+- **#82** — Fix-C closes the "menu hardcoded `[]`" defect at the wiring level. This finding is the downstream blocker preventing Fix-C from delivering visual closure of #82.
+- **`MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`** — Fix-C lands the wiring this followup recommended; closure of the followup itself depends on resolving this finding (#85).
+- **#83** — UX silent-failure pattern; if a future fix wires `workstation:spawn-result` into a header-count display (header counter mentioned in `MB-F-MB-T06-HEADER-COUNT-DISPLAY`), that surface would face the same propagation question if it goes through `rebuildApplicationMenu`. Renderer-side state has no such issue.
+
+**§10.5 self-check (docs-only commit):**
+
+1. API verified by spike? n/a — documentation only.
+2. Test exercises behavior or mocks? n/a — finding cites live Fix-C integration verification with diagnostic stderr instrumentation (since reverted from the branch HEAD) plus AppleScript reproduction.
+3. Implementation deleted, test still passes? n/a.
+4. Anything outside contract? No — documentation only.
+5. Modified contract? No.
+6. Unlabeled claims? No — KNOWN/MODELED labels per evidence quality. Symptom KNOWN, root cause MODELED with three hypotheses explicitly tagged.
+7. Touched a file another session may modify? No parallel session active in this dogfood pass; modified file: `docs/cairn-findings.md`, single append. Fix-C branch HEAD `8348033` working tree was clean before this commit.
+8. Pre-push protocol? Docs-only; per-finding-file pattern; no build/typecheck gate required for docs.
+9. Confidence labeling matches evidence? Yes — KNOWN labels for direct observations, MODELED for inferences (root cause, forward-compat impact).
