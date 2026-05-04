@@ -1056,3 +1056,53 @@ Three composable patches:
 7. Touched a file another session may modify? no parallel session active; single append to docs/cairn-findings.md.
 8. Pre-push protocol? docs-only; per-finding-file pattern.
 9. Confidence labeling matches evidence? yes — Defect A KNOWN, Defect B mostly KNOWN with MODELED on composed-impact extrapolation.
+
+---
+
+## Dogfood pass summary — batch-6 wiring end-to-end (2026-05-04)
+
+**Operator HEAD at start:** 58140bd
+**Operator HEAD at completion:** 4014c36 (this commit + summary)
+**Findings filed:** #82 (Tier 2), #83 (Tier 1), #84 (Tier 1, two-defect compose)
+
+### Per-test result
+
+| # | Test | Result | Notes |
+|---|------|--------|-------|
+| T1 | Workstation launch | PASS | Electron up, WINDOW_READY, no errors. |
+| T2 | First-launch onboarding | PARTIAL PASS | Modal renders (screenshot-verified, deleted for op privacy); test-hook stdin path persists encrypted key + sentinel; second launch suppresses modal. Production renderer click-through not exhaustively driven (UI-scripting blocked by AX permissions + operator-side material in screen capture). |
+| T3 | Console panel inside shell | FAIL → #82 | Wiring chain built end-to-end but no operator-reachable trigger. Native menu hardcoded `[]`; `consoleBridge` exposes no `openPanel`. Cross-ref `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`. |
+| T4 | Spawn end-to-end via UI | PASS-WITH-CAVEAT → #83 | Spawn works after cap was freed; tmux + daemon IDs match. UX defect: `workstation:spawn-result` not subscribed by renderer; every outcome silent. Cap was blocked by 4-of-5 orphaned 'armed' daemon sessions. |
+| T5 | Orchestrator card flow | BLOCKED → #84 | Two composed defects: (A) safeStorage key never loaded into `process.env.ANTHROPIC_API_KEY` → STREAM_ERROR auth_error; (B) `build-doc-state.ts` has no `app.getPath('userData')` fallback → setBuildDocConfig silent no-op → orchestrator system prompt never loads → cards cannot be generated. |
+| T6 | Daemon survives WS restart | PASS | tmux + daemon both alive after cmd-Q quit; daemon entry persisted as `armed`. |
+| T7 | Spawned session survives WS SIGKILL | PASS | tmux + daemon alive after pkill -9 of all Electron procs. |
+| T8 | Audit log integrity | PASS | `orchestrator_audit` table present in data.db; 0 rows (consistent — no cards approved this session, T5 blocked). No corruption. |
+| T9 | cardContextCache survives session restart | DOCUMENTED | In-memory by design (per source comments); restart drops cache. Silent-no-op on post-restart approve composes with #83 — operator clicks Approve, returns silently, no audit row. Documented as defect-class continuation, not separately filed. |
+| T10 | Multiple concurrent sessions | SPAWN-SIDE PASS | Two dogfood sessions spawned concurrently, both armed, both backed by tmux. Card cross-contamination test untestable per #84. |
+| T11 | Kill tmux mid-spawn | PASS state-side | tmux server killed mid-spawn; no daemon registration; no orphan. UX silent per #83. |
+| T12 | Kill daemon mid-flight | PASS state-side | daemon killed; spawn fails before tmux; no orphan. UX silent per #83. |
+| T13 | Malformed orchestrator output | N/A live | Schema validation pure-function-tested in `test/unit/mb-t07/`. Live runtime test requires chat-card flow blocked by #84. |
+| T14 | Permission-denied scenario | N/A — code missing | Prompt cites "3-category subset shipped at ff5b490". That commit is not in repo history at HEAD 4014c36. grep finds no `write_third_party` / `cost_bound` / permission-gating code anywhere in `packages/`. No production gating code to fault-inject. |
+| T15 | Race two card approvals | N/A | Requires two cards in flight; blocked by #84. |
+
+### Recommended next direction (operator arbitration)
+
+Three findings, ordered by ship-gate impact:
+
+1. **Resolve #84 first** — both Defect A (safeStorage → process.env bootstrap) and Defect B (`app.getPath('userData')` fallback in `build-doc-state.ts`) are single-site fixes (~10 LOC each). Without them, the v3.0 orchestrator card flow is non-functional in production. Together they unblock T5/T13/T15 dogfood territory.
+2. **Resolve #83 next** — wire `workstation:spawn-result` consumer in shell + `onSpawnResult` on `workstationBridge`. Single integration point. Closes the silent-failure UX for spawn (and inherits some recovery for T9/T11/T12 silent-no-op). Optional companion: daemon orphan reaper for the cap-blocking-by-orphans symptom.
+3. **Resolve #82 last** — wire `/v2/events/stream` (option-b in existing `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION` followup) so the CC Console menu auto-populates. The wiring chain past the menu is otherwise complete; this single wire restores the full operator path for console-panel-in-shell.
+
+### Pre-existing followups validated by this dogfood
+
+- `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION` (FOLLOWUPS.md:131) — confirmed unresolved at HEAD; #82 documents dogfood evidence.
+- `MB-F-MB-T08-SPAWN-RESULT-SENTINEL` (smoke-harness.ts:85-88) — same root cause as #83, narrower scope; recommend resolving in same patch.
+- `MB-F-COARCH-T04-BUILD-DOC-SETTINGS-UI` (FOLLOWUPS.md:120) — assumes DevTools workaround; #84 Defect B shows the assumption is invalid.
+
+### State left after dogfood
+
+- Tmux server killed (T11 artifact, not restarted) — operator may wish to restart for normal dev flow.
+- Daemon `newTest1` session is now an orphan ('armed' but no tmux). Consistent with #83's orphan pattern.
+- 4 prior orphan sessions (`ddd`, `heytest`, `pa`, `papapapapa`) marked killed during T4 to free cap; not restored.
+- Workstation userData has `anthropic-api-key.enc` populated with `CONDUCTOR_DOGFOOD_API_KEY` ciphertext + `workstation-config.json` with `onboardingCompleted=true`. Pre-dogfood originals preserved at `*.dogfood-bak`. Operator may `mv ...bak ...` to restore if desired.
+- No screenshots persisted on disk (deleted to avoid capturing operator-side desktop background).
