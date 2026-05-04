@@ -35,6 +35,8 @@ function makeAtCapDeps(activeCount: number, cap: number): SpawnHandlerDeps {
     }),
     sourceEnv: { HOME: '/h', USER: 'u' },
     apiKey: 'sk-ant-test',
+    // cairn #72: stand-in absolute claude path.
+    claudeBinPath: '/test/bin/claude',
   };
 }
 

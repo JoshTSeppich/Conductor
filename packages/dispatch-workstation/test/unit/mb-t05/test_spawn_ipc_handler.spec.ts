@@ -46,6 +46,9 @@ function makeRecordingDeps(overrides: Partial<SpawnHandlerDeps> = {}): SpawnHand
     },
     sourceEnv: { HOME: '/h', USER: 'u' },
     apiKey: 'sk-ant-test',
+    // cairn #72: stand-in absolute path; production wiring resolves
+    // via `which claude` at workstation startup.
+    claudeBinPath: '/test/bin/claude',
     ...overrides,
   };
 }
@@ -65,7 +68,8 @@ describe('MB-T05 cluster 4 — spawn-ipc handler replaces test-hook', () => {
       '-d',
       '-s', 'sherpa',
       '-c', '/Users/test/code/foo',
-      'claude',
+      // cairn #72: tmux argv ends in absolute path, not literal 'claude'.
+      '/test/bin/claude',
     ]);
     expect(deps.registerCalls).toHaveLength(1);
     expect(deps.registerCalls[0]).toEqual({

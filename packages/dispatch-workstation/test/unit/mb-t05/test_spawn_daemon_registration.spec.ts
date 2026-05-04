@@ -48,6 +48,9 @@ function recordingDeps() {
     },
     sourceEnv: { HOME: '/h', USER: 'u' },
     apiKey: 'k',
+    // cairn #72: stand-in absolute path; production wiring resolves
+    // via `which claude` at workstation startup.
+    claudeBinPath: '/test/bin/claude',
   };
 }
 

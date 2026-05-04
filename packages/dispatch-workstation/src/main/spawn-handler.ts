@@ -126,6 +126,21 @@ export interface SpawnHandlerDeps {
    * for tests + future settings UI.
    */
   sessionCap?: number;
+  /**
+   * Absolute path to the `claude` executable. Resolved once at
+   * workstation startup via `resolveClaudeBin()` (binary-resolver.ts)
+   * and threaded through SpawnHandlerDeps so tmux argv contains the
+   * absolute path, bypassing PATH lookup inside the closed-allowlist
+   * env (which excludes `~/.local/bin`, the Anthropic official-
+   * installer location). Per cairn finding #72 (MB-F-MB-T05-PATH-
+   * ALLOWLIST-CLAUDE-RESOLUTION).
+   *
+   * spawnSession surfaces SpawnFailed if this is empty/undefined —
+   * unresolved-bin guard prevents the dogfooded silent failure where
+   * tmux exits 0 then claude fails to exec, leaving an orphaned
+   * daemon record.
+   */
+  claudeBinPath: string;
 }
 
 export interface SpawnSessionResult {
@@ -151,15 +166,20 @@ function isDuplicateSessionError(stderr: string | undefined): boolean {
 
 /**
  * Construct the tmux argv for spawning a new claude-running session.
- * Args are stable contract per cluster 2 P1.
+ * Args are stable contract per cluster 2 P1; cairn #72 amends the
+ * final program token from the literal 'claude' to the absolute path
+ * resolved at workstation startup.
  */
-function buildTmuxArgs(req: SpawnSessionRequest): readonly string[] {
+function buildTmuxArgs(
+  req: SpawnSessionRequest,
+  claudeBinPath: string,
+): readonly string[] {
   return [
     'new-session',
     '-d',
     '-s', req.sessionName,
     '-c', req.repoPath,
-    'claude',
+    claudeBinPath,
   ];
 }
 
@@ -210,8 +230,23 @@ export async function spawnSession(
     }
   }
 
+  // Cairn #72 unresolved-bin guard. SpawnHandlerDeps.claudeBinPath is
+  // populated at workstation startup by resolveClaudeBin (in
+  // spawn-ipc's defaultSpawnHandlerDeps). Empty/undefined here means
+  // the resolver failed at startup OR a caller forgot to thread the
+  // field through; either way, surfacing SpawnFailed up-front avoids
+  // the dogfooded "tmux exit-0, claude exec'd nothing, daemon record
+  // orphaned" failure mode.
+  if (!deps.claudeBinPath || deps.claudeBinPath.length === 0) {
+    throw makeError(
+      'SpawnFailed',
+      'claude binary path not resolved at workstation startup — check claude installation or restart the app',
+      { sessionName: req.sessionName },
+    );
+  }
+
   const env = buildSpawnEnv(deps.sourceEnv, deps.apiKey);
-  const args = buildTmuxArgs(req);
+  const args = buildTmuxArgs(req, deps.claudeBinPath);
 
   // Step 1: tmux new-session.
   try {

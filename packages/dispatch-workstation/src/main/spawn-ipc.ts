@@ -33,6 +33,7 @@ import {
 } from './spawn-handler.js';
 import type { SpawnEnv } from './spawn-env.js';
 import { HttpSessionListClient } from './session-cap.js';
+import { resolveClaudeBin } from './binary-resolver.js';
 
 const execFileP = promisify(execFile);
 
@@ -203,7 +204,28 @@ export interface DefaultDepsOpts {
   persistedApiKey?: Buffer | null;
 }
 
-export function defaultSpawnHandlerDeps(opts: DefaultDepsOpts = {}): SpawnHandlerDeps {
+/**
+ * Production deps factory. Async because cairn #72 requires resolving
+ * the absolute `claude` binary path at startup via `which claude`
+ * before deps can be considered complete. Caller (registerSpawnIpcHandlers)
+ * holds onto the returned promise and awaits it on first spawn.
+ *
+ * Resolution failure surfaces as SpawnFailed in the IPC reply for the
+ * first spawn the operator attempts (the unresolved-bin guard in
+ * spawnSession sees an empty claudeBinPath and rejects with a typed
+ * envelope).
+ */
+export async function defaultSpawnHandlerDeps(
+  opts: DefaultDepsOpts = {},
+): Promise<SpawnHandlerDeps> {
+  let claudeBinPath = '';
+  try {
+    claudeBinPath = await resolveClaudeBin();
+  } catch {
+    // Leave empty. The unresolved-bin guard in spawnSession surfaces
+    // SpawnFailed with a clear error message on first spawn rather
+    // than crashing the workstation at startup.
+  }
   return {
     runTmuxNewSession: defaultRunTmuxNewSession,
     runTmuxKillSession: defaultRunTmuxKillSession,
@@ -213,6 +235,7 @@ export function defaultSpawnHandlerDeps(opts: DefaultDepsOpts = {}): SpawnHandle
     // MB-T06: production cap-check wiring against GET /v2/sessions.
     // sessionCap omitted → DEFAULT_SESSION_CAP=5 from session-cap.ts applies.
     sessionListClient: new HttpSessionListClient(),
+    claudeBinPath,
   };
 }
 
@@ -229,7 +252,16 @@ export interface RegisterSpawnIpcOpts {
 }
 
 export function registerSpawnIpcHandlers(opts: RegisterSpawnIpcOpts = {}): void {
-  const controller = opts.controller ?? new SpawnIpcController(defaultSpawnHandlerDeps());
+  // Cairn #72: defaultSpawnHandlerDeps is async (resolves `claude`
+  // absolute path at startup). To avoid changing main.ts's
+  // synchronous registerSpawnIpcHandlers() call site, we kick off
+  // the resolution here and cache the controller promise. The first
+  // spawn awaits the same promise; by the time the operator clicks
+  // "+ Spawn Session" (multi-second user action minimum), the
+  // resolution has long completed.
+  const controllerPromise: Promise<SpawnIpcController> = opts.controller
+    ? Promise.resolve(opts.controller)
+    : defaultSpawnHandlerDeps().then((deps) => new SpawnIpcController(deps));
 
   ipcMain.handle('workstation:open-repo-dialog', async () => {
     const result = await dialog.showOpenDialog({
@@ -246,12 +278,25 @@ export function registerSpawnIpcHandlers(opts: RegisterSpawnIpcOpts = {}): void 
     // trusted within Workstation) and let the handler surface
     // type errors via the error envelope.
     const req = payload as SpawnSessionRequest;
-    void controller.handleSpawnRequest(req).then((reply) => {
-      try {
-        event.sender.send('workstation:spawn-result', reply);
-      } catch {
-        // Renderer may have closed; nothing to do.
-      }
-    });
+    void controllerPromise
+      .then((controller) => controller.handleSpawnRequest(req))
+      .then((reply) => {
+        try {
+          event.sender.send('workstation:spawn-result', reply);
+        } catch {
+          // Renderer may have closed; nothing to do.
+        }
+      })
+      .catch((err) => {
+        // Defense-in-depth: deps construction itself threw (rare —
+        // resolveClaudeBin already swallows its error). Surface a
+        // typed envelope so the renderer doesn't see a hung promise.
+        const reply = toErrorReply(err);
+        try {
+          event.sender.send('workstation:spawn-result', reply);
+        } catch {
+          // Renderer may have closed.
+        }
+      });
   });
 }

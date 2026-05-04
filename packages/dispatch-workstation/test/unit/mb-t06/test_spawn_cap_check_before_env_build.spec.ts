@@ -43,6 +43,9 @@ describe('MB-T06 cluster 3 — capacity check fires before env build / tmux / da
       },
       sourceEnv: { HOME: '/h', USER: 'u' },
       apiKey: 'sk-ant-test',
+      // cairn #72: stand-in absolute claude path; production wires via
+      // resolveClaudeBin() at workstation startup.
+      claudeBinPath: '/test/bin/claude',
     };
 
     await spawnSession({ repoPath: '/r', sessionName: 'sherpa' }, deps);
