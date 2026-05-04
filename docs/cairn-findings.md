@@ -979,3 +979,80 @@ Without renderer subscription to `workstation:spawn-result`, every failure mode 
 7. Touched a file another session may modify? no parallel session active; single append to docs/cairn-findings.md.
 8. Pre-push protocol? docs-only; per-finding-file pattern.
 9. Confidence labeling matches evidence? yes — all four evidence components KNOWN with reproduction paths.
+
+---
+
+## Finding #84 — MB-F-COARCH-CHAT-CARD-FLOW-DISCONNECTED-IN-PRODUCTION
+
+**Date filed:** 2026-05-04
+**Tier:** 1 (ship-gate blocker — orchestrator card flow non-functional in production main HEAD)
+**Origin:** Batch-6 dogfood T5 (orchestrator card flow) at HEAD df1f408 (post-finding-#83)
+**Discovered by:** dogfood operator session, live STREAM_ERROR auth_error reproduction + code-confirmed wiring gap
+**Resolution status:** New finding documenting two composed wiring gaps that together prevent any production-mode workstation from generating an orchestrator card.
+
+**Summary.** Two distinct wiring defects compose to block the v3.0 orchestrator card flow end-to-end. Either alone would block; together they make even the diagnostic path opaque. Cross-references existing followup `MB-F-COARCH-T04-BUILD-DOC-SETTINGS-UI` (build-doc settings UI), but per below, that followup as written would not resolve the production block — the build-doc-state persistence layer is itself non-functional in production.
+
+### Defect A — safeStorage-persisted ANTHROPIC_API_KEY never loaded into main-process env
+
+**Symptom (KNOWN — observed live).** Sending `TYPE_AND_SEND <prompt>` via stdin to a running workstation (with onboarding completed, `anthropic-api-key.enc` ciphertext present in userData) produces `STREAM_ERROR auth_error` immediately. Reproduced this dogfood session.
+
+**Root cause (KNOWN — code-confirmed).** `anthropic-client.ts:91-98` `createAnthropicClient()` reads `process.env['ANTHROPIC_API_KEY']` directly and returns `null` if absent. There is **NO** code path in the workstation main process that decrypts the `anthropic-api-key.enc` ciphertext via `safeStorage.decryptString()` and assigns the result to `process.env['ANTHROPIC_API_KEY']`. The decryption happens exactly once — at `spawn-ipc.ts:203` — solely for populating the **spawned session's** tmux env, not the main process's chat-client env.
+
+**Operator UX.** Operator completes onboarding (encrypts + persists key), workstation launches, operator types in chat. Chat panel surfaces "Invalid API key. Check the ANTHROPIC_API_KEY environment variable." (anthropic-client.ts:72). Operator has no way to know what to do — they DID enter the key during onboarding.
+
+**Workaround that production-shipped install would not surface.** Setting `ANTHROPIC_API_KEY=...` in the parent shell before launching Electron makes chat work — but this is dev-mode-only. A production-packaged Electron app launched from Finder/Dock has no shell parent and no way to receive env vars.
+
+### Defect B — build-doc state directory not resolvable in production
+
+**Symptom (KNOWN — code-confirmed).** `coarchitect:setBuildDocConfig` IPC handler is silently a no-op in production. Even if the operator constructs a payload via DevTools (per the existing followup workaround at `MB-F-COARCH-T04-BUILD-DOC-SETTINGS-UI:120`), the persistence write fails silently and the config is never readable.
+
+**Root cause (KNOWN — code-confirmed).** `build-doc-state.ts:17-30` — `stateDir()` reads three env vars in order:
+```
+process.env['MB_BUILD_DOC_STATE_DIR']        // tests only
+process.env['MB_WORKSTATION_USERDATA']       // not set anywhere
+process.env['MB_APP_USERDATA']                // not set anywhere
+```
+None of these env vars is set by any production code path (verified via grep across `packages/dispatch-workstation/src/`). Result: `stateDir()` returns `''`, `statePath()` throws "Build-doc state dir not configured", `readBuildDocConfig()` catches and returns null, `writeBuildDocConfig()` catches and silently swallows.
+
+The comment at `build-doc-state.ts:21` ("Electron sets this env before main.ts loads when running in test context") is misleading — it suggests Electron handles it in some context, but only the test fixture at `test/unit/coarch-t04/build-doc-state.spec.ts:29` ever sets `MB_BUILD_DOC_STATE_DIR`. Production has no fallback to `app.getPath('userData')`.
+
+**Operator UX.** Even if Defect A is patched (env var manually set), `routeOrchestratorOutput` requires the orchestrator system prompt to fire on the chat stream. The system prompt is loaded only when `buildDocConfig` is non-null (coarchitect-ipc.ts:123). Since `readBuildDocConfig()` always returns null, the chat falls through to `streamMessage(content)` — plain LLM call, no orchestrator system prompt — and the model's response is text not CardOutput JSON. `routeOrchestratorOutput` parses it as `text-passthrough`. **No card is ever emitted.**
+
+### Composed impact
+
+End-to-end: an operator running a production-packaged v3.0 workstation will see the chat panel return "Invalid API key" (Defect A). If they overcome that via dev-mode env var, the chat will stream prose responses with **no cards** (Defect B). The orchestrator card flow ship-gate is non-functional in production.
+
+The kanban UI itself (dispatch-web) likely still renders existing cards from the daemon's persisted state, so spawning a fresh kanban WITH PRE-EXISTING DATA is not affected. But the v3.0 vision §10 promised flow ("operator types prompt → card appears in kanban → operator approves → audit row written") is broken from chat-input forward.
+
+### Recommendation (deferred — operator arbitration)
+
+Three composable patches:
+
+1. **Defect A fix** (single-site): in `main.ts` after `app.whenReady()`, decrypt `anthropic-api-key.enc` via `loadApiKey({ configDir: configDir(), safeStorage })` (api-key-storage.ts:55) and assign result to `process.env['ANTHROPIC_API_KEY']`. Mirror the spawn-ipc pattern. ~10 LOC.
+2. **Defect B fix** (single-site): in `build-doc-state.ts:17-23`, add a fourth fallback after the three env vars: `app.getPath('userData')` from Electron. Requires importing Electron `app` (top-level import, no functional change to test path because env vars take precedence). Test isolation preserved by env-var-precedence-over-Electron-app pattern. ~5 LOC.
+3. **Optional follow-on (out of scope here)**: ship the `MB-F-COARCH-T04-BUILD-DOC-SETTINGS-UI` renderer UI — that's a separate ticket but would only become useful AFTER #2 lands.
+
+### Confidence
+
+- **Defect A symptom:** KNOWN (live STREAM_ERROR auth_error reproduction this session via TYPE_AND_SEND on an onboarding-completed workstation).
+- **Defect A root cause:** KNOWN (grep across `packages/dispatch-workstation/src/main/` confirmed only spawn-ipc.ts:203 decrypts; no setter on `process.env['ANTHROPIC_API_KEY']` exists).
+- **Defect B symptom:** MODELED (no operator-reachable path tested due to A blocking first; defect inferred from code reading).
+- **Defect B root cause:** KNOWN (build-doc-state.ts:17-30 cross-referenced with grep for the three env vars across all production code).
+- **Composed impact:** MODELED — extrapolated from A KNOWN and B MODELED. Would become KNOWN once a workstation runs end-to-end with both defects in scope.
+
+### Cross-references
+
+- `MB-F-COARCH-T04-BUILD-DOC-SETTINGS-UI` (FOLLOWUPS.md:120) — assumes "operator calls bridge from DevTools" works as workaround. It does not (Defect B blocks the underlying persistence).
+- Onboarding flow #83 cross-reference: similar disconnect-between-persistence-and-consumer pattern.
+- Cairn #67 / #80 (bundler-vs-no-bundler hides defect class) — same theme: tests pass, production fails. Here: tests pass because they set MB_BUILD_DOC_STATE_DIR; production fails because nobody does.
+
+**§10.5 self-check (docs-only commit):**
+1. API verified by spike? n/a — documentation only.
+2. Test exercises behavior or mocks? n/a — finding cites live TYPE_AND_SEND reproduction (Defect A) + code reading (Defect B).
+3. Implementation deleted, test still passes? n/a.
+4. Anything outside contract? no — documentation only.
+5. Modified contract? no.
+6. Unlabeled claims? no — KNOWN/MODELED labels applied per evidence quality.
+7. Touched a file another session may modify? no parallel session active; single append to docs/cairn-findings.md.
+8. Pre-push protocol? docs-only; per-finding-file pattern.
+9. Confidence labeling matches evidence? yes — Defect A KNOWN, Defect B mostly KNOWN with MODELED on composed-impact extrapolation.
