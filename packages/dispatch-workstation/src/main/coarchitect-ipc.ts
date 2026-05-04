@@ -50,7 +50,15 @@ function loadSystemPrompt(): string {
   }
 }
 
-const daemonClient = new HttpDaemonClient();
+/**
+ * Singleton HttpDaemonClient instance used by both the coarchitect IPC
+ * handlers (defined in this file) and the F2 card-ipc wiring (imported
+ * from src/main/card-wiring.ts). Exported per coord §4 reconciliation:
+ * the operator-prescribed F2 sentinel referenced `httpDaemonClient` as
+ * if it lived in main.ts, but the actual construction site is here.
+ * Single source of truth; one token-read on startup; both wirings share.
+ */
+export const daemonClient = new HttpDaemonClient();
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('coarchitect:fetchHistory', async () => {
