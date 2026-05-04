@@ -868,3 +868,46 @@ src/components/PanelErrorBoundary.tsx(36,7): error TS2322: Type 'React.ReactNode
 8. Pre-push protocol? this is a docs-only commit closing the #79 triage session per operator scope ("documentation-only commit. No code changes. No further work after this commit"). No build/typecheck gate required for docs.
 9. Confidence labeling matches evidence? yes — KNOWN for symptom + reproduced-on-baseline claim; SPECULATIVE for root cause; n/a labels on no-code self-check questions.
 
+
+---
+
+## Finding #82 — MB-F-CONSOLE-T03-OPERATOR-TRIGGER-UNREACHABLE
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (meaningful defect — blocks operator-facing v3.0 console-panel-in-shell experience; cross-reference to existing followup `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`)
+**Origin:** Batch-6 dogfood T3 (console panel inside shell) at HEAD 58140bd
+**Discovered by:** dogfood operator session, live menu inspection of running workstation
+**Resolution status:** New finding documenting dogfood-confirmation of an existing followup. The followup `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION` was triaged Tier 2 and self-described as "land before v3.0 ship-gate"; this finding closes the gap of validating it is in fact unresolved at HEAD 58140bd and quantifying operator impact.
+
+**Symptom (KNOWN — observed live).** Workstation main HEAD 58140bd ships the full console-panel-in-shell wiring chain (`console:open-panel` IPC → `controller.openConsolePanel()` → `console:open` → shell visibility toggle → ConsolePanel React mount), but no operator-reachable trigger exists to fire it. Live verification (T3 dogfood):
+
+1. Native menu `CC Console > [session]` enumeration on a running workstation returns exactly one disabled item: `[No sessions registered enabled=false]`. Verified via AppleScript UI introspection of the active Electron process.
+2. `curl -H "x-conductor-token: ..." http://localhost:7878/v2/sessions` returns dozens of registered daemon sessions in the same wall-clock window. So the daemon-side data exists; only the workstation-side wiring to consume it is missing.
+3. The renderer-side `consoleBridge` exposed by `preload.mts` (factory at `console-bridge.ts:78-90`) surfaces five subscription methods (onConsoleOpen/Close/StdoutChunk/Gap/Error) and two action methods (sendStdin, signal). It does **NOT** expose an `openPanel(sessionName)` action. So no renderer-driven path can trigger `console:open-panel` either.
+
+**Root cause (KNOWN — code-confirmed).** `main.ts:200` calls `refreshConsoleMenu([])` exactly once at app start with a hardcoded empty session list. There is no code path that invokes `refreshConsoleMenu(<non-empty list>)` anywhere else in the workstation main process. No subscription to daemon `/v2/sessions` (HTTP poll or `/v2/events/stream` push) is wired. Comments at main.ts:108-111 explicitly acknowledge the gap and cite the followup.
+
+**Practical impact.** Operator running v3.0 batch-6 workstation cannot open a console panel for any session through any UI surface. The full console-panel renderer (xterm + WebSocket reconnect logic + 240px tile region in shell) is built, bundled, and unreachable. Specifically:
+- Native menu path (CONSOLE-T03 designed surface) — unreachable, menu hardcoded empty.
+- Renderer-bridge path — does not exist; `consoleBridge` has no `openPanel` action.
+- Spawn-auto-mount path — comment at workstation-shell.html:380-382 cites this as "future spawn-auto-mount path (batch 7+)"; not in batch-6 scope.
+- Programmatic / smoke-harness — only stdin commands present in main.ts:262-368 are spawn/splitter/onboarding/chat related; no console-open command.
+
+**Cross-references.** `FOLLOWUPS.md:131` `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION` is the same defect class, already triaged Tier 2 with two recommended remediation options (HTTP poll vs `/v2/events/stream` subscription). This finding adds the dogfood-perspective evidence that the followup is genuinely unresolved at HEAD 58140bd (not merely tracked) and that the wiring chain past the menu is otherwise complete (so resolving the menu subscription should restore the full operator path).
+
+**Recommendation (deferred — operator arbitration).**
+1. **Resolve `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`** by wiring `/v2/events/stream` (per the followup's recommended option-b) into a `refreshConsoleMenu(sessions)` invocation. Single integration point in main.ts:200 region.
+2. **Optional: also expose `consoleBridge.openPanel(sessionName)`** so a renderer-driven open path exists (e.g., per-session "Open console" button next to spawn UI). Lower priority — the menu path is the originally-designed surface.
+
+**Confidence:** KNOWN. All three observations (menu enumeration, daemon session count, renderer-bridge surface lacking openPanel) are direct live or code-confirmed checks against HEAD 58140bd.
+
+**§10.5 self-check (docs-only commit):**
+1. API verified by spike? n/a — documentation only.
+2. Test exercises behavior or mocks? n/a — finding cites live AppleScript UI introspection and live curl as the reproduction commands.
+3. Implementation deleted, test still passes? n/a — no implementation.
+4. Anything outside contract? no — documentation; no code change, no contract surface touched.
+5. Modified contract? no.
+6. Unlabeled claims? no — symptom KNOWN (observed live), root cause KNOWN (code-confirmed at main.ts:200), impact KNOWN (each path enumerated against source).
+7. Touched a file another session may modify? no parallel session active in this dogfood pass; modified file: docs/cairn-findings.md, single append.
+8. Pre-push protocol? docs-only; per-finding-file pattern; no build/typecheck gate required for docs.
+9. Confidence labeling matches evidence? yes — KNOWN labels throughout, single dogfood-arbitration recommendation explicitly deferred.
