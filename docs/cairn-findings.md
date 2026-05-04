@@ -969,6 +969,48 @@ Without renderer subscription to `workstation:spawn-result`, every failure mode 
 - Cairn #73 (post-spawn liveness check) — adjacent ship pattern; same UX gap
 - Vision §10.x spawn flow — primary v3.0 ship-gate surface; this finding directly impacts ship-gate readiness
 
+**Resolution (Fix-B / batch fix-batch-1, 2026-05-04).**
+
+**Status:** RESOLVED at green commit `07fae77`.
+
+**What shipped:**
+1. New helper `packages/dispatch-workstation/src/main/spawn-result-listener.ts` — pure function `attachSpawnResultListener(ipcLike, cb): cleanup`. Mirrors the testable seam pattern used by `console-bridge.ts:makeConsoleBridge` so the listener-attach logic is unit-testable without booting Electron.
+2. `preload.mts` — `workstationBridge.onSpawnResult(cb): () => void` added inline within the existing object literal; runtime contract mirrors `coarchitectBridge.onStream*` (subscribe via `ipcRenderer.on`, return cleanup-fn).
+3. `main.ts` — new Fix-B SPAWN_RESULT_SUBSCRIPTION sentinel region inside `createWindow()` registers a SECOND `console-message` listener forwarding only `SPAWN_RESULT_OK <sessionName>` and `SPAWN_RESULT_ERROR <error_type> <message>` sentinels under `MB_TEST_HOOKS=1`. Existing test-hooks forwarder untouched (per coordination scaffold §1 sentinel-region discipline).
+4. `workstation-shell.html` — inline result banner (top-right, asymmetric dismiss: success auto-dismisses after 3s, error persists until Dismiss). Subscribes via `window.workstationBridge.onSpawnResult`. Emits the SPAWN_RESULT_* console sentinels in addition to surfacing the visible banner.
+
+**LOC**: 217 added across 4 files (+128 in RED test). Core subscription work (helper + IPC wiring) ~30 LOC of code; remainder is the inline-banner UX surface (operator-acked separately as the minimum-viable fallback during diagnose-phase arbitration).
+
+**Verification.**
+- Unit tests (RED→GREEN): `test/unit/fix-spawn-result/test_spawn_result_subscription.spec.ts` — 5 cases pass (channel registration, success-payload propagation, error-payload propagation, cleanup-fn returned, repeated-cycle leak-free).
+- Full unit suite: 84 files, 283 tests pass; no regressions introduced.
+- Existing electron-integration test `test/integration/mb-t04/spawn-modal-opens.test.ts` passes (4.87s) — confirms renderer boots cleanly with new banner DOM and subscription.
+- Live integration drive (ad-hoc, headless Electron with `MB_TEST_HOOKS=1` + `FOXWORKS_DAEMON_URL=http://127.0.0.1:1` + pre-marked onboarding state to bypass keychain): observed `SPAWN_RESULT_ERROR DaemonUnreachable Daemon token not found at ~/.foxworks-dispatch/token` propagated to stdout end-to-end. KNOWN evidence that the renderer subscription, the IPC roundtrip, and the main-process forwarder are all wired correctly.
+- Build artifacts contain the wiring (3× references in `dist/main/preload.cjs`, 4× in `dist/main/main.js`, 21× in `dist/main/workstation-shell.html`).
+
+**Success-path verification:** the unit test deterministically exercises the listener-side payload propagation for both `SpawnSuccessReply` and `SpawnErrorReply` shapes; live success-path drive requires a running daemon stack and a usable `claude` binary which the Fix-B worktree cannot reproduce headlessly. Manual operator drive of the success path is the v3.0 ship-gate validation surface and is part of the next dogfood pass.
+
+**Smoke-harness followup `MB-F-MB-T08-SPAWN-RESULT-SENTINEL` (resolution scope adjustment).** Diagnose-phase operator ack confirmed Option A: ship the *enabler primitive* (sentinels emit + main forwards) and mark the followup RESOLVED with cross-reference to `07fae77`. Extending `smoke-harness.ts:spawnSession()` to `await` the new sentinels is a trivial follow-on (smoke-harness.ts is read-only per file-ownership scaffold §1; the harness's consumer side is the appropriate site for that wait). The "resolve in same patch" wording in the original Fix-B prompt was scope-slop; Option A preserves the file-ownership boundary and ships the unblocking primitive. Followup index updated in `FOLLOWUPS.md`.
+
+**Orphan reaper (compounding evidence in original finding) — DEFERRED to new finding #85.** Daemon-side orphan-detection sweeper crosses the workstation→daemon repo boundary, requires deeper audit of state-machine concurrent-write semantics (`packages/dispatch-daemon/src/state/transitions.ts:96-104`), and realistic LOC including tests is 80–120 — over Fix-B's scope cap. Filed as finding #85 with the diagnosis surface from the diagnose-phase arbitration (state-machine path, lifecycle hook in `startup.ts`, idempotency + no-op-on-backed requirements). Operator may spin a Fix-D session for it.
+
+**Toast/notification UX system — DEFERRED to new finding #86.** Operator pre-authorized the inline-banner-as-minimum-viable-surfacing in diagnose-phase ack. The shell currently has no general toast/notification system — the spawn-result banner is a one-off DOM/CSS surface. A proper toast system would be reusable across spawn-result, console-panel errors (currently `console.error` only), onboarding errors, and future card-approval feedback. Filed as finding #86 for a follow-up UX pass.
+
+**Confidence:** KNOWN. Live integration drive observed the SPAWN_RESULT_ERROR sentinel propagate end-to-end; unit tests cover the listener seam deterministically; existing integration test confirms no regression in the modal-open path.
+
+**§10.5 self-check (resolution append):**
+1. API verified by spike? yes — pure-function listener helper unit-tested.
+2. Test exercises behavior or mocks? exercises (unit + electron-boot integration + ad-hoc live drive).
+3. Implementation deleted, test still passes? n/a — tests directly exercise the implementation.
+4. Anything outside contract? no — files owned per coordination scaffold §1.
+5. Modified contract? additively (`workstationBridge.onSpawnResult` added; existing surface unchanged).
+6. Unlabeled claims? no.
+7. Touched a file another session may modify? `preload.mts` shared with Fix-C — confirmed independence: Fix-B touches `workstationBridge`, Fix-C touches `consoleBridge`. Merge order A→B→C per scaffold §2.
+8. Pre-push protocol? per-path `git add`; pre-commit `git status --short`; post-commit `git log -1 --stat`. RED + GREEN both pushed before resolution doc.
+9. Confidence labeling matches evidence? yes — KNOWN per live observation + tests.
+
+---
+
 **§10.5 self-check (docs-only commit):**
 1. API verified by spike? n/a — documentation only.
 2. Test exercises behavior or mocks? n/a — finding cites three live dogfood reproductions + grep-confirmed renderer non-subscription.
@@ -1200,6 +1242,91 @@ worked). Defect B: KNOWN-fixed (live smoke shows production-path
 loaded → structured output emitted). Composed impact: KNOWN — chat→
 orchestrator pipeline alive end-to-end, kanban-card render observable
 once prompt/model emit a card variant.
+
+---
+
+## Finding #85 — MB-F-DAEMON-ORPHAN-REAPER
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (operator-experience defect; compounds finding #83 cap-block UX, but the cap symptom is recoverable manually via `tmux kill-server` + daemon DELETE)
+**Origin:** Deferred from finding #83 Fix-B diagnose-phase arbitration (operator-acked, 2026-05-04)
+**Discovered by:** Fix-B / batch fix-batch-1 diagnose-phase scope assessment
+**Resolution status:** OPEN — operator may spin Fix-D to close.
+
+**Symptom (KNOWN — direct dogfood T4 inspection during finding #83).** The daemon retains `state='armed'` records for sessions whose tmux server has long since killed the underlying session. Of 5 daemon-armed sessions blocking the spawn cap during dogfood T4, only 1 had a backing tmux session — 4 were orphans (`ddd`, `heytest`, `pa`, `papapapapa`). `isActiveSession` (session-cap.ts:101-104) only filters `'archived'` and `'killed'` states, so orphaned `'armed'` records count fully toward `DEFAULT_SESSION_CAP=5`. The compounding UX with #83 (silent spawn failure) means the operator hits the cap from accumulated orphans and has no way to discover why their next spawn isn't working.
+
+**Root cause.** No daemon-side mechanism exists to detect that a registered tmux target has died. The daemon learns about session death only through explicit DELETE on `/v2/sessions/<name>` or via state transitions driven by another component. Tmux server crashes, OS reboots, or out-of-band `tmux kill-session` invocations leave the daemon record stranded.
+
+**Diagnosis surface for the fix (assembled during Fix-B diagnose phase).**
+
+- **State machine path.** `armed → killed` is a valid transition per `packages/dispatch-daemon/src/state/transitions.ts:96-101`:
+  ```
+  armed: ['paused', 'held', 'killed']
+  ```
+  Synthesizing a `killed` transition for an orphan would route through the existing transition validator at `transitions.ts:143+`. No new state required.
+- **Lifecycle hook location.** `packages/dispatch-daemon/src/lifecycle/startup.ts` — the reaper would register a periodic timer here on daemon startup and tear it down in `shutdown.ts`. Mirrors the pattern other lifecycle hooks already use.
+- **Detection mechanism.** Per orphan candidate (each `state='armed'` session in the registry), execute `tmux has-session -t <tmux_target>`; non-zero exit indicates the tmux session is gone. `dispatch-workstation/src/main/spawn-ipc.ts:138-140` (`defaultRunTmuxHasSession`) provides a working precedent for the call shape; daemon side would likely use `node:child_process.execFile` directly.
+- **Idempotency requirement.** Reaper must not double-transition: a record already in `'killed'` (or `'archived'`) skips the check. The `isActiveSession` filter at `session-cap.ts:101-104` is the right predicate to mirror.
+- **No-op-on-backed requirement.** `tmux has-session` exit-0 means the session is alive — no transition. Only exit-non-zero with classifiable "session not found" stderr triggers the transition.
+- **Cadence.** Suggested interval: 30–60 seconds. Faster than spawn-cap-block recovery time, slower than tmux startup latency (which is sub-second on macOS — no risk of a brief startup race classifying a just-spawned session as orphan provided cap-check + tmux `new-session` complete inside the cadence window).
+- **Fault tolerance.** Per-session `tmux has-session` failures unrelated to "session not found" (e.g., tmux server crash, exec failure) must NOT trigger a transition — log and skip. The reaper fail-closed semantics: when in doubt, leave the record alone; a stale orphan is a smaller defect than an incorrectly-killed live session.
+- **Realistic LOC.** 80–120 including tests covering: orphan detection on dead target, no-op on backed target, no-op on already-killed record, idempotency across cadence ticks, stderr-classification branches, integration test against a real ephemeral tmux session.
+
+**Why deferred.**
+1. **Cross-repo scope.** Finding #83 is workstation-internal IPC plumbing; the reaper is dispatch-daemon territory. Bundling them inflates Fix-B's blast radius.
+2. **Concurrent-write semantics.** Daemon state mutations come from multiple sources (HTTP routes, websocket events, lifecycle hooks). Adding a third mutator (the reaper) deserves a deeper audit than a fast-fix permits — write ordering, transaction boundaries, observable race windows under concurrent spawn + reap.
+3. **LOC budget.** Fix-B's 50-LOC core-fix cap precludes adding 80–120 LOC of daemon code + tests inline.
+
+**Cross-references.**
+- Finding #83 (Fix-B parent) — silent spawn UX, resolved at `07fae77`. The reaper would address the cap-blocking-by-orphans symptom that compounded #83 in dogfood T4.
+- Cairn #72 (PATH-allowlist resolution) — workstation-side `runTmuxHasSession` precedent for the call shape; reaper would adopt the same exit-classification heuristic.
+- `packages/dispatch-daemon/src/state/transitions.ts:96-101` — state machine path.
+- `packages/dispatch-daemon/src/lifecycle/startup.ts` — lifecycle hook location.
+
+**Recommendation.** Operator may spin a Fix-D session targeting this finding. Suggested commit grammar: `red(MB-F-#85-reaper)`, `green(MB-F-#85-reaper)`. Suggested test directory: `packages/dispatch-daemon/test/unit/orphan-reaper/` with at least an integration spec exercising a real ephemeral tmux session.
+
+**Confidence:** KNOWN.
+- Symptom: directly observed in dogfood T4 (4 orphans of 5 armed sessions).
+- State-machine path: verified at `transitions.ts:96-101`.
+- Lifecycle hook location: verified by file enumeration in `lifecycle/`.
+- LOC estimate: MODELED — based on cohort of similar daemon features.
+
+---
+
+## Finding #86 — MB-F-WORKSTATION-SHELL-NO-TOAST-SYSTEM
+
+**Date filed:** 2026-05-04
+**Tier:** 2 (operator-experience defect; ergonomic gap, not a ship-gate blocker)
+**Origin:** Deferred from finding #83 Fix-B diagnose-phase arbitration — operator pre-authorized the inline-spawn-result-banner fallback during Fix-B with explicit instruction to file a separate finding for proper toast UX
+**Resolution status:** OPEN — UX follow-on.
+
+**Symptom (KNOWN — observed during Fix-B diagnose phase).** The Foxworks Workstation shell (`packages/dispatch-workstation/src/main/workstation-shell.html`) has no general-purpose toast/notification surface. The existing UX patterns are limited to:
+1. **Modal show/hide** — used for the spawn modal and onboarding modal. Heavy-weight; blocks operator interaction.
+2. **Region display flip** — used for the console-tile region. Single-instance (one panel visible at a time).
+3. **`console.log` / `console.error`** — invisible in production (only forwarded via `MB_TEST_HOOKS=1`).
+4. **(post-Fix-B) Inline result banner** — single-instance, hand-rolled top-right DOM element specifically for `workstation:spawn-result`. Not generalized for other event sources.
+
+When a fix needs to surface user-facing feedback for a non-modal event (spawn outcome, console-panel error, async card-flow status, future card-approval-completed signal), the only options are: (a) add another bespoke banner DOM, or (b) misuse the modal for non-blocking feedback. Both options accumulate one-off DOM and styling that won't compose cleanly.
+
+**Root cause.** The shell HTML at MB-T04 was scoped narrowly (modal + kanban webview + chat panel). Notification UX was deferred and never re-scoped. Vision §10.x does not specify a notification component; the shell relies on each feature owner to surface their own UX. This works for modal-shaped flows but fails for fire-and-forget event flows like spawn-result.
+
+**Recommendation.** Single-pass UX ticket adding a toast surface to the shell:
+- DOM: a fixed-position container with stack semantics (most-recent-on-top, max ~3 visible, auto-dismiss with operator-overridable hold).
+- API: a small `showToast({ kind: 'success' | 'error' | 'info', message: string, autoDismissMs?: number })` exposed on `window.shellBridge` (already exists for splitter state; this adds renderer-internal notification methods).
+- Migration: replace the Fix-B inline `#spawn-result-banner` with calls to the new toast API; surface other silent failures (console-panel `console.error` paths, onboarding errors, spawn-modal validation errors that currently just `return`) via the same surface.
+- Test pattern: happy-dom unit tests asserting stack ordering, auto-dismiss timing, manual-dismiss interaction. Existing console-t03 component tests provide the per-file `// @vitest-environment happy-dom` precedent.
+
+**Realistic LOC.** ~150–200 across HTML/CSS + a renderer-side helper module + tests.
+
+**Cross-references.**
+- Finding #83 (Fix-B parent, RESOLVED at `07fae77`) — established the inline banner that this finding's toast system should replace.
+- `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION` (FOLLOWUPS.md:131) — once that lands, console-panel error states would benefit from the toast surface.
+- Onboarding modal error paths (currently swallowed at `main.ts:339-341` with stderr-only diagnostics) would also benefit.
+
+**Confidence:** KNOWN.
+- Symptom: confirmed by enumeration of existing UX surfaces in Fix-B diagnose phase.
+- Affected event sources: spawn-result (Fix-B inline-banner workaround), console-panel errors (`console.error`-only today), onboarding errors (stderr-only).
+- LOC estimate: MODELED — based on similar React/HTML toast component implementations.
 
 ---
 
