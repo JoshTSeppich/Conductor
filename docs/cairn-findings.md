@@ -1722,3 +1722,47 @@ Once shipped, downstream consumers can drop the bootstrap-fetch + refetch patter
 7. Touched a file another session may modify? Single docs append.
 8. Pre-push protocol? Docs-only.
 9. Confidence labeling matches evidence? Yes — KNOWN.
+
+---
+
+## Finding #92 — MB-F-DAEMON-TOKEN-NOT-BOOTSTRAPPED
+
+**Date filed:** 2026-05-04 (stub; full triage deferred to focused session)
+**Tier:** 1 (ship-gate; workstation cannot talk to daemon without manual operator intervention)
+**Origin:** 2026-05-04 operator dogfood follow-up to fix-batch-1
+**Discovered by:** Operator surfaced after fix-batch-1 closed. Not caught by batch-6 dogfood because T1 (workstation launch) only verified Electron reaches main loop, and T4 (spawn) presumably worked because daemon token was already wired in some manner from a prior session — the token bootstrap path was not on the dogfood test list.
+**Resolution status:** STUB — full triage deferred to focused fix session.
+
+**Symptom (KNOWN, operator-reported).** When the workstation app starts cold, the operator must manually `cat ~/.foxworks-dispatch/token` and supply the token via some out-of-band mechanism (env var, paste, etc.) before the workstation can successfully communicate with the daemon. Without this manual step, the workstation does not auto-bootstrap the daemon token from disk into the runtime location consumers (HTTP client, WS client) read from.
+
+**Defect class.** Same shape as #84 Defect A (api-key bootstrap). Credential persists on disk at a known location, never gets bootstrapped into the runtime where consumers expect it. Pattern continues to recur because consumer code reads from `process.env.X` (or equivalent) at first invocation, and there is no boot-time loader that populates that location from on-disk state.
+
+**Likely root cause (SPECULATIVE pending diagnose phase).** Workstation main process probably needs a `bootstrapDaemonToken()` step at app-ready, mirroring the `bootstrapApiKey()` shape from `packages/dispatch-workstation/src/main/api-key-bootstrap.ts` (shipped at green commit 668cd1b). Token file location: `~/.foxworks-dispatch/token` per existing daemon convention. Runtime consumer location: TBD by diagnose phase — could be `process.env.CONDUCTOR_TOKEN` or similar, or an in-process module-level variable read by the HTTP/WS client factory.
+
+**Triage required (focused session scope):**
+1. Read the actual workflow operator runs when starting from cold — surface the literal command sequence
+2. Trace where workstation HTTP/WS clients read the daemon token (grep for `x-conductor-token`, `~/.foxworks-dispatch/token`, token-related env vars)
+3. Confirm there is no existing boot-time bootstrap loader for the daemon token
+4. Implement bootstrap function mirroring `api-key-bootstrap.ts` pattern
+5. Wire it into `main.ts` early in `app.whenReady()` before any IPC handler registration that touches daemon
+6. RED test: workstation client reads correct token from runtime location after bootstrap, when token file exists on disk
+7. GREEN: bootstrap implemented
+8. Integration verification: cold-launch workstation with no manual token step, verify daemon-dependent operations succeed (spawn, session list, etc.)
+
+**Estimated scope:** ~15-25 LOC (bootstrap function + main.ts wire-in + tests). Mirrors Fix-A Defect A almost exactly.
+
+**Methodology observation (Tier 3 candidate for separate filing if pattern continues).** This is the THIRD instance of the same defect class:
+- Finding #67 (xterm dep declared but not installed at runtime — module never bootstrapped into node_modules path consumers read from)
+- Finding #84 Defect A (api-key persisted but never bootstrapped to process.env)
+- Finding #92 (daemon token persisted but never bootstrapped to runtime location)
+
+Pattern shape: persistence-layer wiring shipped without consumer-side bootstrap; tests pass because they inject the missing piece; production fails silently or requires manual operator intervention. Three instances now justify a methodology-level recommendation: **production-env smoke gate** that exercises every credential / dependency / config the consumer code reads at runtime, with no test injection. Pairs with finding #80 (systemic monorepo unbundled-consumer fragility — same defect class, different mechanism). Worth Cairn formalization consideration.
+
+**Confidence:** KNOWN (symptom operator-reported); root cause SPECULATIVE pending diagnose phase.
+
+**Cross-references:**
+- Same defect class as #84 Defect A (resolution at 668cd1b is the mechanical template)
+- Same defect class as #67 (xterm dependency)
+- Pairs with #80 (bundler/no-bundler boundary)
+- Methodology pattern candidate for Cairn formalization
+
