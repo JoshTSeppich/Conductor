@@ -24,6 +24,7 @@ import {
   markOnboardingComplete,
 } from '../onboarding/first-launch-detector.js';
 import { saveApiKey } from '../onboarding/api-key-storage.js';
+import { wireCardIpc } from './card-wiring.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
@@ -150,6 +151,9 @@ app.whenReady().then(async () => {
   consoleController = registerConsoleIpcHandlers({
     getWebContents: () => mainWindow?.webContents ?? null,
   });
+  // === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
+  wireCardIpc({ ipcOn: (channel, listener) => ipcMain.on(channel, listener) });
+  // === end MB-T07 card wiring ===
   registerOnboardingIpc();
 
   if (isFirstLaunch({ configDir: configDir() })) {
