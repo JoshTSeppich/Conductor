@@ -132,6 +132,60 @@ Fix landed in this batch: pre-populate `MB_ONBOARDING_STATE_DIR` with `{ onboard
 
 **Halt discipline (§3.7):** While waiting, no reads, no file inventories, no preparatory absorption. Session-end summary in §5 populates AFTER the main.ts push lands.
 
+### Finding C-8 (2026-05-03) — package.json append-collision (rebase resolution arbitrated)
+
+`git rebase origin/main` (post Session-B merge at 41786a5) produced a conflict on the FIRST commit applied (`36fb54f` MB-T08 GREEN) at `packages/dispatch-workstation/package.json` line 12 (`build` script). Both sessions appended a new build step to the same line:
+
+- Session B: `&& node scripts/build-card-bridge.mjs`
+- Session C: `&& node scripts/build-onboarding.mjs`
+
+git could not auto-merge because both edits share the same lineage point on a single line. **Resolved (operator-arbitrated):** both-sessions-append, alphabetical (`build-card-bridge` before `build-onboarding`) — both produce independent dist artifacts, both are required at runtime, ordering is semantically arbitrary. Resolution commit: `a89e52a` (replaces `36fb54f`).
+
+**Coord-model gap exposed:** scaffold §1 listed `package.json` in BOTH sessions' owned-files lists scoped to "only the `build` script line", but the §2.1 sentinel-region pattern was named only for `main.ts` and `workstation-shell.html`. Single-line shared resources like a `build` script have no sentinel surface available; both sessions appending unilaterally produced a deterministic conflict that no contract enforcement caught.
+
+**Post-merge followup recommendation:** scaffold §1 should grow an explicit "append-shared-line" pattern for single-line shared resources (build scripts, lockfile package lists, single-string config values).
+
+### Finding C-9 (2026-05-03) — main.ts import-block append-collision (rebase resolution arbitrated)
+
+After resolving C-8 and continuing the rebase, the LAST commit applied (`dc38316` main.ts) produced a conflict at `packages/dispatch-workstation/src/main/main.ts` lines 27-40 (imports section). Both sessions added new imports immediately after `saveApiKey` (line 26):
+
+- Session B: `import { wireCardIpc } from './card-wiring.js';` (bare import, no sentinel wrapper)
+- Session C: three sentinel-marked import groups (Onboarding mount imports — three named exports from onboarding-mount.js; Console mount imports — single named export from console-mount.js)
+
+The function-body sentinel regions DID work as designed:
+- Session B's `// === MB-T07 card wiring ===` block at lines 154-156 (wireCardIpc call inside app.whenReady) — distinct from my regions
+- My `// === Onboarding mount ===` region replaces the legacy isFirstLaunch sentinel block — distinct
+- My `// === Console mount ===` region after `refreshConsoleMenu([])` — distinct
+- All three function-body regions textually disjoint, no conflict in the function body
+
+**The gap:** scaffold §2.1's sentinel-pattern guidance named function-call regions inside `app.whenReady().then(...)`. It did NOT name top-of-file imports/exports as sentinel-eligible regions. Session B's `import { wireCardIpc }` was a bare unsentinel-wrapped insert; my sentinel-marked groups landed at the same lineage point.
+
+**Resolved (operator-arbitrated):** both-sessions-append, B's bare import preserved verbatim + C's three sentinel groups appended in their original order. Resolution commit: `60058a1` (replaces `dc38316`).
+
+**Same class as C-8** — two sessions appending to a shared lineage point neither was warned about. Same coord-model gap (sentinel pattern scoped too narrowly).
+
+**Post-merge followup recommendation:** scaffold §2.1 needs explicit sentinel-pattern guidance for top-of-file shared regions (imports, exports, top-level constants).
+
+### Rebase verification (post-conflict resolution)
+
+Branch state after rebase: 7 commits cleanly applied onto `origin/main` (HEAD `41786a5` Session-B merge):
+
+```
+60058a1 green(main.ts): Onboarding + Console mount sentinel regions
+d1b1c66 coord(session-C): halt-state surface + app-launches-clean test fix
+7bd0199 green(MB-F-CONSOLE-T03-SHELL-INTEGRATION): tile region + mount factory
+b78d8be red(MB-F-CONSOLE-T03-SHELL-INTEGRATION): tile region + mount factory
+a89e52a green(MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT): orchestration + bundle  [package.json resolution applied]
+93c474b red(MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT): wiring-mounts unit specs
+fc2543f coord(session-C): batch-6 wiring-mounts session-start
+```
+
+Sentinel-region grep verification (post-rebase main.ts):
+- B region present: line 167 `// === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===`
+- C regions present (5 sentinel groups): lines 28 (Onboarding imports), 35 (Console imports), 42 (Onboarding preload const), 172 (Onboarding mount block), 202 (Console mount block)
+
+Test count: 289 / 290 (1 fail + 1 file failure = both pre-existing, coord §4 C-1 baseline). Up from 243/244 pre-rebase due to Session B's merge contributing ~46 new passing tests. Typecheck clean.
+
 ## §5 Session-end summary
 
 (populated at session end)
