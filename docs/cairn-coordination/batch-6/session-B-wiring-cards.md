@@ -90,7 +90,58 @@ Acknowledged. Coordination scaffold §2.2 ordering: **Session B commits its main
 
 ## §4 Cross-session findings
 
-None at session-start. Will populate as work progresses if observations beyond owned scope or cross-session contention surface.
+### 2026-05-03 — F1 pre-write contract reconciliation
+
+Reading existing GREEN-shipped files surfaced six points where the operator session-start brief and patches differ from the actual file contracts. None block F1 (which has decided-by-existing-code resolutions); items §4.1, §4.2, §4.4 will block F2/F4 if not resolved by the time those followups land. Surfacing now so operator-relay can arbitrate while F1 + F3 are in flight.
+
+**§4.1 (will bite F2): `CardIpcDeps` field name is `cardContext`, not `contextLookup`.**
+
+Operator patch 2 prescribes the F2 sentinel block with `contextLookup: cardContextCache`. But the existing `CardIpcDeps` interface (`packages/dispatch-workstation/src/main/card-ipc.ts:47-59`, frozen by MB-T07 GREEN at commit `b45b93b`) names the field `cardContext`. As prescribed, the sentinel won't compile. KNOWN. Recommendation: F2 sentinel uses `cardContext: cardContextCache`.
+
+**§4.2 (will bite F2): `ipcOn` is required in `CardIpcDeps` and missing from operator patch 2 sentinel.**
+
+`CardIpcDeps.ipcOn` (lines 53-57) has no default; production wiring must pass `(channel, listener) => ipcMain.on(channel, listener)`. `ipcMain` already imported in `main.ts:8`. KNOWN. Recommendation: F2 sentinel becomes:
+```
+import { ipcMain } from 'electron';   // already imported in main.ts
+import { cardContextCache } from './card-context-cache.js';
+import { registerCardIpcHandlers } from './card-ipc.js';
+
+// === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
+registerCardIpcHandlers({
+  daemonClient: httpDaemonClient,
+  cardContext: cardContextCache,
+  ipcOn: (channel, listener) => ipcMain.on(channel, listener),
+});
+// === end MB-T07 card wiring ===
+```
+
+**§4.3 (decides F1): IPC channel namespace is `card:*`, not `workstation:card-*`.**
+
+Operator brief F1 says webview emits via `ipcRenderer.send('workstation:card-approved', payload)` etc. But `card-ipc.ts:193,209,220` (frozen by MB-T07 GREEN at `b45b93b`) listens on `'card:approved'`, `'card:declined'`, `'card:multi-choice-selected'`. GREEN-shipped contract is the source of truth (frozen code wins). KNOWN. F1 implementation will emit on `card:*`.
+
+**§4.4 (will bite F4): `CardContextLookup.get` returns `CardContext | null`, not `CardContext | undefined`.**
+
+Operator brief F4 + operator patch 1 say `get(card_id) returns CardContext or undefined`. But `CardContextLookup.get` (`card-ipc.ts:39-41`) returns `CardContext | null`. KNOWN. Recommendation: F4 implements `CardContextCache.get(card_id): CardContext | null` to match the GREEN-frozen `CardContextLookup` interface.
+
+**§4.5 (decides F1): preload path is sibling-relative `./card-bridge.cjs`, not `./dist/main/card-bridge.cjs`.**
+
+Operator brief F1 step 4 says `<webview preload="./dist/main/card-bridge.cjs">`. But `main.ts:30` loads workstation-shell.html from `dist/main/workstation-shell.html` (`build-shell.mjs` copyFile target), so the correct sibling-relative path from the loaded HTML to the built preload is `./card-bridge.cjs`. The brief's value would resolve to `dist/main/dist/main/card-bridge.cjs` and fail. KNOWN as path resolution.
+
+SPECULATIVE follow-up: per Electron `<webview>` docs, the `preload` attribute may require an absolute `file:` URL rather than a relative path. F1 will write the static relative form (`./card-bridge.cjs`) first as the simplest path. If smoke/dogfood validation shows the webview preload doesn't load, fallback is to set `preload` programmatically from the existing inline `<script>` in workstation-shell.html via `new URL('./card-bridge.cjs', window.location.href).href`. The fallback adds one line inside the existing inline `<script>`, which expands my workstation-shell.html territory beyond the §2-stated "attribute on the webview element only" — flagging now in case operator-relay wants to pre-bless the territory expansion or prefer the programmatic-set form on first pass.
+
+**§4.6 (decides F1 structure): card-bridge implementation splits into factory + entry.**
+
+Brief F1 step 1 says "Pattern after existing console-bridge.ts" (a factory) and "Exposes window.cardBridge" (a preload entry's job). Two layers. Decision:
+- `src/main/card-bridge.ts` — factory + types (no Electron import); unit-testable.
+- `src/main/card-bridge-preload.mts` — entry: imports factory + Electron, calls `contextBridge.exposeInMainWorld('cardBridge', makeCardBridge(ipcRenderer))`.
+
+`build-card-bridge.mjs` esbuild input = the `.mts` entry, output = `dist/main/card-bridge.cjs`. This adds one file (`card-bridge-preload.mts`) beyond the brief's stated set, mirroring the console-bridge.ts ↔ preload.mts pattern. Surfaced for review; will rebase if operator-relay prefers a single-file approach.
+
+### Operator arbitration requested
+
+§4.1 + §4.2 (F2 sentinel) and §4.4 (F4 return type) need explicit operator response before F2/F4 implementation. F1 + F3 + F5 unblocked; will continue. Pre-arbitration F2/F4 hold-state will manifest as task #6 / task #4 sitting at "ready to start RED" until response received in coord file or new prompt.
+
+If operator-relay arbitrates differently on §4.3 (e.g. "rename existing `card:*` channels to `workstation:card-*` for namespace consistency"), F1 work must rebase on the new contract. KNOWN risk; will halt + redo if so directed.
 
 ---
 
