@@ -169,7 +169,100 @@ Will note in session-end summary §5 that the full-suite count includes this 1 p
 
 ## §5 Session-end summary
 
-Pending session end.
+### 2026-05-03 — Session B end
+
+**All 5 owned followups resolved (RED → GREEN, FOLLOWUPS.md annotated).**
+
+Final commit list (15 commits, oldest first; full sha + subject):
+
+```
+3520f0a docs(coord): session-B coord file + session-start
+e71fe6e docs(coord): session-B §4 — F1 pre-write contract findings
+6195b7e red(MB-F-MB-T07-CARD-BRIDGE-PRELOAD-WIRING): factory unit specs
+7217e66 green(MB-F-MB-T07-CARD-BRIDGE-PRELOAD-WIRING): card-bridge preload
+79a370c red(MB-F-MB-T07-DAEMON-AUDIT-CLIENT): postAuditViaFetch unit specs
+fc1d57c green(MB-F-MB-T07-DAEMON-AUDIT-CLIENT): postAudit via pure helper
+a995993 docs(coord): session-B §4.7 — pre-existing mb-t04 spawn-modal flake
+d3cb4a7 red(MB-F-MB-T07-CARD-CONTEXT-CACHE): cache class + singleton specs
+e933498 green(MB-F-MB-T07-CARD-CONTEXT-CACHE): cache class + singleton
+4f2bcdb red(MB-F-MB-T07-ORCHESTRATOR-CARD-EMITTER): variant routing specs
+f8c57f7 green(MB-F-MB-T07-ORCHESTRATOR-CARD-EMITTER): variant routing + emit
+ab6576f refactor(coarchitect-ipc): export daemonClient for shared use
+b0121ea red(MB-F-MB-T07-MAIN-IPC-WIRING): wireCardIpc unit specs
+28f55c5 green(MB-F-MB-T07-MAIN-IPC-WIRING): main.ts sentinel + card-wiring helper
+36d8f3a docs(followups): mark 5 MB-F-MB-T07 entries RESOLVED in batch-6
+```
+
+### Test counts (full dispatch-workstation suite)
+
+```
+$ pnpm --filter dispatch-workstation test
+Test Files  1 failed | 89 passed (90)
+     Tests  1 failed | 258 passed (259)
+   Duration 12.83s
+```
+
+**Net new tests added by Session B: 31** (across 5 new spec files in `test/unit/wiring-cards/`):
+- `test_card_bridge_factory.spec.ts` — 4 tests (F1)
+- `test_post_audit.spec.ts` — 5 tests (F3)
+- `test_card_context_cache.spec.ts` — 8 tests (F4)
+- `test_orchestrator_output_router.spec.ts` — 10 tests (F5)
+- `test_card_wiring.spec.ts` — 4 tests (F2)
+
+**1 pre-existing failure:** `test/integration/mb-t04/spawn-modal-emits-intent.test.ts` (Session A territory). Verified pre-existing, NOT a regression from Session B's changes — see §4.7 for reproduction details (reverted shell.html to 89cfb95 + stashed F3 GREEN; same failure reproduces). Session A's session-end run will likely show the same flake; cross-session triage if it persists post-merge.
+
+**Typecheck:** `pnpm --filter dispatch-workstation typecheck` passes (exit 0) at HEAD.
+
+### Followups resolved (5/5 owned)
+
+| ID | RED | GREEN | Net new tests |
+|---|---|---|---|
+| MB-F-MB-T07-CARD-BRIDGE-PRELOAD-WIRING | 6195b7e | 7217e66 | 4 |
+| MB-F-MB-T07-MAIN-IPC-WIRING | b0121ea | 28f55c5 | 4 |
+| MB-F-MB-T07-DAEMON-AUDIT-CLIENT | 79a370c | fc1d57c | 5 |
+| MB-F-MB-T07-CARD-CONTEXT-CACHE | d3cb4a7 | e933498 | 8 |
+| MB-F-MB-T07-ORCHESTRATOR-CARD-EMITTER | 4f2bcdb | f8c57f7 | 10 |
+
+Plus one refactor (`ab6576f` — export `daemonClient` from coarchitect-ipc.ts to enable F2 wiring without main.ts duplication).
+
+### Halt-discipline events
+
+3 forced-resolution events surfaced and documented during the session, all on contract conflicts between operator brief / patches and frozen GREEN-shipped code:
+
+1. **§4.3 (F1 channel namespace):** brief said `workstation:card-*`; frozen `card-ipc.ts` listens on `card:*`. Forced resolution: GREEN-shipped contract wins. Applied unilaterally; no operator override received at session-end.
+2. **§4.4 (F4 return type):** brief + operator patch 1 said `CardContextLookup.get` returns `CardContext | undefined`; frozen interface returns `CardContext | null`. The `undefined` shape is not assignable to the frozen interface and would force F2's sentinel block to fail typecheck. Applied `null` unilaterally; surfaced reasoning in commit body of F4 GREEN.
+3. **§4 (F2 missing httpDaemonClient):** operator patch 2 sentinel referenced `httpDaemonClient` as if in main.ts, but the actual `HttpDaemonClient` instance lives at `coarchitect-ipc.ts:53`. Pre-edit verification (per coord §3 commitment) caught the missing-construction. Forced resolution: export the existing `daemonClient` from coarchitect-ipc.ts and import in card-wiring.ts (single source of truth). Applied via `ab6576f` refactor commit; surfaced reasoning in commit body.
+
+In each case the resolution was forced by frozen GREEN-shipped contracts (no consistent alternative). Surfacing was via §4 entries + commit bodies + user-facing checkpoints; if operator-relay arbitrates differently post-merge, will rebase.
+
+### Cross-session findings filed
+
+- §4.1 (F2 sentinel field name): forced — applied at 28f55c5.
+- §4.2 (F2 sentinel ipcOn dep): forced — applied at 28f55c5.
+- §4.3 (F1 channel namespace): forced — applied at 7217e66.
+- §4.4 (F4 return type): forced — applied at e933498.
+- §4.5 (F1 preload path): forced — applied at 7217e66 (static-relative; SPECULATIVE runtime fallback to programmatic-set documented).
+- §4.6 (F1 + F5 structural decisions): pattern decisions — applied across F1 / F5.
+- §4.7 (mb-t04 pre-existing flake): observational — Session A territory adjacency, surfaced for awareness.
+
+### Operator merge sequence per coordination scaffold §4
+
+Session B's branch (`session-B/wiring-cards`) is at HEAD `36d8f3a` on origin. Per scaffold §2.2 main.ts ordering and §4 merge sequence:
+
+1. Operator merges Session A first (no main.ts contention; spawn-* + binary-resolver.ts territory).
+2. **Operator merges Session B second** (this session — main.ts edit lands).
+3. Operator merges Session C third (rebases on session-B-landed main, then merges; their main.ts mount-region edits are disjoint from Session B's MB-T07 sentinel region).
+
+After merge: live integration validation in batch-6 dogfood. Expected confirmations:
+- Operator clicks Approve on a kanban card → daemon receives POST /v3/orchestrator/audit with the right shape.
+- Orchestrator emits a card output → kanban region renders the OrchestratorCard (via dispatch-web's useOrchestratorCards hook).
+- Webview preload static path `./card-bridge.cjs` resolves at runtime (SPECULATIVE per §4.5; fallback documented).
+
+### Halt for operator merge
+
+Session B halts here per §3.7 halt discipline. No further reads, no preparatory absorption for next batch, no autonomous work. Awaiting operator merge of `session-B/wiring-cards` to main.
+
+If operator-relay needs arbitration on §4 cross-session findings before merge, response routes to this coord file or a new prompt.
 
 ---
 
