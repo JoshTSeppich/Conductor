@@ -95,6 +95,29 @@ async function createWindow(): Promise<void> {
     });
   }
 
+  // === BEGIN: Fix-B spawn-result subscription (do not modify outside this block) ===
+  // MB-F-#83 closer. The renderer (workstation-shell.html) emits
+  //   SPAWN_RESULT_OK <sessionName>
+  //   SPAWN_RESULT_ERROR <error_type> <message>
+  // console.log sentinels from window.workstationBridge.onSpawnResult.
+  // Forwarding lives in its own console-message listener so the existing
+  // test-hooks forwarder above stays untouched (sentinel-region discipline
+  // from coordination scaffold §1). Closes the smoke-harness followup
+  // MB-F-MB-T08-SPAWN-RESULT-SENTINEL by providing the sentinels the harness
+  // needs to wait on; smoke-harness.ts itself is a follow-on consumer.
+  if (process.env.MB_TEST_HOOKS === '1') {
+    mainWindow.webContents.on('console-message', (event) => {
+      const msg = (event as { message: string }).message;
+      if (
+        msg.startsWith('SPAWN_RESULT_OK ') ||
+        msg.startsWith('SPAWN_RESULT_ERROR ')
+      ) {
+        process.stdout.write(msg + '\n');
+      }
+    });
+  }
+  // === END: Fix-B ===
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });

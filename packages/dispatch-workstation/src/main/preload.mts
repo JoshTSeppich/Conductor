@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { makeConsoleBridge, type ConsoleBridgeIpc } from './console-bridge.js';
+import { attachSpawnResultListener } from './spawn-result-listener.js';
 
 // COARCH-T03: streaming bridge methods added (sendAndStream, onStreamChunk/Done/Error).
 // COARCH-T04: build-doc config bridge methods added (getBuildDocConfig/setBuildDocConfig/clearBuildDocConfig).
@@ -41,10 +42,18 @@ contextBridge.exposeInMainWorld('shellBridge', {
 // 'workstation:spawn-requested' IPC event consumed by spawn-ipc.ts; payload
 // shape per WORKSTATION_CONTRACT.md §3.3 spawn-new-session target = repo
 // path + session name (initial prompt deferred to MB-T05+).
+//
+// MB-F-#83: onSpawnResult subscribes to 'workstation:spawn-result' (emitted
+// by spawn-ipc.ts:297 / :308). Returns cleanup-fn per the
+// coarchitectBridge.onStream* pattern. Listener-attach logic lives in
+// spawn-result-listener.ts so the seam is unit-testable without booting
+// Electron.
 contextBridge.exposeInMainWorld('workstationBridge', {
   openRepoDialog: () => ipcRenderer.invoke('workstation:open-repo-dialog'),
   requestSpawn: (payload: { repoPath: string; sessionName: string }) =>
     ipcRenderer.send('workstation:spawn-requested', payload),
+  onSpawnResult: (cb: (reply: unknown) => void) =>
+    attachSpawnResultListener(ipcRenderer, cb),
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).

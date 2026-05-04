@@ -179,6 +179,53 @@
         border-color: #333;
         cursor: not-allowed;
       }
+      /* === MB-F-#83 spawn-result banner (Fix-B) === */
+      #spawn-result-banner[hidden] {
+        display: none;
+      }
+      #spawn-result-banner {
+        position: fixed;
+        top: 48px;
+        right: 16px;
+        z-index: 90;
+        max-width: 420px;
+        padding: 10px 14px 10px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        line-height: 1.4;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      #spawn-result-banner.success {
+        background: #1f3d1f;
+        color: #d8f0d8;
+        border: 1px solid #4a8a4a;
+      }
+      #spawn-result-banner.error {
+        background: #3d1f1f;
+        color: #f0d8d8;
+        border: 1px solid #8a4a4a;
+      }
+      #spawn-result-banner-message {
+        flex: 1;
+        word-break: break-word;
+      }
+      #spawn-result-banner-dismiss {
+        background: transparent;
+        color: inherit;
+        border: 1px solid currentColor;
+        border-radius: 3px;
+        padding: 2px 6px;
+        font-size: 11px;
+        cursor: pointer;
+        opacity: 0.7;
+      }
+      #spawn-result-banner-dismiss:hover {
+        opacity: 1;
+      }
+      /* === end MB-F-#83 spawn-result banner === */
     </style>
   </head>
   <body>
@@ -204,6 +251,27 @@
       <div id="chat-region" style="height: 280px">
         <div id="root"></div>
       </div>
+    </div>
+
+    <!-- === MB-F-#83 spawn-result banner (Fix-B). Hidden by default;
+         workstationBridge.onSpawnResult shows it on success (auto-dismiss
+         after 3s) or error (persistent until dismissed). Operator-acked
+         minimum-viable surfacing per finding #86. === -->
+    <div
+      id="spawn-result-banner"
+      data-testid="spawn-result-banner"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <div id="spawn-result-banner-message" data-testid="spawn-result-banner-message"></div>
+      <button
+        id="spawn-result-banner-dismiss"
+        data-testid="spawn-result-banner-dismiss"
+        type="button"
+      >
+        Dismiss
+      </button>
     </div>
 
     <div id="spawn-modal" data-testid="spawn-modal" role="dialog" aria-modal="true" hidden>
@@ -372,6 +440,91 @@
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !spawnModal.hidden) closeSpawnModal();
       });
+
+      // ────────────────────────────────────────────────────────────────────────
+      // MB-F-#83 spawn-result subscription (Fix-B / batch fix-batch-1).
+      //
+      // Closes the silent-spawn-UX defect: every spawn attempt reaches the
+      // main process via 'workstation:spawn-requested', and main replies via
+      // 'workstation:spawn-result' (spawn-ipc.ts:297 / :308). Until this
+      // wiring landed, the renderer never subscribed — modal flashed closed
+      // and the operator had no UI feedback for success or any failure mode
+      // (cap-block, daemon unreachable, claude-bin missing, etc.).
+      //
+      // Surfacing UX: small inline banner top-right of the shell. Success
+      // auto-dismisses after 3s; error persists until the operator clicks
+      // Dismiss (or another result arrives). Console.log sentinels emitted
+      // for the smoke harness's MB-F-MB-T08-SPAWN-RESULT-SENTINEL closer:
+      //   SPAWN_RESULT_OK <sessionName>
+      //   SPAWN_RESULT_ERROR <error_type> <message>
+      // Forwarded by main.ts (Fix-B sentinel region) under MB_TEST_HOOKS=1.
+      //
+      // Richer toast/notification UX system tracked as finding #86.
+      // ────────────────────────────────────────────────────────────────────────
+      const spawnResultBanner = document.getElementById('spawn-result-banner');
+      const spawnResultBannerMessage = document.getElementById(
+        'spawn-result-banner-message',
+      );
+      const spawnResultBannerDismiss = document.getElementById(
+        'spawn-result-banner-dismiss',
+      );
+      let spawnResultAutoDismissTimer = null;
+
+      function hideSpawnResultBanner() {
+        if (spawnResultAutoDismissTimer !== null) {
+          clearTimeout(spawnResultAutoDismissTimer);
+          spawnResultAutoDismissTimer = null;
+        }
+        spawnResultBanner.hidden = true;
+        spawnResultBanner.classList.remove('success', 'error');
+      }
+
+      function showSpawnResultBanner(kind, text, autoDismissMs) {
+        if (spawnResultAutoDismissTimer !== null) {
+          clearTimeout(spawnResultAutoDismissTimer);
+          spawnResultAutoDismissTimer = null;
+        }
+        spawnResultBanner.classList.remove('success', 'error');
+        spawnResultBanner.classList.add(kind);
+        spawnResultBannerMessage.textContent = text;
+        spawnResultBanner.hidden = false;
+        if (typeof autoDismissMs === 'number' && autoDismissMs > 0) {
+          spawnResultAutoDismissTimer = setTimeout(
+            hideSpawnResultBanner,
+            autoDismissMs,
+          );
+        }
+      }
+
+      spawnResultBannerDismiss.addEventListener('click', hideSpawnResultBanner);
+
+      function handleSpawnResult(reply) {
+        if (!reply || typeof reply !== 'object') return;
+        if (reply.type === 'success') {
+          const name =
+            (reply.result && reply.result.sessionName) || '(unnamed)';
+          showSpawnResultBanner('success', 'Session "' + name + '" spawned.', 3000);
+          console.log('SPAWN_RESULT_OK ' + name);
+          return;
+        }
+        if (reply.type === 'error') {
+          const errType = (reply.error && reply.error.error_type) || 'SpawnFailed';
+          const errMsg = (reply.error && reply.error.message) || '(no message)';
+          showSpawnResultBanner('error', errType + ': ' + errMsg, 0);
+          console.log('SPAWN_RESULT_ERROR ' + errType + ' ' + errMsg);
+        }
+      }
+
+      if (
+        window.workstationBridge &&
+        typeof window.workstationBridge.onSpawnResult === 'function'
+      ) {
+        window.workstationBridge.onSpawnResult(handleSpawnResult);
+      } else {
+        console.error(
+          'workstationBridge.onSpawnResult not available — spawn results will be silent',
+        );
+      }
 
       // ────────────────────────────────────────────────────────────────────────
       // MB-F-CONSOLE-T03-SHELL-INTEGRATION (Session C / Batch 6).
