@@ -727,3 +727,22 @@ Future Batch 3+ planning should account for this. Parallel sessions of 3 or more
 **Confidence:** KNOWN (symptom reproduced); root cause SPECULATIVE (multiple hypotheses, not triangulated).
 
 ---
+
+## Finding #79 — MB-F-MB-T07-ORCHESTRATOR-OUTPUT-ROUTER-IMPORT-PATH
+
+**Date filed:** 2026-05-04 (stub; full triage deferred)
+**Tier:** 1 (ship-gate; workstation cannot launch)
+**Origin:** 2026-05-04 post-batch-6-merge launch attempt
+**Discovered by:** Operator dogfood
+**Resolution status:** STUB — full triage deferred to fresh session.
+
+**Symptom.** `pnpm --filter dispatch-workstation dev` builds cleanly but Electron throws `ERR_MODULE_NOT_FOUND` at runtime: `Cannot find module 'node_modules/dispatch-core/src/v3/schema.js'` imported from `dist/main/orchestrator-output-router.js`. Workstation never reaches main loop.
+
+**Defect class.** Build-passes-but-runtime-fails. Same anti-fabrication failure pattern as cairn findings #67 (xterm dep declared but not installed) and the relay drafting failures B caught — TypeScript compilation succeeded, unit tests mocked the import, production module-resolution at runtime exposes the gap.
+
+**Likely root cause (MODELED, untriaged).** orchestrator-output-router.ts (shipped by Session B at f8c57f7 GREEN) imports v3 schema via a path that TS path-maps at build time but Node ESM loader cannot resolve at runtime. Possibilities: (a) pnpm workspace symlink doesn't expose src/ subpath, (b) missing .js extension Node ESM strict mode requires, (c) wrong package export path.
+
+**Triage required:** Read orchestrator-output-router.ts import statement. Check dispatch-core package.json exports field. Check pnpm workspace config. Likely a one-line fix in the import statement.
+
+**Confidence:** KNOWN (symptom reproduced 2026-05-04). Root cause SPECULATIVE.
+
