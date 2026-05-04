@@ -38,6 +38,15 @@ import { mountConsoleTileGrid } from './console-mount.js';
 // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
 import { bootstrapApiKey } from './api-key-bootstrap.js';
 // === END: Fix-A ===
+// === BEGIN: Fix-C console trigger imports (cairn finding #82, do not modify outside this block) ===
+import { readFileSync as fixCReadFileSync } from 'node:fs';
+import { homedir as fixCHomedir } from 'node:os';
+import { join as fixCJoin } from 'node:path';
+import {
+  subscribeConsoleMenuToDaemon,
+  type ConsoleMountWebSocket,
+} from './console-mount.js';
+// === END: Fix-C ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
@@ -232,6 +241,66 @@ app.whenReady().then(async () => {
   // followup. Operator can still see the menu's cap-status hint when the
   // panel cap is reached even with an empty session list.
   refreshConsoleMenu([]);
+
+  // === BEGIN: Fix-C console trigger (cairn finding #82, do not modify outside this block) ===
+  // Closes MB-F-CONSOLE-T03-MENU-SUBSCRIPTION + cairn finding #82.
+  // Operator-arbitrated 2026-05-04: hybrid (WS /v2/events/stream as a
+  // "something changed → refetch" trigger + REST GET /v2/sessions for the
+  // session list). Daemon emits no session_created/session_removed events
+  // on the bus (cairn finding #88); pure event-driven impossible at this
+  // daemon HEAD.
+  {
+    const FIX_C_DAEMON_HTTP_URL =
+      process.env['FOXWORKS_DAEMON_URL'] ?? 'http://localhost:7878';
+    const FIX_C_DAEMON_WS_URL =
+      process.env['FOXWORKS_DAEMON_WS_URL'] ?? 'ws://localhost:7878';
+    let fixCToken = '';
+    try {
+      fixCToken = fixCReadFileSync(
+        fixCJoin(fixCHomedir(), '.foxworks-dispatch', 'token'),
+        'utf8',
+      ).trim();
+    } catch {
+      // No token → fetch will 401; menu stays in initial empty state.
+      // Operator refinement (a) — no hidden polling, no error escalation.
+    }
+    subscribeConsoleMenuToDaemon({
+      httpUrl: FIX_C_DAEMON_HTTP_URL,
+      wsUrl: FIX_C_DAEMON_WS_URL,
+      token: fixCToken,
+      fetchImpl: (url, init) => fetch(url, init),
+      wsFactory: (url) => {
+        const ws = new WebSocket(url);
+        const adapter: ConsoleMountWebSocket = {
+          on(event, cb) {
+            if (event === 'open') {
+              ws.addEventListener('open', () => (cb as () => void)());
+            } else if (event === 'message') {
+              ws.addEventListener('message', (ev: MessageEvent) => {
+                const data =
+                  typeof ev.data === 'string' ? ev.data : String(ev.data);
+                (cb as (d: string) => void)(data);
+              });
+            } else if (event === 'close') {
+              ws.addEventListener('close', (ev: CloseEvent) => {
+                (cb as (c: number, r: string) => void)(ev.code, ev.reason);
+              });
+            } else if (event === 'error') {
+              ws.addEventListener('error', () =>
+                (cb as (e: Error) => void)(new Error('websocket error')),
+              );
+            }
+          },
+          close(code, reason) {
+            ws.close(code, reason);
+          },
+        };
+        return adapter;
+      },
+      refreshMenu: (sessions) => refreshConsoleMenu(sessions),
+    });
+  }
+  // === END: Fix-C ===
 
   // === Console mount (Session C / Batch 6 / wiring-mounts) ===
   // Closes MB-F-CONSOLE-T03-SHELL-INTEGRATION (vision §10.10 ship-gate).
