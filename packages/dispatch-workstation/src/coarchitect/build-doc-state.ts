@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import { app } from 'electron';
 
 const STATE_FILENAME = 'build-doc-config.json';
 
@@ -10,16 +11,23 @@ export interface BuildDocConfig {
 }
 
 /**
- * State directory: MB_BUILD_DOC_STATE_DIR env var overrides for test isolation,
- * otherwise uses app.getPath('userData') (set at runtime by Electron).
- * Follows the same pattern as splitter-state.ts.
+ * State directory resolution order:
+ *   1. MB_BUILD_DOC_STATE_DIR        (per-test isolation; spec-suite default)
+ *   2. MB_WORKSTATION_USERDATA       (legacy override; preserved for parity)
+ *   3. MB_APP_USERDATA               (legacy override; preserved for parity)
+ *   4. Electron app.getPath('userData')   (production fallback)
+ *
+ * Cairn finding #84 Defect B: production set none of the three env vars, so
+ * stateDir() returned '' and writeBuildDocConfig silently no-op'd. The fourth
+ * fallback (added 2026-05-04) makes the production path resolvable while
+ * preserving env-var precedence for test isolation.
  */
 function stateDir(): string {
   return (
     process.env['MB_BUILD_DOC_STATE_DIR'] ??
     process.env['MB_WORKSTATION_USERDATA'] ??
-    // Electron sets this env before main.ts loads when running in test context
-    (typeof process !== 'undefined' ? process.env['MB_APP_USERDATA'] ?? '' : '')
+    process.env['MB_APP_USERDATA'] ??
+    app.getPath('userData')
   );
 }
 
