@@ -35,6 +35,9 @@ import {
 // === Console mount imports (Session C / Batch 6 / wiring-mounts) ===
 import { mountConsoleTileGrid } from './console-mount.js';
 // === end Console mount imports ===
+// === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
+import { bootstrapApiKey } from './api-key-bootstrap.js';
+// === END: Fix-A ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
@@ -158,6 +161,14 @@ function registerOnboardingIpc(): void {
 
 app.whenReady().then(async () => {
   registerApplicationMenu();
+  // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
+  // Cairn #84 Defect A: load safeStorage-persisted ANTHROPIC_API_KEY into
+  // process.env so the chat client (anthropic-client.ts createAnthropicClient,
+  // invoked from coarchitect-ipc.ts) sees it on first request. Must run before
+  // registerIpcHandlers() so the chat IPC handler is set up against a
+  // populated env.
+  bootstrapApiKey({ configDir: configDir(), safeStorage });
+  // === END: Fix-A ===
   registerIpcHandlers();
   registerSpawnIpcHandlers();
   // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
