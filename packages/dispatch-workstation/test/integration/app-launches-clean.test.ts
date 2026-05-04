@@ -3,8 +3,9 @@
 // MB-S04 ADR (commit fa6e3cd).
 import { describe, it, expect } from 'vitest';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -83,9 +84,27 @@ describe('MB-T01: app launches clean', () => {
         `expected built main entry at ${MAIN_JS}; run \`pnpm --filter dispatch-workstation build\` first`,
       ).toBe(true);
 
+      // MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT (Session C / Batch 6): the
+      // production main.ts now opens the onboarding modal on first launch
+      // when no config file exists. To preserve this test's "app launches
+      // cleanly" semantic for a returning (already-onboarded) operator,
+      // pre-populate a temp config dir with onboardingCompleted=true and
+      // point MB_ONBOARDING_STATE_DIR at it so the onboarding mount short-
+      // circuits and createWindow → WINDOW_READY fires immediately.
+      const stateDir = mkdtempSync(join(tmpdir(), 'app-launches-clean-cfg-'));
+      writeFileSync(
+        join(stateDir, 'workstation-config.json'),
+        JSON.stringify({ onboardingCompleted: true }),
+        'utf8',
+      );
+
       const child = spawn(ELECTRON_BIN, [MAIN_JS], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: '1' },
+        env: {
+          ...process.env,
+          ELECTRON_DISABLE_SECURITY_WARNINGS: '1',
+          MB_ONBOARDING_STATE_DIR: stateDir,
+        },
       });
 
       let stderr = '';
