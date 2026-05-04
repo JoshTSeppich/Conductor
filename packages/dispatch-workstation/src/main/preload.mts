@@ -60,7 +60,8 @@ contextBridge.exposeInMainWorld('workstationBridge', {
 // Direction-corrected post operator arbitration of CONSOLE-T02 halt:
 //   shell→webview (on*): console:open, console:close, console:stdout-chunk,
 //                        console:gap-detected, console:error
-//   webview→shell (invoke): console:send-stdin, console:signal
+//   webview→shell (invoke): console:send-stdin, console:signal,
+//                           console:open-panel (Fix-C / cairn finding #82)
 // makeConsoleBridge factory lives in console-bridge.ts so the shape can be
 // unit-tested without booting electron.
 const consoleIpcAdapter: ConsoleBridgeIpc = {
