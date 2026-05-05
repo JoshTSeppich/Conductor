@@ -101,9 +101,20 @@ export function registerApplicationMenu(opts: ApplicationMenuOpts = {}): void {
 
 /** Rebuild the application menu in-place. Used by CONSOLE-T03 main.ts to
  * refresh the "CC Console" submenu when daemon's session list or panel
- * count changes. Bypasses the menuRegistered gate intentionally. */
+ * count changes. Bypasses the menuRegistered gate intentionally.
+ *
+ * Cairn finding #89 fix (hypothesis 1, KNOWN-confirmed at green commit):
+ * the macOS menu server reference-tracks submenu pointers from the OS
+ * menu bar's first attachment after app.activate. Subsequent
+ * setApplicationMenu(newMenu) calls update Electron's JS-side state
+ * but the OS-level cache holds the originally attached pointers, so
+ * the operator-visible menu bar stays pinned to the first-attached
+ * state. Calling setApplicationMenu(null) first invalidates the OS
+ * cache; the immediately-following setApplicationMenu(newMenu) then
+ * re-attaches with fresh pointers and propagates correctly. */
 export function rebuildApplicationMenu(opts: ApplicationMenuOpts = {}): void {
   menuRegistered = true;
   const menu = Menu.buildFromTemplate(buildMenuTemplate(opts));
+  Menu.setApplicationMenu(null);
   Menu.setApplicationMenu(menu);
 }

@@ -74,11 +74,17 @@ function spawnWorkstation(envOverrides: Record<string, string>): SpawnResult {
       ...process.env,
       ELECTRON_DISABLE_SECURITY_WARNINGS: '1',
       MB_TEST_HOOKS: '1',
-      // Point Fix-C subscribe path at unreachable port so daemon bootstrap
-      // fetch fails fast and does not race with our REFRESH_CONSOLE_MENU
-      // trigger. Port 1 is reserved (tcpmux); ECONNREFUSED is immediate.
-      FOXWORKS_DAEMON_URL: 'http://127.0.0.1:1',
-      FOXWORKS_DAEMON_WS_URL: 'ws://127.0.0.1:1',
+      // Point Fix-C subscribe path at an invalid URL so URL parsing fails
+      // synchronously in fetch — eliminating any daemon race during the
+      // probe window. Diagnostic note: an earlier port-1 ECONNREFUSED
+      // approach failed isolation (operator daemon at localhost:7878
+      // appeared in menu via daemon path), suggesting some Electron-side
+      // cache or env-resolution path needs harder-fail input. Invalid
+      // URL fails URL parsing immediately — fetch() throws TypeError
+      // before any network attempt; the surrounding try/catch in
+      // refetchAndRefresh swallows it, leaving the menu in [] state.
+      FOXWORKS_DAEMON_URL: 'invalid://daemon-disabled.fix89-probe-01',
+      FOXWORKS_DAEMON_WS_URL: 'invalid://daemon-disabled.fix89-probe-01',
       ...envOverrides,
     },
   });
