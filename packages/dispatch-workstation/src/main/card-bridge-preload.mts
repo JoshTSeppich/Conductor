@@ -42,6 +42,16 @@ void (async () => {
     if (typeof token === 'string' && token.length > 0) {
       try {
         localStorage.setItem('x-conductor-token', token);
+        // Probe-92 obs-infra sentinel: emitted on every successful
+        // setItem so the Fix-92 verification suite can observe (a) that
+        // the IPC roundtrip resolved with a string-typed value of the
+        // expected length and (b) the wall-clock ordering of the
+        // bootstrap relative to SHELL_READY (Probe 8 race-condition
+        // timing). Length-only — never echoes the token value.
+        // Visibility is gated MB_TEST_HOOKS=1 by the main-side
+        // did-attach-webview console-message forwarder.
+        // eslint-disable-next-line no-console
+        console.log('BOOTSTRAP_TOKEN_WRITTEN ' + token.length);
       } catch {
         /* localStorage unavailable; TokenPrompt remains fallback */
       }
