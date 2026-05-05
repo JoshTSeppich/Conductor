@@ -877,7 +877,7 @@ src/components/PanelErrorBoundary.tsx(36,7): error TS2322: Type 'React.ReactNode
 **Tier:** 2 (meaningful defect — blocks operator-facing v3.0 console-panel-in-shell experience; cross-reference to existing followup `MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`)
 **Origin:** Batch-6 dogfood T3 (console panel inside shell) at HEAD 58140bd
 **Discovered by:** dogfood operator session, live menu inspection of running workstation
-**Resolution status:** PARTIAL-RESOLUTION at 320f707 (Fix-C green-bridge head) — wiring shipped + unit-test-and-helper-level GREEN; visual outcome blocked by newly discovered finding #89 (originally filed as #85 before parallel-session number collision with Fix-B's #85; renumbered — see Fix-C renumber commit). See Resolution section below.
+**Resolution status:** **RESOLVED** at b674dda (full visual closure — combined Fix-C wiring + Fix-89 menu-rebuild propagation fix). Initially PARTIAL-RESOLUTION at 320f707 (Fix-C green-bridge head — wiring shipped + unit-test-and-helper-level GREEN; visual outcome blocked by newly discovered finding #89, originally filed as #85 before parallel-session number collision with Fix-B's #85; renumbered — see Fix-C renumber commit). Fully RESOLVED at bb4d82b (fix-89 menu-rebuild propagation merged to main, combined with Fix-C wiring delivers operator-facing visual outcome). See Resolution section below.
 
 **Symptom (KNOWN — observed live).** Workstation main HEAD 58140bd ships the full console-panel-in-shell wiring chain (`console:open-panel` IPC → `controller.openConsolePanel()` → `console:open` → shell visibility toggle → ConsolePanel React mount), but no operator-reachable trigger exists to fire it. Live verification (T3 dogfood):
 
