@@ -12,5 +12,21 @@ export default defineConfig({
     setupFiles: ['test/setup.ts'],
     reporters: ['default'],
     testTimeout: 10_000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'json'],
+      reportsDirectory: './coverage',
+      include: [
+        'src/main/**/*.ts',
+        'src/coarchitect/build-doc-state.ts',
+      ],
+      exclude: [
+        'src/**/*.d.ts',
+        'src/**/*.html',
+        'src/main/run-smoke.ts',
+        'src/main/smoke-harness.ts',
+      ],
+      all: true,
+    },
   },
 });
