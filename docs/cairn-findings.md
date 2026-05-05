@@ -1945,3 +1945,41 @@ Each implements the same shape: `try { readFileSync(join(homedir(), '.foxworks-d
 - No relation to #67 / #80 / #84A despite surface similarity (those are persistence-without-consumer-bootstrap; this is duplication-of-correct-readers)
 - Pairs with the broader observation that the workstation has accumulated multiple module-private credential/path helpers as parallel sessions added new IPC paths; an audit might surface other consolidation opportunities
 
+
+---
+
+## Finding #94 — MB-F-CONDUCTOR-SPAWN-DEFAULT-PERMISSION-MODE
+
+**Date filed:** 2026-05-05
+**Tier:** 2 (UX gap; orchestrator-driven CC sessions blocked on per-action prompts unless operator manually configures each session)
+**Origin:** 2026-05-05 operator design decision after fix-batch-1 + #92 close
+**Discovered by:** Operator strategic decision during probe-suite planning
+**Resolution status:** STUB — pending implementation in MB-T09 batch.
+
+**Symptom (KNOWN, design-confirmed).** When Conductor's spawn pipeline (per finding #84 resolution at `2eaa0e1`, spawn-ipc.ts and related wiring) creates a CC tmux session, the CC binary launches in default permission mode. Default mode prompts the operator to approve every file edit, bash command, and tool action within the CC session. For orchestrator-driven sessions in the v3.0 swarm-conductor product, this defeats the purpose: the operator's approval gate is at the Conductor level (orchestrator cards, audit log, frozen contracts, halt discipline), not at the per-CC-session level.
+
+**Defect class.** Configuration-default mismatch. The CC binary's permission mode is correct for human-driven CC use (operator sitting at terminal). For Conductor-driven use, the orchestrator + cards + audit IS the operator-in-the-loop control surface; the per-action CC prompts are redundant friction.
+
+**Fix (specified, not yet implemented).** Conductor's spawn pipeline must launch CC with `--dangerously-skip-permissions` flag by default. Cairn discipline guarantees the actual operator-in-the-loop control surface remains intact:
+
+- §3.4 frozen contracts CC cannot modify
+- §3.7 halt discipline at staging gates
+- Per-commit-push so operator sees every commit
+- Diagnose-phase HALT before any RED commit
+- Scope fences via prompt and territory boundaries
+- Cairn methodology validated across batch-6 + fix-batch-1 + #92 (~14 documented incidents)
+
+The skipped prompts are CC's per-action UI friction, not the orchestration layer's authorization model. Distinct concerns.
+
+**Implementation scope (MODELED, ~5-10 LOC).** Locate the spawn-pipeline code that assembles the CC binary args (likely `packages/dispatch-workstation/src/main/spawn-ipc.ts` or `packages/dispatch-daemon/src/...` — diagnose phase confirms). Add `--dangerously-skip-permissions` to the args list. Update spawn-pipeline tests to assert the flag is present in the launch command. Verify via integration test (or live launch) that an orchestrator-spawned CC session does not block on permission prompts.
+
+**Cross-references.**
+- #84 (orchestrator card flow) — RESOLVED at `2eaa0e1`. The card flow is the operator-in-the-loop authorization surface that this finding's flag-default change presupposes.
+- MB-T09 (session prompt injection) and MB-T11 (orchestrator action tools + autopilot) per portfolio plan — both will exercise orchestrator-driven sessions; this finding should resolve before either ships, ideally bundled into MB-T09.
+
+**Out of scope for this finding.**
+- Operator-launched CC sessions outside Conductor (e.g., manual `claude` from terminal for fix work like fix-batch-1) — no change; operator continues to control permission mode per session via flag or Shift+Tab toggle.
+- Granular per-action allowlist configuration for hybrid use cases — defer to future work if needed; the binary skip-permissions flag is sufficient for v3.0 swarm-conductor product.
+
+**Confidence.** Symptom KNOWN (design-arbitrated). Implementation scope MODELED pending diagnose-phase code-trace.
+
