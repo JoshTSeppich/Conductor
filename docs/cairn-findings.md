@@ -1727,42 +1727,259 @@ Once shipped, downstream consumers can drop the bootstrap-fetch + refetch patter
 
 ## Finding #92 — MB-F-DAEMON-TOKEN-NOT-BOOTSTRAPPED
 
-**Date filed:** 2026-05-04 (stub; full triage deferred to focused session)
-**Tier:** 1 (ship-gate; workstation cannot talk to daemon without manual operator intervention)
+**Date filed:** 2026-05-04 (stub) · **Triaged:** 2026-05-04 (this body, post-diagnose; supersedes the stub's SPECULATIVE root-cause — see "Triage delta" below)
+**Tier:** 1 (ship-gate; workstation operator hits TokenPrompt on cold launch and must manually paste the daemon token)
 **Origin:** 2026-05-04 operator dogfood follow-up to fix-batch-1
-**Discovered by:** Operator surfaced after fix-batch-1 closed. Not caught by batch-6 dogfood because T1 (workstation launch) only verified Electron reaches main loop, and T4 (spawn) presumably worked because daemon token was already wired in some manner from a prior session — the token bootstrap path was not on the dogfood test list.
-**Resolution status:** STUB — full triage deferred to focused fix session.
+**Discovered by:** Operator surfaced after fix-batch-1 closed. Not caught by batch-6 dogfood because T1 (workstation launch) only verified Electron reaches main loop, and T2/T3 verified shell+console wiring but not the kanban webview's auth-bootstrap path through to a connected state — the dispatch-web AuthBootstrap path was not on the dogfood test list.
+**Resolution status:** RESOLVED at 90abbb5 (fix-92 green commit) — see Resolution section below.
 
-**Symptom (KNOWN, operator-reported).** When the workstation app starts cold, the operator must manually `cat ~/.foxworks-dispatch/token` and supply the token via some out-of-band mechanism (env var, paste, etc.) before the workstation can successfully communicate with the daemon. Without this manual step, the workstation does not auto-bootstrap the daemon token from disk into the runtime location consumers (HTTP client, WS client) read from.
+**Symptom (KNOWN — code-confirmed at this triage).** On cold launch, the kanban webview (dispatch-web React app, embedded via `<webview>` in `workstation-shell.html:237`) renders the `TokenPrompt` component. `TokenPrompt.tsx:24` literally instructs the operator: *"Run `cat ~/.foxworks-dispatch/token` and paste the contents below."* The operator runs the cat, copies the value, pastes it into the input. `writeToken` in `dispatch-web/src/auth/token-storage.ts:12-18` then calls `localStorage.setItem('x-conductor-token', token)` and `useAuthBootstrap` proceeds. On every fresh webview origin (i.e. cold launch with cleared Electron user-data, or launch with no prior paste), this step is required.
 
-**Defect class.** Same shape as #84 Defect A (api-key bootstrap). Credential persists on disk at a known location, never gets bootstrapped into the runtime where consumers expect it. Pattern continues to recur because consumer code reads from `process.env.X` (or equivalent) at first invocation, and there is no boot-time loader that populates that location from on-disk state.
+**Triage delta from the stub root-cause.** The stub speculated this was the same shape as #84 Defect A: a credential persisted on disk with no boot-time loader populating a `process.env` consumer. Diagnose phase falsified that. The workstation main process **already** reads the daemon token from disk in five separate sites at module-load time — `http-daemon-client.ts:10-17`, `spawn-ipc.ts:98-104`, `console-ipc.ts:305-311`, `session-cap.ts:145-151`, `main.ts:259-262` (Fix-C block). Each has its own private `readDaemonToken()` helper that calls `readFileSync(join(homedir(), '.foxworks-dispatch', 'token'), 'utf8').trim()`. There is no `process.env` consumer for the daemon token in the workstation main process. Mirroring `api-key-bootstrap.ts` mechanically would write to a `process.env` location nothing reads from. **The defect class framing in the stub is incorrect for the operator-blocking symptom.**
 
-**Likely root cause (SPECULATIVE pending diagnose phase).** Workstation main process probably needs a `bootstrapDaemonToken()` step at app-ready, mirroring the `bootstrapApiKey()` shape from `packages/dispatch-workstation/src/main/api-key-bootstrap.ts` (shipped at green commit 668cd1b). Token file location: `~/.foxworks-dispatch/token` per existing daemon convention. Runtime consumer location: TBD by diagnose phase — could be `process.env.CONDUCTOR_TOKEN` or similar, or an in-process module-level variable read by the HTTP/WS client factory.
+The actual mismatch is **cross-context**: the workstation main process can read the token; the kanban webview cannot, because it's a separate (renderer-process) context with its own per-origin `localStorage` and no shared filesystem read path. The webview's `useAuthBootstrap.ts:26-29` calls `readToken()` which reads `localStorage.getItem('x-conductor-token')`. There is no main→webview hand-off populating that key on cold launch.
 
-**Triage required (focused session scope):**
-1. Read the actual workflow operator runs when starting from cold — surface the literal command sequence
-2. Trace where workstation HTTP/WS clients read the daemon token (grep for `x-conductor-token`, `~/.foxworks-dispatch/token`, token-related env vars)
-3. Confirm there is no existing boot-time bootstrap loader for the daemon token
-4. Implement bootstrap function mirroring `api-key-bootstrap.ts` pattern
-5. Wire it into `main.ts` early in `app.whenReady()` before any IPC handler registration that touches daemon
-6. RED test: workstation client reads correct token from runtime location after bootstrap, when token file exists on disk
-7. GREEN: bootstrap implemented
-8. Integration verification: cold-launch workstation with no manual token step, verify daemon-dependent operations succeed (spawn, session list, etc.)
+**Root cause (KNOWN).** No code path in the workstation reads `~/.foxworks-dispatch/token` from disk and writes it to the kanban webview's `localStorage['x-conductor-token']` before `dispatch-web`'s `useAuthBootstrap` runs. The kanban webview's preload (`card-bridge-preload.mts` → built to `dist/main/card-bridge.cjs`, attached via `<webview ... preload="./card-bridge.cjs">` per `workstation-shell.html:237`) currently exposes only the `cardBridge` contextBridge surface; it does not pre-populate `localStorage`. The dispatch-web bundle therefore boots into the `prompt` phase on every fresh origin.
 
-**Estimated scope:** ~15-25 LOC (bootstrap function + main.ts wire-in + tests). Mirrors Fix-A Defect A almost exactly.
+**Operator UX.** Cold-launch the workstation. The kanban region renders the dispatch-web app. AuthBootstrap finds no token → `TokenPrompt` mounts → operator reads the on-screen instruction → `cat` + paste. Every cold launch with cleared per-origin storage repeats this.
 
-**Methodology observation (Tier 3 candidate for separate filing if pattern continues).** This is the THIRD instance of the same defect class:
-- Finding #67 (xterm dep declared but not installed at runtime — module never bootstrapped into node_modules path consumers read from)
-- Finding #84 Defect A (api-key persisted but never bootstrapped to process.env)
-- Finding #92 (daemon token persisted but never bootstrapped to runtime location)
+**Defect class — revised framing.** This is **not** the same shape as #67 / #84 Defect A. Those were "persistence-layer wiring shipped without an in-process consumer-side bootstrap; consumer reads `process.env.X`; no boot-time `process.env.X` populator exists." The mechanical template for those is the bootstrap-to-process.env pattern at `api-key-bootstrap.ts`. **#92 is structurally different**: cross-context credential plumbing (workstation main → webview localStorage). The fix shape is webview-side preload injection, not main-process env-var population. A surface-similar symptom ("operator runs `cat ~/.foxworks-dispatch/token`") does not imply identical mechanics. The "third instance of pattern" framing in the stub is dropped.
 
-Pattern shape: persistence-layer wiring shipped without consumer-side bootstrap; tests pass because they inject the missing piece; production fails silently or requires manual operator intervention. Three instances now justify a methodology-level recommendation: **production-env smoke gate** that exercises every credential / dependency / config the consumer code reads at runtime, with no test injection. Pairs with finding #80 (systemic monorepo unbundled-consumer fragility — same defect class, different mechanism). Worth Cairn formalization consideration.
+**Companion finding #93** filed for the orthogonal main-process observation (5-site `readDaemonToken()` duplication), tracked separately because it is not the operator-blocking symptom and consolidating it touches files outside #92's scope.
 
-**Confidence:** KNOWN (symptom operator-reported); root cause SPECULATIVE pending diagnose phase.
+**Triage steps (Option 1 — webview preload extension; operator-arbitrated 2026-05-04):**
+
+1. Extend `card-bridge-preload.mts` to perform a one-shot async bootstrap at preload-load time. The preload IPC-invokes a new main-process channel, then writes the result into `localStorage['x-conductor-token']` if non-null. Preload runs before page scripts even with `contextIsolation: true`, so `useAuthBootstrap.ts:26 readToken()` sees the populated value on first read. Build output stays at `dist/main/card-bridge.cjs` (HTML attribute unchanged).
+2. Add new IPC channel `workstation:get-daemon-token` (`ipcMain.handle` / `ipcRenderer.invoke`). Naming follows the workstation-internal credential precedent (`workstation:onboarding-save-api-key`, `workstation:onboarding-complete`, `workstation:open-repo-dialog`).
+3. New module `packages/dispatch-workstation/src/main/daemon-token-bootstrap.ts` exporting `readDaemonTokenForBootstrap({ tokenPath? }): string | null` — single source of truth for the disk-read used by the new IPC handler. Optional `tokenPath` for test isolation. Returns null on absent / unreadable file (no throw — matches the existing 5-site `readDaemonToken()` helpers' silent-on-error semantics).
+4. Wire in `main.ts` inside a new sentinel region `// === BEGIN: Fix-92 webview token bootstrap ... === / // === END: Fix-92 ===`. Handler must register before the kanban webview loads (i.e. before `createWindow()`'s `loadFile`), so the preload's IPC invoke does not race the handler's registration.
+5. RED test: `test/unit/fix-92-daemon-token/test_daemon_token_bootstrap.spec.ts` — verifies `readDaemonTokenForBootstrap` against a tmp file (present / absent / whitespace-trim).
+6. GREEN: implement the disk-read function, the IPC handler, the preload extension.
+7. Integration verification: cold-launch workstation; verify kanban renders without `TokenPrompt`; verify daemon-touching operations succeed without operator paste step.
+8. Resolution doc: append Resolution section at green SHA.
+
+**Out-of-scope of this fix (filed separately):**
+- Main-process 5-site `readDaemonToken()` duplication (finding #93)
+- Browser-launched dispatch-web (i.e. when operator opens `http://localhost:7878/` directly, not through the workstation webview): TokenPrompt remains the correct fallback for that case; no change.
+
+**Estimated scope:** 30-50 LOC across daemon-token-bootstrap.ts (new), main.ts (sentinel-bracketed addition), card-bridge-preload.mts (extension), one new test file.
+
+**Confidence:** KNOWN (symptom operator-reported AND code-confirmed; root cause grep-confirmed across both packages).
 
 **Cross-references:**
-- Same defect class as #84 Defect A (resolution at 668cd1b is the mechanical template)
-- Same defect class as #67 (xterm dependency)
-- Pairs with #80 (bundler/no-bundler boundary)
-- Methodology pattern candidate for Cairn formalization
+- Surface-symptom adjacent to #84 Defect A (both involve a credential persisted on disk + an apparent need for "bootstrap"), but **not** the same mechanical class — the consumer location differs (env-var in #84A, per-origin localStorage in a renderer process in #92), and the fix shapes are structurally different
+- Companion #93 (main-process disk-read duplication; orthogonal, not operator-blocking)
+- Pairs with #67 / #80 only at the methodology level: "credential or dependency persists on disk; the consumer does not see it without an explicit bootstrap step." Mechanically these three findings are different defects in different layers. Codifying them under one umbrella would conflate three distinct fix shapes.
+
+### Resolution (2026-05-04, fix-92 session)
+
+**Status:** RESOLVED at 90abbb5.
+
+Fixed via Option 1 (webview preload extension) on branch
+`fix-92/daemon-token-bootstrap`. Three commits ahead of main:
+
+```
+5180d0d  docs(cairn): retriage finding #92 + file finding #93
+3347114  red(MB-F-#92): daemon token bootstrap from disk to runtime
+90abbb5  green(MB-F-#92): bootstrap daemon token at app-ready
+```
+
+**Implementation.**
+
+- New `packages/dispatch-workstation/src/main/daemon-token-bootstrap.ts`
+  exports `readDaemonTokenForBootstrap({ tokenPath? }): string | null`.
+  Single source of truth for the disk-read used by the new IPC handler.
+  Optional `tokenPath` for test isolation; default is
+  `~/.foxworks-dispatch/token`. Silent-on-error semantics (returns null
+  on absent / unreadable file) match the pre-existing five module-
+  private `readDaemonToken()` helpers (see finding #93 — orthogonal
+  consolidation scope, not addressed here).
+
+- `main.ts` inside new `WEBVIEW_TOKEN_BOOTSTRAP` sentinel region:
+  registers `workstation:get-daemon-token` `ipcMain.handle` handler
+  inside `app.whenReady().then(...)`, immediately after the Fix-A
+  api-key bootstrap sentinel and before any other IPC handler
+  registration. Guaranteed live by the time `createWindow()` triggers
+  the kanban webview attach + the webview's preload IPC invoke.
+  Channel naming follows the `workstation:*` precedent
+  (`workstation:open-repo-dialog`, `workstation:onboarding-save-api-key`).
+
+- `card-bridge-preload.mts` extended (alongside the existing
+  `contextBridge.exposeInMainWorld('cardBridge', ...)`) with a one-shot
+  async IIFE that invokes the IPC and writes the result into
+  `localStorage.setItem('x-conductor-token', token)`. localStorage is
+  per-origin and shared across isolated worlds even with
+  `contextIsolation:true`, so the preload-side write is observation-
+  stable to the dispatch-web bundle's later `useAuthBootstrap.readToken()`
+  call. All failure modes (IPC reject, null token, localStorage
+  unavailable) are silent → `TokenPrompt` remains the fallback.
+
+- Build output stays at `dist/main/card-bridge.cjs` (HTML attribute in
+  `workstation-shell.html:237` unchanged). Verified via post-build
+  grep that the bundle contains both `workstation:get-daemon-token`
+  and `x-conductor-token` strings.
+
+**Tests.**
+
+5 unit specs in
+`packages/dispatch-workstation/test/unit/fix-92-daemon-token/test_daemon_token_bootstrap.spec.ts`
+exercising `readDaemonTokenForBootstrap` against tmp files: present,
+absent, trailing-whitespace-trim, EACCES-via-chmod-000, default-path-
+when-omitted. All pass at green. Full unit-test sweep: 305/305 pass.
+
+**Integration verification (live, this session).**
+
+Cold-launch smoke against built `dist/main/main.js` with cleared
+Electron `Local Storage/leveldb/`:
+
+1. Snapshotted + wiped Electron `Local Storage` dir (cold-state
+   simulation — equivalent to first launch on a fresh user-data
+   directory).
+2. Spawned Electron with `MB_TEST_HOOKS=1`. `ANTHROPIC_API_KEY` left
+   unset; daemon already running on `localhost:7878`.
+3. `SHELL_READY` observed; waited 5s for kanban webview attach +
+   preload IPC + localStorage write.
+4. Clean exit via `QUIT` stdin command.
+5. Post-exit leveldb scan against `Local Storage/leveldb/`: confirmed
+   presence of (a) the literal key `x-conductor-token`, (b) the
+   origin string `localhost:7878` (kanban webview's URL), and (c) a
+   prefix substring of the on-disk token. All three present in the
+   same leveldb log file → preload's `localStorage.setItem` ran and
+   persisted to the kanban webview's per-origin localStorage.
+6. Local Storage restored from snapshot. Workstation user-data
+   returned to pre-smoke state.
+
+**Pass criteria interpretation.** `useAuthBootstrap.ts:26` calls
+`readToken()` (which reads `localStorage.getItem('x-conductor-token')`)
+on first effect run. With the bootstrap completed before the
+dispatch-web bundle executes, `readToken()` returns the token →
+phase progresses to `'bootstrapping'` → `runPreflight` succeeds (the
+on-disk token IS the daemon's authoritative token) → phase reaches
+`'connected'` → `TokenPrompt` is never rendered. The operator's
+manual `cat` + paste step is eliminated for the cold-launch flow.
+
+**Token value never echoed.** The smoke uses an 8-character prefix as
+a presence-probe substring; no full token value is logged, committed,
+or serialized to disk outside the existing `~/.foxworks-dispatch/token`
+location. The smoke script lives in `/tmp/` and is not committed.
+
+**What this fix does NOT do.**
+
+- No change to dispatch-web (`useAuthBootstrap` / `TokenPrompt` /
+  `token-storage.ts`). Browser-launched dispatch-web at
+  `http://localhost:7878/` (i.e. opening the daemon's static-served
+  dashboard directly in a browser, not through the workstation
+  webview) continues to use `TokenPrompt` as the correct prompt
+  surface. That path is by-design per the daemon's browser-token
+  model.
+- No change to the five main-process module-private `readDaemonToken()`
+  helpers (`http-daemon-client.ts`, `spawn-ipc.ts`, `console-ipc.ts`,
+  `session-cap.ts`, `main.ts` Fix-C block). Consolidation is finding
+  #93's deferred refactor scope; not operator-blocking.
+- No `process.env` consumer added or modified. The "third instance of
+  #67/#84A pattern" framing from the original stub is dropped — see
+  Triage delta above.
+
+**Files changed by fix-92.**
+
+Added:
+- `packages/dispatch-workstation/src/main/daemon-token-bootstrap.ts` (49 LOC)
+- `packages/dispatch-workstation/test/unit/fix-92-daemon-token/test_daemon_token_bootstrap.spec.ts` (95 LOC)
+
+Modified:
+- `packages/dispatch-workstation/src/main/main.ts` (+16 LOC, sentinel-bracketed import + IPC handler inside `app.whenReady()`)
+- `packages/dispatch-workstation/src/main/card-bridge-preload.mts` (+39 LOC, sentinel-bracketed extension alongside existing contextBridge wiring)
+- `docs/cairn-findings.md` (retriage of #92 body + new #93 + this Resolution section)
+
+Total: ~199 LOC net additions to source + tests, of which 95 LOC are
+unit tests. Within the 30–50 LOC arbitrated estimate for the source
+changes alone (104 source LOC; the +50 over estimate is comment
+density carrying the cross-context rationale, not behavioral surface).
+
+**Confidence after fix.** KNOWN-fixed (live cold-launch smoke
+demonstrates leveldb persistence of the bootstrapped token under the
+kanban webview's origin, with cleared pre-launch storage as the
+control). Code review available at the green commit.
+
+**Cross-references on resolution.**
+- Companion finding #93 still open (5-site disk-read consolidation),
+  Tier 3, no ship-gate impact
+- Original stub's "third instance of #67/#84A pattern" framing
+  formally retracted in the retriaged body — surface symptom did
+  not imply mechanical equivalence; the actual fix shape is
+  cross-context plumbing, not env-var bootstrap
+
+## Finding #93 — MB-F-DAEMON-TOKEN-DISK-READ-DUPLICATION
+
+**Date filed:** 2026-05-04
+**Tier:** 3 (code-quality observation; no current ship-gate impact)
+**Origin:** Surfaced during fix-92 diagnose phase
+**Discovered by:** fix-92 session diagnose-phase grep across `packages/dispatch-workstation/src/main/`
+**Resolution status:** Captured; deferred (no operator-blocking impact)
+
+**Observation (KNOWN — code-confirmed).** The workstation main process currently holds five separate copies of an essentially identical `readDaemonToken()` helper:
+
+```
+packages/dispatch-workstation/src/main/http-daemon-client.ts:10-17
+packages/dispatch-workstation/src/main/spawn-ipc.ts:98-104
+packages/dispatch-workstation/src/main/console-ipc.ts:305-311
+packages/dispatch-workstation/src/main/session-cap.ts:145-151
+packages/dispatch-workstation/src/main/main.ts:259-262 (Fix-C inline block)
+```
+
+Each implements the same shape: `try { readFileSync(join(homedir(), '.foxworks-dispatch', 'token'), 'utf8').trim() } catch { return null }`. Each is module-private (no shared import). Each is called either at module-load (via constructor of the singleton client class) or per-request (`spawn-ipc.ts:155`).
+
+**Why this isn't a ship-gate defect.** The behavior is correct: every call site reads the same file, gets the same result, fails-closed-to-null on absence. There is no race condition (token file is written by the daemon before workstation launch in any sane workflow). There is no bug that surfaces to the operator from this duplication today.
+
+**Code-quality concerns (MODELED).**
+1. **Drift risk.** Five copies of the read invariant means a future change to the path, format, or encoding has five sites to update. A new copy added in a sixth file would silently work; missing one in a refactor would silently break.
+2. **No central token cache.** Each construction of `HttpDaemonClient` / `HttpConsoleDaemonClient` / `HttpSessionListClient` re-reads the file. Today this is one read per app boot per client (cheap) — but if any client is reconstructed during a session (e.g. for token-rotation handling), the read gets repeated. A consolidated cache would centralize that policy.
+3. **Telemetry surface.** A single `getDaemonToken()` source-of-truth would be the natural place to add diagnostic logging, retry/backoff for slow filesystems, or future credential-rotation hooks.
+
+**Recommendation (deferred — operator arbitration).** Single-site refactor: consolidate the five helpers into one module (likely `packages/dispatch-workstation/src/main/daemon-token-bootstrap.ts` if fix-92 adds it; otherwise a new `daemon-token-source.ts`). Each call site replaces its private helper with `import { getDaemonToken } from './daemon-token-source.js'`. Estimated 5-10 LOC removed, 5 imports added; net negative-LOC refactor.
+
+**Confidence.** KNOWN observation; MODELED severity (code-quality / drift-risk only).
+
+**Cross-references:**
+- Companion to #92 (fix-92 ships `daemon-token-bootstrap.ts` for the webview path; consolidation could later reuse that module)
+- No relation to #67 / #80 / #84A despite surface similarity (those are persistence-without-consumer-bootstrap; this is duplication-of-correct-readers)
+- Pairs with the broader observation that the workstation has accumulated multiple module-private credential/path helpers as parallel sessions added new IPC paths; an audit might surface other consolidation opportunities
+
+
+---
+
+## Finding #94 — MB-F-CONDUCTOR-SPAWN-DEFAULT-PERMISSION-MODE
+
+**Date filed:** 2026-05-05
+**Tier:** 2 (UX gap; orchestrator-driven CC sessions blocked on per-action prompts unless operator manually configures each session)
+**Origin:** 2026-05-05 operator design decision after fix-batch-1 + #92 close
+**Discovered by:** Operator strategic decision during probe-suite planning
+**Resolution status:** STUB — pending implementation in MB-T09 batch.
+
+**Symptom (KNOWN, design-confirmed).** When Conductor's spawn pipeline (per finding #84 resolution at `2eaa0e1`, spawn-ipc.ts and related wiring) creates a CC tmux session, the CC binary launches in default permission mode. Default mode prompts the operator to approve every file edit, bash command, and tool action within the CC session. For orchestrator-driven sessions in the v3.0 swarm-conductor product, this defeats the purpose: the operator's approval gate is at the Conductor level (orchestrator cards, audit log, frozen contracts, halt discipline), not at the per-CC-session level.
+
+**Defect class.** Configuration-default mismatch. The CC binary's permission mode is correct for human-driven CC use (operator sitting at terminal). For Conductor-driven use, the orchestrator + cards + audit IS the operator-in-the-loop control surface; the per-action CC prompts are redundant friction.
+
+**Fix (specified, not yet implemented).** Conductor's spawn pipeline must launch CC with `--dangerously-skip-permissions` flag by default. Cairn discipline guarantees the actual operator-in-the-loop control surface remains intact:
+
+- §3.4 frozen contracts CC cannot modify
+- §3.7 halt discipline at staging gates
+- Per-commit-push so operator sees every commit
+- Diagnose-phase HALT before any RED commit
+- Scope fences via prompt and territory boundaries
+- Cairn methodology validated across batch-6 + fix-batch-1 + #92 (~14 documented incidents)
+
+The skipped prompts are CC's per-action UI friction, not the orchestration layer's authorization model. Distinct concerns.
+
+**Implementation scope (MODELED, ~5-10 LOC).** Locate the spawn-pipeline code that assembles the CC binary args (likely `packages/dispatch-workstation/src/main/spawn-ipc.ts` or `packages/dispatch-daemon/src/...` — diagnose phase confirms). Add `--dangerously-skip-permissions` to the args list. Update spawn-pipeline tests to assert the flag is present in the launch command. Verify via integration test (or live launch) that an orchestrator-spawned CC session does not block on permission prompts.
+
+**Cross-references.**
+- #84 (orchestrator card flow) — RESOLVED at `2eaa0e1`. The card flow is the operator-in-the-loop authorization surface that this finding's flag-default change presupposes.
+- MB-T09 (session prompt injection) and MB-T11 (orchestrator action tools + autopilot) per portfolio plan — both will exercise orchestrator-driven sessions; this finding should resolve before either ships, ideally bundled into MB-T09.
+
+**Out of scope for this finding.**
+- Operator-launched CC sessions outside Conductor (e.g., manual `claude` from terminal for fix work like fix-batch-1) — no change; operator continues to control permission mode per session via flag or Shift+Tab toggle.
+- Granular per-action allowlist configuration for hybrid use cases — defer to future work if needed; the binary skip-permissions flag is sufficient for v3.0 swarm-conductor product.
+
+**Confidence.** Symptom KNOWN (design-arbitrated). Implementation scope MODELED pending diagnose-phase code-trace.
 

@@ -47,15 +47,52 @@ import {
   type ConsoleMountWebSocket,
 } from './console-mount.js';
 // === END: Fix-C ===
+// === BEGIN: Fix-92 webview token bootstrap (cairn finding #92, do not modify outside this block) ===
+import { readDaemonTokenForBootstrap } from './daemon-token-bootstrap.js';
+// === END: Fix-92 ===
+// === BEGIN: Probe-92 obs-infra (probe-92/fix-verification, do not modify outside this block) ===
+// Observability infrastructure for the Fix-92 verification probe suite
+// (test/integration/fix-92-verification/). Operator-arbitrated 2026-05-05.
+// All additions are MB_TEST_HOOKS=1 gated; production builds see zero
+// behavior change. Defense-in-depth gating helpers in test-hooks-env.ts
+// (unit-tested in test/unit/probe-92-test-hooks-env/).
+import {
+  getDaemonTokenPathOverride,
+  getUserDataDirOverride,
+} from './test-hooks-env.js';
+// === END: Probe-92 obs-infra ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
 const SHELL_PATH = resolve(__dirname, 'workstation-shell.html');
+
+// === BEGIN: Probe-92 obs-infra — userData isolation (do not modify outside this block) ===
+// Redirect Electron's userData directory (where Local Storage / leveldb
+// lives) to a tmpdir per-test-run when MB_TEST_HOOKS=1 + MB_USER_DATA_DIR
+// are both set. Defense-in-depth gating in test-hooks-env.ts. Must run
+// at module load time, BEFORE app.whenReady() — Electron caches the
+// resolved userData path on first access. Production: helper returns
+// undefined → branch is skipped → platform default applies.
+{
+  const userDataOverride = getUserDataDirOverride(process.env);
+  if (userDataOverride) app.setPath('userData', userDataOverride);
+}
+// === END: Probe-92 obs-infra — userData isolation ===
 // === Onboarding mount path (Session C / Batch 6 / wiring-mounts) ===
 const ONBOARDING_PRELOAD_PATH = resolve(__dirname, 'preload-onboarding.cjs');
 // === end Onboarding mount path ===
 
 let mainWindow: BrowserWindow | null = null;
+
+// === BEGIN: Probe-92 obs-infra — kanban webview handle (do not modify outside this block) ===
+// Captured in did-attach-webview (registered inside createWindow) so the
+// KANBAN_EVAL stdin handler can call .executeJavaScript on the embedded
+// webview's webContents. MB_TEST_HOOKS=1 gated end-to-end: the capture
+// listener only registers under MB_TEST_HOOKS=1, AND the stdin handler
+// only fires under MB_TEST_HOOKS=1. Production: handle stays null,
+// stdin handler unreachable.
+let kanbanWebContents: Electron.WebContents | null = null;
+// === END: Probe-92 obs-infra — kanban webview handle ===
 
 async function createWindow(): Promise<void> {
   mainWindow = createManagedWindow({
@@ -103,6 +140,32 @@ async function createWindow(): Promise<void> {
       }
     });
   }
+
+  // === BEGIN: Probe-92 obs-infra — webview console forwarder (do not modify outside this block) ===
+  // The kanban <webview> in workstation-shell.html:237 is a separate
+  // webContents from mainWindow.webContents (where the existing
+  // SHELL_READY/RENDER_OK forwarder lives). Console messages from
+  // card-bridge-preload.mts (the Fix-92 BOOTSTRAP_TOKEN_WRITTEN
+  // sentinel) therefore never reach stdout via the existing handler.
+  // This forwarder captures the kanban webview's handle on attach and
+  // forwards its allowlisted console messages to stdout under
+  // MB_TEST_HOOKS=1. It also exposes the handle to the KANBAN_EVAL
+  // stdin handler (below) for probes 5-9. Production: branch skipped.
+  if (process.env.MB_TEST_HOOKS === '1') {
+    mainWindow.webContents.on('did-attach-webview', (_event, webContents) => {
+      kanbanWebContents = webContents;
+      webContents.on('console-message', (event) => {
+        const msg = (event as { message: string }).message;
+        if (msg.startsWith('BOOTSTRAP_TOKEN_WRITTEN ')) {
+          process.stdout.write(msg + '\n');
+        }
+        if ((event as unknown as { level?: string }).level === 'error') {
+          process.stderr.write('[kanban-webview-error] ' + msg + '\n');
+        }
+      });
+    });
+  }
+  // === END: Probe-92 obs-infra — webview console forwarder ===
 
   // === BEGIN: Fix-B spawn-result subscription (do not modify outside this block) ===
   // MB-F-#83 closer. The renderer (workstation-shell.html) emits
@@ -201,6 +264,27 @@ app.whenReady().then(async () => {
   // populated env.
   bootstrapApiKey({ configDir: configDir(), safeStorage });
   // === END: Fix-A ===
+  // === BEGIN: Fix-92 webview token bootstrap (cairn finding #92, do not modify outside this block) ===
+  // Cairn #92: register the IPC channel the kanban webview's preload
+  // (card-bridge-preload.mts, attached via workstation-shell.html:237)
+  // invokes at preload-load time to bootstrap localStorage['x-conductor-
+  // token']. Must register before createWindow() so the handler is live
+  // when the webview attaches and its preload fires ipcRenderer.invoke.
+  // Returns the trimmed file contents from ~/.foxworks-dispatch/token, or
+  // null if absent / unreadable. Failure case leaves the webview's
+  // localStorage untouched and TokenPrompt remains the fallback.
+  //
+  // Probe-92 obs-infra extension (operator-acked 2026-05-05): when
+  // MB_TEST_HOOKS=1 + MB_TEST_HOOKS_DAEMON_TOKEN_PATH are both set, the
+  // override path is forwarded to readDaemonTokenForBootstrap. Defense-
+  // in-depth gating in test-hooks-env.ts; production: helper returns
+  // undefined → handler reads the default ~/.foxworks-dispatch/token
+  // (unchanged behavior).
+  ipcMain.handle('workstation:get-daemon-token', () => {
+    const tokenPath = getDaemonTokenPathOverride(process.env);
+    return readDaemonTokenForBootstrap(tokenPath ? { tokenPath } : {});
+  });
+  // === END: Fix-92 ===
   registerIpcHandlers();
   registerSpawnIpcHandlers();
   // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
@@ -450,6 +534,48 @@ process.stdin.on('data', (chunk: string | Buffer) => {
       process.stdout.write('ONBOARDING_COMPLETE\n');
       return;
     }
+
+    // === BEGIN: Probe-92 obs-infra — KANBAN_EVAL stdin handler (do not modify outside this block) ===
+    // KANBAN_EVAL <id>|<code> — runs <code> via executeJavaScript on the
+    // kanban webview's webContents (captured in did-attach-webview
+    // above) and emits KANBAN_EVAL_RESULT <id> <json> to stdout where
+    // <json> is { ok: true, result } | { ok: false, error: string }.
+    // Used by Probes 5-9 to read localStorage / DOM / fetch from inside
+    // the webview without baking probe-specific sentinels into preload.
+    // Pipe separator chosen for the same reason FILL_AND_SUBMIT_SPAWN
+    // uses it (shell paths/JSON survive intact). Production: gate
+    // unreachable (already inside MB_TEST_HOOKS=1 block).
+    const kanbanEvalMatch = /^KANBAN_EVAL ([^|]+)\|(.+)$/.exec(line);
+    if (kanbanEvalMatch) {
+      const id = kanbanEvalMatch[1];
+      const code = kanbanEvalMatch[2];
+      if (!kanbanWebContents || kanbanWebContents.isDestroyed()) {
+        process.stdout.write(
+          `KANBAN_EVAL_RESULT ${id} ${JSON.stringify({
+            ok: false,
+            error: 'webview-not-attached',
+          })}\n`,
+        );
+        return;
+      }
+      kanbanWebContents.executeJavaScript(code, true).then(
+        (result: unknown) => {
+          process.stdout.write(
+            `KANBAN_EVAL_RESULT ${id} ${JSON.stringify({ ok: true, result })}\n`,
+          );
+        },
+        (err: Error) => {
+          process.stdout.write(
+            `KANBAN_EVAL_RESULT ${id} ${JSON.stringify({
+              ok: false,
+              error: err.message,
+            })}\n`,
+          );
+        },
+      );
+      return;
+    }
+    // === END: Probe-92 obs-infra — KANBAN_EVAL stdin handler ===
 
     // COARCH-T03: TYPE_AND_SEND <content> — sets chat-input value and clicks send button.
     const typeAndSend = /^TYPE_AND_SEND (.+)$/.exec(line);
