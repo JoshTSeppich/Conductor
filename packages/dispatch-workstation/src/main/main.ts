@@ -577,6 +577,28 @@ process.stdin.on('data', (chunk: string | Buffer) => {
     }
     // === END: Probe-92 obs-infra — KANBAN_EVAL stdin handler ===
 
+    // === BEGIN: Fix-89 test hook (cairn finding #89, do not modify outside this block) ===
+    // REFRESH_CONSOLE_MENU <comma,separated,names> — drives refreshConsoleMenu
+    // directly so the fix-89 integration test (test/integration/fix-89-menu-
+    // rebuild/) can exercise menu rebuild propagation without depending on a
+    // running daemon. The integration test asserts the macOS native menu
+    // bar's "CC Console" submenu reflects the rebuilt names via AppleScript
+    // introspection; this stdin handler is the deterministic trigger.
+    // Empty-tail handling: trailing/leading whitespace + empty entries are
+    // discarded so callers can pass a single name without commas.
+    // Production: gate unreachable (already inside MB_TEST_HOOKS=1 block).
+    const fix89RefreshMatch = /^REFRESH_CONSOLE_MENU (.+)$/.exec(line);
+    if (fix89RefreshMatch) {
+      const names = fix89RefreshMatch[1]
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s !== '');
+      refreshConsoleMenu(names);
+      process.stdout.write(`REFRESH_CONSOLE_MENU_DONE ${names.length}\n`);
+      return;
+    }
+    // === END: Fix-89 test hook ===
+
     // COARCH-T03: TYPE_AND_SEND <content> — sets chat-input value and clicks send button.
     const typeAndSend = /^TYPE_AND_SEND (.+)$/.exec(line);
     if (typeAndSend && mainWindow) {
