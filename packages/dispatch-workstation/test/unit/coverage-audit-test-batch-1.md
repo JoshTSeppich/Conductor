@@ -1,0 +1,165 @@
+# Coverage audit — test-batch-1 Session B
+
+**Date:** 2026-05-05
+**Operator:** Joshua Seppich
+**Branch:** `test-B/workstation-main-coverage`
+**Cut from:** `main` HEAD `f5c0a8b`
+**Coordination scaffold:** `docs/cairn-coordination/test-batch-1/00_COORDINATION_SCAFFOLD.md`
+**Tooling commit:** `7ea398d docs(cairn): wire vitest coverage tooling for test-batch-1 Session B`
+
+## §1 Scope and methodology
+
+### Goal
+
+Audit unit-test coverage of workstation main-process source files, document Tier 1 ship-gate-proximate gaps, close those gaps via per-file unit-test additions targeting ≥80% coverage on all four axes (statements, branches, functions, lines).
+
+### Tier 1 definition (per session prompt)
+
+A file is Tier 1 ship-gate-proximate if any of:
+
+- regression on it would block operator-experiential paths;
+- recently touched by fix-batch-1 / fix-92 / fix-89 (high-churn surface);
+- cross-context plumbing (IPC handlers, preload bridges, daemon clients);
+- authentication, persistence, or credential surface.
+
+### Out of scope (filed separately if surfaces)
+
+- onboarding flow components (deferred to onboarding triage);
+- coarchitect renderer components (deferred to coarchitect triage);
+- console panel renderer components (deferred to console-panel triage);
+- new fix-92 / fix-89 files (already have probe coverage).
+
+### Source-territory rule
+
+NO source-code edits in this session. If a test reveals a defect, file a finding in the reserved range #100–#104, HALT, surface to operator. Test additions only.
+
+### Tooling
+
+- Provider: `@vitest/coverage-v8@4.1.5` (matches `vitest@4.1.5` repo pin).
+- Run: `pnpm --filter dispatch-workstation test:coverage` after `pnpm --filter dispatch-core build`.
+- Scope: unit tests only (`vitest run --coverage test/unit`). Integration tests spawn subprocess Electron and do not contribute to in-process v8 coverage; measuring them would conflate two different surfaces.
+- Reporters: `text`, `json-summary`, `json`.
+- Include glob: `src/main/**/*.ts` plus `src/coarchitect/build-doc-state.ts`.
+
+## §2 Pre-state coverage
+
+Captured 2026-05-05 against branch HEAD `7ea398d` (post-tooling, pre-test-additions). Source for these numbers: `packages/dispatch-workstation/coverage/coverage-summary.json` (gitignored).
+
+| File | Source LOC | Stmt% | Branch% | Func% | Line% | Tier 1 status |
+|---|---:|---:|---:|---:|---:|---|
+| `src/coarchitect/build-doc-state.ts` | 78 | 91.30 | 82.35 | 100.00 | 95.00 | already ≥80% all-axes |
+| `src/main/console-mount.ts` | 241 | 86.07 | 71.42 | 92.85 | 100.00 | branch-only gap |
+| `src/main/console-ipc.ts` | 440 | 54.54 | 45.16 | 42.10 | 56.58 | gap |
+| `src/main/session-cap.ts` | 186 | 45.16 | 47.05 | 50.00 | 45.16 | gap |
+| `src/main/http-daemon-client.ts` | 116 | 39.39 | 33.33 | 50.00 | 44.82 | gap |
+| `src/main/spawn-ipc.ts` | 314 | 15.15 | 14.28 | 17.64 | 15.38 | critical gap |
+| `src/main/coarchitect-ipc.ts` | 183 | 3.03 | 0.00 | 0.00 | 3.17 | critical gap |
+| `src/main/menu.ts` | 120 | 0.00 | 0.00 | 0.00 | 0.00 | critical gap |
+
+KNOWN: `menu.ts` has 0% unit-test coverage despite being the file finding #89 just shipped a fix into. Existing menu specs all import `console-menu.ts` (the CC Console submenu builder) — the application-menu factory itself has never had a unit test. The file is exercised only by the `test/integration/fix-89-menu-rebuild/` probe suite, which spawns subprocess Electron.
+
+## §3 Methodology lesson — bank
+
+**Observation (2026-05-05, banked from operator arbitration):** `menu.ts` shipped a Tier 1 fix (finding #89, the macOS `setApplicationMenu(null)` precursor at line 118) without any unit tests landing alongside the fix. Only integration-probe coverage exists. A unit test that mocks the Electron `Menu` API and asserts `setApplicationMenu(null)` is invoked before `setApplicationMenu(menu)` would have caught the propagation-defect class earlier and cheaper than the integration-probe loop.
+
+**Lesson:** files that ship Tier 1 fixes should have unit tests landed alongside the fix, not just integration probes. Integration probes are slow, environment-sensitive, and exercise the compiled `dist/` rather than source — they're high-fidelity ship-gates but expensive feedback loops. Unit tests for IPC factories, menu builders, and other in-process surfaces should be the first line of regression coverage; integration probes should backstop them, not replace them.
+
+**Application going forward:** when a fix-* commit lands, the same session (or an immediately-following test session) should land a unit-test commit covering the fix's invariants. Probe-92's obs-infra → probe-content commit boundary is a good shape; coverage tooling shipped separately from probe content (commit `7ea398d`) follows the same discipline.
+
+## §4 Operator-arbitrated scope decisions (2026-05-05)
+
+### Per-file scope decisions
+
+- **build-doc-state.ts**: SKIP. Already ≥80% all axes.
+- **console-mount.ts**: branch-only top-up to ≥80% branch coverage.
+- **console-ipc.ts**: SCOPE-REDUCED. Target ship-gate-proximate paths only. Do not pursue ≥80% all-axes. In-scope: error paths in IPC handlers, happy-path IPC flows. Out-of-scope (document gap): WebSocket reconnection edge cases (lower-priority gap), panel cap edge cases (already covered in `console-t02`/`console-t03`).
+- **session-cap.ts**: full ≥80%.
+- **http-daemon-client.ts**: full ≥80%.
+- **spawn-ipc.ts**: full ≥80%. 200-LOC test-additions ceiling LIFTED because scout verified clean factory injection points already exist (existing `mb-t06` tests use the same pattern). LOC reflects honest API-surface density, not refactor signal.
+- **coarchitect-ipc.ts**: full ≥80%. Same 200-LOC lift on the same rationale.
+- **menu.ts**: full ≥80%. Greenfield (0% pre-state).
+
+### Halt conditions in effect
+
+- Defect in production code → file finding #100–#104, HALT, do NOT fix.
+- File genuinely resists testing without injection refactor → HALT, surface (the 200-LOC lift is conditional on injection points existing).
+- Cross-session conflict with Session A → HALT, surface.
+- Anything surprising → HALT, surface.
+
+## §5 Work order (ROI-sequenced)
+
+1. `menu.ts` — 0% → ≥80%, greenfield, ~80-120 test LOC.
+2. `coarchitect-ipc.ts` — 3% → ≥80%, greenfield-ish, ~180-260 test LOC (over old 200 ceiling, lifted per §4).
+3. `http-daemon-client.ts` — 39% → ≥80%, ~100-150 test LOC.
+4. `session-cap.ts` — 45% → ≥80%, ~100-150 test LOC.
+5. `console-ipc.ts` — 55% → 60-70% (scope-reduced per §4), ~150 test LOC.
+6. `spawn-ipc.ts` — 15% → ≥80%, ~180-280 test LOC (over old 200 ceiling, lifted per §4).
+7. `console-mount.ts` — branch-only top-up, ~50-80 test LOC.
+8. `build-doc-state.ts` — SKIPPED (§4).
+
+Estimated total: ~840-1,260 test LOC across 7 files.
+
+## §6 Per-file commit log
+
+Populated incrementally as test additions land. Each entry: pre/post coverage delta, brief rationale, commit SHA.
+
+### menu.ts
+
+- Pre: stmt 0.00 / branch 0.00 / func 0.00 / line 0.00
+- Post: _pending_
+- Commit: _pending_
+
+### coarchitect-ipc.ts
+
+- Pre: stmt 3.03 / branch 0.00 / func 0.00 / line 3.17
+- Post: _pending_
+- Commit: _pending_
+
+### http-daemon-client.ts
+
+- Pre: stmt 39.39 / branch 33.33 / func 50.00 / line 44.82
+- Post: _pending_
+- Commit: _pending_
+
+### session-cap.ts
+
+- Pre: stmt 45.16 / branch 47.05 / func 50.00 / line 45.16
+- Post: _pending_
+- Commit: _pending_
+
+### console-ipc.ts (scope-reduced)
+
+- Pre: stmt 54.54 / branch 45.16 / func 42.10 / line 56.58
+- Post: _pending_
+- Commit: _pending_
+- Out-of-scope gap (intentional): WebSocket reconnection edge cases; panel cap edge cases (already covered in `console-t02`/`console-t03`).
+
+### spawn-ipc.ts
+
+- Pre: stmt 15.15 / branch 14.28 / func 17.64 / line 15.38
+- Post: _pending_
+- Commit: _pending_
+
+### console-mount.ts (branch-only top-up)
+
+- Pre: stmt 86.07 / branch 71.42 / func 92.85 / line 100.00
+- Post: _pending_
+- Commit: _pending_
+
+### build-doc-state.ts (skipped)
+
+- Pre: stmt 91.30 / branch 82.35 / func 100.00 / line 95.00 — already ≥80% all axes.
+- Post: n/a
+- Commit: n/a
+
+## §7 Findings filed
+
+Populated if test additions reveal production defects. Reserved range: #100-#104.
+
+_None at audit-doc-creation time._
+
+## §8 Final audit summary
+
+Populated at end of session. Includes branch HEAD SHA, post-state per-file coverage table, total deltas, findings (if any), and recommended next steps.
+
+_Pending session completion._
