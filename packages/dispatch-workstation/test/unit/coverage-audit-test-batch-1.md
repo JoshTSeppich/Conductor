@@ -105,61 +105,127 @@ Populated incrementally as test additions land. Each entry: pre/post coverage de
 
 ### menu.ts
 
-- Pre: stmt 0.00 / branch 0.00 / func 0.00 / line 0.00
-- Post: _pending_
-- Commit: _pending_
+- Pre:  stmt   0.00 / branch   0.00 / func   0.00 / line   0.00
+- Post: stmt 100.00 / branch 100.00 / func 100.00 / line 100.00
+- Delta: +100.00 pp on every axis (greenfield → fully covered)
+- Commit: `36e029e green(test-batch-1): close menu.ts coverage gap (0% → 100% all axes)`
 
 ### coarchitect-ipc.ts
 
-- Pre: stmt 3.03 / branch 0.00 / func 0.00 / line 3.17
-- Post: _pending_
-- Commit: _pending_
+- Pre:  stmt  3.03 / branch  0.00 / func  0.00 / line  3.17
+- Post: stmt 95.45 / branch 81.81 / func 82.35 / line 95.23
+- Delta: +92.42 / +81.81 / +82.35 / +92.06 pp
+- Commit: `9275fe5 green(test-batch-1): close coarchitect-ipc.ts coverage gap (3% → 95% stmt)`
+- Notes: 200-LOC ceiling lifted; spec is 21 tests, ~430 LOC (single file, single source of truth for shared mock surface).
 
 ### http-daemon-client.ts
 
-- Pre: stmt 39.39 / branch 33.33 / func 50.00 / line 44.82
-- Post: _pending_
-- Commit: _pending_
+- Pre:  stmt  39.39 / branch  33.33 / func  50.00 / line  44.82
+- Post: stmt 100.00 / branch 100.00 / func 100.00 / line 100.00
+- Delta: +60.61 / +66.67 / +50.00 / +55.18 pp
+- Commit: `628edb8 green(test-batch-1): close http-daemon-client.ts coverage gap (39% → 100%)`
+- Notes: 19 tests across 2 specs (postAuditViaFetch + HttpDaemonClient class).
 
 ### session-cap.ts
 
-- Pre: stmt 45.16 / branch 47.05 / func 50.00 / line 45.16
-- Post: _pending_
-- Commit: _pending_
+- Pre:  stmt  45.16 / branch 47.05 / func  50.00 / line  45.16
+- Post: stmt 100.00 / branch 94.11 / func 100.00 / line 100.00
+- Delta: +54.84 / +47.06 / +50.00 / +54.84 pp
+- Commit: `c7a79a9 green(test-batch-1): close session-cap.ts coverage gap (45% → 100% stmt)`
+- Notes: HttpSessionListClient previously uncovered; existing mb-t06 tests covered isAtCap and checkSpawnCapacity (pure surfaces). Branch axis at 94.11% (one nullish-coalesce edge accepted in scope, well above 80% target).
 
 ### console-ipc.ts (scope-reduced)
 
-- Pre: stmt 54.54 / branch 45.16 / func 42.10 / line 56.58
-- Post: _pending_
-- Commit: _pending_
-- Out-of-scope gap (intentional): WebSocket reconnection edge cases; panel cap edge cases (already covered in `console-t02`/`console-t03`).
+- Pre:  stmt 54.54 / branch 45.16 / func 42.10 / line 56.58
+- Post: stmt 77.62 / branch 63.44 / func 71.05 / line 81.39
+- Delta: +23.08 / +18.28 / +28.95 / +24.81 pp
+- Commit: `20efea6 green(test-batch-1): close console-ipc.ts ship-gate-proximate gaps (54% → 78% stmt)`
+- Out-of-scope intentional gap (operator §4 decision): WebSocket reconnection edge cases (lines 248-249); `defaultWebSocketFactory` global-WebSocket adapter (lines 374-396, requires WS env to test); panel cap edge cases (already covered in `console-t02`/`console-t03`).
+- Coverage lands within the §4 60-70% target band on stmt/branch/func; line axis exceeds 80%.
 
 ### spawn-ipc.ts
 
-- Pre: stmt 15.15 / branch 14.28 / func 17.64 / line 15.38
-- Post: _pending_
-- Commit: _pending_
+- Pre:  stmt 15.15 / branch  14.28 / func 17.64 / line 15.38
+- Post: stmt 95.45 / branch 100.00 / func 94.11 / line 95.38
+- Delta: +80.30 / +85.72 / +76.47 / +80.00 pp
+- Commit: `1f917eb green(test-batch-1): close spawn-ipc.ts coverage gap (15% → 95% stmt, 100% branch)`
+- Notes: 200-LOC ceiling lifted; spec is 27 tests, ~520 LOC. Branch axis at 100% (defense-in-depth catch at lines 306-308 is structurally unreachable without deps-factory throw growth).
 
 ### console-mount.ts (branch-only top-up)
 
-- Pre: stmt 86.07 / branch 71.42 / func 92.85 / line 100.00
-- Post: _pending_
-- Commit: _pending_
+- Pre:  stmt 86.07 / branch 71.42 / func 92.85 / line 100.00
+- Post: stmt 94.93 / branch 90.47 / func 92.85 / line 100.00
+- Delta: +8.86 / +19.05 / +0.00 / +0.00 pp
+- Commit: `37a9a4f green(test-batch-1): close console-mount.ts branch coverage gap (71% → 90%)`
+- Notes: branch axis was the only sub-80% target; lifted from 71.42 to 90.47.
 
 ### build-doc-state.ts (skipped)
 
-- Pre: stmt 91.30 / branch 82.35 / func 100.00 / line 95.00 — already ≥80% all axes.
-- Post: n/a
+- Pre:  stmt 91.30 / branch 82.35 / func 100.00 / line 95.00 — already ≥80% all axes.
+- Post: unchanged (no test additions)
 - Commit: n/a
 
 ## §7 Findings filed
 
 Populated if test additions reveal production defects. Reserved range: #100-#104.
 
-_None at audit-doc-creation time._
+**None.** All 7 priority files closed without surfacing a production defect. Test additions are pure coverage closure; no source-code changes required.
 
 ## §8 Final audit summary
 
-Populated at end of session. Includes branch HEAD SHA, post-state per-file coverage table, total deltas, findings (if any), and recommended next steps.
+### Branch state
 
-_Pending session completion._
+- Branch: `test-B/workstation-main-coverage`
+- Final HEAD: `37a9a4f green(test-batch-1): close console-mount.ts branch coverage gap (71% → 90%)`
+- Cut from: `main` HEAD `f5c0a8b`
+- Total commits added: 9 (2 docs + 7 green)
+
+### Per-file coverage closure summary
+
+All 7 in-scope priority files reached the operator-arbitrated coverage target:
+
+- **6 files at ≥80% all four axes**: menu.ts (100%/100%/100%/100%), coarchitect-ipc.ts (95/82/82/95), http-daemon-client.ts (100/100/100/100), session-cap.ts (100/94/100/100), spawn-ipc.ts (95/100/94/95), console-mount.ts (95/90/93/100).
+- **1 file scope-reduced per §4**: console-ipc.ts at 78/63/71/81 — within the §4 60-70% target band on three axes, line axis exceeds 80%. Documented out-of-scope gap stands.
+- **1 file pre-state pass**: build-doc-state.ts at 91/82/100/95, no work needed.
+
+### Total project coverage
+
+| Axis | Pre-state | Post-state | Delta |
+|---|---:|---:|---:|
+| Statements | 43.46% (439/1010) | 63.96% (646/1010) | +20.50 pp |
+| Branches | 41.11% (229/557) | 58.34% (325/557) | +17.23 pp |
+| Functions | 40.90% (99/242) | 61.15% (148/242) | +20.25 pp |
+| Lines | 43.99% (410/932) | 64.37% (600/932) | +20.38 pp |
+
+Suite size: 317 → 432 tests (+115 tests across 7 priority files).
+
+### Findings filed
+
+None. Reserved range #100-#104 unused.
+
+### Methodology lessons banked
+
+1. **Files that ship Tier 1 fixes should have unit tests landed alongside the fix, not just integration probes.** menu.ts shipped finding #89 fix without unit-test coverage; this audit caught the gap at 0% pre-state and closed it at 100% post-state. The unit test (`test_register_and_rebuild_application_menu.spec.ts`) asserts the load-bearing `setApplicationMenu(null)` precursor invariant — removing menu.ts:118 reintroduces finding #89, the unit test catches it before integration probes do.
+
+2. **Coverage tooling commit shipped separately from probe content.** `7ea398d docs(cairn): wire vitest coverage tooling` is the same commit shape as probe-92's obs-infra → probe-content boundary. Honest tooling work, not bundled into the test additions.
+
+3. **vi.hoisted + vi.mock pattern is portable across Electron-mocking unit tests.** First reached for in menu.ts tests; reused unchanged for coarchitect-ipc.ts, spawn-ipc.ts. Pattern: declare spies in `vi.hoisted` block, reference them from `vi.mock` factory, capture handlers in maps for replay.
+
+4. **`new Mock` requires regular function declarations, not vi.fn arrow impls.** Discovered in coarchitect-ipc.ts spec when HttpDaemonClient was constructed via `new`; `vi.fn(() => ({...}))` is not a constructor target. Solution: plain `function HttpDaemonClient(this: unknown) { Object.assign(this, ...) }`. Banked for future Electron-class mocking.
+
+5. **v8 coverage measures in-process imports only.** Integration tests in this repo spawn subprocess Electron and do not contribute to src/main/ coverage. Unit-test coverage IS the audit baseline; integration probes are a separate ship-gate tier.
+
+### Recommended next steps
+
+1. **Merge order per scaffold §2**: Session A merges first (probe suites for fix-batch-1 #82/#83/#84). Session B merges second (this branch).
+2. **Both branches are additive** — coverage tooling additions (devDep + script + vitest config block) are scaffolding, not source-fix; test files are pure additions. No territory conflict expected.
+3. **For followups**: the methodology lesson #1 ("unit tests alongside Tier 1 fixes") should be promoted to a coordination scaffold §7 standing rule for future fix-* sessions.
+4. **Out-of-scope gaps preserved**:
+   - console-ipc.ts WebSocket reconnection edge cases (lines 248-249)
+   - console-ipc.ts `defaultWebSocketFactory` (lines 374-396)
+   - main.ts (lines 65-619, 0% — entry point, integration-only territory)
+   - window-lifecycle.ts (lines 15-103, 0% — Electron lifecycle, integration-only)
+   - electron-process-controller.ts (lines 21-125, 0% — daemon spawn process controller)
+   These remain ship-gated by integration probes; future audit cycles can close them as Tier 2 work.
+
+
