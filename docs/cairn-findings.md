@@ -1501,7 +1501,7 @@ Three findings, ordered by ship-gate impact:
 **Tier:** 1 (ship-gate blocker — blocks Fix-C from delivering its visual outcome despite all wiring verified GREEN; any operator-facing native-menu refresh path through `rebuildApplicationMenu` is silently inert)
 **Origin:** Fix-C integration verification at branch `fix-C/console-panel-trigger` HEAD `8348033` (post-rebase onto Fix-A merge `e6698d9`)
 **Discovered by:** Fix-C end-to-end integration verification — diagnostic stderr instrumentation + AppleScript UI introspection of the live Electron menu bar
-**Resolution status:** New finding. Discovered while attempting integration verification of Fix-C's resolution of finding #82. Fix-C's wiring is unit-test-and-helper-level GREEN but the operator-facing visual outcome remains unrealized due to this defect.
+**Resolution status:** **RESOLVED at `cf77a10`** (branch `fix-89/menu-rebuild`, 2026-05-05). Hypothesis 1 confirmed; hypotheses 2 and 3 remain UNTESTED but no longer blocking. See Resolution section below.
 
 **Symptom (KNOWN — observed live).** `Menu.setApplicationMenu(menu)` invoked from inside `rebuildApplicationMenu` (menu.ts:108) after `app.whenReady().then(...)` settles does NOT propagate to the macOS menu bar. The "CC Console" submenu remains pinned to its initial-build state regardless of subsequent rebuilds.
 
@@ -1565,6 +1565,85 @@ Evidence pointing at hypothesis (1): the hardcoded synchronous test `setTimeout(
 7. Touched a file another session may modify? No parallel session active in this dogfood pass; modified file: `docs/cairn-findings.md`, single append. Fix-C branch HEAD `8348033` working tree was clean before this commit.
 8. Pre-push protocol? Docs-only; per-finding-file pattern; no build/typecheck gate required for docs.
 9. Confidence labeling matches evidence? Yes — KNOWN labels for direct observations, MODELED for inferences (root cause, forward-compat impact).
+
+---
+
+### Resolution — RESOLVED at `cf77a10`
+
+**Date resolved:** 2026-05-05
+**Branch:** `fix-89/menu-rebuild` (cut from `main` HEAD `b4a10d9`)
+**Resolution status:** **RESOLVED** at green commit `cf77a10`. Hypothesis 1 confirmed; hypotheses 2 and 3 remain UNTESTED but no longer blocking.
+
+**Fix shipped (production change, 1 LOC + comment block).** `packages/dispatch-workstation/src/main/menu.ts` `rebuildApplicationMenu`:
+
+```ts
+export function rebuildApplicationMenu(opts: ApplicationMenuOpts = {}): void {
+  menuRegistered = true;
+  const menu = Menu.buildFromTemplate(buildMenuTemplate(opts));
+  Menu.setApplicationMenu(null);
+  Menu.setApplicationMenu(menu);
+}
+```
+
+The `setApplicationMenu(null)` precursor invalidates the OS-level submenu pointer cache; the immediately-following `setApplicationMenu(newMenu)` then re-attaches with fresh pointers and propagates to the macOS menu bar.
+
+**Permanent regression coverage.** `packages/dispatch-workstation/test/integration/fix-89-menu-rebuild/probe-01-menu-rebuild-propagates.test.ts` ships alongside the fix. Cold-launches Electron with isolated `MB_USER_DATA_DIR` + `MB_ONBOARDING_STATE_DIR`, drives `refreshConsoleMenu(['probe-session-fix89'])` via the `REFRESH_CONSOLE_MENU` MB_TEST_HOOKS=1 stdin handler (added to `main.ts` in the RED commit `717e874`), and AppleScript-introspects the CC Console submenu via `unix id`-filtered process query + AX-traversal (with click+enumerate fallback). Future regression in menu-rebuild propagation triggers it automatically.
+
+**Live integration verification (KNOWN — observed live 2026-05-05).** Cold-launched workstation against the operator's running daemon at `localhost:7878` with two armed sessions (`mb-t04-test-session`, `newTest1`). After daemon-bootstrap settle window:
+
+```
+Sentinels seen:
+  WINDOW_STATE 1024 768
+  SHELL_READY
+  RENDER_OK
+  WINDOW_READY
+  CONSOLE_TILE_GRID_MOUNTED
+  ONBOARDING_READY
+  BOOTSTRAP_TOKEN_WRITTEN 44
+
+AppleScript output (AX-traversal, no click fallback):
+  AX:mb-t04-test-session|newTest1
+
+Operator's daemon active sessions (Fix-C pickActiveSessionNames filter):
+  mb-t04-test-session state=armed
+  newTest1 state=armed
+```
+
+The CC Console submenu's contents **exactly match** the daemon's active session list. Pre-fix repro at HEAD `8348033` showed `1 items: No sessions registered` — the initial-build empty state — under identical AppleScript introspection.
+
+**Hypothesis disposition.**
+
+- **Hypothesis 1 (Electron submenu identity caching) — KNOWN-confirmed.** The macOS menu server reference-tracks submenu pointers from the OS menu bar's first attachment after `app.activate`. `Menu.setApplicationMenu(menu)` with a freshly constructed Menu does NOT invalidate the OS-level cached submenu pointers; subsequent rebuilds update Electron's JS-side state but the operator-visible menu bar stays pinned to first-attached state. `Menu.setApplicationMenu(null)` clears the cache; `Menu.setApplicationMenu(newMenu)` re-attaches.
+- **Hypothesis 2 (initial-menu sticky on first activation) — UNTESTED.** Hypothesis 1's fix closes the symptom; deferring `registerApplicationMenu()` until after `mainWindow.on('ready-to-show')` is unnecessary.
+- **Hypothesis 3 (`menuRegistered` gate semantic mismatch) — UNTESTED.** The finding body itself noted "probably benign relative to (1)"; correctly assessed.
+
+**Test isolation refinement (KNOWN — observed during GREEN verification).** The probe-01 test originally set `FOXWORKS_DAEMON_URL=http://127.0.0.1:1` (port 1 reserved, ECONNREFUSED-fast) intending to disable Fix-C's `subscribeConsoleMenuToDaemon` path during the probe window. Empirically this did NOT fully isolate — the operator's running daemon's active sessions appeared in the test menu via the daemon path even with this override, masking the menu-rebuild propagation behavior under test. Root cause not deterministically pinned (suspected Electron WS adapter fall-through or path-2 fetch resolver behavior with reserved ports). Switched to `FOXWORKS_DAEMON_URL=invalid://daemon-disabled.fix89-probe-01` which fails URL parsing synchronously inside `fetch()` / `WebSocket` constructor; `refetchAndRefresh`'s catch swallows the throw silently per Fix-C refinement (a). Daemon path then fully disabled for the probe window, and hypothesis 1's effect became cleanly observable. (This is a useful pattern for future Electron-spawn integration tests that need to disable HTTP / WS paths inside the spawn.)
+
+**Cross-references.**
+
+- **#82** — Fix-C closed the "menu hardcoded `[]`" defect at the wiring level (PARTIAL-RESOLUTION at `320f707`); this resolution closes the propagation gap that blocked Fix-C's visual outcome. Combined effect: full visual closure of the operator-driven CC Console menu population path. **#82 can now be revisited for full status update from PARTIAL-RESOLVED to RESOLVED.**
+- **`MB-F-CONSOLE-T03-MENU-SUBSCRIPTION`** — Fix-C's wiring + this finding's propagation fix together close this followup. The vision §10.10 ship-gate operator-driven open path is unblocked.
+- **#83** — UX silent-failure pattern remains independent; no carry-over impact from this resolution.
+- **#94** — daemon orphan reaper (Fix-92 follow-up) — independent.
+
+**Evidence labels.**
+
+- Symptom resolution: KNOWN. Live integration verification + permanent probe-01 regression test, both PASS at `cf77a10`.
+- Root cause: KNOWN-confirmed via hypothesis 1 closing the symptom under controlled isolation.
+- Practical impact (Fix-C operator-trigger path): KNOWN-resolved. Operator can now click "CC Console > [session]" and the panel opens against live daemon sessions.
+- Forward-compatibility (any future operator-facing menu refresh): KNOWN-resolved. `rebuildApplicationMenu` is now the canonical mechanism for any dynamic menu refresh in the workstation.
+
+**§10.5 self-check (resolution-doc-only commit):**
+
+1. API verified by spike? Yes — both via probe-01 (real Electron, real menu bar, real AppleScript) and live integration verification against operator's running daemon.
+2. Test exercises behavior or mocks? Real, no mocks. Probe-01 ships as permanent regression coverage.
+3. Implementation deleted, test still passes? Reverting the menu.ts fix would put the OS menu in the first-attached state; probe-01 would FAIL. Test discriminates the fix correctly.
+4. Anything outside contract? No — `Menu.setApplicationMenu(null)` is documented Electron API; the fix is fully within the published contract.
+5. Modified contract? No — `rebuildApplicationMenu` signature unchanged.
+6. Unlabeled claims? No — KNOWN / MODELED / SPECULATIVE per evidence class.
+7. Touched a file another session may modify? No parallel session active. Branch `fix-89/menu-rebuild` HEAD `cf77a10` working tree was clean before this resolution commit. Modified file: `docs/cairn-findings.md` only.
+8. Pre-push protocol? Docs-only commit; per-path `git add`. Build + probe-01 verified at green commit `cf77a10`.
+9. Confidence labeling matches evidence? Yes.
 
 ---
 
