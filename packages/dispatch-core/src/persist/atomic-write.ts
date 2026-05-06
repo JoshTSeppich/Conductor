@@ -120,8 +120,31 @@ function resolveLockOpts(
   const overrides = input === undefined || input === true ? {} : input;
   return {
     stale: overrides.stale ?? DEFAULT_LOCK_OPTS.stale,
-    retries: overrides.retries ?? DEFAULT_LOCK_OPTS.retries,
+    retries: resolveRetries(overrides.retries),
     realpath: overrides.realpath ?? DEFAULT_LOCK_OPTS.realpath,
+  };
+}
+
+function resolveRetries(
+  input:
+    | number
+    | { retries: number; minTimeout?: number; maxTimeout?: number; factor?: number }
+    | undefined,
+): ResolvedLockOpts['retries'] {
+  if (input === undefined) return DEFAULT_LOCK_OPTS.retries;
+  if (typeof input === 'number') return input;
+  // Object form: merge user's inner fields onto defaults so all
+  // inner fields are populated. DEFAULT_LOCK_OPTS.retries is
+  // constructed as the object variant; type-narrow is safe.
+  const defaults = DEFAULT_LOCK_OPTS.retries as Exclude<
+    ResolvedLockOpts['retries'],
+    number
+  >;
+  return {
+    retries: input.retries,
+    minTimeout: input.minTimeout ?? defaults.minTimeout,
+    maxTimeout: input.maxTimeout ?? defaults.maxTimeout,
+    factor: input.factor ?? defaults.factor,
   };
 }
 
