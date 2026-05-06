@@ -51,8 +51,8 @@ import {
   type State,
 } from 'dispatch-core/src/v2/schema.js';
 import { sessionsPath } from 'dispatch-core/src/lib/paths.js';
-import { writeAtomicJson } from '../persist/atomic-write.js';
-import { readJsonWithRecovery } from '../persist/read-with-recovery.js';
+import { writeAtomicJson } from 'dispatch-core/src/persist/atomic-write.js';
+import { readJsonWithRecovery } from 'dispatch-core/src/persist/read-with-recovery.js';
 
 const EMPTY_REGISTRY: RegistryV2 = { version: 2, sessions: {} };
 
