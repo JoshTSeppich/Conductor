@@ -17,12 +17,18 @@
 //   4. Cleanup-listener-reference drift (constructing a NEW listener arrow
 //      in the cleanup closure, breaking ipcRenderer.removeListener). C4 §8.
 //
-// C1 RED: No auto-skip guard. Bundle is currently absent from this worktree
-// (gitignored dist/), so require(BUNDLE_PATH) throws MODULE_NOT_FOUND and
-// the test fails. The C1 GREEN commit wraps describe in describe.skip when
-// the bundle is missing.
+// C1 GREEN: describe wrapped in conditional. When BUNDLE_PATH is absent
+// (gitignored dist/ — operator must run `pnpm --filter dispatch-workstation
+// build` or focused `node packages/dispatch-workstation/scripts/build-card-
+// bridge.mjs`), the entire describe block is replaced with describe.skip
+// carrying a loud, action-instruction reason string. Pattern adapted from
+// mb-t05-spawn-tmux/probe-01-tmux-session-exists.test.ts (auto-skip-with-
+// MANUAL per finding #115 / fix-94 precedent), but using describe.skip
+// instead of per-it ctx.skip so the reason string surfaces louder in the
+// vitest reporter output.
 
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,8 +39,22 @@ const BUNDLE_PATH = resolve(PACKAGE_ROOT, 'dist/main/card-bridge.cjs');
 
 const requireCjs = createRequire(import.meta.url);
 
-describe('cardbridge-shape Probe 1 — preload bundle exposes CardBridge with correct envelope round-trip', () => {
-  it('preconditions: bundle exists and loads', () => {
-    requireCjs(BUNDLE_PATH);
+const SKIP_REASON =
+  `cardbridge-shape Probe 1 SKIPPED: ${BUNDLE_PATH} missing. ` +
+  `Run \`pnpm --filter dispatch-workstation build\` ` +
+  `(or focused: \`node packages/dispatch-workstation/scripts/build-card-bridge.mjs\`) ` +
+  `then re-run this probe for KNOWN evidence.`;
+
+if (!existsSync(BUNDLE_PATH)) {
+  describe.skip(SKIP_REASON, () => {
+    it('preconditions: bundle exists and loads', () => {
+      // Skipped — body unreachable.
+    });
   });
-});
+} else {
+  describe('cardbridge-shape Probe 1 — preload bundle exposes CardBridge with correct envelope round-trip', () => {
+    it('preconditions: bundle exists and loads', () => {
+      requireCjs(BUNDLE_PATH);
+    });
+  });
+}
