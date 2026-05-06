@@ -474,8 +474,18 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // POST/PATCH route deps. Reading registry here may surface
   // ENOENT on a fresh install — readRegistryV2 returns an empty
   // registry in that case, so attachAll is a no-op.
+  //
+  // MB-F-DAEMON-REGISTRY-FIX (WB4): on corrupt-on-load, opt into
+  // 'quarantine' so the daemon does not 500-storm every subsequent
+  // /v2/sessions* request. The corrupt file is renamed to
+  // <path>.corrupt-<ISO-timestamp>, a fresh empty v2 registry is
+  // written via writeAtomicJson, an ERROR log is emitted, and
+  // attachAll runs against the empty registry (no-op).
   try {
-    const initialRegistry = await readRegistryV2(opts.registryPath);
+    const initialRegistry = await readRegistryV2(opts.registryPath, {
+      onCorrupt: 'quarantine',
+      logger: app.log as unknown as { error: (...args: unknown[]) => void },
+    });
     watcherManager.attachAll(initialRegistry);
   } catch (err) {
     app.log.warn(

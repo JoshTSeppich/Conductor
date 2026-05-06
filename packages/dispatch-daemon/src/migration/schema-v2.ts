@@ -47,8 +47,30 @@ import {
   type State,
 } from 'dispatch-core/src/v2/schema.js';
 import { sessionsPath } from 'dispatch-core/src/lib/paths.js';
+import { writeAtomicJson } from '../persist/atomic-write.js';
 
-export async function readRegistryV2(path?: string): Promise<RegistryV2> {
+export interface ReadRegistryV2Opts {
+  /**
+   * What to do when the file exists but does not parse + validate.
+   * - 'rethrow' (default): throw a diagnostic Error. Preserves the
+   *   pre-WB4 behavior so existing callers (every route handler)
+   *   continue surfacing 500s on programmer-error / hand-edit
+   *   corruption.
+   * - 'quarantine': rename the corrupt file to
+   *   `<path>.corrupt-<ISO-timestamp>`, write a fresh empty v2
+   *   registry, log at ERROR level, and return the empty registry.
+   *   Used by startup so a corrupt-on-load registry does not 500-
+   *   storm every subsequent route call.
+   */
+  onCorrupt?: 'rethrow' | 'quarantine';
+  /** Optional ERROR-level logger. Used only on the quarantine path. */
+  logger?: { error: (...args: unknown[]) => void };
+}
+
+export async function readRegistryV2(
+  path?: string,
+  opts: ReadRegistryV2Opts = {},
+): Promise<RegistryV2> {
   const target = path ?? sessionsPath();
 
   let raw: string;
@@ -61,6 +83,17 @@ export async function readRegistryV2(path?: string): Promise<RegistryV2> {
     throw err;
   }
 
+  try {
+    return parseAndMigrate(raw, target);
+  } catch (err) {
+    if ((opts.onCorrupt ?? 'rethrow') === 'rethrow') {
+      throw err;
+    }
+    return quarantineAndStartFresh(target, raw, err as Error, opts.logger);
+  }
+}
+
+function parseAndMigrate(raw: string, target: string): RegistryV2 {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -86,23 +119,23 @@ export async function readRegistryV2(path?: string): Promise<RegistryV2> {
     const rawSessions = obj.sessions;
     const migratedSessions: Record<string, unknown> = {};
     if (rawSessions && typeof rawSessions === 'object') {
-      for (const [name, raw] of Object.entries(
+      for (const [name, rawSession] of Object.entries(
         rawSessions as Record<string, Record<string, unknown>>,
       )) {
-        const existingState = raw.state;
+        const existingState = rawSession.state;
         const stateValid =
           typeof existingState === 'string' &&
           StateEnum.safeParse(existingState).success;
         const state: State = stateValid ? (existingState as State) : 'armed';
         migratedSessions[name] = {
-          cwd: raw.cwd,
-          tmux_target: raw.tmux_target,
-          handoff_path: raw.handoff_path,
-          last_prompt_sent_at: raw.last_prompt_sent_at ?? null,
-          last_handoff_pulled_at: raw.last_handoff_pulled_at ?? null,
+          cwd: rawSession.cwd,
+          tmux_target: rawSession.tmux_target,
+          handoff_path: rawSession.handoff_path,
+          last_prompt_sent_at: rawSession.last_prompt_sent_at ?? null,
+          last_handoff_pulled_at: rawSession.last_handoff_pulled_at ?? null,
           state,
-          last_commit_sha: raw.last_commit_sha ?? null,
-          last_status_json_at: raw.last_status_json_at ?? null,
+          last_commit_sha: rawSession.last_commit_sha ?? null,
+          last_status_json_at: rawSession.last_status_json_at ?? null,
         };
       }
     }
@@ -119,6 +152,26 @@ export async function readRegistryV2(path?: string): Promise<RegistryV2> {
   throw new Error(
     `Registry at ${target} has unknown version: ${JSON.stringify(obj.version)}`,
   );
+}
+
+async function quarantineAndStartFresh(
+  target: string,
+  _raw: string,
+  cause: Error,
+  logger?: { error: (...args: unknown[]) => void },
+): Promise<RegistryV2> {
+  const suffix = `.corrupt-${new Date().toISOString().replace(/:/g, '-')}`;
+  const sidecar = `${target}${suffix}`;
+  await rename(target, sidecar);
+  const empty: RegistryV2 = { version: 2, sessions: {} };
+  await writeAtomicJson(target, empty, {
+    validate: (v) => RegistrySchemaV2.parse(v) as RegistryV2,
+  });
+  logger?.error?.(
+    { path: target, sidecar, err: cause.message },
+    'sessions.json corrupt-on-load; quarantined and replaced with empty v2 registry',
+  );
+  return empty;
 }
 
 export async function writeRegistryV2(
