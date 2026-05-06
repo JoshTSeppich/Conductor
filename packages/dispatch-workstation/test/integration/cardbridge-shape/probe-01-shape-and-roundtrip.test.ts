@@ -17,13 +17,20 @@
 //   4. Cleanup-listener-reference drift (constructing a NEW listener arrow
 //      in the cleanup closure, breaking ipcRenderer.removeListener). C4 §8.
 //
-// C2 RED: shape assertion added (window.cardBridge exposes all 6 methods
-// per finding #111-canonical CardBridge interface at card-bridge.ts:97-104
-// and card-ipc-bridge.ts:63-70). Uses a placeholder `bridge: any = null`
-// — no bundle-loading machinery yet. Assertions fail because bridge is
-// null. C2 GREEN adds createRequire + require.cache stub for electron,
-// requires the bundle, captures the bridge from the contextBridge.
-// exposeInMainWorld spy.
+// C2 GREEN: bundle-loading machinery wired. createRequire constructs a
+// CommonJS require() bound to this test file's location; we pre-populate
+// requireCjs.cache[electronPath] with a stub electron module BEFORE
+// requireCjs(BUNDLE_PATH). When the bundle's `require("electron")` runs
+// (esbuild emitted that as a bare external at line 4 of card-bridge.cjs),
+// Node returns our stub instead of the real electron launcher binary.
+//
+// The stub's contextBridge.exposeInMainWorld is a vi.fn() spy that
+// captures the bridge object on its second argument; the bundle calls
+// it at line 43 with name='cardBridge'. The stub's ipcRenderer also
+// has spies for send/on/removeListener (used in C3/C4) and an invoke
+// that returns Promise.resolve(null) so the Fix-92 IIFE (lines 44-56
+// of the bundle) settles cleanly without firing localStorage.setItem
+// (per Phase 1 §G3).
 //
 // Type-only structural reference (per Q5 operator authorization): the
 // CardBridge interface declared on the WEB side is the canonical shape
@@ -31,7 +38,7 @@
 // web (Session 1 territory) — it's a compile-time structural assertion
 // only.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
@@ -70,14 +77,60 @@ if (!existsSync(BUNDLE_PATH)) {
     });
   });
 } else {
-  // C2 RED PLACEHOLDER: bundle-loading machinery deferred to C2 GREEN.
-  // bridge is null; shape assertions fail. This is the expected RED state.
-  const bridge: CardBridge | null = null;
+  // === Bundle loader (C2 GREEN) ===========================================
+  // Step 1: build electron stub. contextBridge.exposeInMainWorld captures
+  // the bridge into a closure variable; ipcRenderer surface stubs the four
+  // methods the bundle uses (send/on/removeListener via the ipcAdapter at
+  // bundle lines 35-41, plus invoke for the Fix-92 IIFE at line 46).
+  let capturedBridge: CardBridge | null = null;
+
+  const ipcSpies = {
+    send: vi.fn(),
+    on: vi.fn(),
+    removeListener: vi.fn(),
+    invoke: vi.fn(() => Promise.resolve(null)),
+  };
+
+  const electronStub = {
+    contextBridge: {
+      exposeInMainWorld: vi.fn((name: string, obj: unknown) => {
+        if (name === 'cardBridge') {
+          capturedBridge = obj as CardBridge;
+        }
+      }),
+    },
+    ipcRenderer: ipcSpies,
+  };
+
+  // Step 2: pre-populate require.cache so the bundle's `require("electron")`
+  // resolves to our stub. Resolving electron from this test's createRequire
+  // anchor returns the path Node would otherwise load — same key the bundle
+  // would resolve to via its own require() because both share Node's
+  // module-resolution algorithm.
+  const electronPath = requireCjs.resolve('electron');
+  requireCjs.cache[electronPath] = {
+    id: electronPath,
+    filename: electronPath,
+    loaded: true,
+    exports: electronStub,
+  } as unknown as NodeModule;
+
+  // Step 3: require the bundle. contextBridge.exposeInMainWorld fires
+  // synchronously at bundle line 43; capturedBridge is set before this
+  // call returns. The Fix-92 IIFE (lines 44-56) is async — it awaits
+  // ipcRenderer.invoke (returns Promise.resolve(null)) → typeof token
+  // !== 'string' → no localStorage call → settles benignly. We do NOT
+  // need to await it before reading capturedBridge (the bridge is
+  // captured synchronously above the IIFE).
+  requireCjs(BUNDLE_PATH);
 
   describe('cardbridge-shape Probe 1 — preload bundle exposes CardBridge with correct envelope round-trip', () => {
     it('exposes window.cardBridge with all 6 canonical methods', () => {
-      expect(bridge).not.toBeNull();
-      const b = bridge as CardBridge;
+      expect(
+        capturedBridge,
+        'contextBridge.exposeInMainWorld("cardBridge", ...) was not invoked — preload bundle did not call the spy',
+      ).not.toBeNull();
+      const b = capturedBridge as CardBridge;
       for (const method of CANONICAL_METHODS) {
         expect(
           typeof b[method],
