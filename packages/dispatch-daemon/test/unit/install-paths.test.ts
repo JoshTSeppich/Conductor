@@ -20,21 +20,41 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { resolveRepoRoot } from '../../src/install/paths.js';
 
 describe('DAEMON-T18 — resolveRepoRoot', () => {
   it('P3 from inside the repo → returns absolute path to repo root', () => {
     // The test file itself lives at:
     //   <repo-root>/packages/dispatch-daemon/test/unit/install-paths.test.ts
-    // walk-up should land on <repo-root> where CONDUCTOR_API_CONTRACT.md
-    // sits.
+    // Compute expected via the same marker walk-up production uses so
+    // the assertion tests roundtrip semantics, not the repo basename
+    // (works in any worktree, not just the canonical clone).
+    const MARKER = 'CONDUCTOR_API_CONTRACT.md';
+    const expectedRoot = (() => {
+      let current = resolve(import.meta.dirname);
+      while (true) {
+        if (existsSync(join(current, MARKER))) return current;
+        const parent = dirname(current);
+        if (parent === current) {
+          throw new Error(
+            `test setup: ${MARKER} not reachable via walk-up from ${import.meta.dirname}`,
+          );
+        }
+        current = parent;
+      }
+    })();
     const result = resolveRepoRoot(import.meta.dirname);
-    expect(result).toMatch(/foxworks-dispatch$/);
-    // Sanity: the returned path is absolute
+    expect(result).toBe(expectedRoot);
+    // Sanity: returned path is absolute
     expect(result.startsWith('/')).toBe(true);
+    // Sanity: marker actually lives at the returned path — defends
+    // against resolveRepoRoot ever returning a wrong-but-plausible
+    // parent dir.
+    expect(existsSync(join(result, MARKER))).toBe(true);
   });
 
   it('P4 from outside repo → throws with operator-helpful message', async () => {
