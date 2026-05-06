@@ -200,6 +200,13 @@ export interface SpawnTestServerOpts {
    * exercise eviction-window-gap signaling cheaply.
    */
   consoleBufferCap?: number;
+  /**
+   * MB-F-DAEMON-REGISTRY-FIX (WB7): forwards into StartupOpts so
+   * tests can capture the corrupt-on-load recovery record without
+   * enabling the otherwise-silenced fixture logger. Receives
+   * `{path, sidecar, err}` after a quarantine completes.
+   */
+  recoveryHook?: (info: { path: string; sidecar: string; err: string }) => void;
 }
 
 /**
@@ -373,6 +380,7 @@ export async function spawnTestServer(
     dbPath,
     consoleOps: opts.consoleOps,
     consoleBufferCap: opts.consoleBufferCap,
+    recoveryHook: opts.recoveryHook,
   });
 
   const triggerHandoffWrite = async (
