@@ -722,3 +722,88 @@ export const WorkstationSessionSendPromptReplySchema = z.discriminatedUnion('ok'
 export type WorkstationSessionSendPromptReply = z.infer<
   typeof WorkstationSessionSendPromptReplySchema
 >;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §11 — Spawned-session context snapshot (MB-T10 — CONDUCTOR_V3_RESCOPE.md §3.5 + §4)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// New daemon endpoint `GET /v3/sessions/:name/context-snapshot` returns a
+// per-session observability slice for the workstation context-builder's
+// new Tier 4 (spawnedSessions). Per CONDUCTOR_V3_RESCOPE.md §3.5 line 121
+// the orchestrator chat tier shows live state of every registered non-
+// killed session: recent HANDOFF tail, recent console tail, pending multi-
+// step intents, and last-action / last-operator-typed timestamps.
+//
+// v3.0 surface (operator-arbitrated Q-MBT10-{1..7} 2026-05-06):
+//   - pending_intents: [] until MB-T11 populates orchestrator-side state
+//   - last_action_fired_at: null until MB-T11
+//   - last_operator_typed_at: always null in v3.0 (deferred to v3.0.x)
+//   - All schemas .strict() per Q-MBT10-4=a + existing v3 convention
+//   - Tier 4 numbering renumbers existing context-builder tiers
+//     (chat-history → Tier 5; triggering-event → Tier 6) per Q-MBT10-1=a;
+//     refactor lands in MB-T10 WB4.5/WB5
+
+/**
+ * One element of `pending_intents` in a session context snapshot.
+ *
+ * MB-T10 v3.0 ships this schema with `pending_intents: []` populated;
+ * MB-T11 wires the orchestrator-side state that fills the array.
+ * Shape mirrors `SendPromptEnvelopeSchema` (§10) minus the
+ * `envelope_version` literal — these are intent records observed
+ * across multi-step sequences, not envelope payloads in flight.
+ */
+export const PendingIntentSchema = z
+  .object({
+    intent_id: z.string().uuid(),
+    step: z.number().int().min(1),
+    total_steps: z.number().int().min(1),
+    intent_summary: z.string().min(1),
+  })
+  .strict();
+export type PendingIntent = z.infer<typeof PendingIntentSchema>;
+
+/**
+ * GET /v3/sessions/:name/context-snapshot response body.
+ *
+ * `recent_handoff`: last 4096 chars of HANDOFF.md (string-char slice per
+ * Q-MBT10-6=a) when the file's mtime is within 60s of the request; null
+ * if the file is absent OR if the mtime is older than 60s.
+ *
+ * `recent_console_tail`: last ≤2048 bytes of cc_console_buffer rows for
+ * the session, whole-line accumulation oldest-fully-included-first per
+ * Q-MBT10-5=a; null if no rows exist for the session.
+ *
+ * `pending_intents`: empty array in v3.0 (MB-T11 populates).
+ *
+ * `last_action_fired_at`: null in v3.0 (MB-T11 populates).
+ *
+ * `last_operator_typed_at`: always null in v3.0 (deferred per
+ * CONDUCTOR_V3_RESCOPE.md §4 MB-T10 out-of-scope clause line 199).
+ */
+export const SessionContextSnapshotSchema = z
+  .object({
+    recent_handoff: z.string().nullable(),
+    recent_console_tail: z.string().nullable(),
+    pending_intents: z.array(PendingIntentSchema),
+    last_action_fired_at: z.string().datetime().nullable(),
+    last_operator_typed_at: z.string().datetime().nullable(),
+  })
+  .strict();
+export type SessionContextSnapshot = z.infer<typeof SessionContextSnapshotSchema>;
+
+/**
+ * Tier 4 payload assembled by the workstation context-builder per
+ * CONDUCTOR_V3_RESCOPE.md §3.5. Map keyed by session name → snapshot.
+ * Empty `sessions_context` record when no spawned sessions exist OR
+ * all sessions are killed. Per Q-MBT10-7=a, sessions whose daemon
+ * fetch fails are still keyed in the record with a stub snapshot
+ * (recent_handoff: null, recent_console_tail: null, pending_intents: [],
+ * timestamps null) so context-builder consumers can see which session
+ * names were attempted.
+ */
+export const Tier4PayloadSchema = z
+  .object({
+    sessions_context: z.record(z.string(), SessionContextSnapshotSchema),
+  })
+  .strict();
+export type Tier4Payload = z.infer<typeof Tier4PayloadSchema>;

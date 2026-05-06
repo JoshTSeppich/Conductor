@@ -75,6 +75,7 @@ describe('COARCH-T04 cluster 4: context builder', () => {
       buildDocContent: FRONTMATTER_CONTENT,
       buildDocSha: 'abc123',
       daemonState: DAEMON_STATE,
+      spawnedSessions: null,
       chatHistory: CHAT_HISTORY,
       triggeringEvent: TRIGGERING_EVENT,
     });
@@ -87,6 +88,7 @@ describe('COARCH-T04 cluster 4: context builder', () => {
       buildDocContent: FRONTMATTER_CONTENT,
       buildDocSha: 'abc123',
       daemonState: DAEMON_STATE,
+      spawnedSessions: null,
       chatHistory: CHAT_HISTORY,
       triggeringEvent: TRIGGERING_EVENT,
     });
@@ -101,6 +103,7 @@ describe('COARCH-T04 cluster 4: context builder', () => {
       buildDocContent: FRONTMATTER_CONTENT,
       buildDocSha: 'abc123',
       daemonState: DAEMON_STATE,
+      spawnedSessions: null,
       chatHistory: CHAT_HISTORY,
       triggeringEvent: TRIGGERING_EVENT,
     });
@@ -115,6 +118,7 @@ describe('COARCH-T04 cluster 4: context builder', () => {
       buildDocContent: FRONTMATTER_CONTENT,
       buildDocSha: 'abc123',
       daemonState: DAEMON_STATE,
+      spawnedSessions: null,
       chatHistory: CHAT_HISTORY,
       triggeringEvent: TRIGGERING_EVENT,
     });
@@ -133,6 +137,7 @@ describe('COARCH-T04 cluster 4: context builder', () => {
       buildDocContent: FRONTMATTER_CONTENT,
       buildDocSha: 'abc123',
       daemonState: DAEMON_STATE,
+      spawnedSessions: null,
       chatHistory: longHistory,
       triggeringEvent: TRIGGERING_EVENT,
     });
@@ -149,6 +154,7 @@ describe('COARCH-T04 cluster 4: context builder', () => {
       buildDocContent: FRONTMATTER_CONTENT,
       buildDocSha: 'abc123',
       daemonState: DAEMON_STATE,
+      spawnedSessions: null,
       chatHistory: CHAT_HISTORY,
       triggeringEvent: TRIGGERING_EVENT,
     });

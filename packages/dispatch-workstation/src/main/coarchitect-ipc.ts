@@ -135,6 +135,10 @@ export function registerIpcHandlers(): void {
               buildDocContent: buildDocResult.content,
               buildDocSha: buildDocResult.sha,
               daemonState: null,
+              // MB-T10 Tier 4 wiring deferred — passes null until MB-T11 plumbs
+              // the daemon /v3/sessions/:name/context-snapshot fan-out into the
+              // workstation main process. Followup: MB-F-T10-COARCHITECT-IPC-WIRE-TIER4.
+              spawnedSessions: null,
               chatHistory,
               triggeringEvent: content,
             });
