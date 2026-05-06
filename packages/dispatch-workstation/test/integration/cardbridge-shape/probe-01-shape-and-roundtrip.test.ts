@@ -189,5 +189,104 @@ if (!existsSync(BUNDLE_PATH)) {
       b.multiChoiceSelect(envelope);
       expect(ipcSpies.send).toHaveBeenCalledWith('card:multi-choice-selected', envelope);
     });
+
+    // === C4 RED: subscribe-side behavioral tests (4 it cases) ==============
+    // Drift this catches:
+    //   - Channel-name shift on Shell→Webview envelopes (e.g.,
+    //     'orchestrator-card-rendered' → 'orchestrator-card-render').
+    //   - Listener-unwrap regression: subscribe<P> helper at card-bridge.ts:
+    //     106-121 unwraps (event, payload) and invokes handler(payload).
+    //     A regression that forwards both args breaks the web-side reducer
+    //     (which expects payload only).
+    //   - Cleanup-listener-reference drift: the cleanup closure must call
+    //     ipc.removeListener with the SAME listener reference that ipc.on
+    //     received. A regression that constructs a new arrow makes
+    //     ipcRenderer.removeListener a no-op.
+    //
+    // C4 RED state: the 3 subscribe cases use `toHaveBeenCalledWith(event,
+    // payload)` — wrong. The bridge unwraps and calls handler(payload).
+    // C4 GREEN flips to `toHaveBeenCalledWith(payload)` to match actual
+    // unwrap behavior. Cleanup case uses a NEW listener reference for
+    // the removeListener assertion — wrong. C4 GREEN captures the actual
+    // listener and asserts reference equality.
+    //
+    // Helper: find the listener arrow registered for a given channel,
+    // since ipc.on may be called from multiple it cases (one per channel).
+    function findRegisteredListener(channel: string): (event: unknown, payload: unknown) => void {
+      const onCalls = (ipcSpies.on.mock.calls as unknown[][]).filter(
+        (call) => call[0] === channel,
+      );
+      expect(
+        onCalls.length,
+        `expected at least one ipc.on registration for channel '${channel}'`,
+      ).toBeGreaterThan(0);
+      // Most recent registration for this channel.
+      return onCalls[onCalls.length - 1][1] as (event: unknown, payload: unknown) => void;
+    }
+
+    it('onCardRendered(handler) wires ipc.on("orchestrator-card-rendered"); fired event delivers payload (event-unwrapped)', () => {
+      const b = capturedBridge as CardBridge;
+      const handler = vi.fn();
+      b.onCardRendered(handler);
+      const listener = findRegisteredListener('orchestrator-card-rendered');
+      const fakeEvent = { sender: 'fake-event-stub' };
+      const payload = {
+        type: 'orchestrator-card-rendered' as const,
+        card_id: 'card-c4-rendered',
+        card: { id: 'card-c4-rendered', kind: 'CardOutput' as const },
+      };
+      listener(fakeEvent, payload);
+      // C4 RED: deliberately asserts handler got BOTH args (the
+      // un-unwrapped tuple). Real bridge unwraps; this assertion fails.
+      expect(handler).toHaveBeenCalledWith(fakeEvent, payload);
+    });
+
+    it('onCardSuperseded(handler) wires ipc.on("orchestrator-card-superseded"); fired event delivers payload (event-unwrapped)', () => {
+      const b = capturedBridge as CardBridge;
+      const handler = vi.fn();
+      b.onCardSuperseded(handler);
+      const listener = findRegisteredListener('orchestrator-card-superseded');
+      const fakeEvent = { sender: 'fake-event-stub' };
+      const payload = {
+        type: 'orchestrator-card-superseded' as const,
+        superseding_card_id: 'card-c4-new',
+        superseded_card_ids: ['card-c4-old-1', 'card-c4-old-2'],
+      };
+      listener(fakeEvent, payload);
+      expect(handler).toHaveBeenCalledWith(fakeEvent, payload);
+    });
+
+    it('onCardUpdate(handler) wires ipc.on("orchestrator-card-update"); fired event delivers payload (event-unwrapped)', () => {
+      const b = capturedBridge as CardBridge;
+      const handler = vi.fn();
+      b.onCardUpdate(handler);
+      const listener = findRegisteredListener('orchestrator-card-update');
+      const fakeEvent = { sender: 'fake-event-stub' };
+      const payload = {
+        type: 'orchestrator-card-update' as const,
+        card_id: 'card-c4-update',
+        patch: { status: 'in-progress' as const },
+      };
+      listener(fakeEvent, payload);
+      expect(handler).toHaveBeenCalledWith(fakeEvent, payload);
+    });
+
+    it('cleanup closure calls ipc.removeListener with same channel + same listener reference', () => {
+      const b = capturedBridge as CardBridge;
+      const handler = vi.fn();
+      const cleanup = b.onCardRendered(handler);
+      const registeredListener = findRegisteredListener('orchestrator-card-rendered');
+      cleanup();
+      // C4 RED: deliberately asserts removeListener was called with a
+      // DIFFERENT listener reference — a no-op stub. Real bridge passes
+      // the SAME listener reference; this assertion fails.
+      const wrongListener = (): void => {};
+      expect(ipcSpies.removeListener).toHaveBeenCalledWith(
+        'orchestrator-card-rendered',
+        wrongListener,
+      );
+      // Suppress unused-var lint for registeredListener — used in C4 GREEN.
+      void registeredListener;
+    });
   });
 }
