@@ -51,6 +51,10 @@ function latestActionMs(session: SessionResponseV2Type): number | null {
 }
 
 function formatLastActivity(session: SessionResponseV2Type): string {
+  // Both timestamps null (never-prompted, never-pulled) → DASH.
+  // latestActionMs returns null when both candidates absent; format
+  // chosen for visual stability between sessions (same width as a
+  // formatted age string in the row's right-aligned slot).
   const ms = latestActionMs(session);
   return ms === null ? DASH : formatAge(Date.now() - ms);
 }
