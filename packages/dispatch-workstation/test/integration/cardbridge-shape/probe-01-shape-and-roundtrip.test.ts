@@ -236,9 +236,11 @@ if (!existsSync(BUNDLE_PATH)) {
         card: { id: 'card-c4-rendered', kind: 'CardOutput' as const },
       };
       listener(fakeEvent, payload);
-      // C4 RED: deliberately asserts handler got BOTH args (the
-      // un-unwrapped tuple). Real bridge unwraps; this assertion fails.
-      expect(handler).toHaveBeenCalledWith(fakeEvent, payload);
+      // Bridge unwraps (event, payload) → handler(payload). Assert handler
+      // got payload only (single arg) — drift would mean subscribe<P>
+      // forwards both args.
+      expect(handler).toHaveBeenCalledWith(payload);
+      expect(handler).toHaveBeenCalledTimes(1);
     });
 
     it('onCardSuperseded(handler) wires ipc.on("orchestrator-card-superseded"); fired event delivers payload (event-unwrapped)', () => {
@@ -253,7 +255,8 @@ if (!existsSync(BUNDLE_PATH)) {
         superseded_card_ids: ['card-c4-old-1', 'card-c4-old-2'],
       };
       listener(fakeEvent, payload);
-      expect(handler).toHaveBeenCalledWith(fakeEvent, payload);
+      expect(handler).toHaveBeenCalledWith(payload);
+      expect(handler).toHaveBeenCalledTimes(1);
     });
 
     it('onCardUpdate(handler) wires ipc.on("orchestrator-card-update"); fired event delivers payload (event-unwrapped)', () => {
@@ -268,7 +271,8 @@ if (!existsSync(BUNDLE_PATH)) {
         patch: { status: 'in-progress' as const },
       };
       listener(fakeEvent, payload);
-      expect(handler).toHaveBeenCalledWith(fakeEvent, payload);
+      expect(handler).toHaveBeenCalledWith(payload);
+      expect(handler).toHaveBeenCalledTimes(1);
     });
 
     it('cleanup closure calls ipc.removeListener with same channel + same listener reference', () => {
@@ -277,16 +281,17 @@ if (!existsSync(BUNDLE_PATH)) {
       const cleanup = b.onCardRendered(handler);
       const registeredListener = findRegisteredListener('orchestrator-card-rendered');
       cleanup();
-      // C4 RED: deliberately asserts removeListener was called with a
-      // DIFFERENT listener reference — a no-op stub. Real bridge passes
-      // the SAME listener reference; this assertion fails.
-      const wrongListener = (): void => {};
+      // Reference equality is load-bearing: Electron's ipcRenderer.
+      // removeListener compares listeners by reference. If the cleanup
+      // closure constructed a new arrow, removeListener would be a no-op
+      // and the listener would leak across subscribe/unsubscribe cycles.
+      // Asserting toHaveBeenCalledWith uses Vitest's deep-equal at the
+      // top level, but for functions the comparison is reference identity
+      // — so this assertion catches the regression.
       expect(ipcSpies.removeListener).toHaveBeenCalledWith(
         'orchestrator-card-rendered',
-        wrongListener,
+        registeredListener,
       );
-      // Suppress unused-var lint for registeredListener — used in C4 GREEN.
-      void registeredListener;
     });
   });
 }
