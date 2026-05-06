@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FilterChips } from '../src/components/FilterChips.js';
 import { useUIStore } from '../src/store/ui.js';
 
@@ -43,7 +43,11 @@ describe('Phase 2 Step 2 — FilterChips', () => {
 
   it('reflects external store changes (e.g. URL hash, future deeplink)', () => {
     render(<FilterChips />);
-    useUIStore.getState().setSessionListFilter('trouble');
+    // act() needed for direct store mutation outside React event
+    // handler — fireEvent.click auto-acts; direct setState does not.
+    act(() => {
+      useUIStore.getState().setSessionListFilter('trouble');
+    });
     expect(screen.getByRole('button', { name: 'Trouble' })).toHaveAttribute(
       'aria-pressed',
       'true',
