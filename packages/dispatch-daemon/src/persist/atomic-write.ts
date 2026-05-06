@@ -1,29 +1,34 @@
 /**
  * Generic atomic-JSON-write helper.
  *
- * MB-F-DAEMON-REGISTRY-FIX WB1 — initial skeleton. The same recipe
- * already lives inline in migration/schema-v2.ts:writeRegistryV2 and
- * dispatch-core/src/registry/write.ts:writeRegistry; WB6 routes the
- * daemon's writeRegistryV2 through this helper.
- *
- * Recipe (all guaranteed by this helper):
+ * MB-F-DAEMON-REGISTRY-FIX. Recipe (all guaranteed by this helper):
  *   1. Validate the value FIRST (default: identity). Throws before any
  *      disk operation, so a bad input never leaves a sidecar.
  *   2. mkdir -p the target directory.
- *   3. Write the serialised body to `<path>.tmp`.
- *   4. Rename `<path>.tmp` → `<path>` (atomic at the directory entry).
+ *   3. Open `<path>.tmp` for write.
+ *   4. Write the serialised body.
+ *   5. fsync the FileHandle (unless opts.fsync === false). Guarantees
+ *      data blocks are durable before the rename so power loss
+ *      between rename and post-rename flush cannot leave a
+ *      renamed-but-zero-content file (Phase 1 §1.3 #1).
+ *   6. Close the FileHandle.
+ *   7. Rename `<path>.tmp` → `<path>` (atomic at the directory entry).
  *
- * fsync between (3) and (4) lands in WB2.
  * Post-write re-read + retry-from-input lands in WB3.
+ *
+ * The same recipe already lives inline in
+ * migration/schema-v2.ts:writeRegistryV2 (without fsync) and
+ * dispatch-core/src/registry/write.ts:writeRegistry; WB6 routes the
+ * daemon's writeRegistryV2 through this helper.
  */
 
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, open, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 export interface WriteAtomicJsonOpts<T> {
   /** Throws to reject the input. Default: identity. */
   validate?: (v: unknown) => T;
-  /** Reserved for WB2. Default true once WB2 lands. */
+  /** fsync the FileHandle before close + rename. Default true. */
   fsync?: boolean;
   /** Reserved for WB3. Default 3 once WB3 lands. */
   retries?: number;
@@ -41,6 +46,14 @@ export async function writeAtomicJson<T>(
 
   const tmp = `${path}.tmp`;
   const body = `${JSON.stringify(value, null, 2)}\n`;
-  await writeFile(tmp, body, 'utf8');
+  const handle = await open(tmp, 'w');
+  try {
+    await handle.write(body, 0, 'utf8');
+    if (opts.fsync !== false) {
+      await handle.sync();
+    }
+  } finally {
+    await handle.close();
+  }
   await rename(tmp, path);
 }
