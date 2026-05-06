@@ -12,6 +12,14 @@ export type ConnectionStatus =
   | 'daemon_down'
   | 'auth_failed';
 
+// Phase 2 Step 1 (parallel-batch-2 / sess-1/dispatch-web-ui).
+// Drives wireframe variant C "All / Running / Trouble" filter chips
+// above the session list. 'trouble' = computed_status === 'stale'
+// per operator-default §7.3 (see /tmp/sess-1-dispatch-web-ui-
+// diagnose.md). Future expansion may union recent cairn_violation
+// events when those become queryable per-session.
+export type SessionListFilter = 'all' | 'running' | 'trouble';
+
 export interface CommitEntry {
   sha: string;
   subject: string;
@@ -68,6 +76,10 @@ interface UIState {
   // degradation rule. T21 reads for banner rules.
   notificationsAvailable: boolean;
 
+  // Phase 2 Step 1: filter chip selection for wireframe variant C
+  // session list. Default 'all'. See SessionListFilter type docs.
+  sessionListFilter: SessionListFilter;
+
   // ── actions ───────────────────────────────────────────────────
   setFocus: (name: string | null) => void;
   openSendModal: () => void;
@@ -82,6 +94,7 @@ interface UIState {
   setNotificationsAvailable: (b: boolean) => void;
   pushBanner: (b: Omit<Banner, 'id' | 'createdAt'>) => string;
   dismissBanner: (id: string) => void;
+  setSessionListFilter: (f: SessionListFilter) => void;
 }
 
 function generateBannerId(): string {
@@ -105,6 +118,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   authRetryNonce: 0,
   events: [],
   notificationsAvailable: false,
+  sessionListFilter: 'all',
 
   // INTENTIONAL: setFocus uses history.replaceState, not pushState
   // or window.location.hash assignment. Focus is transient UI
@@ -191,4 +205,6 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   dismissBanner: (id) =>
     set((s) => ({ banners: s.banners.filter((b) => b.id !== id) })),
+
+  setSessionListFilter: (f) => set({ sessionListFilter: f }),
 }));
