@@ -189,6 +189,19 @@ export interface StartupOpts {
    * thousands of lines.
    */
   consoleBufferCap?: number;
+  /**
+   * MB-F-DAEMON-REGISTRY-FIX (WB7): observation seam for the
+   * corrupt-registry recovery path. When the initial registry read
+   * triggers a quarantine, this fn is invoked AFTER the sidecar is
+   * written and the empty registry has been persisted, with
+   * `{path, sidecar, err}`. The ERROR-level Pino log emit also
+   * fires (via app.log.error) regardless of whether this hook is
+   * provided. Tests use this to capture the recovery record
+   * without enabling Pino in the otherwise-silenced fixture
+   * logger; production-side observability layers can also wire
+   * a hook here to forward to alerting / metrics systems.
+   */
+  recoveryHook?: (info: { path: string; sidecar: string; err: string }) => void;
 }
 
 export interface StartupHandle {
@@ -481,10 +494,21 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // <path>.corrupt-<ISO-timestamp>, a fresh empty v2 registry is
   // written via writeAtomicJson, an ERROR log is emitted, and
   // attachAll runs against the empty registry (no-op).
+  // WB7: opts.recoveryHook (when provided) is invoked alongside
+  // app.log.error so tests + production observability can react
+  // without parsing log streams.
+  const recoveryLogger = {
+    error: (info: { path: string; sidecar: string; err: string }, msg: string) => {
+      app.log.error(info, msg);
+      opts.recoveryHook?.(info);
+    },
+  };
   try {
     const initialRegistry = await readRegistryV2(opts.registryPath, {
       onCorrupt: 'quarantine',
-      logger: app.log as unknown as { error: (...args: unknown[]) => void },
+      logger: recoveryLogger as unknown as {
+        error: (...args: unknown[]) => void;
+      },
     });
     watcherManager.attachAll(initialRegistry);
   } catch (err) {
