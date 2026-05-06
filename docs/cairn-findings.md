@@ -2220,3 +2220,209 @@ to KNOWN-decision per operator's pre-Phase-2 ack:
    per §7.4; suite-mode probe-infrastructure documented as
    known-issue with operator re-verification step.
 
+
+---
+
+## Finding #115 — MB-F-PROBE-COVERAGE-GAP-CLOSURES-2026-05-05
+
+**Date filed:** 2026-05-05
+**Tier:** 3 (verification-net coverage; closes 5 ship-gate-proximate
+gaps from `docs/probe-coverage-gap-analysis-2026-05-05.md` §4.1).
+**Origin:** Probe-coverage gap analysis banked at main HEAD
+`0216326` plus operator-arbitrated parallel-batch-2 scaffold (`docs/
+coordination/parallel-batch-2-2026-05-05.md`) §2.3 + §8.4.
+**Discovered by:** Strategic gap-analysis pass; not a defect found
+in production code.
+**Resolution status:** RESOLVED via Session 3 / parallel-batch-2,
+branch `sess-3/probe-additions`. Aggregate REPORT lives at
+`packages/dispatch-workstation/test/integration/probe-additions-
+2026-05-05/REPORT.md`. Per-probe REPORTs at the 5 sub-directories
+listed below.
+
+**Symptom (KNOWN, gap-analysis-confirmed).** Per the Phase 1
+gap-analysis pass, 5 ship-gate-proximate operator-experiential paths
+lacked deterministic probe coverage:
+
+1. **#82 — ConsolePanel actually mounts in webview after IPC**
+   (GAP). fix-82 probes 01-05 cover the IPC channel + bootstrap
+   fetch + WS debounce + bridge surface, but stop at the IPC
+   boundary; the renderer-side React mount was unverified.
+2. **MB-T08 — onboarding flow end-to-end** (GAP). main.ts ships the
+   smoke-path stdin handlers (`ONBOARDING_NEXT`, `ONBOARDING_API_KEY`,
+   `ONBOARDING_DONE`) and sentinels (`ONBOARDING_REQUIRED`, `_STEP_
+   API_KEY`, `_API_KEY_SAVED`, `_COMPLETE`, `_READY`); no probe drove
+   them. T17 dogfood test was the only safety net against cleared-
+   userData regressions.
+3. **MB-T05 — tmux session in `tmux ls` after spawn** (PARTIAL).
+   fix-83 probe-04 trusted the SPAWN_RESULT_OK IPC sentinel; no
+   probe ran `tmux ls` to assert tmux state independently, and no
+   probe asserted daemon `/v2/sessions` independently.
+4. **T1 — cold-launch composite** (PARTIAL). app-launches-clean +
+   fix-92 probes 06-09 + fix-82 probes 02-03 cover the T1 sub-
+   surfaces individually; no probe asserted the full path in ONE
+   spawn.
+5. **MB-T05 — kanban shows new spawn card** (GAP, replacement for
+   originally-planned P5 per operator arbitration B1). No probe
+   drove kanban refresh after spawn and asserted the new card
+   mounts.
+
+The originally-planned P5 (MB-T06 cap enforcement UI) was deferred
+at Phase 1 §7-Q1 because `data-testid="session-count"` does not
+exist in the codebase (verified by grep across `packages/dispatch-
+web/src/` and `packages/dispatch-workstation/src/`). Adding it
+would land in Session 1 territory or production source — outside
+Session 3's test-only scope. P6 took P5's slot per operator B1.
+
+**Defect class.** Verification-net coverage gap. NOT a production-
+code defect; the production paths work (per existing fix-82 / fix-83
+/ fix-84 / fix-92 probe coverage). The gap is the absence of
+regression nets at specific renderer-side and substrate-level
+surfaces.
+
+**Resolution.**
+
+5 probe directories shipped to `packages/dispatch-workstation/test/
+integration/`:
+
+| # | Directory | File | Result | Closes |
+|---|---|---|---|---|
+| P1 | `mb-82-console-mount/` | `probe-01-console-panel-mounts.test.ts` | PASS in ~2s | §4.1 #1 |
+| P3 | `mb-t08-onboarding/` | `probe-01-onboarding-end-to-end.test.ts` | PASS in ~6s | §4.1 #3 |
+| P4 | `mb-t05-spawn-tmux/` | `probe-01-tmux-session-exists.test.ts` | AUTO-SKIPPED (operator-state) | §4.1 #4 |
+| P15 | `t1-cold-launch-composite/` | `probe-01-cold-launch-one-shot.test.ts` | AUTO-SKIPPED (operator-state) | §4.1 #15 |
+| P6 | `mb-t05-kanban-card/` | `probe-01-spawn-card-renders.test.ts` | AUTO-SKIPPED (operator-state) | §4.2 #6 (replaces P5) |
+
+Plus the aggregate at `probe-additions-2026-05-05/REPORT.md`.
+
+P3 and P1 PASS individually with KNOWN evidence. P4, P15, and P6
+auto-skip with explicit loud reason on operator's machine this
+session due to a daemon-registry corruption (see Cross-references
+below); KNOWN-when-ran upon operator repair.
+
+**Source-side seam additions:** 1 commit, +44 LOC under existing
+`MB_TEST_HOOKS=1` stdin block in `packages/dispatch-workstation/
+src/main/main.ts`. The new `SHELL_EVAL <id>|<code>` handler is a
+byte-for-byte parallel of the existing `KANBAN_EVAL` handler at
+`main.ts:548-577`, but targets `mainWindow?.webContents` (the shell
+webview) instead of `kanbanWebContents` (the embedded kanban). It
+emits `SHELL_EVAL_RESULT <id> <json>`.
+
+Justification for the seam (operator arbitration B5): KANBAN_EVAL
+only reaches the embedded kanban `<webview>`. P1 (ConsolePanel
+mount) and the deferred P5 (cap UI) need eval against the SHELL
+webview. The existing `CLICK_SPAWN_BUTTON`, `FILL_AND_SUBMIT_SPAWN`,
+and `TYPE_AND_SEND` stdin handlers all run executeJavaScript on
+`mainWindow.webContents` but each is a one-shot DOM mutation —
+SHELL_EVAL is the missing generic eval-and-return-JSON primitive.
+
+Defense-in-depth: gate is unreachable in production (already inside
+`MB_TEST_HOOKS=1` block); zero behavior change with `MB_TEST_HOOKS`
+unset. Build verified — `SHELL_EVAL` appears 8 times in
+`dist/main/main.js` post-build. Workstation full unit suite passes
+unchanged at 103/103 files, 440/440 cases (same baseline as fix-94
+REPORT.md's pre-Session-3 catalog).
+
+**Net source LOC for Phase 2:** **+44 LOC** in 1 source file
+(main.ts), inside the `MB_TEST_HOOKS=1` sentinel block. Within the
+scaffold §2.3 ~50 LOC budget. ~1,940 LOC of test code shipped
+across 5 new probe files.
+
+**Cross-references.**
+- `docs/probe-coverage-gap-analysis-2026-05-05.md` — Phase 1
+  diagnose surfacing all 23 gaps; this finding closes §4.1 #1, #3,
+  #4, #15 + §4.2 #6.
+- `docs/coordination/parallel-batch-2-2026-05-05.md` — Session 3
+  scaffold (§2.3 territory + §8.4 operator arbitrations B1-B5).
+- `packages/dispatch-workstation/test/integration/probe-additions-
+  2026-05-05/REPORT.md` — aggregate cross-probe REPORT with
+  per-probe assertion catalogs and §4.3 operator-state observation.
+- Finding #92 (daemon-token bootstrap, RESOLVED at `f3eceda` +
+  probe-92 obs-infra at `d8ab92f`) — the obs-infra precedent for
+  the SHELL_EVAL seam (KANBAN_EVAL pattern this session extends).
+- Finding #94 (CC permission-mode, RESOLVED via MB-T09 Phase 2 at
+  `a99d79e`) — fix-94 REPORT.md §3 documented the auto-skip-with-
+  MANUAL pattern this session reuses for daemon-precondition gates
+  (P4, P15, P6).
+- Finding #82 (RESOLVED) — P1 closes the renderer-side mount
+  verification gap that fix-82 left open.
+- Finding #83 (RESOLVED) — P4 + P6 close the post-IPC substrate-
+  level + kanban-side render gaps that fix-83 probe-04 left open.
+
+**Operator-state observation banked.** During Session 3 individual-
+mode runs, operator's daemon at `:7878` returns HTTP 500 on `/v2/
+sessions` because `~/.foxworks-dispatch/sessions.json` registry is
+corrupted ("not valid JSON: Unexpected non-whitespace character
+after JSON at position 13239"). Confidence: KNOWN-state
+(reproduced via direct curl); SPECULATIVE-cause (likely partial
+write or append during a prior interrupted probe / dogfood run).
+Affects KNOWN-when-ran evidence for P4, P15, P6 and would also
+affect existing fix-94 probes 02 + 03. Operator-step to recover
+KNOWN evidence is in `mb-t05-spawn-tmux/REPORT.md` §3 + aggregate
+REPORT §4.3. Filed here as an observation, not as a Session-3-
+internal finding (daemon-territory concern; reserved finding range
+#115-119 is for probe-additions session findings only).
+
+**Out of scope for this finding.**
+- **Per-column-label strengthening** for P15 (per operator
+  arbitration B3) — kanban-column label assertion (`AWAITING REVIEW
+  / STALE / RUNNING / IDLE`) deferred. Could be a Session 1 follow-
+  up since dispatch-web is their territory.
+- **xterm `<canvas>` rendering inside ConsolePanel** — gap analysis
+  §4.1 #1 also called this out; out of P1 scope. Requires either a
+  real session with stdout flowing OR synthetic stdout-chunk IPC
+  injection. Filed as P1 §4.5 follow-up.
+- **MB-T06 cap UI** (originally-planned P5) — deferred per
+  operator arbitration B1; may be revisited in a future session
+  after Session 1 ships the cap UI elements (`session-count`,
+  override modal).
+- **Gaps §4.2 #7-#15 + §4.3 #21-#23** — Tier-2 / Tier-3 / lower-
+  priority gaps not addressed this Phase. Future probe-additions
+  session.
+
+**Confidence.**
+- Symptom: KNOWN (gap-analysis-confirmed against probe inventory at
+  `0216326`).
+- Resolution structure: KNOWN (5 probes shipped, all green
+  individually OR auto-skipped with documented reason).
+- Resolution evidence:
+  - P1 + P3: KNOWN (PASS in 2.07s and 6.02s on operator's machine).
+  - P4 + P15 + P6: KNOWN-when-ran (probe verified to compile + load
+    + reach precondition gate + emit loud-skip with daemon body).
+- SHELL_EVAL seam: KNOWN (build verified; production unreachable;
+  P1 exercises end-to-end).
+
+### §10.5 self-check (resolution append):
+
+1. API verified by spike? n/a — diagnose-only Phase 1 is the spike
+   equivalent; SHELL_EVAL is a literal copy-paste of KANBAN_EVAL
+   (existing pattern).
+2. Test exercises behavior or mocks? exercises — 5 integration
+   probes spawn real Electron + real DOM observation; P3 + P1 ran
+   green individually on operator's machine.
+3. Implementation deleted, test still passes? no — removing
+   SHELL_EVAL → P1 cannot drive openPanel; removing the probe files
+   → 5 gaps re-open.
+4. Anything outside contract? no — all probes test-only;
+   SHELL_EVAL inside existing `MB_TEST_HOOKS=1` sentinel block;
+   territory matches scaffold §2.3.
+5. Modified contract? no production contract change. Test-hook
+   contract additively extends with the new SHELL_EVAL_RESULT
+   sentinel.
+6. Unlabeled claims? no — KNOWN / KNOWN-when-ran / MODELED /
+   SPECULATIVE labeled throughout per-probe REPORTs and aggregate.
+7. Touched a file another session may modify? main.ts is in
+   sentinel-region territory shared with Sessions 1 + 2 (per
+   scaffold §3 frozen contracts: existing MB_TEST_HOOKS=1 sentinel
+   regions are frozen FOR Sessions 1 + 2 but operator-arbitrated
+   additions are allowed for Session 3 per §2.3). Addition is
+   inside an existing block, byte-disjoint from any other
+   session's edit surface.
+8. Pre-push protocol? per-commit-push discipline (12 commits in
+   sequence each pushed individually); per-path `git add` (no
+   `git add -A`); `git status --short` between commits to verify
+   territory.
+9. Confidence labeling matches evidence? yes — GREEN-individually
+   for P1 + P3; AUTO-SKIPPED-with-loud-reason for P4 + P15 + P6
+   (the documented degraded mode under operator-state precondition
+   failure per fix-94 §7.5 pattern).
+
