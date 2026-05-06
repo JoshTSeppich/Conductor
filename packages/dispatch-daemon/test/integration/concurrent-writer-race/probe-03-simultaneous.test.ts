@@ -3,9 +3,8 @@
  *
  * Stochastic — captures the actual on-disk outcomes of N=10
  * simultaneous writes. Operator-arbitrated policy per Phase 1 §6
- * Q3 = LOOP N=10 + assert ≥1 iteration exhibits a documented FM3
- * sub-mode. Q2 = it() (NOT it.fails) — captures actual behavior;
- * passes when at least one race-detected outcome is recorded.
+ * Q3 = LOOP N=10. Q2 = it() (NOT it.fails) — captures actual
+ * behavior.
  *
  * Each iteration:
  *   1. Seed: alpha.state="armed", beta.last_prompt_sent_at=null.
@@ -45,14 +44,46 @@
  *     writes serialised cleanly enough that one read AFTER the
  *     other's rename. Logged but does NOT count toward the assert.
  *
- * Pass condition: at LEAST one iteration of N=10 shows
- *   FM3b-rename-error || FM3-corrupt || FM3-silent-lost-update.
- * If 0 iterations raced, fail with diagnostic (timing too coarse
- * on this machine; tune polling or barrier latency).
+ * MB-F-DAEMON-CONCURRENT-RACE-FIX (sess-g, parallel-batch-6) updated
+ * the assertion model:
+ *
+ *   PRE-FIX assertion (sess-c-shipped): `racedCount >= 1` —
+ *     captured the existence of FM3 sub-modes at HEAD `b3da626`.
+ *
+ *   POST-FIX assertion (sess-g-shipped, this file): FM3b-rename-error
+ *     and FM3-corrupt MUST be zero across all N=10 iterations. The
+ *     proper-lockfile primitive integrated into writeAtomicJson
+ *     serialises concurrent rename + tmp ownership, eliminating
+ *     these two FM3 sub-modes outright.
+ *
+ *   FM3-silent-lost-update is INTENTIONALLY left unasserted: the
+ *     write-only lock that sess-g shipped does NOT address FM1
+ *     (lost-update from stale snapshots), because FM1 is a caller-
+ *     side read-modify-write hazard that spans the entire
+ *     read→mutate→write window — not just the rename. Each writer
+ *     reads BEFORE acquiring the lock, so when both writers reach
+ *     the lock with their stale-but-otherwise-consistent snapshots,
+ *     each writes its own whole-registry value; whoever writes last
+ *     wins. The result classifies as FM3-silent-lost-update under
+ *     the existing classifier even though the proximate cause is
+ *     FM1, not FM3.
+ *
+ *   no-race-detected is left unasserted because its rate depends
+ *     on barrier polling latency + child startup interleaving and
+ *     is machine-dependent.
+ *
+ *   FM1 — full lost-update fix — is deferred to a future batch:
+ *     MB-F-DAEMON-CONCURRENT-RACE-FIX-FM1. Likely paths: caller-
+ *     side lock spanning read→mutate→write, field-level patch
+ *     protocol, or HTTP-mandatory single-writer. Operator pick at
+ *     next batch turn-on. probe-01 + probe-02 stay `it.fails`
+ *     post-sess-g; both correctly demonstrate FM1 still fires.
  *
  * Confidence: KNOWN — simultaneous-write race surface derived from
- * Phase 1 §1.2 FM3. Operator-arbitrated WB4 spec frozen at Phase 2
- * turn-on.
+ * Phase 1 §1.2 FM3. sess-g WB3 (commit `23517d7`) integrates the
+ * proper-lockfile primitive. Sample tally observed at sess-g WB4:
+ *   {"FM3b-rename-error":0, "FM3-corrupt":0,
+ *    "FM3-silent-lost-update":10, "no-race-detected":0}
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -236,7 +267,7 @@ describe('MB-F-DAEMON-CONCURRENT-RACE probe-03 — simultaneous race (N=10)', ()
   }
 
   it(
-    'at least one of N=10 iterations exhibits a documented FM3 sub-mode',
+    'FM3b-rename-error and FM3-corrupt are zero across N=10 (FM1 silent-lost-update may still fire post-write-only-lock)',
     async () => {
       const records: IterationRecord[] = [];
       for (let i = 0; i < ITERATIONS; i++) {
@@ -270,17 +301,22 @@ describe('MB-F-DAEMON-CONCURRENT-RACE probe-03 — simultaneous race (N=10)', ()
         );
       }
 
-      const racedCount =
-        tally['FM3b-rename-error'] +
-        tally['FM3-corrupt'] +
-        tally['FM3-silent-lost-update'];
-
+      // sess-g post-fix assertion: the proper-lockfile primitive in
+      // writeAtomicJson eliminates FM3b-rename-error and FM3-corrupt
+      // outright. Both must be zero across all N=10 iterations.
+      // FM3-silent-lost-update may still fire (FM1 is out of scope for
+      // this batch; see MB-F-DAEMON-CONCURRENT-RACE-FIX-FM1).
+      // no-race-detected rate is machine-dependent; left unasserted.
       expect(
-        racedCount,
-        `Expected ≥1 iteration to exhibit FM3 sub-mode across ${ITERATIONS}; ` +
-          `got tally=${JSON.stringify(tally)}. Timing may be too coarse on ` +
-          `this machine — investigate barrier polling latency or child startup time.`,
-      ).toBeGreaterThanOrEqual(1);
+        tally['FM3b-rename-error'],
+        `FM3b-rename-error must be 0 post-fix (lock prevents tmp ` +
+          `collision yielding rename ENOENT); got tally=${JSON.stringify(tally)}.`,
+      ).toBe(0);
+      expect(
+        tally['FM3-corrupt'],
+        `FM3-corrupt must be 0 post-fix (lock prevents byte-level ` +
+          `interleaving); got tally=${JSON.stringify(tally)}.`,
+      ).toBe(0);
     },
     PROBE_TIMEOUT,
   );

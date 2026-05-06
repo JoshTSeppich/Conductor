@@ -15,6 +15,10 @@
     "spike:03": "tsx spikes/03-tmux-has-session.ts"
   },
   "dependencies": {
+    "proper-lockfile": "^4.1.2",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/proper-lockfile": "^4.1.4"
   }
 }
