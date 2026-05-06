@@ -36,10 +36,14 @@
  *   T05 writes v2 format. fd v1 commands reading a v2 registry is
  *   T14/T15 scope per contract §7.2. This module is v2-only; v1
  *   read-compat logic lives elsewhere.
+ *
+ * MB-F-DAEMON-REGISTRY-FIX (WB6): both fns now delegate to the
+ * generic persist module (writeAtomicJson with fsync + retries;
+ * readJsonWithRecovery with optional 'quarantine' onCorrupt). The
+ * read API surface is preserved — default onCorrupt='rethrow' keeps
+ * every existing route handler + every existing test untouched.
  */
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
 import {
   RegistrySchemaV2,
   StateEnum,
@@ -48,6 +52,9 @@ import {
 } from 'dispatch-core/src/v2/schema.js';
 import { sessionsPath } from 'dispatch-core/src/lib/paths.js';
 import { writeAtomicJson } from '../persist/atomic-write.js';
+import { readJsonWithRecovery } from '../persist/read-with-recovery.js';
+
+const EMPTY_REGISTRY: RegistryV2 = { version: 2, sessions: {} };
 
 export interface ReadRegistryV2Opts {
   /**
@@ -72,37 +79,30 @@ export async function readRegistryV2(
   opts: ReadRegistryV2Opts = {},
 ): Promise<RegistryV2> {
   const target = path ?? sessionsPath();
-
-  let raw: string;
-  try {
-    raw = await readFile(target, 'utf8');
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { version: 2, sessions: {} };
-    }
-    throw err;
-  }
-
-  try {
-    return parseAndMigrate(raw, target);
-  } catch (err) {
-    if ((opts.onCorrupt ?? 'rethrow') === 'rethrow') {
-      throw err;
-    }
-    return quarantineAndStartFresh(target, raw, err as Error, opts.logger);
-  }
+  return readJsonWithRecovery<RegistryV2>(target, {
+    validate: (parsed) => migrateAndValidate(parsed, target),
+    onCorrupt: opts.onCorrupt ?? 'rethrow',
+    emptyValue: EMPTY_REGISTRY,
+    logger: opts.logger,
+    writeOpts: {
+      validate: (v) => RegistrySchemaV2.parse(v) as RegistryV2,
+    },
+  });
 }
 
-function parseAndMigrate(raw: string, target: string): RegistryV2 {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (err) {
-    throw new Error(
-      `Registry at ${target} is not valid JSON: ${(err as Error).message}`,
-    );
-  }
+export async function writeRegistryV2(
+  path: string | undefined,
+  registry: RegistryV2,
+): Promise<void> {
+  const target = path ?? sessionsPath();
+  await writeAtomicJson(target, registry, {
+    validate: (v) => RegistrySchemaV2.parse(v) as RegistryV2,
+    fsync: true,
+    retries: 3,
+  });
+}
 
+function migrateAndValidate(parsed: unknown, target: string): RegistryV2 {
   const obj = parsed as { version?: unknown; sessions?: unknown };
 
   if (obj.version === 2) {
@@ -152,41 +152,4 @@ function parseAndMigrate(raw: string, target: string): RegistryV2 {
   throw new Error(
     `Registry at ${target} has unknown version: ${JSON.stringify(obj.version)}`,
   );
-}
-
-async function quarantineAndStartFresh(
-  target: string,
-  _raw: string,
-  cause: Error,
-  logger?: { error: (...args: unknown[]) => void },
-): Promise<RegistryV2> {
-  const suffix = `.corrupt-${new Date().toISOString().replace(/:/g, '-')}`;
-  const sidecar = `${target}${suffix}`;
-  await rename(target, sidecar);
-  const empty: RegistryV2 = { version: 2, sessions: {} };
-  await writeAtomicJson(target, empty, {
-    validate: (v) => RegistrySchemaV2.parse(v) as RegistryV2,
-  });
-  logger?.error?.(
-    { path: target, sidecar, err: cause.message },
-    'sessions.json corrupt-on-load; quarantined and replaced with empty v2 registry',
-  );
-  return empty;
-}
-
-export async function writeRegistryV2(
-  path: string | undefined,
-  registry: RegistryV2,
-): Promise<void> {
-  // Validate FIRST so malformed inputs fail without touching disk.
-  // No .tmp file is created if this throws.
-  RegistrySchemaV2.parse(registry);
-
-  const target = path ?? sessionsPath();
-  await mkdir(dirname(target), { recursive: true });
-
-  const tmp = `${target}.tmp`;
-  const body = `${JSON.stringify(registry, null, 2)}\n`;
-  await writeFile(tmp, body, 'utf8');
-  await rename(tmp, target);
 }
