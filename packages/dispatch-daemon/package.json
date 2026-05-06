@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
+    "test:race": "RACE_TESTS=1 vitest run --testTimeout=60000 test/integration/concurrent-writer-race",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "install:daemon": "tsx scripts/install.ts",
