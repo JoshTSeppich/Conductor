@@ -133,7 +133,7 @@ The orchestrator chat (existing COARCH-T04 context-builder) gets a new context t
 }
 ```
 
-This context refreshes every chat turn. The orchestrator sees what's happening across the swarm without operator narration. Token cost: ~1-3KB per session × N sessions; capped at 8 sessions = ~24KB max for this tier (cost-validation per existing MB-S01 ADR pattern).
+This context refreshes every chat turn. The orchestrator sees what's happening across the swarm without operator narration. Token cost: ~5-7KB per session × N sessions at schema-permitted maxima (4KB recent_handoff per Q-MBT10-6=a + 2KB recent_console_tail + populated pending_intents); capped at 8 sessions = ~60KB max for this tier — measured 54.40 KB by MB-T10 WB6 cost-validation probe `packages/dispatch-workstation/test/integration/coarchitect-tier4-cost/probe-15-cost-validation.spec.ts`. Operator-arbitrated ceiling per `packages/dispatch-workstation/spikes/MB-T10-COST/README.md` Option A (2026-05-06). 60KB ≈ 7.5% of Sonnet 4.6's 200K-token context window — within orchestrator-call budget. (Earlier draft of this line quoted ~24KB based on a typical-content estimate that did not account for schema-permitted maxima; superseded by the 2026-05-06 measurement.)
 
 ### §3.6 Orchestrator action tools
 
