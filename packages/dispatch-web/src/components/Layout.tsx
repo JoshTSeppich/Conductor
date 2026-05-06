@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ConnectionStatusBanner } from './ConnectionStatusBanner.js';
 import { PanelErrorBoundary } from './PanelErrorBoundary.js';
-import { KanbanPanel } from './KanbanPanel.js';
+import { SessionListPanel } from './SessionListPanel.js';
 import { FocusedDetailPanel } from './FocusedDetailPanel.js';
 import { TickerPanel } from './TickerPanel.js';
 import { InBannerHost } from './InBannerHost.js';
@@ -41,7 +41,7 @@ export function Layout(): ReactNode {
 
       <main className="flex flex-col flex-1 overflow-hidden lg:grid lg:grid-cols-[60%_40%]">
         <PanelErrorBoundary name="Sessions">
-          <KanbanPanel />
+          <SessionListPanel />
         </PanelErrorBoundary>
         <PanelErrorBoundary name="Session detail">
           <FocusedDetailPanel />
