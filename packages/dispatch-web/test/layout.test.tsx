@@ -106,6 +106,34 @@ describe('WEB-T06 Layout', () => {
     expect(banners.children.length).toBe(0);
   });
 
+  // Phase 2 Step 5 — header restructure: PlanRing + CostPill mounted
+  // with mock constants per /tmp/sess-1-dispatch-web-ui-diagnose.md
+  // §4 recommendation 1. Mock-marker on the cluster wrapper, NOT on
+  // the primitives themselves (those are pure props-in components).
+  describe('Phase 2 Step 5 — header mock cluster', () => {
+    it('renders PlanRing as progressbar in header', () => {
+      render(<Layout />);
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('renders CostPill with mock USD amount', () => {
+      render(<Layout />);
+      // Mock fixture: 0.42 — matches operator wireframe example.
+      expect(screen.getByText(/api · \$0\.42 today/)).toBeInTheDocument();
+    });
+
+    it('marks the mock cluster with data-mock="true" for dev visibility', () => {
+      const { container } = render(<Layout />);
+      const mockCluster = container.querySelector('[data-mock="true"]');
+      expect(mockCluster).not.toBeNull();
+    });
+
+    it('keeps the Conductor wordmark in header', () => {
+      render(<Layout />);
+      expect(screen.getByText(/Foxworks Dispatch Conductor/i)).toBeInTheDocument();
+    });
+  });
+
   it('per-panel error isolation: error in one panel renders panel fallback; siblings still render', () => {
     // cleanup() between sub-cases removes the prior render's
     // container from document.body. unmount() alone leaves the
