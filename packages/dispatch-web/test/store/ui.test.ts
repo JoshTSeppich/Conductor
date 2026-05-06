@@ -19,6 +19,7 @@ beforeEach(() => {
       authRetryNonce: 0,
       events: [],
       notificationsAvailable: false,
+      sessionListFilter: 'all',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
   );
