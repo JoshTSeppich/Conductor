@@ -71,11 +71,35 @@ export interface RegisteredSession {
   state: string;
 }
 
+/**
+ * Permission-mode toggle for the spawned CC session (cairn finding #94).
+ *
+ *   'auto' — appends `--dangerously-skip-permissions` to the tmux argv
+ *            so the CC binary launches without per-action approval
+ *            prompts. Operator-in-the-loop control surface remains the
+ *            Conductor level (orchestrator cards, audit log, frozen
+ *            contracts, halt discipline). Required for v3.0 swarm-
+ *            conductor flows where per-action prompts defeat the
+ *            orchestrator design.
+ *   'ask'  — default CC behavior; the binary prompts on each file
+ *            edit / bash / tool action. Matches operator-launched
+ *            terminal `claude` use.
+ *
+ * Field is optional; omitted ⇒ 'ask' (operator-arbitrated §7.2:
+ * 'ask' on first launch; operator opts INTO 'auto' consciously).
+ */
+export type SpawnPermissionMode = 'auto' | 'ask';
+
 export interface SpawnSessionRequest {
   /** Absolute path to the repo cwd for the spawned tmux session. */
   repoPath: string;
   /** Operator-chosen session name; uniqueness enforced both tmux-side and daemon-side. */
   sessionName: string;
+  /**
+   * Per-spawn permission mode (cairn finding #94). Optional;
+   * omitted ⇒ 'ask'. See SpawnPermissionMode docs for semantics.
+   */
+  permissionMode?: SpawnPermissionMode;
 }
 
 export interface SpawnHandlerDeps {
@@ -188,19 +212,29 @@ function isDuplicateSessionError(stderr: string | undefined): boolean {
  * Construct the tmux argv for spawning a new claude-running session.
  * Args are stable contract per cluster 2 P1; cairn #72 amends the
  * final program token from the literal 'claude' to the absolute path
- * resolved at workstation startup.
+ * resolved at workstation startup; cairn #94 conditionally appends
+ * `--dangerously-skip-permissions` AFTER claudeBinPath when
+ * `req.permissionMode === 'auto'` (orchestrator-driven CC flow).
+ *
+ * Default (omitted permissionMode OR 'ask'): 7-element argv unchanged
+ * from pre-#94 contract — `new-session -d -s NAME -c CWD CLAUDEBINPATH`.
+ * Auto-mode: 8-element argv with the flag appended as argv[7].
  */
 function buildTmuxArgs(
   req: SpawnSessionRequest,
   claudeBinPath: string,
 ): readonly string[] {
-  return [
+  const base = [
     'new-session',
     '-d',
     '-s', req.sessionName,
     '-c', req.repoPath,
     claudeBinPath,
   ];
+  if (req.permissionMode === 'auto') {
+    return [...base, '--dangerously-skip-permissions'];
+  }
+  return base;
 }
 
 /**

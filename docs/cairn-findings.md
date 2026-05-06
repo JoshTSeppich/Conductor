@@ -2033,7 +2033,7 @@ Each implements the same shape: `try { readFileSync(join(homedir(), '.foxworks-d
 **Tier:** 2 (UX gap; orchestrator-driven CC sessions blocked on per-action prompts unless operator manually configures each session)
 **Origin:** 2026-05-05 operator design decision after fix-batch-1 + #92 close
 **Discovered by:** Operator strategic decision during probe-suite planning
-**Resolution status:** STUB — pending implementation in MB-T09 batch.
+**Resolution status:** RESOLVED via MB-T09 Phase 2 (backend layer). GREEN edit at branch HEAD `46c7f7c` on `mb-t09/permission-mode-flag`. Merge commit SHA pending operator-authored merge to `main` — see Resolution section below for full evidence catalog. UI layer (Phase 3) deferred until BUILD.md parser ships per operator §7.4 arbitration; backend resolution is independently shippable.
 
 **Symptom (KNOWN, design-confirmed).** When Conductor's spawn pipeline (per finding #84 resolution at `2eaa0e1`, spawn-ipc.ts and related wiring) creates a CC tmux session, the CC binary launches in default permission mode. Default mode prompts the operator to approve every file edit, bash command, and tool action within the CC session. For orchestrator-driven sessions in the v3.0 swarm-conductor product, this defeats the purpose: the operator's approval gate is at the Conductor level (orchestrator cards, audit log, frozen contracts, halt discipline), not at the per-CC-session level.
 
@@ -2061,4 +2061,162 @@ The skipped prompts are CC's per-action UI friction, not the orchestration layer
 - Granular per-action allowlist configuration for hybrid use cases — defer to future work if needed; the binary skip-permissions flag is sufficient for v3.0 swarm-conductor product.
 
 **Confidence.** Symptom KNOWN (design-arbitrated). Implementation scope MODELED pending diagnose-phase code-trace.
+
+### Resolution (2026-05-05, MB-T09 Phase 2 — backend layer)
+
+**Status:** RESOLVED via MB-T09 Phase 2 backend layer. UI layer
+(Phase 3) deferred until BUILD.md parser ships (Tier C) per operator
+§7.4 arbitration; backend resolution is independently shippable.
+
+**What shipped:**
+
+1. `packages/dispatch-workstation/src/main/spawn-handler.ts` —
+   - New exported type `SpawnPermissionMode = 'auto' | 'ask'` with
+     full docstring (auto = skip prompts; ask = default CC per-action
+     approval).
+   - `SpawnSessionRequest` interface gains optional `permissionMode?:
+     SpawnPermissionMode` field. Optional ⇒ omitted treated as 'ask'
+     per operator §7.2 arbitration ('ask' on first launch; operator
+     opts INTO 'auto' consciously).
+   - `buildTmuxArgs` conditionally appends `--dangerously-skip-
+     permissions` AFTER `claudeBinPath` when `req.permissionMode ===
+     'auto'`. Default + explicit-ask produce the existing 7-element
+     argv byte-identical to pre-#94. Auto-mode produces 8-element
+     argv with the flag as `argv[7]`.
+
+2. No edit to `spawn-ipc.ts`: the existing `payload as
+   SpawnSessionRequest` cast is structural; the new optional field
+   flows through automatically. Confirmed via cross-layer probe
+   (test_spawn_ipc_passes_through_permission_mode.spec.ts).
+
+**Net source LOC:** ~22 LOC added (interface field + type alias +
+3-line conditional + docstrings); ~2 LOC of existing argv kept
+inside the new helper structure. Within the finding's MODELED 5-10
+LOC core estimate (additional LOC are docstrings).
+
+**Verification:**
+
+- **Unit test seam:** 3 new test files in `test/unit/mb-t09/`
+  totaling 8 cases — all GREEN at `46c7f7c`. Cover (a) auto-mode
+  8-element argv, (b) default + explicit-ask 7-element argv with
+  positional invariants, (c) IPC controller cross-layer thread-
+  through. Existing strict-`toEqual` tests in `test/unit/mb-t05/`
+  + `test/unit/wiring-spawn/` remain GREEN (default-mode argv
+  preserved).
+- **Workstation unit suite (full):** 103/103 files PASS · 440/440
+  cases PASS (was 100/432 pre-MB-T09; +3 files +8 cases, no
+  regressions). KNOWN.
+- **Probe suite:** 3 probes in `test/integration/fix-94-verification/`
+  (probe-01 source + dist greps; probe-02 live ps-aux for auto-mode
+  flag presence; probe-03 live ps-aux negative-evidence for
+  default/ask). All 3 PASS individually with auto-skip-with-MANUAL
+  pattern per operator §7.5. See `fix-94-verification/REPORT.md`
+  for the full evidence catalog including a documented suite-mode
+  probe-infrastructure known-issue (probes auto-skip under vitest
+  fork-pool parallelism but run deterministically green
+  individually; banked for the dedicated probe-additions session).
+
+**Cairn methodology delta — surfaced for codification consideration.**
+
+This phase produced a PHASE-1 DIAGNOSE artifact at
+`/tmp/mb-t09-auto-ask-toggle-diagnose.md` (532 lines covering
+finding-verbatim, current-state code-trace, gap, LOC, open questions,
+confidence audit). Operator §7 arbitration of 6 open questions
+collapsed multiple SPECULATIVE regions to KNOWN before Phase 2
+implementation began. Pattern recommended for codification: any
+backend-with-implication-for-UI ticket where wireframe access is
+operator-side, ship a diagnose-only Phase 1 first.
+
+This phase also surfaced a probe-infrastructure pattern: `ctx.skip()`-
+gated preconditions interact non-trivially with vitest's fork-pool
+parallelism. Same probe runs deterministically green individually,
+auto-skips under suite invocation. Banked in `docs/probe-coverage-
+gap-analysis-2026-05-05.md` for the dedicated probe-additions
+session per operator-authorized scope.
+
+**Files changed by MB-T09 Phase 2.**
+
+Modified:
+- `packages/dispatch-workstation/src/main/spawn-handler.ts`
+  (+36 / −2 LOC, type alias + interface field + conditional append +
+  docstrings)
+
+Added:
+- `packages/dispatch-workstation/test/unit/mb-t09/test_spawn_executes_tmux_new_session_with_auto_permission_mode.spec.ts` (~125 LOC, 2 cases)
+- `packages/dispatch-workstation/test/unit/mb-t09/test_spawn_executes_tmux_new_session_default_ask_mode.spec.ts` (~130 LOC, 3 cases)
+- `packages/dispatch-workstation/test/unit/mb-t09/test_spawn_ipc_passes_through_permission_mode.spec.ts` (~140 LOC, 3 cases)
+- `packages/dispatch-workstation/test/integration/fix-94-verification/probe-01-source-and-build-wiring.test.ts` (~110 LOC, 5 cases)
+- `packages/dispatch-workstation/test/integration/fix-94-verification/probe-02-permission-mode-auto-live.test.ts` (~280 LOC, 1 deterministic + 1 MANUAL)
+- `packages/dispatch-workstation/test/integration/fix-94-verification/probe-03-permission-mode-ask-default.test.ts` (~330 LOC, 2 deterministic)
+- `packages/dispatch-workstation/test/integration/fix-94-verification/REPORT.md` (~350 LOC docs)
+
+Total: ~1500 LOC net additions, of which ~36 LOC are production
+source change; remainder is unit + probe + docs.
+
+**Commits on `mb-t09/permission-mode-flag`** (cut from `main` HEAD
+`0216326`):
+
+```
+09a444b red(MB-T09): permissionMode: auto produces 7-element argv
+db0e0dc red(MB-T09): default/ask mode preserves 7-element argv (regression guard)
+4d56a82 red(MB-T09): SpawnIpcController threads permissionMode payload field
+46c7f7c green(MB-T09): conditional --dangerously-skip-permissions flag
+254ba54 green(probe-94-01): source + build-artifact wiring grep
+c100755 green(probe-94-02): live ps-aux assertion for auto-mode flag
+5518a36 green(probe-94-03): live ps-aux negative-evidence for default/ask mode
+59cd0c9 docs(probe-94): REPORT.md aggregate — 3/3 PROBES PASS individually
+<this commit> docs(cairn): finding #94 RESOLVED at MB-T09 Phase 2
+```
+
+Merge commit SHA: pending operator-authored merge to `main`.
+Branch HEAD pre-merge will be the SHA of this docs commit.
+
+**Confidence after fix.** Backend layer KNOWN-RESOLVED:
+- Source code change: KNOWN (single-file edit verified at `46c7f7c`).
+- Build-pipeline survival: KNOWN (probe-01 dist grep; flag literal +
+  'auto' string + permissionMode reference all present in
+  `dist/main/spawn-handler.js`).
+- Live process-level activation: KNOWN-when-ran (probe-02 observed
+  flag in spawned CC argv via ps-aux; probe-03 observed flag absence
+  for default/ask paths). Suite-mode probe behavior is the documented
+  known-issue (probe-infrastructure, not production).
+- Operator-experiential CC-no-prompt validation: pending Phase 3 UI
+  + dogfood per the MANUAL designation in Probe 2's `it.skip`.
+
+**Confidence on §7 arbitration:** all 6 open questions collapsed
+to KNOWN-decision per operator's pre-Phase-2 ack:
+- §7.1 state persistence: userData JSON when UI ships; backend
+  default plumbed as constant via the optional field's omission
+  semantics (defaults to 'ask').
+- §7.2 default value: 'ask' on first launch.
+- §7.3 per-session override: not yet, global behavior only.
+- §7.4 wireframe access: BACKEND ONLY this phase, UI deferred until
+  BUILD.md parser ships (Tier C).
+- §7.5 probe approach: deterministic ps-aux + MANUAL alongside,
+  fix-83-04 + fix-84-06 split — implemented in probe-02 + probe-03.
+- §7.6 test strategy: preserve existing toEqual (default = 7-element
+  argv), add new cases for auto-mode = 8-element argv — implemented
+  in mb-t09/ unit suite.
+
+**§10.5 self-check (resolution append):**
+1. API verified by spike? n/a — additive optional field on existing
+   typed contract.
+2. Test exercises behavior or mocks? exercises (8 unit cases at
+   recording-deps level + 3 probes at dist + live process levels).
+3. Implementation deleted, test still passes? no — removing the
+   conditional append → 4/8 mb-t09 cases RED + probe-94-02 RED.
+4. Anything outside contract? no — single-file source edit inside
+   operator-authorized scope (spawn-handler.ts only).
+5. Modified contract? additively — `SpawnSessionRequest` gains
+   optional field; existing 2-field shape still valid.
+6. Unlabeled claims? no — KNOWN, KNOWN-when-ran, MANUAL, SPECULATIVE
+   labeled per evidence quality throughout this resolution + REPORT.md.
+7. Touched a file another session may modify? no parallel session.
+8. Pre-push protocol? per-path `git add`; pre-commit `git status
+   --short`; post-commit `git log -1 --stat` per commit on the
+   branch.
+9. Confidence labeling matches evidence? yes — backend RESOLVED
+   per source + dist + unit + probe evidence; UI Phase 3 deferred
+   per §7.4; suite-mode probe-infrastructure documented as
+   known-issue with operator re-verification step.
 
