@@ -67,6 +67,64 @@ export const ViolationTypeEnum = z.enum([
 export type ViolationType = z.infer<typeof ViolationTypeEnum>;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// §1.5 — Plan + cost sub-objects
+//        (KNOWN — operator-arbitrated MB-F-DAEMON-PLAN-COST-ENDPOINTS,
+//         parallel-batch-6 sess-i. Defined here so §2 SessionSchemaV2
+//         and §5 SessionResponseV2 can reference them without forward-
+//         reference issues. Closes sess-b finding #140 §Followups #1
+//         (PlanInfo daemon surface) and sess-e finding #155 §Followups #1
+//         (CostInfo daemon surface).)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Per-session plan-quota configuration.
+ *
+ * Persisted on SessionSchemaV2 (operator-arbitrated I-Q5=c: plan is
+ * per-session config that survives daemon restart; CostInfo is request-
+ * time computed and lives on SessionResponseV2 instead).
+ *
+ * I-Q3=a path: this batch ships the SHAPE; daemon returns hardcoded
+ * mock values; real Anthropic API integration deferred to a future
+ * batch (Tier-2 followup MB-F-DAEMON-PLAN-COST-REAL-INTEGRATION).
+ *
+ * Field shape (operator-arbitrated I-Q1=a):
+ *   - tier:       human-readable plan name, e.g. "Pro" / "Team" / "API"
+ *   - usage_pct:  0-100 integer for the ring fill
+ *   - reset_ms:   milliseconds-until-quota-reset for the countdown text
+ *   - plan_id:    machine-readable identifier, e.g. "anthropic-pro"
+ */
+export const PlanInfoSchema = z.object({
+  tier: z.string().min(1),
+  usage_pct: z.number().int().min(0).max(100),
+  reset_ms: z.number().int().nonnegative(),
+  plan_id: z.string().min(1),
+});
+export type PlanInfo = z.infer<typeof PlanInfoSchema>;
+
+/**
+ * Per-session request-time cost aggregation.
+ *
+ * Computed by daemon on each GET /v2/sessions response (operator-
+ * arbitrated I-Q5=c: cost is request-time aggregation that changes on
+ * every read; not persisted in registry). Embedded on SessionResponseV2,
+ * NOT on SessionSchemaV2.
+ *
+ * I-Q3=a path: this batch ships the SHAPE; daemon returns hardcoded
+ * mock values; real cost-aggregation deferred to future batch.
+ *
+ * Field shape (operator-arbitrated I-Q2=a):
+ *   - usd_today:      dollars spent in the current calendar day
+ *   - usd_this_month: dollars spent in the current calendar month
+ *   - token_count:    total token count (input + output) for the period
+ */
+export const CostInfoSchema = z.object({
+  usd_today: z.number().nonnegative(),
+  usd_this_month: z.number().nonnegative(),
+  token_count: z.number().int().nonnegative(),
+});
+export type CostInfo = z.infer<typeof CostInfoSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // §2 — Session schema (KNOWN — contract §4.2 + §7.3 + Blocker 2 arbitration)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -95,6 +153,13 @@ export const SessionSchemaV2 = z.object({
   state: StateEnum,
   last_commit_sha: z.string().nullable(),
   last_status_json_at: z.string().datetime().nullable(),
+
+  // v2.1 additions (MB-F-DAEMON-PLAN-COST-ENDPOINTS, sess-i parallel-batch-6).
+  // PlanInfo is OPTIONAL so existing v1→v2 migration logic at
+  // packages/dispatch-daemon/src/migration/schema-v2.ts (which does
+  // NOT inject plan_info) parses cleanly without test churn.
+  // Operator-arbitrated I-Q3=a.
+  plan_info: PlanInfoSchema.optional(),
 });
 export type SessionV2 = z.infer<typeof SessionSchemaV2>;
 
@@ -265,6 +330,13 @@ export const SessionResponseV2 = SessionSchemaV2.extend({
   computed_status: ComputedStatusEnum,
   status_json: StatusJsonSchema.nullable(),
   recent_events: z.array(EventV2).max(50),
+
+  // v2.1 additions (MB-F-DAEMON-PLAN-COST-ENDPOINTS, sess-i parallel-batch-6).
+  // CostInfo is OPTIONAL — daemon may omit when not yet wired.
+  // Operator-arbitrated I-Q5=c: cost is request-time aggregation
+  // (computed per request, not persisted in registry).
+  // plan_info inherits as optional from SessionSchemaV2 above.
+  cost_info: CostInfoSchema.optional(),
 });
 export type SessionResponseV2Type = z.infer<typeof SessionResponseV2>;
 

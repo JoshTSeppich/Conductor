@@ -28,6 +28,7 @@ import { deriveState, type SessionState } from 'dispatch-core/src/state/derive.j
 import {
   CreateSessionRequest,
   PatchStateRequest,
+  type CostInfo,
   type SessionV2,
 } from 'dispatch-core/src/v2/schema.js';
 import { readRegistryV2, writeRegistryV2 } from '../migration/schema-v2.js';
@@ -40,6 +41,30 @@ import type { WatcherManager } from '../watchers/manager.js';
 
 /** fd v1 default. Tracked under DAEMON-F04 threshold-tuning followup. */
 const STALE_THRESHOLD_MS = 30 * 60 * 1000;
+
+/**
+ * Per-session mock CostInfo emitted on every read (MB-F-DAEMON-PLAN-COST-ENDPOINTS,
+ * sess-i parallel-batch-6, operator-arbitrated I-Q5=a).
+ *
+ * Values:
+ *   - usd_today:      0.42  matches packages/dispatch-web/src/components/Layout.tsx:25
+ *                           MOCK_USD_TODAY for visual transition symmetry
+ *   - usd_this_month: 8.17  Phase 1 §3.2 recommendation accepted via Q-I5=a "etc."
+ *   - token_count:    124500
+ *
+ * Deferred to a future batch (Tier-2 followup MB-F-DAEMON-PLAN-COST-REAL-INTEGRATION):
+ * real Anthropic API integration + per-session cost aggregation. Until then, the
+ * daemon returns this constant on every read so the schema/UI surface ships now
+ * without blocking on the real-integration work.
+ *
+ * Drift between this constant and probe-08/probe-09 EXPECTED_MOCK_COST_INFO will
+ * fail those tests — they are the regression shield for the contract.
+ */
+const MOCK_COST_INFO: CostInfo = {
+  usd_today: 0.42,
+  usd_this_month: 8.17,
+  token_count: 124_500,
+};
 
 export interface SessionsRoutesDeps {
   registryPath?: string;
@@ -78,7 +103,16 @@ export async function registerSessionsReadRoutes(
     const entries = await Promise.all(
       Object.entries(registry.sessions).map(async ([name, session]) => {
         const computed_status = await deriveComputedStatus(session, now);
-        return { name, ...session, computed_status };
+        // session.plan_info propagates via the spread when present
+        // (optional per Q-I3=a); cost_info attached unconditionally
+        // per Q-I5=a (request-time computed mock until real Anthropic
+        // API integration lands in a future batch).
+        return {
+          name,
+          ...session,
+          computed_status,
+          cost_info: MOCK_COST_INFO,
+        };
       }),
     );
     entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -97,12 +131,17 @@ export async function registerSessionsReadRoutes(
       }
       const now = new Date();
       const computed_status = await deriveComputedStatus(session, now);
+      // session.plan_info propagates via the spread when present
+      // (optional per Q-I3=a); cost_info attached unconditionally
+      // per Q-I5=a (mock values; real integration deferred to
+      // Tier-2 followup MB-F-DAEMON-PLAN-COST-REAL-INTEGRATION).
       return {
         name,
         ...session,
         computed_status,
         status_json: null,
         recent_events: [],
+        cost_info: MOCK_COST_INFO,
       };
     },
   );
