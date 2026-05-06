@@ -8,6 +8,7 @@ import { InBannerHost } from './InBannerHost.js';
 import { SendModal } from './SendModal.js';
 import { PlanRing } from './PlanRing.js';
 import { CostPill } from './CostPill.js';
+import { OrchestratorCardsExtras } from '../orchestrator-cards/orchestrator-cards-extras.js';
 
 // Phase 2 Step 5 (parallel-batch-2 / sess-1/dispatch-web-ui).
 // MOCK constants for header plan ring + cost pill. Daemon does not
@@ -41,7 +42,7 @@ export function Layout(): ReactNode {
 
       <main className="flex flex-col flex-1 overflow-hidden lg:grid lg:grid-cols-[60%_40%]">
         <PanelErrorBoundary name="Sessions">
-          <SessionListPanel />
+          <SessionListPanel extras={<OrchestratorCardsExtras />} />
         </PanelErrorBoundary>
         <PanelErrorBoundary name="Session detail">
           <FocusedDetailPanel />

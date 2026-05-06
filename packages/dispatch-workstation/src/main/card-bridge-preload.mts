@@ -29,8 +29,20 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { makeCardBridge, type CardBridgeIpc } from './card-bridge.js';
 
+// MB-T07 Phase 2 WB1-4: subscribe-side adapter. ipcRenderer.on /
+// removeListener handle the Shell→Webview envelopes (orchestrator-card-
+// rendered / -superseded / -update) that coarchitect-ipc.ts broadcasts
+// via webContents.send. The bridge factory wraps these in the operator-
+// facing onCardRendered/onCardSuperseded/onCardUpdate methods that the
+// dispatch-web useOrchestratorCards hook subscribes to.
 const ipcAdapter: CardBridgeIpc = {
   send: (channel, ...args) => ipcRenderer.send(channel, ...args),
+  on: (channel, listener) => {
+    ipcRenderer.on(channel, listener);
+  },
+  removeListener: (channel, listener) => {
+    ipcRenderer.removeListener(channel, listener);
+  },
 };
 
 contextBridge.exposeInMainWorld('cardBridge', makeCardBridge(ipcAdapter));

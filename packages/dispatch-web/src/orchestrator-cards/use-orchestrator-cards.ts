@@ -9,8 +9,18 @@
 // When window.cardBridge is undefined (dispatch-web standalone in
 // browser dev), the hook returns empty buckets so the UI renders
 // without IPC connectivity.
+//
+// Phase 2 WB3 extension (operator A4 — local optimistic dismiss):
+// The hook also exposes approve/decline/multiChoiceSelect action
+// handlers. Each handler emits the IPC envelope to window.cardBridge
+// AND dispatches the local 'dismissed' action so the card disappears
+// from the awaiting bucket immediately, without waiting for any
+// shell echo. The audit-row write happens asynchronously on the
+// shell side via card-ipc.ts; the optimistic UI flip is independent
+// of that durability guarantee per A5 (audit row written; action
+// execution deferred to MB-T11).
 
-import { useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useReducer } from 'react';
 import {
   cardStateReducer,
   initialCardState,
@@ -18,6 +28,9 @@ import {
   type CardLifecycleStatus,
 } from './card-state.js';
 import {
+  emitCardApproved,
+  emitCardDeclined,
+  emitMultiChoiceSelected,
   subscribeCardRendered,
   subscribeCardSuperseded,
   subscribeCardUpdate,
@@ -38,6 +51,16 @@ export interface OrchestratorCardEntry extends CardEntry {
 export interface OrchestratorCardsBuckets {
   awaiting: OrchestratorCardEntry[];
   stale: OrchestratorCardEntry[];
+  /** Approve: emits card-approved envelope + locally dismisses the card. */
+  approve: (card_id: string, free_form_text: string) => void;
+  /** Decline: emits card-declined envelope + locally dismisses the card. */
+  decline: (card_id: string, reason: string) => void;
+  /** Multi-choice: emits multi-choice-selected envelope + locally dismisses. */
+  multiChoiceSelect: (
+    card_id: string,
+    selected_index: number,
+    free_form_text: string | null,
+  ) => void;
 }
 
 export function useOrchestratorCards(): OrchestratorCardsBuckets {
@@ -69,6 +92,34 @@ export function useOrchestratorCards(): OrchestratorCardsBuckets {
     };
   }, []);
 
+  const approve = useCallback(
+    (card_id: string, free_form_text: string): void => {
+      emitCardApproved(card_id, free_form_text);
+      dispatch({ type: 'dismissed', card_id });
+    },
+    [],
+  );
+
+  const decline = useCallback(
+    (card_id: string, reason: string): void => {
+      emitCardDeclined(card_id, reason);
+      dispatch({ type: 'dismissed', card_id });
+    },
+    [],
+  );
+
+  const multiChoiceSelect = useCallback(
+    (
+      card_id: string,
+      selected_index: number,
+      free_form_text: string | null,
+    ): void => {
+      emitMultiChoiceSelected(card_id, selected_index, free_form_text);
+      dispatch({ type: 'dismissed', card_id });
+    },
+    [],
+  );
+
   const awaiting: OrchestratorCardEntry[] = [];
   const stale: OrchestratorCardEntry[] = [];
   for (const [card_id, entry] of state.cards) {
@@ -79,5 +130,5 @@ export function useOrchestratorCards(): OrchestratorCardsBuckets {
     // Dismissed cards intentionally drop out of the visible buckets
     // here; the parent owns dismissed-tail rendering if any.
   }
-  return { awaiting, stale };
+  return { awaiting, stale, approve, decline, multiChoiceSelect };
 }

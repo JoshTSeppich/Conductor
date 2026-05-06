@@ -2220,3 +2220,140 @@ to KNOWN-decision per operator's pre-Phase-2 ack:
    per §7.4; suite-mode probe-infrastructure documented as
    known-issue with operator re-verification step.
 
+
+---
+
+## Finding #110 — MB-F-MB-T07-RESOLVED
+
+**Date filed:** 2026-05-05
+**Tier:** ticket-close
+**Origin:** Session 2 Phase 2 close (parallel-batch-2 / sess-2/mb-t07-kanban-cards)
+**Discovered by:** N/A (this is a ticket-closure record)
+**Resolution status:** RESOLVED at sess-2/mb-t07-kanban-cards HEAD `2e07f14` (REPORT.md commit); branch awaits operator merge.
+
+**Summary.** MB-T07 (Kanban-card rendering + approval semantics) is RESOLVED end-to-end across the workstation main process, the daemon audit endpoint, and the dispatch-web React tree mounted into the kanban webview. V3_TICKETS §198 acceptance ladder reaches its top: orchestrator output → F5 router/emitter → Shell→Webview broadcast → cardBridge subscribe → useOrchestratorCards reducer → OrchestratorCardsExtras render → SessionListPanel.extras mount.
+
+**Sub-findings (G1–G10 from Phase 1 §11):**
+- §G1 CardBridge name mismatch: RESOLVED at `e440420`.
+- §G2 Preload subscribe wiring: RESOLVED at `e440420`.
+- §G3 Mount integration: RESOLVED at `2b0b0be` (mount via SessionListPanel.extras per Option D).
+- §G4 Optimistic dismiss flow: RESOLVED at `c80ea40`.
+- §G5 Supersede emission: RESOLVED at `c9b5011` (emit ordering per A6).
+- §G6 Column collision: reframed via A3 re-arbitration (extras-renders-both-buckets).
+- §G7 territory: A1 confirmed in-place at `orchestrator-cards/`.
+- §G8 Action-fire scope: A5 deferred to MB-T11.
+- §G9 Fix-92 sentinel: preserved verbatim through preload edits.
+- §G10 build script: required no changes.
+
+**Test counts at close (KNOWN by direct vitest run).**
+- `packages/dispatch-workstation` wiring-cards: 10 files / 67 tests pass.
+- `packages/dispatch-web`: 46 files / 278 tests pass.
+- `tsc --noEmit` clean on both packages.
+- `node packages/dispatch-workstation/scripts/build-card-bridge.mjs`: emits 1.7kb cjs bundle.
+
+**Aggregate report.** `docs/coordination/sess-2-mb-t07-REPORT.md` (commit `2e07f14`) carries the full WB1–WB5 commit ladder, file-touched per-path discipline trail, pipeline shape diagram, halt trail, and confidence audit per claim.
+
+**Confidence:** KNOWN.
+
+---
+
+## Finding #111 — MB-F-MB-T07-CARDBRIDGE-INTERFACE-DRIFT-RESOLVED
+
+**Date filed:** 2026-05-05
+**Tier:** 1 (production-runtime defect — pre-Phase-2)
+**Origin:** Phase 1 §G1 + §G2 of `/tmp/sess-2-mb-t07-kanban-cards-diagnose.md`
+**Discovered by:** Session 2 Phase 1 scout
+**Resolution status:** RESOLVED at commit `e440420` (WB1-3+4 GREEN).
+
+**Symptom.** Pre-Phase-2 production runtime: every operator click on an OrchestratorCard pill would have thrown TypeError "cardBridge.approve is not a function" because the shell-side `makeCardBridge` factory exposed `emitCardApproved/emitCardDeclined/emitMultiChoiceSelected` while the web-side helpers in `card-ipc-bridge.ts:87-133` called `bridge.approve(...)`, `bridge.decline(...)`, `bridge.multiChoiceSelect(...)`. Subscribe-side was strictly worse: `bridge.onCardRendered/onCardSuperseded/onCardUpdate` did not exist on the shell-exposed object at all, so `useOrchestratorCards`'s subscribe call would throw on first render in production. Unit tests on both sides individually passed because each side mocked the bridge in its own preferred shape; no integration test caught the cross-side mismatch.
+
+**Root cause.** Cluster 5 cardBridge interface drift: shell side and web side were authored independently against the same conceptual contract but with different naming conventions, and no integration test composed both. The shell tests at `test_card_bridge_factory.spec.ts` asserted shell's emit-prefixed names; the web tests at `mb-t07-approve-fires-action.test.tsx` constructed fakes with web's unprefixed names. Both passed; production would have crashed.
+
+**Resolution.**
+1. Renamed shell-side methods to canonical web names (`approve/decline/multiChoiceSelect`) — operator A7 ratified the rename direction.
+2. Added subscribe methods (`onCardRendered/onCardSuperseded/onCardUpdate`) returning `Cleanup` closures.
+3. Expanded `CardBridgeIpc` to require `on` and `removeListener`; updated `card-bridge-preload.mts` ipcAdapter to provide them via `ipcRenderer.on/removeListener`.
+4. Wire envelope shapes (`ApprovedEnvelope/DeclinedEnvelope/MultiChoiceSelectedEnvelope` + `CardRenderedPayload/CardSupersededPayload/CardUpdatePayload`) match the web-side declarations verbatim.
+5. WB1-1 (10 tests) and WB1-2 (7 tests) pin both surfaces; existing `test_card_bridge_factory.spec.ts` refactored to use canonical names (4 tests).
+
+**Methodology lesson.** Cross-package interface contracts need integration tests, not just per-side unit tests. Every interface defined in two places (here: `CardBridge` declared in both `dispatch-workstation/src/main/card-bridge.ts` and `dispatch-web/src/orchestrator-cards/card-ipc-bridge.ts`) is at risk of drift. A single integration test that imports both factories and calls them through the same window.cardBridge object would have caught this at first runtime; the absence of such a test was the load-bearing gap.
+
+**Followup recommendation.** File a Tier 2 followup to add an integration smoke test that boots the preload bundle (`dist/main/card-bridge.cjs`) and asserts the exposed `cardBridge` shape matches the web-side `CardBridge` interface structurally. This would catch future drift even without per-side test coverage.
+
+**Confidence:** KNOWN (verified by 17 RED→GREEN tests across the rename cycle).
+
+---
+
+## Finding #112 — MB-F-MB-T07-F5-SUPERSEDE-EMIT-WIRED
+
+**Date filed:** 2026-05-05
+**Tier:** 2 (UX-fidelity gap — pre-Phase-2)
+**Origin:** Phase 1 §G5 of `/tmp/sess-2-mb-t07-kanban-cards-diagnose.md`
+**Discovered by:** Session 2 Phase 1 scout
+**Resolution status:** RESOLVED at commit `c9b5011` (WB2-7 GREEN).
+
+**Symptom.** Pre-Phase-2: `coarchitect-ipc.ts` F5 region only emitted `orchestrator-card-rendered` to webContents. The web-side `useOrchestratorCards` hook subscribed to `orchestrator-card-superseded` (per `card-state.ts:60-70`) but the shell never broadcast that envelope, so V3_TICKETS §198 "stale rollover" acceptance was unreachable. Cards with `superseded_card_ids` would land as new awaiting cards while the prior cards stayed visible in awaiting indefinitely.
+
+**Root cause.** F5 emit logic was implemented for the rendered envelope only when card-flow was initially wired (commit `b45b93b` MB-T07 GREEN). The supersede envelope was declared in `card-ipc-bridge.ts:27-31` and consumed by the reducer but never produced.
+
+**Resolution.**
+1. Extracted F5 emit logic to a pure helper `emitCardEnvelopes(decision: RouteDecision, emitter: CardEmitter)` in `packages/dispatch-workstation/src/main/orchestrator-card-emitter.ts`.
+2. Per operator A6: when a new card has non-empty `superseded_card_ids`, emit `orchestrator-card-superseded` BEFORE `orchestrator-card-rendered`. This ordering means the web reducer marks prior cards stale before the new card lands as awaiting — eliminates a render flash.
+3. `coarchitect-ipc.ts` F5 region now wraps `allWebContents.getAllWebContents()` into a `CardEmitter` and calls `emitCardEnvelopes(decision, broadcaster)`.
+4. WB2-6 (7 tests) pins ordering + supersede payload shape; WB4-14 (5 tests) covers the orchestrator-JSON → router → emitter pipeline composition.
+
+**Confidence:** KNOWN.
+
+---
+
+## Finding #113 — MB-F-MB-T07-OPTIMISTIC-DISMISS-WIRED
+
+**Date filed:** 2026-05-05
+**Tier:** 2 (UX-fidelity gap — pre-Phase-2)
+**Origin:** Phase 1 §G4 of `/tmp/sess-2-mb-t07-kanban-cards-diagnose.md`
+**Discovered by:** Session 2 Phase 1 scout
+**Resolution status:** RESOLVED at commit `c80ea40` (WB3-9 GREEN).
+
+**Symptom.** Pre-Phase-2: `cardStateReducer` had a `dismissed` action defined (`card-state.ts:39-40, 88-95`) but no caller ever dispatched it. After `emitCardDeclined` or `emitCardApproved`, the card stayed in the `awaiting` bucket indefinitely until something external superseded it. The operator would see the audit-row write succeed at the daemon while the UI continued to show the approved/declined card as awaiting — interpretable as "click did nothing" without operator-visible feedback.
+
+**Root cause.** Phase 1 design assumed shell-echo on audit POST success would drive dismiss. No echo was wired; reducer's dismiss path never activated.
+
+**Resolution.** Per operator A4 (local optimistic dispatch on click):
+1. `useOrchestratorCards()` extended to expose `approve/decline/multiChoiceSelect` action handlers alongside the `{awaiting, stale}` buckets.
+2. Each handler emits the IPC envelope to `window.cardBridge` AND dispatches `{type: 'dismissed', card_id}` to the local reducer — so the card disappears from the awaiting bucket immediately, independent of audit-row durability.
+3. Operator A5 ratifies that the audit row is the durable record; UI flip is independent.
+4. WB3-8 (9 tests) pins the optimistic-dismiss + emit-envelope contract.
+
+**Connection to A5 + MB-T11.** A5 confirms action execution remains deferred to MB-T11 — the optimistic dismiss does NOT imply the action fired; only that the operator's intent was captured (audit row + UI flip). MB-T11 will wire actual side effects (file writes, session spawn-from-card, etc).
+
+**Confidence:** KNOWN.
+
+---
+
+## Finding #114 — MB-F-MB-T07-MOUNT-INTEGRATION-VIA-EXTRAS-SLOT
+
+**Date filed:** 2026-05-05
+**Tier:** 1 (acceptance-blocking — pre-WB5)
+**Origin:** Phase 1 §G3 + scaffold §8.4 A2 + WB5 halt at `/tmp/sess-2-mb-t07-wb5-halt.md`
+**Discovered by:** Session 2 Phase 1 scout (G3); Session 2 WB5-15 (A2-vs-reality)
+**Resolution status:** RESOLVED at commit `2b0b0be` (WB5-16 GREEN) per operator's Option D arbitration.
+
+**Symptom.** Pre-Phase-2: every layer downstream of the React mount was wired (bridge subscribe, IPC, audit POST, reducer, optimistic dismiss, supersede pipeline, lane rendering) but `OrchestratorCardsLane` was unmounted in the React tree. Operators would see no orchestrator cards in the kanban regardless of orchestrator output.
+
+**Cross-session A2-vs-reality complication (surfaced at WB5-15).** Operator brief A2 said Session 1 would add an extras slot to `KanbanColumn.tsx`. Session 1 instead refactored to `SessionListPanel.tsx` (commit `387ed6d`) and put the extras slot there (commit `0279439`). KanbanColumn.tsx was untouched. Additionally, `SessionListPanel`'s M2 taxonomy (Active / Done / Idle) has no Stale column, so operator A3 ("shared Stale column with sessions; blue tint disambiguates") could not apply directly. WB5-15 took a HALT and surfaced three resolution options (A: edit Layout.tsx, B: edit App.tsx, C: HOLD).
+
+**Resolution per operator's Option D.** Session 1 having merged dissolved the cross-session territory restriction. Re-arbitrations:
+1. **A2 corrected:** mount target is `SessionListPanel.extras` (Session 1's actual ship). Session 2 fills via Layout.tsx edit (~3 LOC).
+2. **A3 corrected:** "extras-renders-both-buckets-above-session-list" pattern. Visual disambiguation between orchestrator cards and CC-session cards comes from the existing blue tint on `OrchestratorCard` root (`orchestrator-card.tsx:53-54`), independent of column placement.
+
+**Implementation.**
+1. New wrapper `packages/dispatch-web/src/orchestrator-cards/orchestrator-cards-extras.tsx` (76 LOC) renders awaiting + stale lanes as one ReactNode for the single-ReactNode extras prop. Renders `OrchestratorCard` directly per-entry to bind `card_id` into the click closures (the lane API forwards single-arg callbacks that can't carry card_id).
+2. `Layout.tsx` 2-line edit: `<SessionListPanel extras={<OrchestratorCardsExtras />} />`.
+3. WB5-17 mount integration test (6 tests) pins the wrapper render contract + Layout extras-prop forwarding.
+
+**Methodology lesson — territory contracts under partial concurrent shipping.**
+- Original A2 (KanbanColumn-extras) was a sound design, but Session 1's refactor invalidated the literal target while preserving the spirit. Sessions on parallel branches need a mechanism to renegotiate territory contracts when an upstream session reshapes the target surface. The cooperative pattern Session 1 used here (explicit comment in `SessionListPanel.tsx:54-62` naming MB-T07 as the intended consumer) is the right primitive.
+- The WB5-15 halt was correct discipline. Surfacing A2-vs-reality to the operator before any cross-territory edit preserved the §3.7 pre-registration boundary even though the resolution was "obvious" from Session 1's slot-comment context.
+
+**Confidence:** KNOWN (mount integration test coverage at WB5-17; visual-side smoke not yet run — the workstation `pnpm dev` smoke test is not part of this finding's evidence chain because the dev-server-vs-prod gating per Finding #68 means Session 2 cannot reliably exercise it).
+
