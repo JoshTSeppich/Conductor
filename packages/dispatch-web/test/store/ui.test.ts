@@ -233,4 +233,26 @@ describe('WEB-T05 Zustand store', () => {
     expect((events[0].data as { sha: string }).sha).toBe('sha5');
     expect((events[99].data as { sha: string }).sha).toBe('sha104');
   });
+
+  // Phase 2 Step 1 (parallel-batch-2 / sess-1/dispatch-web-ui).
+  // sessionListFilter slot for FilterChips component (Category A
+  // wireframe: "All / Running / Trouble" chips above session list).
+  // 'trouble' = computed_status === 'stale' per operator-default
+  // arbitration §7.3 (cairn-violation history not yet queryable
+  // per-session in a useful way; SessionResponseV2.recent_events
+  // is bounded 50 — keep filter simple for v0).
+  describe('sessionListFilter (Phase 2 Step 1)', () => {
+    it('defaults to "all"', () => {
+      expect(useUIStore.getState().sessionListFilter).toBe('all');
+    });
+
+    it('setSessionListFilter updates slot for each enum value', () => {
+      useUIStore.getState().setSessionListFilter('running');
+      expect(useUIStore.getState().sessionListFilter).toBe('running');
+      useUIStore.getState().setSessionListFilter('trouble');
+      expect(useUIStore.getState().sessionListFilter).toBe('trouble');
+      useUIStore.getState().setSessionListFilter('all');
+      expect(useUIStore.getState().sessionListFilter).toBe('all');
+    });
+  });
 });
