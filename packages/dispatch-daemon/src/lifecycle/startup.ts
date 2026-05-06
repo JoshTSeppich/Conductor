@@ -61,6 +61,7 @@ import { registerOrchestratorAuditRoutes } from '../routes/v3/orchestrator-audit
 import { registerOrchestratorHistoryRoutes } from '../routes/v3/orchestrator-history.js';
 import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
 import { registerTicketsStateRoutes } from '../routes/v3/tickets-state.js';
+import { registerContextSnapshotRoutes } from '../routes/v3/context-snapshot.js';
 import { registerConsoleRoutes } from '../routes/v3/console.js';
 import { pasteRawBytes as defaultPasteRawBytes } from '../console/paste-raw-bytes.js';
 import { defaultAttachStream } from '../console/pipe-pane-stream.js';
@@ -409,6 +410,18 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // MB-S03 §6 (composite PK upsert; build_doc_id REQUIRED on single
   // GET).
   await registerTicketsStateRoutes(app, { db });
+
+  // MB-T10: GET /v3/sessions/:name/context-snapshot per
+  // CONDUCTOR_V3_RESCOPE.md §3.5 + §4. Per-session observability
+  // slice (recent HANDOFF tail, recent console tail, MB-T11
+  // placeholders) consumed by the workstation context-builder's
+  // Tier 4 (spawnedSessions). Registered after tickets-state per
+  // Q-MBT10-3=b for consistent /v3/* grouping. Auth-gated via the
+  // same onRequest hook as the rest of /v3/*.
+  await registerContextSnapshotRoutes(app, {
+    registryPath: opts.registryPath,
+    db,
+  });
 
   // CONSOLE-T01: /v3/sessions/:name/console/* surface per
   // CONDUCTOR_API_CONTRACT.md §4.7 (frozen at a7e8d4f, v2.2.0).
