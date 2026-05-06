@@ -108,6 +108,21 @@ function MockSummaryRow({
   );
 }
 
+/**
+ * Renders the focused-session detail surface inside Layout's 60/40
+ * grid (lg: breakpoint). Click-driven via UI-store focusedSessionName
+ * subscription. Surfaces the Standard bundle:
+ *   - Model chip          (MOCK, data-mock="true" on chip span)
+ *   - Status              (REAL, computed_status)
+ *   - Last activity       (REAL, max of last_prompt_sent_at /
+ *                          last_handoff_pulled_at; DASH when both null)
+ *   - Plan summary        (MOCK, data-mock="true" on row wrapper)
+ *   - Cost summary        (MOCK, data-mock="true" on row wrapper)
+ *   - Recent stdout (10)  (MOCK, data-mock="true" on snippet wrapper)
+ * StateControlCluster + SendButton + PullButton render at the bottom
+ * as the operator-action surface (preserved across refactor; their
+ * APIs are frozen for this batch).
+ */
 export function FocusedDetailPanel(): ReactNode {
   const focusedName = useUIStore((s) => s.focusedSessionName);
   // useSession with empty name is disabled (T04 enabled: name.length > 0)
