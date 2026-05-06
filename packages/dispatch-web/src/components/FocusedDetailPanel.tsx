@@ -27,15 +27,15 @@ const MOCK_COST_SUMMARY = '$0.42 today • $3.17 this week';
 // on the wrapper is the dev-tools fake-marker; visual plausibility is
 // the design goal so layout testing reflects realistic line lengths.
 const MOCK_STDOUT_LINES: readonly string[] = [
-  '[12:34:56] cc: applied edit FocusedDetailPanel.tsx:130-150',
+  '[12:34:56] cc: refactor FocusedDetailPanel success branch',
   '[12:34:57] vitest run test/focused-detail.test.tsx',
-  '[12:34:58] ✓ 8 tests passed',
+  '[12:34:58] ✓ 11 tests passed (1 file)',
   '[12:34:59] tsc --noEmit packages/dispatch-web',
-  '[12:35:00] git add packages/dispatch-web/src/components/FocusedDetailPanel.tsx',
-  '[12:35:01] git commit -m "green(MB-F-DETAIL-PANE): WB3 — mock field renderers"',
-  '[12:35:02] git push origin sess-b/detail-pane-rearb',
-  '[12:35:03] cc: handoff written /test/HANDOFF.md',
-  '[12:35:04] cc: status_json updated phase=mock-fields-shipped',
+  '[12:35:00] eslint --fix packages/dispatch-web/src/components',
+  '[12:35:01] git add packages/dispatch-web/src/components/FocusedDetailPanel.tsx',
+  '[12:35:02] git commit -m "green(MB-F-DETAIL-PANE): WB3 mock fields"',
+  '[12:35:03] git push origin sess-b/detail-pane-rearb',
+  '[12:35:04] cc: handoff written /test/HANDOFF.md',
   '[12:35:05] cc: idle, awaiting next prompt',
 ];
 
