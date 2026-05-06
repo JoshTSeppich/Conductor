@@ -4,6 +4,7 @@ import type {
   State,
 } from 'dispatch-core/src/v2/schema.js';
 import { formatAge } from '../utils/format-age.js';
+import { useUIStore } from '../store/ui.js';
 
 // formatAge re-exported for consumers that imported from here pre-T12.
 // New consumers should import from '../utils/format-age.js' directly.
@@ -44,6 +45,23 @@ const COMPUTED_STATUS_TINT_CLASSES: Record<string, string> = {
   idle: 'border-l-status-idle',
 };
 
+// Phase 2 Step 6 — status-dot palette reuses the same T07 oklch
+// tokens as the left-border tint, just on bg- side. Keeps a single
+// source of truth for the status color in src/styles/tokens.css.
+const COMPUTED_STATUS_DOT_CLASSES: Record<string, string> = {
+  awaiting_review: 'bg-status-awaiting-review',
+  stale: 'bg-status-stale',
+  running: 'bg-status-running',
+  idle: 'bg-status-idle',
+};
+
+// Inline POSIX-style basename. cwd from daemon is always absolute
+// per CONDUCTOR_API_CONTRACT §4.2 examples; defensive fallback to
+// the raw string keeps render safe if a future cwd shape surprises.
+function basename(p: string): string {
+  return p.split('/').filter(Boolean).pop() ?? p;
+}
+
 export interface SessionCardProps {
   name: string;
   session: SessionResponseV2Type;
@@ -54,11 +72,17 @@ export interface SessionCardProps {
 // via useFocusFromHash() hook. Between T10 ship and T11 ship, cards
 // render but don't respond to clicks (no onClick passed). Intentional
 // layer separation.
+//
+// Phase 2 Step 6 enrichment: status dot + repo·branch sub-line.
+// Branch sourced from store (commit_landed event-driven ring buffer
+// via applyCommitEvent). Repo derived from cwd basename per §7.6
+// operator-default arbitration.
 export function SessionCard({
   name,
   session,
   onClick,
 }: SessionCardProps): ReactNode {
+  const branch = useUIStore((s) => s.commitBySession[name]?.branch ?? null);
   const ageMs = latestActionMs(session);
   // null age (fresh session, no prompts/pulls yet) → em dash per
   // operator's weak preference. Lighter than "never"; universal
@@ -67,6 +91,10 @@ export function SessionCard({
   const stateBadge = STATE_BADGE_CLASSES[session.state];
   const computedTint =
     COMPUTED_STATUS_TINT_CLASSES[session.computed_status] ?? '';
+  const dotClass =
+    COMPUTED_STATUS_DOT_CLASSES[session.computed_status] ?? 'bg-gray-300';
+  const repo = basename(session.cwd);
+  const branchText = branch ?? '—';
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>): void {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -84,13 +112,22 @@ export function SessionCard({
       onKeyDown={handleKeyDown}
       className={`p-2 bg-white dark:bg-gray-900 rounded shadow border border-gray-200 dark:border-gray-700 border-l-4 ${computedTint} cursor-pointer focus:outline focus:outline-2 focus:outline-blue-500`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-sm truncate">{name}</span>
+      <div className="flex items-center gap-2">
+        <span
+          data-testid="session-status-dot"
+          aria-hidden="true"
+          title={session.computed_status}
+          className={`inline-block w-2 h-2 rounded-full ${dotClass}`}
+        />
+        <span className="font-medium text-sm truncate flex-1">{name}</span>
         <span className={`text-xs px-1.5 py-0.5 rounded ${stateBadge}`}>
           {session.state.toUpperCase()}
         </span>
       </div>
-      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex justify-between">
+      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+        {repo} · {branchText}
+      </div>
+      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex justify-between">
         <span className="truncate">{session.tmux_target}</span>
         <span>{ageText}</span>
       </div>
