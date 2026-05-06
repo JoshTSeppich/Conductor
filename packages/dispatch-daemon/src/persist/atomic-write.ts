@@ -13,16 +13,19 @@
  *      renamed-but-zero-content file (Phase 1 §1.3 #1).
  *   6. Close the FileHandle.
  *   7. Rename `<path>.tmp` → `<path>` (atomic at the directory entry).
- *
- * Post-write re-read + retry-from-input lands in WB3.
+ *   8. Read the target back, JSON.parse, re-validate. If parse or
+ *      validate fails, retry the entire 3-7 sequence up to
+ *      `opts.retries` times (default 3). Throws after exhaustion.
+ *      Defends against bytes-on-disk ≠ bytes-written corner cases
+ *      and concurrent writers (re-write our value).
  *
  * The same recipe already lives inline in
- * migration/schema-v2.ts:writeRegistryV2 (without fsync) and
- * dispatch-core/src/registry/write.ts:writeRegistry; WB6 routes the
- * daemon's writeRegistryV2 through this helper.
+ * migration/schema-v2.ts:writeRegistryV2 (without fsync, without
+ * readback) and dispatch-core/src/registry/write.ts:writeRegistry;
+ * WB6 routes the daemon's writeRegistryV2 through this helper.
  */
 
-import { mkdir, open, rename } from 'node:fs/promises';
+import { mkdir, open, readFile, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 export interface WriteAtomicJsonOpts<T> {
@@ -30,7 +33,10 @@ export interface WriteAtomicJsonOpts<T> {
   validate?: (v: unknown) => T;
   /** fsync the FileHandle before close + rename. Default true. */
   fsync?: boolean;
-  /** Reserved for WB3. Default 3 once WB3 lands. */
+  /**
+   * Re-read + re-validate after rename. On failure, repeat the entire
+   * write cycle up to N times. Default 3. Pass 0 to disable readback.
+   */
   retries?: number;
 }
 
@@ -46,14 +52,36 @@ export async function writeAtomicJson<T>(
 
   const tmp = `${path}.tmp`;
   const body = `${JSON.stringify(value, null, 2)}\n`;
-  const handle = await open(tmp, 'w');
-  try {
-    await handle.write(body, 0, 'utf8');
-    if (opts.fsync !== false) {
-      await handle.sync();
+  const maxAttempts = (opts.retries ?? 3) + 1;
+  let lastErr: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const handle = await open(tmp, 'w');
+    try {
+      await handle.write(body, 0, 'utf8');
+      if (opts.fsync !== false) {
+        await handle.sync();
+      }
+    } finally {
+      await handle.close();
     }
-  } finally {
-    await handle.close();
+    await rename(tmp, path);
+
+    if (opts.retries === 0) {
+      return;
+    }
+
+    try {
+      const raw = await readFile(path, 'utf8');
+      const parsed: unknown = JSON.parse(raw);
+      validate(parsed);
+      return;
+    } catch (err) {
+      lastErr = err as Error;
+    }
   }
-  await rename(tmp, path);
+
+  throw new Error(
+    `writeAtomicJson at ${path} failed readback after ${maxAttempts} attempts: ${lastErr?.message ?? 'unknown error'}`,
+  );
 }
