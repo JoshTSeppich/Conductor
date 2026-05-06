@@ -577,6 +577,50 @@ process.stdin.on('data', (chunk: string | Buffer) => {
     }
     // === END: Probe-92 obs-infra — KANBAN_EVAL stdin handler ===
 
+    // === BEGIN: Session 3 SHELL_EVAL stdin handler (do not modify outside this block) ===
+    // SHELL_EVAL <id>|<code> — runs <code> via executeJavaScript on the
+    // shell webContents (mainWindow.webContents) and emits SHELL_EVAL_RESULT
+    // <id> <json> to stdout where <json> is { ok: true, result } | { ok:
+    // false, error: string }. Direct parallel of KANBAN_EVAL above but
+    // targets the shell webview (workstation-shell.html) instead of the
+    // embedded kanban <webview>. Used by Session-3 P1 ConsolePanel-mount
+    // probe to read shell DOM and drive consoleBridge from the renderer.
+    // Pipe separator survives shell paths / JSON intact (same convention
+    // as FILL_AND_SUBMIT_SPAWN / KANBAN_EVAL).
+    // Production: gate unreachable (already inside MB_TEST_HOOKS=1 block).
+    const shellEvalMatch = /^SHELL_EVAL ([^|]+)\|(.+)$/.exec(line);
+    if (shellEvalMatch) {
+      const id = shellEvalMatch[1];
+      const code = shellEvalMatch[2];
+      const wc = mainWindow?.webContents;
+      if (!wc || wc.isDestroyed()) {
+        process.stdout.write(
+          `SHELL_EVAL_RESULT ${id} ${JSON.stringify({
+            ok: false,
+            error: 'shell-not-attached',
+          })}\n`,
+        );
+        return;
+      }
+      wc.executeJavaScript(code, true).then(
+        (result: unknown) => {
+          process.stdout.write(
+            `SHELL_EVAL_RESULT ${id} ${JSON.stringify({ ok: true, result })}\n`,
+          );
+        },
+        (err: Error) => {
+          process.stdout.write(
+            `SHELL_EVAL_RESULT ${id} ${JSON.stringify({
+              ok: false,
+              error: err.message,
+            })}\n`,
+          );
+        },
+      );
+      return;
+    }
+    // === END: Session 3 SHELL_EVAL stdin handler ===
+
     // === BEGIN: Fix-89 test hook (cairn finding #89, do not modify outside this block) ===
     // REFRESH_CONSOLE_MENU <comma,separated,names> — drives refreshConsoleMenu
     // directly so the fix-89 integration test (test/integration/fix-89-menu-
