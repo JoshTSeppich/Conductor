@@ -1,12 +1,8 @@
 import type { ReactNode } from 'react';
-import type {
-  SessionResponseV2Type,
-  StatusJson,
-} from 'dispatch-core/src/v2/schema.js';
+import type { SessionResponseV2Type } from 'dispatch-core/src/v2/schema.js';
 import { useUIStore } from '../store/ui.js';
 import { useSession } from '../query/useSession.js';
 import { formatAge } from '../utils/format-age.js';
-import type { CommitEntry } from '../store/ui.js';
 import { StateControlCluster } from './StateControlCluster.js';
 import { SendButton } from './SendButton.js';
 import { PullButton } from './PullButton.js';
@@ -27,45 +23,9 @@ function latestActionMs(session: SessionResponseV2Type): number | null {
   return candidates.length === 0 ? null : Math.max(...candidates);
 }
 
-function formatLastAction(session: SessionResponseV2Type): string {
+function formatLastActivity(session: SessionResponseV2Type): string {
   const ms = latestActionMs(session);
   return ms === null ? DASH : formatAge(Date.now() - ms);
-}
-
-// Per-field nullability per Decision 3: when status_json itself is
-// null OR a specific field within is null, render em dash for that
-// field. Avoids visual instability between sessions.
-function formatTests(statusJson: StatusJson | null): string {
-  if (!statusJson) return DASH;
-  const passing =
-    statusJson.tests_passing === null
-      ? DASH
-      : `${statusJson.tests_passing} passing`;
-  const failing =
-    statusJson.tests_failing === null
-      ? DASH
-      : `${statusJson.tests_failing} failing`;
-  return `${passing} · ${failing}`;
-}
-
-function formatPhase(statusJson: StatusJson | null): string {
-  if (!statusJson) return DASH;
-  return statusJson.phase ?? DASH;
-}
-
-// 3-tier precedence per Decision 2 + TICKETS.md:
-//   1. commitBySession[name] entry (GAP-2 reduce result) → full
-//   2. session.last_commit_sha alone → sha-only fallback
-//   3. neither → em dash
-function formatCommit(
-  commitEntry: CommitEntry | undefined,
-  fallbackSha: string | null,
-): string {
-  if (commitEntry) {
-    return `${commitEntry.sha} — ${commitEntry.subject} (${commitEntry.branch})`;
-  }
-  if (fallbackSha !== null) return fallbackSha;
-  return DASH;
 }
 
 function Row({
@@ -92,7 +52,6 @@ function Row({
 
 export function FocusedDetailPanel(): ReactNode {
   const focusedName = useUIStore((s) => s.focusedSessionName);
-  const commitBySession = useUIStore((s) => s.commitBySession);
   // useSession with empty name is disabled (T04 enabled: name.length > 0)
   const { data, isLoading, isError } = useSession(focusedName ?? '');
 
@@ -124,40 +83,18 @@ export function FocusedDetailPanel(): ReactNode {
     );
   }
 
-  const commitEntry = commitBySession[focusedName];
-
   return wrap(
     <div className="flex flex-col">
       <h2 className="text-base font-bold mb-2">{focusedName}</h2>
-      <Row
-        label="State"
-        value={data.state.toUpperCase()}
-        testId="detail-row-state"
-      />
       <Row
         label="Status"
         value={data.computed_status}
         testId="detail-row-status"
       />
       <Row
-        label="Last commit"
-        value={formatCommit(commitEntry, data.last_commit_sha)}
-        testId="detail-row-commit"
-      />
-      <Row
-        label="Tests"
-        value={formatTests(data.status_json)}
-        testId="detail-row-tests"
-      />
-      <Row
-        label="Phase"
-        value={formatPhase(data.status_json)}
-        testId="detail-row-phase"
-      />
-      <Row
-        label="Last action"
-        value={formatLastAction(data)}
-        testId="detail-row-last-action"
+        label="Last activity"
+        value={formatLastActivity(data)}
+        testId="detail-row-last-activity"
       />
       <StateControlCluster session={data} name={focusedName} />
       <div className="flex gap-2 mt-2">
