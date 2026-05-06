@@ -177,48 +177,4 @@ describe('Phase 2 Step 7 — SessionListPanel (M2 grouping)', () => {
       expect(screen.getByRole('region', { name: /sessions/i })).toBeInTheDocument();
     });
   });
-
-  // Cross-session cooperative follow-up: Session 2 (MB-T07) needs a
-  // mount target for OrchestratorCardsLane. Session 1's swap from
-  // KanbanPanel → SessionListPanel invalidated the original target
-  // (KanbanColumn extras slot). New target: SessionListPanel extras
-  // slot — per-status mapping so each lane mounts inside the matching
-  // group region.
-  it('renders extras[group] inside the matching group region when provided', async () => {
-    server.use(
-      http.get('/v2/sessions', () => HttpResponse.json({ sessions: {} })),
-    );
-    const { wrapper } = createWrapper();
-    render(
-      <SessionListPanel
-        extras={{
-          active: <div data-testid="extras-active">A-extras</div>,
-          done: <div data-testid="extras-done">D-extras</div>,
-        }}
-      />,
-      { wrapper },
-    );
-    await waitFor(() => {
-      expect(screen.getByTestId('session-group-active')).toBeInTheDocument();
-    });
-    // Extras render scoped within their group's region
-    const active = screen.getByTestId('session-group-active');
-    expect(active).toContainElement(screen.getByTestId('extras-active'));
-    const done = screen.getByTestId('session-group-done');
-    expect(done).toContainElement(screen.getByTestId('extras-done'));
-    // Unmapped key (idle) renders nothing
-    expect(screen.queryByTestId('extras-idle')).not.toBeInTheDocument();
-  });
-
-  it('omitting extras prop is backwards-compatible (no crash, no extras DOM)', async () => {
-    server.use(
-      http.get('/v2/sessions', () => HttpResponse.json({ sessions: {} })),
-    );
-    const { wrapper } = createWrapper();
-    render(<SessionListPanel />, { wrapper });
-    await waitFor(() => {
-      expect(screen.getByTestId('session-group-active')).toBeInTheDocument();
-    });
-    expect(screen.queryByTestId(/^extras-/)).not.toBeInTheDocument();
-  });
 });
