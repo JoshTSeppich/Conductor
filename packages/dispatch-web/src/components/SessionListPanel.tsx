@@ -51,7 +51,17 @@ const GROUP_LABELS: Record<Group, string> = {
 
 const GROUPS: ReadonlyArray<Group> = ['active', 'done', 'idle'];
 
-export function SessionListPanel(): ReactNode {
+export interface SessionListPanelProps {
+  /** Optional slot for cross-session mounts (e.g. MB-T07
+   *  OrchestratorCardsLane). Renders at the top of the scrollable
+   *  body, above the session groups. Single ReactNode by design —
+   *  consumer owns the rendering decision. */
+  extras?: ReactNode;
+}
+
+export function SessionListPanel({
+  extras,
+}: SessionListPanelProps = {}): ReactNode {
   const { data } = useSessions();
   const filter = useUIStore((s) => s.sessionListFilter);
   const setFocus = useUIStore((s) => s.setFocus);
@@ -80,6 +90,7 @@ export function SessionListPanel(): ReactNode {
         <FilterChips />
       </header>
       <div className="flex-1 overflow-auto p-3 flex flex-col gap-4">
+        {extras}
         {GROUPS.map((g) => (
           <div key={g} data-testid={`session-group-${g}`}>
             <h3 className="text-xs font-semibold uppercase tracking-wide mb-2 text-gray-700 dark:text-gray-300">
