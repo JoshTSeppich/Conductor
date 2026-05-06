@@ -15,10 +15,11 @@ import { OrchestratorCardsExtras } from '../orchestrator-cards/orchestrator-card
 // expose plan-quota or cost-aggregation endpoints today (verified
 // in /tmp/sess-1-dispatch-web-ui-diagnose.md §2 — zero hits across
 // dispatch-daemon/src/ and dispatch-core/src/). Operator arbitrated
-// option 1 (mock v0). data-mock="true" on the cluster wrapper
-// surfaces this fact in DOM for dev-tools visibility. A finding for
-// daemon plan/cost endpoints will be filed as part of post-batch
-// followup.
+// option 1 (mock v0). Per-field data-mock="true" lives on PlanRing
+// + CostPill roots (sess-b finding #140 §Followups #2) — mirrors
+// FocusedDetailPanel's per-field pattern shipped in batch-4. A
+// finding for daemon plan/cost endpoints will be filed as part of
+// post-batch followup.
 const MOCK_USAGE_PCT = 47;
 const MOCK_RESET_MS = 8_040_000; // 2h 14m — matches wireframe example
 const MOCK_USD_TODAY = 0.42;
@@ -32,7 +33,7 @@ export function Layout(): ReactNode {
     <div className="flex flex-col h-screen font-sans bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <header className="flex items-center justify-between gap-4 px-4 py-2 border-b border-gray-300 bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
         <strong>Foxworks Dispatch Conductor</strong>
-        <div className="flex items-center gap-3" data-mock="true">
+        <div className="flex items-center gap-3">
           <PlanRing usagePct={MOCK_USAGE_PCT} resetMs={MOCK_RESET_MS} />
           <CostPill usdToday={MOCK_USD_TODAY} />
         </div>
