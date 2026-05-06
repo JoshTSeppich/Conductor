@@ -1,6 +1,6 @@
 import type { DaemonClient, ChatMessage, ChatMessageInput } from '../coarchitect/daemon-client.js';
 import type { DaemonAuditClient } from './card-ipc.js';
-import type { OrchestratorAuditWriteRequest } from 'dispatch-core/src/v3/schema.js';
+import type { OrchestratorAuditWriteRequest } from 'dispatch-core/dist/v3/schema.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';

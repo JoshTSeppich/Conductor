@@ -18,12 +18,12 @@ import { ipcMain } from 'electron';
 import {
   WorkstationSessionSendPromptRequestSchema,
   type WorkstationSessionSendPromptReply,
-} from 'dispatch-core/src/v3/schema.js';
-import { serializeEnvelope } from 'dispatch-core/src/v3/envelope-serializer.js';
+} from 'dispatch-core/dist/v3/schema.js';
+import { serializeEnvelope } from 'dispatch-core/dist/v3/envelope-serializer.js';
 import {
   hasSession as coreHasSession,
   sendKeys as coreSendKeys,
-} from 'dispatch-core/src/transport/tmux.js';
+} from 'dispatch-core/dist/transport/tmux.js';
 
 export interface SessionSendPromptDeps {
   /** Returns true iff a tmux session/pane with this name exists. */

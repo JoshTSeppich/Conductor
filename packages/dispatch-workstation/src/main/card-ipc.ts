@@ -24,7 +24,7 @@ import type {
   MultiChoiceCardOutput,
   OrchestratorAuditWriteRequest,
   OperatorResponse,
-} from 'dispatch-core/src/v3/schema.js';
+} from 'dispatch-core/dist/v3/schema.js';
 
 export interface CardContext {
   card_id: string;
