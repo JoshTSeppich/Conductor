@@ -21,6 +21,30 @@ vi.mock('../src/components/KanbanPanel.js', () => ({
   },
 }));
 
+// Phase 2 Step 8 — coexist-with-distinct-mock pattern. Layout's
+// session-list mount is the SessionListPanel after the swap; before
+// the swap Layout still imports KanbanPanel. The data-testid
+// distinguishes which one actually rendered.
+vi.mock('../src/components/SessionListPanel.js', () => ({
+  SessionListPanel: () => {
+    if (mockState.throwIn === 'kanban') {
+      // Reuse the 'kanban' throwIn channel — error-isolation test
+      // asserts on "Sessions failed to render", which is the panel-
+      // name-derived fallback regardless of which component threw.
+      throw new Error('session list panel test error');
+    }
+    return (
+      <section
+        role="region"
+        aria-label="Sessions"
+        data-testid="session-list-panel-mount"
+      >
+        Sessions
+      </section>
+    );
+  },
+}));
+
 vi.mock('../src/components/FocusedDetailPanel.js', () => ({
   FocusedDetailPanel: () => {
     if (mockState.throwIn === 'focused') {
@@ -131,6 +155,18 @@ describe('WEB-T06 Layout', () => {
     it('keeps the Conductor wordmark in header', () => {
       render(<Layout />);
       expect(screen.getByText(/Foxworks Dispatch Conductor/i)).toBeInTheDocument();
+    });
+  });
+
+  // Phase 2 Step 8 — Layout swaps mount from KanbanPanel to
+  // SessionListPanel. Pre-swap: testid absent (KanbanPanel mock has
+  // no testid). Post-swap: testid present.
+  describe('Phase 2 Step 8 — SessionListPanel mount swap', () => {
+    it('mounts SessionListPanel (not KanbanPanel) for the Sessions region', () => {
+      render(<Layout />);
+      expect(
+        screen.getByTestId('session-list-panel-mount'),
+      ).toBeInTheDocument();
     });
   });
 
