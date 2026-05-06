@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 
 // Phase 2 Step 3 (parallel-batch-2 / sess-1/dispatch-web-ui).
 // Wireframe variant C header primitive: circular usage % + reset
-// countdown. Pure presentational; mock-data orchestration lives in
-// Layout (Step 5) so the data-mock marker stays at the source-of-
-// truth boundary.
+// countdown. Pure presentational; mock-data is sourced from Layout,
+// with data-mock="true" on this root as the per-field marker
+// (sess-b finding #140 §Followups #2, closed by sess-e batch-5).
 
 export interface PlanRingProps {
   usagePct: number;
@@ -32,7 +32,7 @@ export function PlanRing({ usagePct, resetMs }: PlanRingProps): ReactNode {
   const dashOffset = CIRCUMFERENCE * (1 - pct / 100);
 
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div data-mock="true" data-testid="header-plan-ring" className="flex items-center gap-2 text-xs">
       <div
         role="progressbar"
         aria-valuenow={pct}

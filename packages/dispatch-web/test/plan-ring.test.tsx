@@ -55,4 +55,10 @@ describe('Phase 2 Step 3 — PlanRing', () => {
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByText('0%')).toBeInTheDocument();
   });
+
+  it('marks root with data-mock="true" + data-testid="header-plan-ring" for per-field mock visibility', () => {
+    render(<PlanRing usagePct={47} resetMs={8040000} />);
+    const root = screen.getByTestId('header-plan-ring');
+    expect(root).toHaveAttribute('data-mock', 'true');
+  });
 });

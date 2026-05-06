@@ -30,4 +30,10 @@ describe('Phase 2 Step 4 — CostPill', () => {
     render(<CostPill usdToday={42} />);
     expect(screen.getByText(/\$42\.00/)).toBeInTheDocument();
   });
+
+  it('marks root with data-mock="true" + data-testid="header-cost-pill" for per-field mock visibility', () => {
+    render(<CostPill usdToday={0.42} />);
+    const root = screen.getByTestId('header-cost-pill');
+    expect(root).toHaveAttribute('data-mock', 'true');
+  });
 });

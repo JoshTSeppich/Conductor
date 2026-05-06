@@ -132,9 +132,11 @@ describe('WEB-T06 Layout', () => {
 
   // Phase 2 Step 5 — header restructure: PlanRing + CostPill mounted
   // with mock constants per /tmp/sess-1-dispatch-web-ui-diagnose.md
-  // §4 recommendation 1. Mock-marker on the cluster wrapper, NOT on
-  // the primitives themselves (those are pure props-in components).
-  describe('Phase 2 Step 5 — header mock cluster', () => {
+  // §4 recommendation 1. Per-field data-mock markers live on PlanRing
+  // + CostPill roots (sess-b finding #140 §Followups #2, closed by
+  // sess-e batch-5) — mirrors FocusedDetailPanel's per-field pattern.
+  // The cluster <div> wrapping them carries no data-mock (no redundancy).
+  describe('Phase 2 Step 5 — header per-field mock markers', () => {
     it('renders PlanRing as progressbar in header', () => {
       render(<Layout />);
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -146,10 +148,16 @@ describe('WEB-T06 Layout', () => {
       expect(screen.getByText(/api · \$0\.42 today/)).toBeInTheDocument();
     });
 
-    it('marks the mock cluster with data-mock="true" for dev visibility', () => {
-      const { container } = render(<Layout />);
-      const mockCluster = container.querySelector('[data-mock="true"]');
-      expect(mockCluster).not.toBeNull();
+    it('cluster wrapper does NOT carry data-mock; per-field markers live on PlanRing + CostPill roots', () => {
+      render(<Layout />);
+      // PlanRing + CostPill roots carry the marker (per-field pattern)
+      expect(screen.getByTestId('header-plan-ring')).toHaveAttribute('data-mock', 'true');
+      expect(screen.getByTestId('header-cost-pill')).toHaveAttribute('data-mock', 'true');
+      // The cluster div wrapping them does not (no redundant marker)
+      const planRoot = screen.getByTestId('header-plan-ring');
+      const cluster = planRoot.parentElement;
+      expect(cluster).not.toBeNull();
+      expect(cluster).not.toHaveAttribute('data-mock');
     });
 
     it('keeps the Conductor wordmark in header', () => {
