@@ -15,6 +15,7 @@ import {
 import { readBuildDoc } from '../coarchitect/build-doc-reader.js';
 import { buildContext } from '../coarchitect/context-builder.js';
 import { routeOrchestratorOutput } from './orchestrator-output-router.js';
+import { emitCardEnvelopes, type CardEmitter } from './orchestrator-card-emitter.js';
 import { cardContextCache } from './card-context-cache.js';
 
 const MOCK_RESPONSES: Record<string, string> = {
@@ -169,9 +170,17 @@ export function registerIpcHandlers(): void {
         });
         if (decision.kind === 'card-or-multi-choice') {
           cardContextCache.set(decision.cardId, decision.context);
-          for (const wc of allWebContents.getAllWebContents()) {
-            wc.send('orchestrator-card-rendered', decision.payload);
-          }
+          // F5 emit: broadcast envelopes to all webContents via the pure
+          // emitCardEnvelopes helper so superseded fires before rendered
+          // when the new card has lineage (operator A6, MB-T07 Phase 2 WB2).
+          const broadcaster: CardEmitter = {
+            emit: (channel, payload) => {
+              for (const wc of allWebContents.getAllWebContents()) {
+                wc.send(channel, payload);
+              }
+            },
+          };
+          emitCardEnvelopes(decision, broadcaster);
         }
         try { await daemonClient.postMessage({ role: 'assistant', content: fullResponse }); } catch {}
         event.sender.send('coarchitect:streamDone', fullResponse.trimEnd().slice(0, 120));
