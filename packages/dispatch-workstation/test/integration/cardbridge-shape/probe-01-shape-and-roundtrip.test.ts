@@ -162,9 +162,7 @@ if (!existsSync(BUNDLE_PATH)) {
         timestamp: '2026-05-06T00:00:00.000Z',
       };
       b.approve(envelope);
-      // C3 RED: deliberately wrong channel name (missing the colon).
-      // C3 GREEN flips back to 'card:approved'.
-      expect(ipcSpies.send).toHaveBeenCalledWith('card-approved-WRONG', envelope);
+      expect(ipcSpies.send).toHaveBeenCalledWith('card:approved', envelope);
     });
 
     it('decline(envelope) → ipc.send("card:declined", envelope)', () => {
@@ -176,7 +174,7 @@ if (!existsSync(BUNDLE_PATH)) {
         timestamp: '2026-05-06T00:00:01.000Z',
       };
       b.decline(envelope);
-      expect(ipcSpies.send).toHaveBeenCalledWith('card-declined-WRONG', envelope);
+      expect(ipcSpies.send).toHaveBeenCalledWith('card:declined', envelope);
     });
 
     it('multiChoiceSelect(envelope) → ipc.send("card:multi-choice-selected", envelope)', () => {
@@ -189,7 +187,7 @@ if (!existsSync(BUNDLE_PATH)) {
         timestamp: '2026-05-06T00:00:02.000Z',
       };
       b.multiChoiceSelect(envelope);
-      expect(ipcSpies.send).toHaveBeenCalledWith('multi-choice-selected-WRONG', envelope);
+      expect(ipcSpies.send).toHaveBeenCalledWith('card:multi-choice-selected', envelope);
     });
   });
 }
