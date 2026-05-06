@@ -138,5 +138,58 @@ if (!existsSync(BUNDLE_PATH)) {
         ).toBe('function');
       }
     });
+
+    // === C3 RED: emit-side behavioral tests (3 it cases) ===================
+    // Drift this catches: channel-name shift (e.g., card:approved →
+    // card:approve) OR envelope payload restructure (e.g., field rename).
+    // Each it constructs the canonical envelope shape, calls the bridge
+    // method, and asserts the IPC adapter received exactly (channel,
+    // envelope) byte-identical.
+    //
+    // C3 RED state: assertions are wired but NO `mockClear` / state-reset
+    // is in place between tests. The earlier shape-assertion test does
+    // not invoke send, so the spy starts clean for the first emit case;
+    // however the `toHaveBeenCalledWith` assertion uses the WRONG channel
+    // names below (deliberately misspelled to make C3 RED fail). C3 GREEN
+    // corrects channel names to match card-bridge.ts:125-128 verbatim.
+
+    it('approve(envelope) → ipc.send("card:approved", envelope)', () => {
+      const b = capturedBridge as CardBridge;
+      const envelope = {
+        type: 'card-approved' as const,
+        card_id: 'card-c3-approve',
+        free_form_text: null,
+        timestamp: '2026-05-06T00:00:00.000Z',
+      };
+      b.approve(envelope);
+      // C3 RED: deliberately wrong channel name (missing the colon).
+      // C3 GREEN flips back to 'card:approved'.
+      expect(ipcSpies.send).toHaveBeenCalledWith('card-approved-WRONG', envelope);
+    });
+
+    it('decline(envelope) → ipc.send("card:declined", envelope)', () => {
+      const b = capturedBridge as CardBridge;
+      const envelope = {
+        type: 'card-declined' as const,
+        card_id: 'card-c3-decline',
+        reason: 'operator-rejected',
+        timestamp: '2026-05-06T00:00:01.000Z',
+      };
+      b.decline(envelope);
+      expect(ipcSpies.send).toHaveBeenCalledWith('card-declined-WRONG', envelope);
+    });
+
+    it('multiChoiceSelect(envelope) → ipc.send("card:multi-choice-selected", envelope)', () => {
+      const b = capturedBridge as CardBridge;
+      const envelope = {
+        type: 'multi-choice-selected' as const,
+        card_id: 'card-c3-mcs',
+        selected_index: 2,
+        free_form_text: null,
+        timestamp: '2026-05-06T00:00:02.000Z',
+      };
+      b.multiChoiceSelect(envelope);
+      expect(ipcSpies.send).toHaveBeenCalledWith('multi-choice-selected-WRONG', envelope);
+    });
   });
 }
