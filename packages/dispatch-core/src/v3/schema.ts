@@ -529,6 +529,20 @@ const PersistenceError = z
   })
   .strict();
 
+// MB-T09 — surfaced when the workstation:session-send-prompt IPC handler
+// invokes the canonical sendKeys helper and the underlying tmux command
+// fails (load-buffer/paste-buffer/send-keys/delete-buffer flow per
+// dispatch-core/src/transport/tmux.ts). `target` is the tmux session
+// name passed in the IPC payload; `reason` carries the underlying error
+// message (typically execFile stderr).
+const TmuxSendError = z
+  .object({
+    error_type: z.literal('TmuxSendError'),
+    target: z.string().min(1),
+    reason: z.string().min(1),
+  })
+  .strict();
+
 export const WorkstationErrorSchema = z.discriminatedUnion('error_type', [
   SchemaValidationError,
   SessionNotFoundError,
@@ -538,6 +552,7 @@ export const WorkstationErrorSchema = z.discriminatedUnion('error_type', [
   IPCDropError,
   TicketNotFoundError,
   PersistenceError,
+  TmuxSendError,
 ]);
 export type WorkstationError = z.infer<typeof WorkstationErrorSchema>;
 
@@ -645,3 +660,65 @@ export const TicketStateGetQuerySchema = z
   })
   .strict();
 export type TicketStateGetQuery = z.infer<typeof TicketStateGetQuerySchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §10 — Workstation IPC: session-send-prompt (MB-T09 — CONDUCTOR_V3_RESCOPE.md §3.4 + §4)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// IPC channel `workstation:session-send-prompt`: orchestrator/tile-footer →
+// workstation main process → tmux pane via canonical sendKeys helper.
+//
+// Two payload paths per CONDUCTOR_V3_RESCOPE.md §3.4:
+//   - Raw text (envelope omitted): prompt sent verbatim.
+//   - Structured envelope (multi-step intent): operator-visible comment
+//     line is prepended to the prompt before sendKeys.
+//
+// Reply discriminates on `ok`. The error path carries a typed
+// WorkstationError (see §8). MB-T09 introduces `TmuxSendError` and reuses
+// the existing `SchemaValidationError` and `SessionNotFoundError` variants
+// for invalid-payload and unknown-session paths respectively.
+
+/**
+ * Operator-visible envelope wrapping a prompt with multi-step intent
+ * tracking. Serialized to a single comment line + the prompt before
+ * tmux send (see `envelope-serializer.ts`). The orchestrator tracks
+ * `intent_id` across the multi-step sequence in its own state.
+ */
+export const SendPromptEnvelopeSchema = z
+  .object({
+    envelope_version: z.literal(1),
+    intent_id: z.string().uuid(),
+    step: z.number().int().min(1),
+    total_steps: z.number().int().min(1),
+    intent_summary: z.string().min(1),
+  })
+  .strict();
+export type SendPromptEnvelope = z.infer<typeof SendPromptEnvelopeSchema>;
+
+/**
+ * IPC payload for `workstation:session-send-prompt`. `prompt` is sent
+ * verbatim when `envelope` is omitted; otherwise the envelope is
+ * serialized to a comment line and prepended.
+ */
+export const WorkstationSessionSendPromptRequestSchema = z
+  .object({
+    sessionName: z.string().min(1),
+    prompt: z.string().min(1),
+    envelope: SendPromptEnvelopeSchema.optional(),
+  })
+  .strict();
+export type WorkstationSessionSendPromptRequest = z.infer<
+  typeof WorkstationSessionSendPromptRequestSchema
+>;
+
+/**
+ * IPC reply for `workstation:session-send-prompt`. `ok: true` carries no
+ * additional fields; `ok: false` carries a typed WorkstationError.
+ */
+export const WorkstationSessionSendPromptReplySchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true) }).strict(),
+  z.object({ ok: z.literal(false), error: WorkstationErrorSchema }).strict(),
+]);
+export type WorkstationSessionSendPromptReply = z.infer<
+  typeof WorkstationSessionSendPromptReplySchema
+>;
