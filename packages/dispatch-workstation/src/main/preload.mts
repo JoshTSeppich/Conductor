@@ -54,6 +54,10 @@ contextBridge.exposeInMainWorld('workstationBridge', {
     ipcRenderer.send('workstation:spawn-requested', payload),
   onSpawnResult: (cb: (reply: unknown) => void) =>
     attachSpawnResultListener(ipcRenderer, cb),
+  // MB-T09: session-send-prompt bridge per Q-MBT09-4=a.
+  // Consumed by orchestrator (MB-T11) and tile footer (MB-T12).
+  sendPromptToSession: (payload: unknown) =>
+    ipcRenderer.invoke('workstation:session-send-prompt', payload),
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).

@@ -13,6 +13,7 @@ import { registerApplicationMenu, rebuildApplicationMenu } from './menu.js';
 import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.js';
 import { registerIpcHandlers } from './coarchitect-ipc.js';
 import { registerSpawnIpcHandlers } from './spawn-ipc.js';
+import { registerSessionSendPromptIpcHandlers } from './session-send-prompt-ipc.js';
 import {
   registerConsoleIpcHandlers,
   DEFAULT_PANEL_CAP,
@@ -287,6 +288,12 @@ app.whenReady().then(async () => {
   // === END: Fix-92 ===
   registerIpcHandlers();
   registerSpawnIpcHandlers();
+  // === MB-T09 session-send-prompt IPC ===
+  // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
+  // tile footer (MB-T12) consume this surface. Default deps wire to
+  // canonical sendKeys (dispatch-core/src/transport/tmux.ts).
+  registerSessionSendPromptIpcHandlers();
+  // === end MB-T09 session-send-prompt IPC ===
   // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
   consoleController = registerConsoleIpcHandlers({
     getWebContents: () => mainWindow?.webContents ?? null,
