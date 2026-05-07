@@ -28,6 +28,17 @@ import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
 export interface WorkstationBridgeShape {
   /** Subscribes to 'workstation:spawn-result' replies. Returns cleanup. */
   onSpawnResult: (cb: (reply: unknown) => void) => () => void;
+  /** WB11: invokes 'tile:detach' IPC to open a separate BrowserWindow for
+   *  the session's console panel. Optional — when undefined, detach is a
+   *  no-op (graceful degradation for non-Electron / test environments). */
+  detachTile?: (sessionName: string) => Promise<{ ok: boolean }>;
+  /** WB11: subscribes to 'tile:detach-closed' main-process events fired
+   *  when an operator closes a detached console window. The detached
+   *  session's tile re-mounts in the main grid (status flips to 'open').
+   *  Returns cleanup. Optional — see detachTile note. */
+  onTileDetachClosed?: (
+    cb: (payload: { sessionName: string }) => void,
+  ) => () => void;
 }
 
 export interface TileGridAppProps {
@@ -98,6 +109,25 @@ export function TileGridApp({
     });
   }, [workstationBridge, onSessionMounted]);
 
+  // WB11: subscribe to detach-window-closed events. When the operator closes
+  // a detached console window (closes the second BrowserWindow), the main
+  // process fires 'tile:detach-closed' with the affected sessionName; the
+  // tile reverts to 'open' status and re-mounts the ConsolePanel in the
+  // main grid.
+  useEffect(() => {
+    if (!workstationBridge.onTileDetachClosed) return undefined;
+    return workstationBridge.onTileDetachClosed(({ sessionName }) => {
+      setSessions((current) =>
+        persistAndUpdate(
+          current.map((s) =>
+            s.name === sessionName ? { ...s, status: 'open' as const } : s,
+          ),
+        ),
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workstationBridge]);
+
   function persistAndUpdate(
     next: readonly TileGridSessionEntry[],
   ): readonly TileGridSessionEntry[] {
@@ -119,8 +149,28 @@ export function TileGridApp({
     );
   }
 
-  function handleDetach(_name: string): void {
-    // WB11 fills in detach-to-window BrowserWindow open + status update.
+  function handleDetach(name: string): void {
+    // WB11: fire the IPC and update local status. Bridge call is async,
+    // but we update status optimistically — onTileDetachClosed restores
+    // status='open' if the operator closes the window or the detach fails.
+    if (!workstationBridge.detachTile) return;
+    void workstationBridge.detachTile(name).catch(() => {
+      // Detach failed (e.g., window creation refused). Restore status.
+      setSessions((current) =>
+        persistAndUpdate(
+          current.map((s) =>
+            s.name === name ? { ...s, status: 'open' as const } : s,
+          ),
+        ),
+      );
+    });
+    setSessions((current) =>
+      persistAndUpdate(
+        current.map((s) =>
+          s.name === name ? { ...s, status: 'detached' as const } : s,
+        ),
+      ),
+    );
   }
 
   function handleSwap(a: string, b: string): void {

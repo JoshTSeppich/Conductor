@@ -135,11 +135,17 @@ export function Tile({
       </div>
       {!collapsed && (
         <div data-testid="tile-body">
-          <ConsolePanel
-            targetSessionName={sessionName}
-            consoleBridge={consoleBridge}
-            createTerminal={createTerminal}
-          />
+          {status === 'detached' ? (
+            <div data-testid="tile-detached-placeholder">
+              detached — close window to reattach
+            </div>
+          ) : (
+            <ConsolePanel
+              targetSessionName={sessionName}
+              consoleBridge={consoleBridge}
+              createTerminal={createTerminal}
+            />
+          )}
         </div>
       )}
       <div data-slot="footer" data-testid={`tile-footer-slot-${sessionName}`} />

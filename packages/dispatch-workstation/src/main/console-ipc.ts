@@ -115,15 +115,60 @@ const TERMINAL_CLOSE_CODES = new Set<number>([1000, 4404, 4422]);
 export class ConsoleIpcController {
   private readonly daemonClient: ConsoleDaemonClient;
   private readonly wsFactory: ConsoleWebSocketFactory;
-  private readonly emitToWebview: (channel: string, payload: unknown) => void;
+  /** WB11: original injected dep, used as the default fallback when no
+   *  per-session target is registered. The class-internal `emit()` method
+   *  routes per-session via sessionTargets first; falls back to defaultEmit. */
+  private readonly defaultEmit: (channel: string, payload: unknown) => void;
   private readonly panelCap: number;
   private readonly panels = new Map<string, PanelState>();
+  /** WB11: per-session event target registry. When set for a sessionName,
+   *  console:* events with that sessionName route to the registered target
+   *  (typically a detached BrowserWindow's webContents.send) instead of
+   *  the default emit (mainWindow). */
+  private readonly sessionTargets = new Map<
+    string,
+    (channel: string, payload: unknown) => void
+  >();
 
   constructor(opts: ConsoleIpcOptions) {
     this.daemonClient = opts.daemonClient;
     this.wsFactory = opts.wsFactory;
-    this.emitToWebview = opts.emitToWebview;
+    this.defaultEmit = opts.emitToWebview;
     this.panelCap = opts.panelCap ?? DEFAULT_PANEL_CAP;
+  }
+
+  /**
+   * WB11: register a per-session event target. When set for `sessionName`,
+   * subsequent console:* events whose payload contains
+   * `{sessionName: '<sessionName>', ...}` route to `target(channel, payload)`
+   * instead of the default emitToWebview. Pass null to remove the
+   * registration (events fall back to default).
+   */
+  setSessionTarget(
+    sessionName: string,
+    target: ((channel: string, payload: unknown) => void) | null,
+  ): void {
+    if (target === null) {
+      this.sessionTargets.delete(sessionName);
+    } else {
+      this.sessionTargets.set(sessionName, target);
+    }
+  }
+
+  /** WB11: internal multi-target emit. Inspects payload for sessionName,
+   *  routes to a per-session target if registered, else falls back to default. */
+  private emitToWebview(channel: string, payload: unknown): void {
+    if (payload !== null && typeof payload === 'object') {
+      const sn = (payload as Record<string, unknown>)['sessionName'];
+      if (typeof sn === 'string') {
+        const target = this.sessionTargets.get(sn);
+        if (target !== undefined) {
+          target(channel, payload);
+          return;
+        }
+      }
+    }
+    this.defaultEmit(channel, payload);
   }
 
   panelCount(): number {

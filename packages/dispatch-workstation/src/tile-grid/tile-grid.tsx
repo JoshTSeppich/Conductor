@@ -187,23 +187,26 @@ export function TileGrid({
     const drag = dragRef.current;
     dragRef.current = null;
     if (!drag) return;
-    if (onResizeEnd) {
-      const override: GridOverride = {};
-      if (drag.orientation === 'vertical') {
-        setColCss((latest) => {
-          if (latest) override.colSizes = latest;
-          if (rowCss) override.rowSizes = rowCss;
-          onResizeEnd(override);
-          return latest;
-        });
-      } else {
-        setRowCss((latest) => {
-          if (latest) override.rowSizes = latest;
-          if (colCss) override.colSizes = colCss;
-          onResizeEnd(override);
-          return latest;
-        });
-      }
+    if (!onResizeEnd) return;
+    // Build the override as a literal (GridOverride fields are readonly).
+    if (drag.orientation === 'vertical') {
+      setColCss((latest) => {
+        const override: GridOverride = {
+          ...(latest ? { colSizes: latest } : {}),
+          ...(rowCss ? { rowSizes: rowCss } : {}),
+        };
+        onResizeEnd(override);
+        return latest;
+      });
+    } else {
+      setRowCss((latest) => {
+        const override: GridOverride = {
+          ...(latest ? { rowSizes: latest } : {}),
+          ...(colCss ? { colSizes: colCss } : {}),
+        };
+        onResizeEnd(override);
+        return latest;
+      });
     }
   }
 
