@@ -77,6 +77,21 @@ export function Tile({
       data-testid={`tile-${sessionName}`}
       data-collapsed={collapsed ? 'true' : 'false'}
       data-status={status}
+      style={
+        collapsed
+          ? { height: '40px', overflow: 'hidden', alignSelf: 'start' }
+          : undefined
+      }
+      onClick={
+        collapsed
+          ? (e) => {
+              // WB10: click anywhere on a collapsed tile (excluding the
+              // kill/detach/picker/autopilot buttons) toggles expand.
+              if (isInteractiveTarget(e.target)) return;
+              onCollapse(sessionName);
+            }
+          : undefined
+      }
     >
       <div
         data-testid="tile-header"
