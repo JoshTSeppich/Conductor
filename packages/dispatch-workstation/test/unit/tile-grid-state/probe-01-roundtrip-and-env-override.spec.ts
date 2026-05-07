@@ -116,14 +116,18 @@ describe('tile-grid-state — probe 01: defensive parse + validator', () => {
   });
 
   it('readAllTileLayoutStates drops malformed entries (missing fields, wrong types)', () => {
+    // WB7 file shape: { perTile: {...}, gridOverride?: ... }. The validator
+    // drops malformed entries inside perTile but keeps valid ones.
     writeFileSync(
       join(dir, 'tile-grid-state.json'),
       JSON.stringify({
-        valid: { orderIndex: 0, collapsed: false, detached: false },
-        missingFields: { orderIndex: 0 },
-        wrongType: { orderIndex: 'zero', collapsed: false, detached: false },
-        nonInteger: { orderIndex: 1.5, collapsed: false, detached: false },
-        nullEntry: null,
+        perTile: {
+          valid: { orderIndex: 0, collapsed: false, detached: false },
+          missingFields: { orderIndex: 0 },
+          wrongType: { orderIndex: 'zero', collapsed: false, detached: false },
+          nonInteger: { orderIndex: 1.5, collapsed: false, detached: false },
+          nullEntry: null,
+        },
       }),
       'utf8',
     );

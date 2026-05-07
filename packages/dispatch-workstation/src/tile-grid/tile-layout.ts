@@ -72,6 +72,40 @@ export function computeGridLayout(n: number): GridLayout {
   };
 }
 
+// MB-T12 WB7 — drag-resize sizing math.
+//
+// Pure fn: takes initial pixel sizes for the row or column band, the
+// border-index being dragged (between i and i+1), the pixel delta, and
+// a min-size clamp. Returns new sizes for all bands.
+//
+// Delta semantics: positive delta grows band[borderIdx] (the LEFT/TOP
+// band) and shrinks band[borderIdx + 1]. Negative delta does the reverse.
+// Min-pixel clamp: the function will not let either adjacent band shrink
+// below `minPx`. If the requested delta would violate the clamp, the
+// effective delta is clipped to fit.
+export function computeNewSizesAfterDrag(
+  initialSizes: readonly number[],
+  borderIdx: number,
+  deltaPx: number,
+  minPx = 80,
+): number[] {
+  if (!Number.isInteger(borderIdx) || borderIdx < 0 || borderIdx >= initialSizes.length - 1) {
+    throw new Error(
+      `computeNewSizesAfterDrag: borderIdx=${borderIdx} out of range for ${initialSizes.length} sizes`,
+    );
+  }
+  const newSizes = [...initialSizes];
+  // Allowable delta range:
+  //   upper: how far we can grow band[borderIdx] before band[borderIdx+1] hits minPx
+  //   lower: how far we can shrink band[borderIdx] before it hits minPx (negative)
+  const upper = newSizes[borderIdx + 1] - minPx;
+  const lower = minPx - newSizes[borderIdx];
+  const clamped = Math.max(lower, Math.min(upper, deltaPx));
+  newSizes[borderIdx] += clamped;
+  newSizes[borderIdx + 1] -= clamped;
+  return newSizes;
+}
+
 function buildGridTemplateAreas(
   n: number,
   rows: number,
