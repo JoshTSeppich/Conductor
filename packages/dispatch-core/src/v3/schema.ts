@@ -956,6 +956,29 @@ export type OrchestratorSwarmAuditWriteRequest = z.infer<
 >;
 
 /**
+ * GET /v3/audit/swarm-audit query params. Filter axes per Q-MBT13-5=b
+ * (per-session forensics) + Q-MBT13-9=a (default limit 100; route-layer
+ * Math.min clamp caps at 100 even when caller passes a larger value —
+ * defense-in-depth against accidental large-N reads).
+ *
+ * Note on WB1/WB4 boundary: the WB1 schema brief listed the response
+ * shape (OrchestratorSwarmAuditQueryResponseSchema below) but did NOT
+ * list the request-side query schema; this schema landed as part of
+ * WB4 because daemon-side route validation requires a dispatch-core
+ * Zod instance (daemon does not direct-dep zod). Functionally part of
+ * the §13 schema surface; isolated here for traceability.
+ */
+export const OrchestratorSwarmAuditQuerySchema = z
+  .object({
+    session_name: z.string().min(1).optional(),
+    limit: z.coerce.number().int().min(1).default(100),
+  })
+  .strict();
+export type OrchestratorSwarmAuditQuery = z.infer<
+  typeof OrchestratorSwarmAuditQuerySchema
+>;
+
+/**
  * GET /v3/audit/swarm-audit response body per Q-MBT13-9=a (LIMIT 100
  * ORDER BY ts DESC). `total` is the count of rows returned in this
  * response (NOT the table cardinality — caller can issue a follow-up

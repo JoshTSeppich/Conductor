@@ -58,6 +58,7 @@ import {
   registerSessionsWriteRoutes,
 } from '../routes/sessions.js';
 import { registerOrchestratorAuditRoutes } from '../routes/v3/orchestrator-audit.js';
+import { registerSwarmAuditRoutes } from '../routes/v3/audit/swarm-audit.js';
 import { registerOrchestratorHistoryRoutes } from '../routes/v3/orchestrator-history.js';
 import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
 import { registerTicketsStateRoutes } from '../routes/v3/tickets-state.js';
@@ -404,6 +405,15 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // POST persists to orchestrator_audit with JSON-encoded payload TEXT;
   // GET filters per §6.2 axes and paginates with timestamp cursor.
   await registerOrchestratorAuditRoutes(app, { db });
+
+  // MB-T13 WB4: POST + GET /v3/audit/swarm-audit per CONDUCTOR_V3_RESCOPE
+  // .md §3.8 + Phase 2 brief WB4 + Q-MBT13-{1,5,8,9}=a/b/c/a. Distinct
+  // from /v3/orchestrator/audit above: this surface audits orchestrator
+  // swarm-action firings (autopilot or manual), not operator-facing
+  // approve/decline of chat output. Persists to NEW
+  // orchestrator_swarm_audit table from migration 0003. GET clamps
+  // limit to 100 per Q-MBT13-9=a (single-page modal at v3.0).
+  await registerSwarmAuditRoutes(app, { db });
 
   // COARCH-T01 B10: POST upsert + GET list + GET /:ticket_id for
   // /v3/tickets/state per WORKSTATION_CONTRACT.md §6.3 + ratified
