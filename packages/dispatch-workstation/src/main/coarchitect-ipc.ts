@@ -1,6 +1,7 @@
 import { ipcMain, app, webContents as allWebContents } from 'electron';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { HttpDaemonClient } from './http-daemon-client.js';
 import { createAnthropicClient, classifyAnthropicError } from './anthropic-client.js';
@@ -17,6 +18,14 @@ import { buildContext } from '../coarchitect/context-builder.js';
 import { routeOrchestratorOutput } from './orchestrator-output-router.js';
 import { emitCardEnvelopes, type CardEmitter } from './orchestrator-card-emitter.js';
 import { cardContextCache } from './card-context-cache.js';
+// === MB-T11 WB7 imports — action-fire route + Tier4 wiring closure ===
+import {
+  dispatchAction,
+  defaultDispatchActionDeps,
+} from './orchestrator-action-handler.js';
+import { AutopilotLoop } from './autopilot-loop.js';
+import { buildTier4Payload } from './tier4-fan-out.js';
+import { HttpSessionListClient } from './session-cap.js';
 
 const MOCK_RESPONSES: Record<string, string> = {
   self_check: `I'll analyze the current state and surface the self-check block.
@@ -60,6 +69,40 @@ function loadSystemPrompt(): string {
  * Single source of truth; one token-read on startup; both wirings share.
  */
 export const daemonClient = new HttpDaemonClient();
+
+// === MB-T11 WB7 — autopilot + Tier4 fan-out singletons + helpers ===
+
+/**
+ * Per-process autopilot state machine. Persists to <userData>/
+ * autopilot-state.json per Q-MBT11-2=a + Q-MBT11-9=a. Consumed by:
+ *   - The action-fire route (orchestrator-action-handler.dispatchAction
+ *     → startIntent for assign-task) below.
+ *   - The Tier 4 fan-out merge (tier4-fan-out.buildTier4Payload uses
+ *     getPendingIntents + getLastActionFiredAt to overwrite the daemon
+ *     hardcoded null/[] per Q-MBT11-8=a).
+ */
+const autopilot = new AutopilotLoop();
+
+/**
+ * Daemon session-list client used by the Tier 4 fan-out for the
+ * registered-non-killed session-name source.
+ */
+const sessionListClient = new HttpSessionListClient();
+
+const DAEMON_URL_FOR_TIER4 =
+  process.env['FOXWORKS_DAEMON_URL'] ?? 'http://localhost:7878';
+
+/** Read the daemon token; null if missing. Mirrors http-daemon-client. */
+function readDaemonTokenForTier4(): string | null {
+  try {
+    return readFileSync(
+      join(homedir(), '.foxworks-dispatch', 'token'),
+      'utf8',
+    ).trim();
+  } catch {
+    return null;
+  }
+}
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('coarchitect:fetchHistory', async () => {
@@ -130,15 +173,30 @@ export function registerIpcHandlers(): void {
             const chatHistory = historyRows
               .filter((m) => m.role === 'user' || m.role === 'assistant')
               .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+            // MB-T11 WB7 — Tier 4 wiring closure (closes
+            // MB-F-T10-COARCHITECT-IPC-WIRE-TIER4 per Q-MBT11-7=a).
+            // Per Q-MBT11-8=a, autopilot pending_intents +
+            // last_action_fired_at are merged workstation-side into each
+            // SessionContextSnapshot after the daemon fetch. Failure is
+            // tolerated per assembleTier4Payload's per-session
+            // graceful-degrade contract; if the daemon list itself fails,
+            // buildTier4Payload returns an empty Tier4Payload and the
+            // orchestrator sees "no spawned sessions".
+            const spawnedSessions = await buildTier4Payload({
+              sessionListClient,
+              autopilot,
+              fetchImpl: globalThis.fetch.bind(globalThis),
+              daemonUrl: DAEMON_URL_FOR_TIER4,
+              daemonToken: readDaemonTokenForTier4(),
+            }).catch(() => null);
+
             const context = buildContext({
               systemPrompt,
               buildDocContent: buildDocResult.content,
               buildDocSha: buildDocResult.sha,
               daemonState: null,
-              // MB-T10 Tier 4 wiring deferred — passes null until MB-T11 plumbs
-              // the daemon /v3/sessions/:name/context-snapshot fan-out into the
-              // workstation main process. Followup: MB-F-T10-COARCHITECT-IPC-WIRE-TIER4.
-              spawnedSessions: null,
+              spawnedSessions,
               chatHistory,
               triggeringEvent: content,
             });
@@ -185,6 +243,105 @@ export function registerIpcHandlers(): void {
             },
           };
           emitCardEnvelopes(decision, broadcaster);
+        } else if (decision.kind === 'action-fire-without-card') {
+          // MB-T11 WB7 — orchestrator-fired action route.
+          // Per Q-MBT11-1..6 + Q-MBT11-8: validate payload via §12 sub-
+          // schema, consult resolver-stub, route to MB-T09/MB-T05/WB3 IPC
+          // or v2 handoff or autopilot.startIntent. Errors do not throw
+          // out of the streaming handler — they're surfaced to operator
+          // via the chat panel through the next orchestrator turn (the
+          // dispatchAction result is logged here; a future ticket may
+          // surface kind:'error' / kind:'pending-approval' as renderer
+          // sentinels).
+          const actionDeps = defaultDispatchActionDeps({
+            fireSendPrompt: async (sessionName, payload) => {
+              const {
+                SessionSendPromptIpcController,
+                defaultSessionSendPromptDeps,
+              } = await import('./session-send-prompt-ipc.js');
+              const ctl = new SessionSendPromptIpcController(
+                defaultSessionSendPromptDeps(),
+              );
+              const reply = await ctl.handleSendPrompt({
+                sessionName,
+                prompt: payload.prompt,
+                envelope: payload.envelope,
+              });
+              if (!reply.ok) {
+                throw new Error(
+                  `session-send-prompt ${reply.error.error_type}`,
+                );
+              }
+              autopilot.recordAction(sessionName, 'send', payload);
+            },
+            fireSpawn: async () => {
+              // v3.0: orchestrator-driven spawn-new-session is not wired
+              // in this WB. Operator-driven spawn flows through the
+              // existing renderer → workstation:spawn-requested path
+              // (MB-T05 spawn-ipc). Followup
+              // MB-F-T11-WB7-ORCHESTRATOR-SPAWN-DEFERRED tracks the
+              // wiring for orchestrator-fired spawn.
+              throw new Error(
+                'orchestrator-fired spawn-new-session not wired in v3.0 (MB-F-T11-WB7-ORCHESTRATOR-SPAWN-DEFERRED)',
+              );
+            },
+            fireKill: async (sessionName, payload) => {
+              const { SessionKillIpcController, defaultSessionKillDeps } =
+                await import('./session-kill-ipc.js');
+              const ctl = new SessionKillIpcController(
+                defaultSessionKillDeps(),
+              );
+              const reply = await ctl.handleKill({ sessionName });
+              if (!reply.ok) {
+                throw new Error(`session-kill ${reply.error.error_type}`);
+              }
+              autopilot.recordAction(sessionName, 'kill', payload);
+            },
+            firePullHandoff: async (sessionName) => {
+              const token = readDaemonTokenForTier4();
+              if (!token) {
+                throw new Error('daemon token unavailable for handoff fetch');
+              }
+              const res = await globalThis.fetch(
+                `${DAEMON_URL_FOR_TIER4}/v2/sessions/${encodeURIComponent(
+                  sessionName,
+                )}/handoff`,
+                { headers: { 'X-Conductor-Token': token } },
+              );
+              if (!res.ok) {
+                throw new Error(`handoff fetch returned HTTP ${res.status}`);
+              }
+              const body = (await res.json()) as {
+                content: string;
+                written_at: string;
+                archived_to: string;
+              };
+              autopilot.recordAction(sessionName, 'pull', { sessionName });
+              return body;
+            },
+            startIntent: async (payload) => {
+              const result = autopilot.startIntent(payload);
+              autopilot.recordAction(payload.sessionName, 'assign-task', payload);
+              return result;
+            },
+          });
+
+          await dispatchAction(
+            {
+              output: decision.output,
+              triggerEvent: content,
+              buildDocId: buildDocConfig?.relativePath ?? 'unknown',
+            },
+            actionDeps,
+          ).catch((err: unknown) => {
+            // dispatchAction itself doesn't throw, but defense-in-depth
+            // here keeps a buggy dep from killing the streaming handler.
+            event.sender.send('coarchitect:streamError', {
+              code: 'action_dispatch_error',
+              message:
+                err instanceof Error ? err.message : String(err),
+            });
+          });
         }
         try { await daemonClient.postMessage({ role: 'assistant', content: fullResponse }); } catch {}
         event.sender.send('coarchitect:streamDone', fullResponse.trimEnd().slice(0, 120));
