@@ -19,7 +19,7 @@ describe('CONSOLE-T03 cluster 1 — onConsoleClose → panel state', () => {
     const adapter = makeFakeTerminalAdapter();
 
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
 
     act(() => {
@@ -42,6 +42,7 @@ describe('CONSOLE-T03 cluster 1 — onConsoleClose → panel state', () => {
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,

@@ -21,6 +21,7 @@ describe('CONSOLE-T03 cluster 3 — prompt input rendered when session bound', (
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,
@@ -43,6 +44,7 @@ describe('CONSOLE-T03 cluster 3 — prompt input rendered when session bound', (
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,

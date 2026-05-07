@@ -20,6 +20,7 @@ describe('CONSOLE-T03 cluster 3 — Send invokes bridge.sendStdin', () => {
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,
@@ -47,6 +48,7 @@ describe('CONSOLE-T03 cluster 3 — Send invokes bridge.sendStdin', () => {
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,
@@ -70,6 +72,7 @@ describe('CONSOLE-T03 cluster 3 — Send invokes bridge.sendStdin', () => {
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,

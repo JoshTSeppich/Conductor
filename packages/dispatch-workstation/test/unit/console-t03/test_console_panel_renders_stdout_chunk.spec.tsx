@@ -22,7 +22,7 @@ describe('CONSOLE-T03 cluster 2 — stdout chunk routing', () => {
     const fake = makeFakeConsoleBridge();
     const adapter = makeFakeTerminalAdapter();
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
     act(() => {
       fake.emitOpen({ sessionName: 'alpha' });
@@ -44,7 +44,7 @@ describe('CONSOLE-T03 cluster 2 — stdout chunk routing', () => {
     const fake = makeFakeConsoleBridge();
     const adapter = makeFakeTerminalAdapter();
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
 
     // No emitOpen — adapter never created.
@@ -66,7 +66,7 @@ describe('CONSOLE-T03 cluster 2 — stdout chunk routing', () => {
     const fake = makeFakeConsoleBridge();
     const adapter = makeFakeTerminalAdapter();
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
     act(() => {
       fake.emitOpen({ sessionName: 'alpha' });

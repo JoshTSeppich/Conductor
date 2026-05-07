@@ -20,7 +20,7 @@ describe('CONSOLE-T03 cluster 1 — onConsoleOpen → panel state', () => {
     const adapter = makeFakeTerminalAdapter();
 
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
 
     // Idle before event.
@@ -43,7 +43,7 @@ describe('CONSOLE-T03 cluster 1 — onConsoleOpen → panel state', () => {
     const adapter = makeFakeTerminalAdapter();
 
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
     act(() => {
       fake.emitOpen({ sessionName: 'alpha' });

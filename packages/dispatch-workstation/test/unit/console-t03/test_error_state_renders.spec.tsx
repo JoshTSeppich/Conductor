@@ -19,6 +19,7 @@ describe('CONSOLE-T03 cluster 4 — error banner rendering', () => {
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,
@@ -47,6 +48,7 @@ describe('CONSOLE-T03 cluster 4 — error banner rendering', () => {
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,

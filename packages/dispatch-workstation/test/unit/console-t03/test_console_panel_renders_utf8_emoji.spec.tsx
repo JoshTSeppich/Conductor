@@ -23,7 +23,7 @@ describe('CONSOLE-T03 cluster 2 — UTF-8 + base64 encodings', () => {
     const fake = makeFakeConsoleBridge();
     const adapter = makeFakeTerminalAdapter();
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
     act(() => {
       fake.emitOpen({ sessionName: 'alpha' });
@@ -47,7 +47,7 @@ describe('CONSOLE-T03 cluster 2 — UTF-8 + base64 encodings', () => {
     const fake = makeFakeConsoleBridge();
     const adapter = makeFakeTerminalAdapter();
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
     act(() => {
       fake.emitOpen({ sessionName: 'alpha' });
@@ -71,7 +71,7 @@ describe('CONSOLE-T03 cluster 2 — UTF-8 + base64 encodings', () => {
     const fake = makeFakeConsoleBridge();
     const adapter = makeFakeTerminalAdapter();
     render(
-      <ConsolePanel consoleBridge={fake.bridge} createTerminal={() => adapter} />,
+      <ConsolePanel targetSessionName="alpha" consoleBridge={fake.bridge} createTerminal={() => adapter} />,
     );
     act(() => {
       fake.emitOpen({ sessionName: 'alpha' });

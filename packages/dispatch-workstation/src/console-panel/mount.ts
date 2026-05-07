@@ -79,13 +79,25 @@ function defaultLazyAdapterFactory(): TerminalAdapter {
   };
 }
 
-// Auto-mount when the bridge is present. Standalone dev (open
-// console-panel.html in a non-Electron browser) renders a "no bridge"
-// placeholder so operators / tests can still load the page.
+// MB-T12 WB4 deprecation: the auto-mount-into-#console-root path is
+// removed. Pre-MB-T12 the console-panel renderer auto-mounted a single
+// ConsolePanel into #console-root — multi-panel rendering was blocked
+// (MB-F-CONSOLE-T03-MULTI-PANEL). Post-MB-T12 the tile-grid React tree
+// (WB6) calls `mountConsolePanel(...)` programmatically, once per tile,
+// passing a distinct `targetSessionName` per call. WB12 wires the
+// tile-grid bundle into workstation-shell.html and removes the
+// `<script src="../console-panel/renderer.js">` tag (or repurposes it).
+//
+// During WB4-WB11 the workstation has no console-panel rendered in the
+// shell (the tile-grid bundle isn't wired yet); this is intentional and
+// reflects the in-flight nature of the ladder. The standalone
+// console-panel.html dev-preview path requires the bridge AND a
+// `targetSessionName` to render usefully — operators load via the
+// Workstation shell once WB12 is complete.
+
 const bridge = window.consoleBridge;
-if (bridge) {
-  mountConsolePanel({ rootElementId: 'console-root', consoleBridge: bridge });
-} else {
-  const el = document.getElementById('console-root');
-  if (el) el.textContent = 'window.consoleBridge not available — open via Workstation shell.';
+const standalone = document.getElementById('console-root');
+if (!bridge && standalone) {
+  standalone.textContent =
+    'window.consoleBridge not available — open via Workstation shell.';
 }

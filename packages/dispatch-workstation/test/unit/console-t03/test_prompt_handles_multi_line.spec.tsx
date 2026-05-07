@@ -25,6 +25,7 @@ describe('CONSOLE-T03 cluster 3 — multi-line preservation', () => {
     const fake = makeFakeConsoleBridge();
     render(
       <ConsolePanel
+        targetSessionName="alpha"
         consoleBridge={fake.bridge}
         createTerminal={() => makeFakeTerminalAdapter()}
       />,

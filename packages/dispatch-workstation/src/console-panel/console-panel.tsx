@@ -13,20 +13,29 @@ import type {
 } from '../main/console-bridge.js';
 import type { TerminalAdapter } from './terminal-adapter.js';
 
-// CONSOLE-T03 — operator-facing CC-console panel.
+// CONSOLE-T03 / MB-T12 WB4 — operator-facing CC-console panel.
 //
-// Vision §10 (frozen at eac381e) + WORKSTATION_CONTRACT.md (frozen at
-// cf1848a) + CONDUCTOR_API_CONTRACT.md §4.7 (frozen at a7e8d4f, v2.2.0).
+// Pre-MB-T12 (single-panel): the panel held a single sessionName in state
+// and rebound on every console:open event from the bridge — opening a
+// second session overwrote the first. That single-panel constraint was
+// MB-F-CONSOLE-T03-MULTI-PANEL.
 //
-// Cluster 1 scope (this commit): mount, idle/empty state, console:open
-// surfacing the session name in a header + creating the xterm.js terminal
-// container, console:close returning to idle + disposing the adapter, and
-// registering exactly one listener per shell→webview channel. Cluster 2
-// (STDOUT routing), cluster 3 (prompt input), and cluster 4 (signals + gap +
-// error) extend this skeleton — the cluster 2-4 listener bodies are no-ops
-// here so each cluster's RED tests fail until that cluster's GREEN lands.
+// Post-MB-T12 WB4 (multi-mount): the panel is bound to a targetSessionName
+// at mount time. The parent (the tile-grid React tree, WB6) renders one
+// ConsolePanel per tile, each with a distinct targetSessionName prop.
+// Listener handlers FILTER bridge events by `p.sessionName === targetSessionName`,
+// so a console:open / stdout-chunk / gap / error / close event only affects
+// the tile bound to that session — no cross-talk.
+//
+// State semantics:
+//   - `open: boolean` — true after console:open for THIS targetSessionName,
+//     false initially and after console:close. Drives idle vs bound render.
+//   - `gap`, `error` — last gap / error payload received for THIS session.
 
 export interface ConsolePanelProps {
+  /** Session this panel renders. Set by the tile-grid parent (MB-T12).
+   *  Bridge events with a different sessionName are ignored. */
+  readonly targetSessionName: string;
   readonly consoleBridge: ConsoleBridge;
   /**
    * Factory for the terminal adapter. In production this is wired in
@@ -39,14 +48,15 @@ export interface ConsolePanelProps {
 }
 
 interface PanelState {
-  sessionName: string | null;
+  open: boolean;
   gap: GapPayload | null;
   error: ErrorPayload | null;
 }
 
-const INITIAL_STATE: PanelState = { sessionName: null, gap: null, error: null };
+const INITIAL_STATE: PanelState = { open: false, gap: null, error: null };
 
 export function ConsolePanel({
+  targetSessionName,
   consoleBridge,
   createTerminal,
 }: ConsolePanelProps): JSX.Element {
@@ -57,54 +67,52 @@ export function ConsolePanel({
 
   async function handleSendPrompt(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
-    if (!state.sessionName) return;
+    if (!state.open) return;
     const text = inputRef.current?.value ?? '';
-    if (text.length === 0) return; // empty input is a no-op
+    if (text.length === 0) return;
     if (inputRef.current) inputRef.current.value = '';
-    await consoleBridge.sendStdin(state.sessionName, text, 'utf8');
+    await consoleBridge.sendStdin(targetSessionName, text, 'utf8');
   }
 
   async function handleSignal(signal: SignalName): Promise<void> {
-    if (!state.sessionName) return;
-    await consoleBridge.signal(state.sessionName, signal);
+    if (!state.open) return;
+    await consoleBridge.signal(targetSessionName, signal);
   }
 
-  // Bridge subscriptions — five listeners, one per shell→webview channel.
-  // Cluster 1 only acts on open/close; chunk/gap/error are intentional no-ops
-  // so cluster 2-4 RED tests can fail before each GREEN expands the body.
   useEffect(() => {
     const cleanups = [
       consoleBridge.onConsoleOpen((p) => {
-        // Reset gap + error state on each open so a fresh session has a
-        // clean banner area; otherwise a prior session's transient errors
-        // would bleed into the rebound view.
-        setState({ sessionName: p.sessionName, gap: null, error: null });
+        if (p.sessionName !== targetSessionName) return;
+        setState({ open: true, gap: null, error: null });
       }),
-      consoleBridge.onConsoleClose(() => {
+      consoleBridge.onConsoleClose((p) => {
+        if (p.sessionName !== targetSessionName) return;
         setState(INITIAL_STATE);
       }),
       consoleBridge.onStdoutChunk((p) => {
+        if (p.sessionName !== targetSessionName) return;
         const t = terminalAdapterRef.current;
-        if (!t) return; // No adapter yet — chunk arrived before console:open.
+        if (!t) return;
         const data =
           p.encoding === 'base64' ? decodeBase64Utf8(p.bytes) : p.bytes;
         t.write(data);
       }),
       consoleBridge.onGap((p) => {
+        if (p.sessionName !== targetSessionName) return;
         setState((s) => ({ ...s, gap: p }));
       }),
       consoleBridge.onError((p) => {
+        if (p.sessionName !== targetSessionName) return;
         setState((s) => ({ ...s, error: p }));
       }),
     ];
     return () => {
       for (const c of cleanups) c();
     };
-  }, [consoleBridge]);
+  }, [consoleBridge, targetSessionName]);
 
-  // Terminal lifecycle — runs whenever a session becomes bound or unbound.
   useEffect(() => {
-    if (!state.sessionName) return undefined;
+    if (!state.open) return undefined;
     const container = terminalContainerRef.current;
     if (!container) return undefined;
 
@@ -115,9 +123,9 @@ export function ConsolePanel({
       adapter.dispose();
       terminalAdapterRef.current = null;
     };
-  }, [state.sessionName, createTerminal]);
+  }, [state.open, createTerminal]);
 
-  if (!state.sessionName) {
+  if (!state.open) {
     return (
       <div data-testid="console-panel-root">
         <div data-testid="console-panel-empty">No console session bound.</div>
@@ -128,7 +136,7 @@ export function ConsolePanel({
   return (
     <div data-testid="console-panel-root">
       <div data-testid="console-panel-header">
-        <span>{state.sessionName}</span>
+        <span>{targetSessionName}</span>
         <button
           type="button"
           data-testid="signal-sigint"
@@ -193,7 +201,5 @@ function decodeBase64Utf8(b64: string): string {
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return new TextDecoder('utf-8', { fatal: false }).decode(arr);
   }
-  // Node fallback (build target is browser; this branch is defensive for
-  // unit-test environments where atob may be absent on older Node releases).
   return Buffer.from(b64, 'base64').toString('utf8');
 }
