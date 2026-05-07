@@ -807,3 +807,168 @@ export const Tier4PayloadSchema = z
   })
   .strict();
 export type Tier4Payload = z.infer<typeof Tier4PayloadSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §13 — Per-session approval policy + swarm audit (MB-T13 — CONDUCTOR_V3_RESCOPE.md §3.2 + §3.8 + §4)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// v3.0 surface (operator-arbitrated Q-MBT13-1..13 2026-05-06):
+//   - approval_policy stored in NEW SQLite session_policies table (Q-MBT13-1=a)
+//     coexists with sessions.json RegistryV2 (frozen per §5)
+//   - resolver is a pure fn; caller passes (policy, actionType, predicates) per Q-MBT13-6=b
+//   - audit-write is async-after-fire, best-effort + single-shot retry per Q-MBT13-7=b
+//   - audit row queryable by ts DESC and (session_name, ts DESC) per Q-MBT13-5=b
+//   - ApprovalActionTypeEnum defined here parallel to sess-mbt11 §12 ActionType per Q-MBT13-12=a
+//     post-cross-merge dedup followup: MB-F-T11-T13-ACTION-TYPE-ENUM-DEDUP
+//   - tile-header picker UI deferred per Q-MBT13-10=b (MB-F-T13-TILE-HEADER-PICKER-INTEGRATION)
+//   - settings-default-policy UI deferred per Q-MBT13-11=a (MB-F-T13-SETTINGS-DEFAULT-POLICY-INTEGRATION)
+//
+// Section numbering note: when sess-mbt11 lands §12 in main, the numerical-
+// order rebase rule per MB-F-PARALLEL-CAIRN-SCHEMA-FILE-MERGE-CONFLICT
+// (sess-mbt10 lesson) governs which branch lands first; this section lands
+// AS §13 in the post-merge file regardless of merge order (sess-mbt11's §12
+// either precedes here or is interleaved at rebase time).
+
+/** Per-session approval policy per CONDUCTOR_V3_RESCOPE.md §3.2. */
+export const ApprovalPolicyEnum = z.enum(['tight', 'medium', 'loose']);
+export type ApprovalPolicy = z.infer<typeof ApprovalPolicyEnum>;
+
+/**
+ * Action types that flow through the approval-policy resolver per
+ * CONDUCTOR_V3_RESCOPE.md §3.6. Mirrors sess-mbt11's §12 ActionType
+ * naming per Q-MBT13-12=a (parallel definition to avoid cross-territory
+ * write pre-merge); post-cross-merge dedup followup
+ * MB-F-T11-T13-ACTION-TYPE-ENUM-DEDUP reconciles the two enums (likely
+ * via re-export or alias from §12). Naming convention follows the §1
+ * ActionTypeEnum precedent (`send`, `kill`, `pull`) rather than the
+ * §3.6 verbose form (`send-prompt-to-session`, `kill-session`, etc.).
+ */
+export const ApprovalActionTypeEnum = z.enum([
+  'send',
+  'spawn-new-session',
+  'kill',
+  'pull',
+  'assign-task',
+]);
+export type ApprovalActionType = z.infer<typeof ApprovalActionTypeEnum>;
+
+/**
+ * Persisted row in `session_policies` per Q-MBT13-1=a. New SQLite table;
+ * coexists with sessions.json RegistryV2 (frozen). Keyed by session_name
+ * (matches the registry name in sessions.json; not FK because the v3
+ * SQLite layer is independent of the v2 JSON-file registry per
+ * WORKSTATION_CONTRACT.md §8.1 coexistence-without-sync rule).
+ */
+export const ApprovalPolicyRowSchema = z
+  .object({
+    session_name: z.string().min(1),
+    approval_policy: ApprovalPolicyEnum,
+    updated_at: z.string().datetime(),
+  })
+  .strict();
+export type ApprovalPolicyRow = z.infer<typeof ApprovalPolicyRowSchema>;
+
+/**
+ * GET /v3/sessions/:name/approval-policy response body.
+ *
+ * `updated_at` is nullable: when no row exists in session_policies for the
+ * given session_name, the daemon returns the structural default
+ * `approval_policy: 'medium'` with `updated_at: null` (Q-MBT13-4=c
+ * defense-in-depth — workstation-side resolver fallback ALSO defaults to
+ * 'medium' on no-row, so the wire-level null sentinel is observability,
+ * not a correctness load-bearing field).
+ */
+export const ApprovalPolicyGetResponseSchema = z
+  .object({
+    session_name: z.string().min(1),
+    approval_policy: ApprovalPolicyEnum,
+    updated_at: z.string().datetime().nullable(),
+  })
+  .strict();
+export type ApprovalPolicyGetResponse = z.infer<typeof ApprovalPolicyGetResponseSchema>;
+
+/**
+ * PUT /v3/sessions/:name/approval-policy body. Server upserts via
+ * INSERT OR REPLACE INTO session_policies (session_name, approval_policy,
+ * updated_at) where updated_at is server-assigned (datetime('now')).
+ */
+export const ApprovalPolicyPutRequestSchema = z
+  .object({
+    approval_policy: ApprovalPolicyEnum,
+  })
+  .strict();
+export type ApprovalPolicyPutRequest = z.infer<typeof ApprovalPolicyPutRequestSchema>;
+
+/**
+ * Persisted row in `orchestrator_swarm_audit` per CONDUCTOR_V3_RESCOPE.md
+ * §3.8. Distinct from the freeze-anchor `OrchestratorAuditRowSchema` (§5)
+ * which audits operator-facing approve/decline of orchestrator chat output;
+ * THIS table audits orchestrator swarm-action firings (autopilot or
+ * manual) — different surface, different retention, separate forensics.
+ *
+ * Field set per §3.8 verbatim:
+ *   ts, session_name, action_type, intent_id, step, total_steps,
+ *   approval_required, approval_status, payload_hash, result_status,
+ *   operator_loop_state
+ *
+ * `intent_id`/`step`/`total_steps` are nullable for non-multi-step actions
+ * (single send, spawn, kill, pull-handoff). Populated only when the
+ * orchestrator wraps the action in a multi-step envelope per §3.4.
+ *
+ * `payload_hash` is SHA-256 hex (lowercase, 64 chars) of canonical
+ * JSON-serialized `{action_type, session_name, prompt}` per Q-MBT13-8=c.
+ * For non-prompt actions, hash the action-type-relevant fields (e.g.,
+ * spawn → `{action_type, session_name, repo_path}`); concrete per-type
+ * hash-input shape is defined at the audit-writer call site (sess-mbt11
+ * territory).
+ *
+ * `id` is UUIDv7, server-assigned at POST time per Q-MBT13-9=a +
+ * orchestrator_audit precedent (`uuidv7()` from
+ * dispatch-daemon/src/events/history.ts).
+ */
+export const OrchestratorSwarmAuditRowSchema = z
+  .object({
+    id: z.string().uuid(),
+    ts: z.string().datetime(),
+    session_name: z.string().min(1),
+    action_type: ApprovalActionTypeEnum,
+    intent_id: z.string().uuid().nullable(),
+    step: z.number().int().min(1).nullable(),
+    total_steps: z.number().int().min(1).nullable(),
+    approval_required: z.boolean(),
+    approval_status: z.enum(['not-required', 'pending', 'approved', 'declined']),
+    payload_hash: z.string().regex(/^[a-f0-9]{64}$/),
+    result_status: z.enum(['fired', 'failed', 'pending']),
+    operator_loop_state: z.enum(['autopilot', 'manual', 'paused']),
+  })
+  .strict();
+export type OrchestratorSwarmAuditRow = z.infer<typeof OrchestratorSwarmAuditRowSchema>;
+
+/**
+ * POST /v3/audit/swarm-audit body — verbatim swarm-audit-row shape minus
+ * `id` (server-assigned UUIDv7). Matches the §5 OrchestratorAuditWriteRequest
+ * shape pattern.
+ */
+export const OrchestratorSwarmAuditWriteRequestSchema =
+  OrchestratorSwarmAuditRowSchema.omit({ id: true }).strict();
+export type OrchestratorSwarmAuditWriteRequest = z.infer<
+  typeof OrchestratorSwarmAuditWriteRequestSchema
+>;
+
+/**
+ * GET /v3/audit/swarm-audit response body per Q-MBT13-9=a (LIMIT 100
+ * ORDER BY ts DESC). `total` is the count of rows returned in this
+ * response (NOT the table cardinality — caller can issue a follow-up
+ * GET with the smallest `ts` from this response to paginate further;
+ * v3.0 ships a single-page modal, deferring rich pagination to v3.1
+ * followup MB-F-T13-AUDIT-MODAL-FILTERS).
+ */
+export const OrchestratorSwarmAuditQueryResponseSchema = z
+  .object({
+    rows: z.array(OrchestratorSwarmAuditRowSchema),
+    total: z.number().int().min(0),
+  })
+  .strict();
+export type OrchestratorSwarmAuditQueryResponse = z.infer<
+  typeof OrchestratorSwarmAuditQueryResponseSchema
+>;
