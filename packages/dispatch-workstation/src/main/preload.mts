@@ -67,6 +67,24 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   // clicks "Show recent orchestrator actions" in the menu.
   fetchAuditModal: () =>
     ipcRenderer.invoke('workstation:audit-modal-fetch'),
+  // MB-T12 WB11b: detach-tile bridge per Q-MBT12-4=a.
+  // detachTile invokes 'tile:detach' which causes the main process
+  // (DetachTileIpcController in detach-tile-ipc.ts) to open a new
+  // BrowserWindow loading console-panel.html?session=<name>. The
+  // returned promise resolves with { ok: true } when the window opened.
+  detachTile: (sessionName: string) =>
+    ipcRenderer.invoke('tile:detach', { sessionName }),
+  // MB-T12 WB11b: subscribe to 'tile:detach-closed' main-process events
+  // fired when an operator closes a detached console window. The
+  // detached session's tile re-mounts in the main grid (TileGridApp
+  // flips status to 'open'). Returns a cleanup fn matching the
+  // onSpawnResult / onStream* pattern.
+  onTileDetachClosed: (cb: (payload: { sessionName: string }) => void) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (_: unknown, payload: { sessionName: string }) => cb(payload);
+    ipcRenderer.on('tile:detach-closed', h as any);
+    return () => ipcRenderer.removeListener('tile:detach-closed', h as any);
+  },
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
