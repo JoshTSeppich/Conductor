@@ -79,6 +79,15 @@ export interface TileProps {
    *  MB-T12 WB5 picker slot affordance for tests not exercising
    *  MB-T16). */
   readonly renderPickerSlot?: (sessionName: string) => ReactNode;
+  // ── MB-T17 WB4: tile-header autopilot slot render-prop ────────────
+  /** Render-prop for the autopilot slot (Q-MBT17-4=a). Mirrors
+   *  renderPickerSlot semantics: when provided, closure is called with
+   *  the tile's `sessionName` and the result renders INSIDE the
+   *  existing `<div data-slot="autopilot" data-testid="tile-autopilot-
+   *  slot-{name}">` wrapper. When undefined, the wrapper renders empty
+   *  (preserves MB-T12 WB5 autopilot slot affordance for tests not
+   *  exercising MB-T17). */
+  readonly renderAutopilotSlot?: (sessionName: string) => ReactNode;
 }
 
 // Skip drag-swap when the user clicks an interactive header element
@@ -110,6 +119,7 @@ export function Tile({
   tokensUsed,
   tokenBudget,
   renderPickerSlot,
+  renderAutopilotSlot,
 }: TileProps): JSX.Element {
   return (
     <div
@@ -165,7 +175,9 @@ export function Tile({
         <div
           data-slot="autopilot"
           data-testid={`tile-autopilot-slot-${sessionName}`}
-        />
+        >
+          {renderAutopilotSlot ? renderAutopilotSlot(sessionName) : null}
+        </div>
         <button
           type="button"
           data-testid="tile-collapse-btn"

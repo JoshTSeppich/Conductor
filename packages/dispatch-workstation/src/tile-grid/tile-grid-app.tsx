@@ -25,6 +25,10 @@ import {
   TileApprovalPicker,
   type TileApprovalPickerBridge,
 } from './tile-approval-picker.js';
+import {
+  TileAutopilotToggle,
+  type TileAutopilotToggleBridge,
+} from './tile-autopilot-toggle.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
@@ -59,6 +63,18 @@ export interface WorkstationBridgeShape {
     sessionName: string,
     policy: ApprovalPolicy,
   ) => Promise<ApprovalPolicyGetResponse>;
+  /** MB-T17 WB2: invokes 'workstation:autopilot-get'. Optional —
+   *  when undefined, TileAutopilotToggle renders 'unavailable' state
+   *  per Q-MBT17-2=a. */
+  getSessionAutopilotEnabled?: (
+    sessionName: string,
+  ) => Promise<{ enabled: boolean }>;
+  /** MB-T17 WB2: invokes 'workstation:autopilot-put'. Optional —
+   *  when undefined, toggle stays in 'unavailable' state. */
+  setSessionAutopilotEnabled?: (
+    sessionName: string,
+    enabled: boolean,
+  ) => Promise<{ enabled: boolean }>;
 }
 
 export interface TileGridAppProps {
@@ -234,6 +250,32 @@ export function TileGridApp({
     );
   }
 
+  // MB-T17 WB4 — adapt the optional autopilot bridge methods into the
+  // slim TileAutopilotToggleBridge shape ONLY when both methods are
+  // defined. When the bridge methods are missing (test fixtures, non-
+  // Electron envs), the closure passes null → toggle renders
+  // 'unavailable' per Q-MBT17-2=a. Mirrors the picker bridge adapter
+  // pattern (MB-T16 Insight 2).
+  const autopilotBridge: TileAutopilotToggleBridge | null =
+    workstationBridge.getSessionAutopilotEnabled &&
+    workstationBridge.setSessionAutopilotEnabled
+      ? {
+          getSessionAutopilotEnabled:
+            workstationBridge.getSessionAutopilotEnabled,
+          setSessionAutopilotEnabled:
+            workstationBridge.setSessionAutopilotEnabled,
+        }
+      : null;
+
+  function renderAutopilotSlot(sessionName: string): JSX.Element {
+    return (
+      <TileAutopilotToggle
+        sessionName={sessionName}
+        workstationBridge={autopilotBridge}
+      />
+    );
+  }
+
   return (
     <TileGrid
       sessions={sessions}
@@ -244,6 +286,7 @@ export function TileGridApp({
       onDetach={handleDetach}
       onSwap={handleSwap}
       renderPickerSlot={renderPickerSlot}
+      renderAutopilotSlot={renderAutopilotSlot}
       onResizeEnd={handleResizeEnd}
       gridOverride={initialGridOverride}
       getCurrentPixelSizes={getCurrentPixelSizes}

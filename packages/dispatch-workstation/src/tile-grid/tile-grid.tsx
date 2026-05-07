@@ -73,6 +73,12 @@ export interface TileGridProps {
    * for semantics.
    */
   readonly renderPickerSlot?: (sessionName: string) => ReactNode;
+  /**
+   * MB-T17 WB4 — tile-header autopilot slot render-prop. Plumbed
+   * through to each <Tile> via direct pass-through. See Tile's prop
+   * docstring for semantics.
+   */
+  readonly renderAutopilotSlot?: (sessionName: string) => ReactNode;
 }
 
 const noop = (): void => {
@@ -102,6 +108,7 @@ export function TileGrid({
   getCurrentPixelSizes,
   onSwap,
   renderPickerSlot,
+  renderAutopilotSlot,
 }: TileGridProps): JSX.Element | null {
   // Hooks must be unconditional and run in the same order on every
   // render (React Rules of Hooks). Layout / shape checks happen below
@@ -325,6 +332,7 @@ export function TileGrid({
               tokensUsed={s.tokensUsed}
               tokenBudget={s.tokenBudget}
               renderPickerSlot={renderPickerSlot}
+              renderAutopilotSlot={renderAutopilotSlot}
             />
           </div>
         );

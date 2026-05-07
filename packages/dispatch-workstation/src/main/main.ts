@@ -52,6 +52,14 @@ import {
 // audit-modal-ipc registration patterns.
 import { createDefaultApprovalPolicyIpcController } from './approval-policy-ipc.js';
 // === END: MB-T16 approval-policy IPC imports ===
+// === BEGIN: MB-T17 autopilot IPC imports (do not modify outside this block) ===
+// WB4 — AutopilotIpcController + production factory for the per-session
+// autopilot toggle consumed by TileAutopilotToggle. Significant deviation
+// from MB-T16 pattern: NO daemon route — autopilot state is workstation-
+// side only via AutopilotLoop (autopilot-loop.ts:102 endorses parallel
+// AutopilotLoop instances).
+import { createDefaultAutopilotIpcController } from './autopilot-ipc.js';
+// === END: MB-T17 autopilot IPC imports ===
 // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
 import { bootstrapApiKey } from './api-key-bootstrap.js';
 // === END: Fix-A ===
@@ -532,6 +540,33 @@ app.whenReady().then(async () => {
     process.stdout.write('APPROVAL_POLICY_IPC_MOUNTED\n');
   }
   // === END: MB-T16 approval-policy IPC ===
+
+  // === BEGIN: MB-T17 autopilot IPC (do not modify outside this block) ===
+  // WB4 — wires `workstation:autopilot-get` + `workstation:autopilot-put`
+  // ipcMain handlers. The renderer-side TileAutopilotToggle (mounted by
+  // TileGridApp via renderAutopilotSlot closure) invokes these channels
+  // through the preload contextBridge methods `getSessionAutopilotEnabled`
+  // / `setSessionAutopilotEnabled`.
+  //
+  // Default factory wires `new AutopilotLoop()` (default deps reading/
+  // writing autopilot-state-store at <userData>/autopilot-state.json).
+  // Q-MBT17-9=a: parallel AutopilotLoop instance is explicitly safe per
+  // autopilot-loop.ts:102 file header — coexists with the AutopilotLoop
+  // instance in coarchitect-ipc.ts:84 (used by orchestrator-action-handler).
+  //
+  // Closes MB-F-T12-AUTOPILOT-TILE-TOGGLE-INTEGRATION (FOLLOWUPS.md:173)
+  // — the tile-header autopilot toggle that MB-T11 deferred to a follow-
+  // on now ships end-to-end (renderer → preload bridge → ipcMain handler
+  // → AutopilotLoop → autopilot-state.json).
+  //
+  // R-MBT17-7 honored: NEW sentinel-bracketed block adjacent to (NOT
+  // inside) the MB-T16 sentinel zone.
+  const autopilotController = createDefaultAutopilotIpcController();
+  autopilotController.registerHandlers(ipcMain);
+  if (process.env['MB_TEST_HOOKS'] === '1') {
+    process.stdout.write('AUTOPILOT_IPC_MOUNTED\n');
+  }
+  // === END: MB-T17 autopilot IPC ===
 
   // ONBOARDING_READY sentinel is emitted after createWindow returns so the
   // smoke harness's runOnboarding() can wait deterministically.
