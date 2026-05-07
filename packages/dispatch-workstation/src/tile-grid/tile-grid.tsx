@@ -15,7 +15,7 @@
 // Per Q-MBT12-10=a: overflow at N≥9 uses CSS Grid auto-flow (implicit rows
 // + container `overflow-y: auto`); tab-strip deferred to v3.1.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Tile, type TileStatus } from './tile.js';
 import { computeGridLayout, computeNewSizesAfterDrag } from './tile-layout.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
@@ -67,6 +67,12 @@ export interface TileGridProps {
    * WB8 drag-swap: fires when one tile's header is dropped on another's.
    */
   readonly onSwap?: (a: string, b: string) => void;
+  /**
+   * MB-T16 WB4 — tile-header picker slot render-prop. Plumbed through
+   * to each <Tile> via direct pass-through. See Tile's prop docstring
+   * for semantics.
+   */
+  readonly renderPickerSlot?: (sessionName: string) => ReactNode;
 }
 
 const noop = (): void => {
@@ -95,6 +101,7 @@ export function TileGrid({
   onResizeEnd,
   getCurrentPixelSizes,
   onSwap,
+  renderPickerSlot,
 }: TileGridProps): JSX.Element | null {
   // Hooks must be unconditional and run in the same order on every
   // render (React Rules of Hooks). Layout / shape checks happen below
@@ -317,6 +324,7 @@ export function TileGrid({
               model={s.model}
               tokensUsed={s.tokensUsed}
               tokenBudget={s.tokenBudget}
+              renderPickerSlot={renderPickerSlot}
             />
           </div>
         );

@@ -27,6 +27,7 @@
 // WB5; their respective followups populate them. Footer slot is also
 // placeholder for MB-T18.
 
+import type { ReactNode } from 'react';
 import { ConsolePanel } from '../console-panel/console-panel.js';
 import { TileHeader } from './tile-header.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
@@ -68,6 +69,16 @@ export interface TileProps {
   /** Token budget (model context window). Default 200_000 per
    *  Q-MBT15-2 stub. */
   readonly tokenBudget?: number;
+  // ── MB-T16 WB4: tile-header picker slot render-prop ───────────────
+  /** Render-prop for the picker slot (Q-MBT16-4=a). When provided,
+   *  the closure is called with the tile's `sessionName` and the
+   *  result is rendered INSIDE the existing
+   *  `<div data-slot="picker" data-testid="tile-picker-slot-{name}">`
+   *  wrapper (per Q-MBT16-3=a-equivalent slot-population semantics).
+   *  When undefined, the wrapper renders empty (preserves the legacy
+   *  MB-T12 WB5 picker slot affordance for tests not exercising
+   *  MB-T16). */
+  readonly renderPickerSlot?: (sessionName: string) => ReactNode;
 }
 
 // Skip drag-swap when the user clicks an interactive header element
@@ -98,6 +109,7 @@ export function Tile({
   model,
   tokensUsed,
   tokenBudget,
+  renderPickerSlot,
 }: TileProps): JSX.Element {
   return (
     <div
@@ -147,7 +159,9 @@ export function Tile({
           tokensUsed={tokensUsed}
           tokenBudget={tokenBudget}
         />
-        <div data-slot="picker" data-testid={`tile-picker-slot-${sessionName}`} />
+        <div data-slot="picker" data-testid={`tile-picker-slot-${sessionName}`}>
+          {renderPickerSlot ? renderPickerSlot(sessionName) : null}
+        </div>
         <div
           data-slot="autopilot"
           data-testid={`tile-autopilot-slot-${sessionName}`}

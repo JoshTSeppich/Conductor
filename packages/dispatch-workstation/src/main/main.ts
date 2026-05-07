@@ -45,6 +45,13 @@ import {
   createDefaultWindowFactory,
 } from './detach-tile-ipc.js';
 // === END: MB-T12 tile-grid mount imports ===
+// === BEGIN: MB-T16 approval-policy IPC imports (do not modify outside this block) ===
+// WB4 — ApprovalPolicyIpcController + production factory for the
+// per-session approval-policy GET/PUT bridge consumed by
+// TileApprovalPicker. Mirrors the MB-T12 detach-tile-ipc + sess-mbt13
+// audit-modal-ipc registration patterns.
+import { createDefaultApprovalPolicyIpcController } from './approval-policy-ipc.js';
+// === END: MB-T16 approval-policy IPC imports ===
 // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
 import { bootstrapApiKey } from './api-key-bootstrap.js';
 // === END: Fix-A ===
@@ -497,6 +504,34 @@ app.whenReady().then(async () => {
     process.stdout.write('TILE_GRID_MOUNTED\n');
   }
   // === END: MB-T12 tile-grid mount ===
+
+  // === BEGIN: MB-T16 approval-policy IPC (do not modify outside this block) ===
+  // WB4 — wires `workstation:approval-policy-get` + `workstation:approval-
+  // policy-put` ipcMain handlers. The renderer-side TileApprovalPicker
+  // (mounted by TileGridApp via renderPickerSlot closure) invokes these
+  // channels through the preload contextBridge methods
+  // `getSessionApprovalPolicy` / `putSessionApprovalPolicy`.
+  //
+  // The default factory wires DAEMON_URL (env var or localhost:7878
+  // fallback) + readDaemonToken() (~/.foxworks-dispatch/token via fs).
+  // Token is re-read per request so it can rotate without process
+  // restart.
+  //
+  // Closes MB-F-T13-TILE-HEADER-PICKER-INTEGRATION (FOLLOWUPS.md:160)
+  // — the tile-header dropdown that lets operators flip approval
+  // policy via tile UI is now functional end-to-end (renderer →
+  // preload bridge → ipcMain handler → daemon GET/PUT
+  // /v3/sessions/:name/approval-policy → SQLite session_policies).
+  //
+  // R-MBT16-7 + R-MBT12-6 honored: NEW sentinel-bracketed block
+  // adjacent to (NOT inside) the existing MB-T12 / Fix-C / Probe-92
+  // sentinel zones.
+  const approvalPolicyController = createDefaultApprovalPolicyIpcController();
+  approvalPolicyController.registerHandlers(ipcMain);
+  if (process.env['MB_TEST_HOOKS'] === '1') {
+    process.stdout.write('APPROVAL_POLICY_IPC_MOUNTED\n');
+  }
+  // === END: MB-T16 approval-policy IPC ===
 
   // ONBOARDING_READY sentinel is emitted after createWindow returns so the
   // smoke harness's runOnboarding() can wait deterministically.

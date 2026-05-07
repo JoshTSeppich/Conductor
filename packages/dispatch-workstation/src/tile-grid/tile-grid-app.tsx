@@ -21,9 +21,17 @@ import {
   TileGrid,
   type TileGridSessionEntry,
 } from './tile-grid.js';
+import {
+  TileApprovalPicker,
+  type TileApprovalPickerBridge,
+} from './tile-approval-picker.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
+import type {
+  ApprovalPolicy,
+  ApprovalPolicyGetResponse,
+} from 'dispatch-core/dist/v3/schema.js';
 
 export interface WorkstationBridgeShape {
   /** Subscribes to 'workstation:spawn-result' replies. Returns cleanup. */
@@ -39,6 +47,18 @@ export interface WorkstationBridgeShape {
   onTileDetachClosed?: (
     cb: (payload: { sessionName: string }) => void,
   ) => () => void;
+  /** MB-T16 WB2: invokes 'workstation:approval-policy-get'. Optional —
+   *  when undefined, TileApprovalPicker renders 'unavailable' state per
+   *  Q-MBT16-2=a. */
+  getSessionApprovalPolicy?: (
+    sessionName: string,
+  ) => Promise<ApprovalPolicyGetResponse>;
+  /** MB-T16 WB2: invokes 'workstation:approval-policy-put'. Optional —
+   *  when undefined, picker stays in 'unavailable' state. */
+  putSessionApprovalPolicy?: (
+    sessionName: string,
+    policy: ApprovalPolicy,
+  ) => Promise<ApprovalPolicyGetResponse>;
 }
 
 export interface TileGridAppProps {
@@ -188,6 +208,32 @@ export function TileGridApp({
     if (onPersistGridOverride) onPersistGridOverride(override);
   }
 
+  // MB-T16 WB4 — adapt the optional bridge methods into the slim
+  // TileApprovalPickerBridge shape ONLY when both methods are defined.
+  // Captured in a stable closure so React doesn't re-mount the picker
+  // on every TileGridApp render. When the bridge methods are missing
+  // (test fixtures, non-Electron envs), the closure passes null →
+  // picker renders 'unavailable' per Q-MBT16-2=a.
+  const pickerBridge: TileApprovalPickerBridge | null =
+    workstationBridge.getSessionApprovalPolicy &&
+    workstationBridge.putSessionApprovalPolicy
+      ? {
+          getSessionApprovalPolicy:
+            workstationBridge.getSessionApprovalPolicy,
+          putSessionApprovalPolicy:
+            workstationBridge.putSessionApprovalPolicy,
+        }
+      : null;
+
+  function renderPickerSlot(sessionName: string): JSX.Element {
+    return (
+      <TileApprovalPicker
+        sessionName={sessionName}
+        workstationBridge={pickerBridge}
+      />
+    );
+  }
+
   return (
     <TileGrid
       sessions={sessions}
@@ -197,6 +243,7 @@ export function TileGridApp({
       onCollapse={handleCollapse}
       onDetach={handleDetach}
       onSwap={handleSwap}
+      renderPickerSlot={renderPickerSlot}
       onResizeEnd={handleResizeEnd}
       gridOverride={initialGridOverride}
       getCurrentPixelSizes={getCurrentPixelSizes}
