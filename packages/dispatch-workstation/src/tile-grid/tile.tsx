@@ -30,8 +30,13 @@
 import { ConsolePanel } from '../console-panel/console-panel.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
+import type { TileStatus } from './types.js';
 
-export type TileStatus = 'idle' | 'open' | 'killed' | 'detached';
+// Re-export TileStatus so existing consumers (tile-grid.tsx) keep
+// importing from './tile.js'. MB-T15 WB1 extracted the type into
+// types.ts so non-JSX modules (color-helpers.ts) can import it without
+// pulling tile.tsx into tsc scope.
+export type { TileStatus };
 
 export interface TileProps {
   readonly sessionName: string;
