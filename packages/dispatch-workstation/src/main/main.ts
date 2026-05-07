@@ -14,6 +14,7 @@ import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.
 import { registerIpcHandlers } from './coarchitect-ipc.js';
 import { registerSpawnIpcHandlers } from './spawn-ipc.js';
 import { registerSessionSendPromptIpcHandlers } from './session-send-prompt-ipc.js';
+import { registerAuditModalIpcHandlers } from './audit-modal-ipc.js';
 import {
   registerConsoleIpcHandlers,
   DEFAULT_PANEL_CAP,
@@ -294,6 +295,14 @@ app.whenReady().then(async () => {
   // canonical sendKeys (dispatch-core/src/transport/tmux.ts).
   registerSessionSendPromptIpcHandlers();
   // === end MB-T09 session-send-prompt IPC ===
+  // === MB-T13 audit-modal-fetch IPC ===
+  // Per CONDUCTOR_V3_RESCOPE.md §3.8 + Phase 2 brief WB7 — operator
+  // menu item ("Show recent orchestrator actions") fires this IPC,
+  // controller fetches last-100 swarm-audit rows from daemon GET
+  // /v3/audit/swarm-audit?limit=100. Default deps wire production
+  // fetch + token reader.
+  registerAuditModalIpcHandlers();
+  // === end MB-T13 audit-modal-fetch IPC ===
   // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
   consoleController = registerConsoleIpcHandlers({
     getWebContents: () => mainWindow?.webContents ?? null,
