@@ -58,13 +58,13 @@ describe('MB-T20 WB3 — mountChatShell adapter', () => {
     );
   });
 
-  it('renders the WB3 default chat-tab stub when no renderChatTab provided', async () => {
+  it('renders default chat-tab stub when neither renderChatTab nor bridge provided', async () => {
     await act(async () => {
       mountChatShell({ rootElementId: 'chat-shell-mount-target' });
     });
     const stub = document.querySelector('[data-testid="chat-shell-chat-tab-stub"]');
     expect(stub).not.toBeNull();
-    expect(stub?.textContent).toContain('WB4');
+    expect(stub?.textContent).toContain('Chat tab body');
   });
 
   it('renders custom renderChatTab when provided', async () => {

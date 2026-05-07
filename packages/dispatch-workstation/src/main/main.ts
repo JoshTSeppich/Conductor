@@ -60,6 +60,14 @@ import { createDefaultApprovalPolicyIpcController } from './approval-policy-ipc.
 // AutopilotLoop instances).
 import { createDefaultAutopilotIpcController } from './autopilot-ipc.js';
 // === END: MB-T17 autopilot IPC imports ===
+// === BEGIN: MB-T20 chat panel (do not modify outside this block) ===
+// Reserved zone for any future main-process wiring related to the
+// Conductor chat panel shell (src/chat-shell/). At WB4 the chat-shell
+// renderer mounts entirely renderer-side via workstation-shell.html
+// line 555 script-tag swap (Q-MBT20-4=a single renderer per region;
+// Q-MBT20-5=a coarchitectBridge reuse — preload.mts unchanged).
+// Zone reserved per Q-MBT20-8=a CLAUDE.md §3.3 sentinel discipline.
+// === END: MB-T20 chat panel ===
 // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
 import { bootstrapApiKey } from './api-key-bootstrap.js';
 // === END: Fix-A ===
