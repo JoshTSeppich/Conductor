@@ -59,6 +59,7 @@ import {
 } from '../routes/sessions.js';
 import { registerOrchestratorAuditRoutes } from '../routes/v3/orchestrator-audit.js';
 import { registerSwarmAuditRoutes } from '../routes/v3/audit/swarm-audit.js';
+import { registerApprovalPolicyRoutes } from '../routes/v3/sessions/approval-policy.js';
 import { registerOrchestratorHistoryRoutes } from '../routes/v3/orchestrator-history.js';
 import { registerOrchestratorMessagesRoutes } from '../routes/v3/orchestrator-messages.js';
 import { registerTicketsStateRoutes } from '../routes/v3/tickets-state.js';
@@ -414,6 +415,16 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
   // orchestrator_swarm_audit table from migration 0003. GET clamps
   // limit to 100 per Q-MBT13-9=a (single-page modal at v3.0).
   await registerSwarmAuditRoutes(app, { db });
+
+  // MB-T13 WB5: GET + PUT /v3/sessions/:name/approval-policy per
+  // CONDUCTOR_V3_RESCOPE.md §3.2 + Phase 2 brief WB5 + WB5 routing
+  // note (operator preference: per-session policy reads/writes belong
+  // under sessions/, NOT audit/). GET on no-row returns the structural
+  // default 'medium' with updated_at: null per Q-MBT13-4=c defense-
+  // in-depth. PUT upserts via INSERT OR REPLACE; server-assigned
+  // updated_at as ISO-8601. Persists to session_policies table from
+  // migration 0003.
+  await registerApprovalPolicyRoutes(app, { db });
 
   // COARCH-T01 B10: POST upsert + GET list + GET /:ticket_id for
   // /v3/tickets/state per WORKSTATION_CONTRACT.md §6.3 + ratified
