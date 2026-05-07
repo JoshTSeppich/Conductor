@@ -35,9 +35,16 @@ import {
   runOnboardingIfNeeded,
 } from './onboarding-mount.js';
 // === end Onboarding mount imports ===
-// === Console mount imports (Session C / Batch 6 / wiring-mounts) ===
-import { mountConsoleTileGrid } from './console-mount.js';
-// === end Console mount imports ===
+// === BEGIN: MB-T12 tile-grid mount imports (do not modify outside this block) ===
+// WB12 — DetachTileIpcController (WB11b) + window factory for the detach
+// flow. The renderer-side mount happens via the tile-grid renderer bundle
+// loaded by workstation-shell.html; this main-process module sets up the
+// IPC plumbing.
+import {
+  DetachTileIpcController,
+  createDefaultWindowFactory,
+} from './detach-tile-ipc.js';
+// === END: MB-T12 tile-grid mount imports ===
 // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
 import { bootstrapApiKey } from './api-key-bootstrap.js';
 // === END: Fix-A ===
@@ -72,6 +79,10 @@ const SHELL_PATH = resolve(__dirname, 'workstation-shell.html');
 // scripts/build-audit-modal.mjs. From dist/main/main.js the relative
 // path is `../audit-modal/audit-modal.html`.
 const AUDIT_MODAL_PATH = resolve(__dirname, '..', 'audit-modal', 'audit-modal.html');
+// MB-T12 WB12 + WB11b: the standalone console-panel.html is loaded by
+// detached BrowserWindows opened via DetachTileIpcController. From
+// dist/main/main.js the relative path is `../console-panel/console-panel.html`.
+const CONSOLE_PANEL_HTML_PATH = resolve(__dirname, '..', 'console-panel', 'console-panel.html');
 
 // === BEGIN: Probe-92 obs-infra — userData isolation (do not modify outside this block) ===
 // Redirect Electron's userData directory (where Local Storage / leveldb
@@ -448,46 +459,44 @@ app.whenReady().then(async () => {
   }
   // === END: Fix-C ===
 
-  // === Console mount (Session C / Batch 6 / wiring-mounts) ===
-  // Closes MB-F-CONSOLE-T03-SHELL-INTEGRATION (vision §10.10 ship-gate).
+  // === BEGIN: MB-T12 tile-grid mount (do not modify outside this block) ===
+  // WB12 — replaces the WB1-era no-op mountConsoleTileGrid wiring with
+  // the real tile-grid integration. The renderer-side React tree mounts
+  // in dist/tile-grid/renderer.js (built from src/tile-grid/mount.ts) and
+  // is loaded by workstation-shell.html.
   //
-  // v3.0 single-panel-in-shell: the shell's inline script subscribes to
-  // window.consoleBridge.onConsoleOpen / onConsoleClose directly (see
-  // workstation-shell.html), so the tile region's visibility tracks
-  // panel state without requiring main-process panel-event observability.
-  // mountConsoleTileGrid is wired here for the parallel
-  // console-tile:show / console-tile:hide IPC channels that MB-T12
-  // multi-panel tiling will consume; in v3.0 it stays quiescent because
-  // ConsoleIpcController does not surface panel-event observability and
-  // the menu callback wiring (refreshConsoleMenu's onOpen) lives outside
-  // Session-C's sentinel territory.
+  // This block (main-process side) sets up:
+  //   - DetachTileIpcController (WB11b) — opens detached BrowserWindows
+  //     on tile-detach-button clicks; routes 'tile:detach' invoke +
+  //     'tile:detach-closed' notify back to renderer.
+  //   - ConsoleIpcController.setSessionTarget callback (WB11a multi-target
+  //     refactor) — wired to the detach controller so console:* events
+  //     for a detached session route to the detached window's webContents
+  //     instead of mainWindow.
+  //   - TILE_GRID_MOUNTED stdout sentinel (MB_TEST_HOOKS=1) for smoke
+  //     harness verification.
   //
-  // The CONSOLE_TILE_GRID_MOUNTED stdout sentinel is emitted on mount so
-  // the smoke harness can validate the wiring chain even though no panel
-  // events fire in v3.0. Future MB-T12 will replace the no-op event
-  // sources with controller-derived subscriptions.
-  const consoleMountDispose = mountConsoleTileGrid({
-    onPanelOpen: () => () => {
-      /* v3.0: no panel-event source on controller; MB-T12 wires this. */
+  // R-MBT12-6 honored: this is a NEW sentinel-bracketed block adjacent
+  // to (but not inside) the existing Fix-C / Probe-92 sentinel zones.
+  const detachTileController = new DetachTileIpcController({
+    windowFactory: createDefaultWindowFactory(BrowserWindow),
+    consolePanelHtmlPath: CONSOLE_PANEL_HTML_PATH,
+    preloadPath: PRELOAD_PATH,
+    setSessionTarget: (sessionName, target) => {
+      consoleController?.setSessionTarget(sessionName, target);
     },
-    onPanelClose: () => () => {
-      /* v3.0: no panel-event source on controller; MB-T12 wires this. */
-    },
-    sendToShell: (channel, payload) => {
+    notifyMainWindow: (sessionName) => {
       const wc = mainWindow?.webContents;
-      if (wc && !wc.isDestroyed()) wc.send(channel, payload);
-    },
-    emitTestSentinel: (sentinel) => {
-      if (process.env.MB_TEST_HOOKS === '1') {
-        process.stdout.write(sentinel + '\n');
+      if (wc && !wc.isDestroyed()) {
+        wc.send('tile:detach-closed', { sessionName });
       }
     },
   });
-  // Capture the dispose handle so future window-close lifecycle hooks
-  // can release subscriptions cleanly. No-op in v3.0 (subscriptions are
-  // empty), but keeps the symmetry for MB-T12.
-  void consoleMountDispose;
-  // === end Console mount ===
+  detachTileController.registerHandlers(ipcMain);
+  if (process.env['MB_TEST_HOOKS'] === '1') {
+    process.stdout.write('TILE_GRID_MOUNTED\n');
+  }
+  // === END: MB-T12 tile-grid mount ===
 
   // ONBOARDING_READY sentinel is emitted after createWindow returns so the
   // smoke harness's runOnboarding() can wait deterministically.

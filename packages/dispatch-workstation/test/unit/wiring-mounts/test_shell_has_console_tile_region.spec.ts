@@ -1,19 +1,19 @@
-// MB-F-CONSOLE-T03-SHELL-INTEGRATION — Cluster 1 RED.
+// MB-T12 WB12 — workstation-shell.html exposes the tile-grid mount region.
 //
-// Vision §10.10 ship-gate: "operator selects 'CC Console > [session]' from
-// native menu → panel mounts in webview". CONSOLE-T03's menu surface and
-// ConsoleIpcController.openConsolePanel ship at HEAD; what's missing is
-// that the running workstation-shell.html has no #console-tile-region
-// (and therefore no #console-root and no script tag for the bundled
-// renderer), so console:open IPC reaches the shell but renders nowhere
-// visible. This RED spec reads the source-of-truth shell HTML and asserts
-// the region is present + correctly placed.
+// Pre-WB12 (WB1-era / Session C / Batch 6 / wiring-mounts): the shell had
+// `#console-tile-region` containing `#console-tile-grid` containing
+// `#console-root`. A single ConsolePanel auto-mounted into #console-root.
+// The region was hidden by default (display:none) and toggled via inline
+// JS that subscribed to consoleBridge.onConsoleOpen.
 //
-// Acceptance criterion (followup body): "RED: test asserts #console-tile-grid
-// not present in shell OR mountConsoleTileGrid not called."
-//
-// RED state: workstation-shell.html does not yet contain #console-tile-region
-// or #console-tile-grid → assertion fails.
+// Post-WB12: the inner DOM is replaced with `#tile-grid-root` and the
+// inline visibility toggle is deleted. The tile-grid renderer bundle
+// auto-mounts <TileGridApp> into `#tile-grid-root`; TileGridApp returns
+// null when sessions.length===0, so the region collapses naturally
+// (flex-grow + min-height:0). The console-panel renderer bundle is
+// still loaded so the WB11 detached-window path
+// (console-panel.html?session=<name>) keeps working.
+
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -25,33 +25,37 @@ const SHELL_HTML = resolve(
   '../../../src/main/workstation-shell.html',
 );
 
-describe('MB-F-CONSOLE-T03 — workstation-shell.html exposes the console tile region', () => {
+describe('MB-T12 WB12 — workstation-shell.html tile-grid mount region', () => {
   const html = readFileSync(SHELL_HTML, 'utf8');
 
-  it('contains a #console-tile-region container', () => {
+  it('retains the #console-tile-region wrapper (renamed-inner only)', () => {
     expect(html).toMatch(/id\s*=\s*['"]console-tile-region['"]/);
   });
 
-  it('contains a #console-tile-grid container nested inside the region', () => {
-    expect(html).toMatch(/id\s*=\s*['"]console-tile-grid['"]/);
+  it('contains the #tile-grid-root mount target (WB12 replaces #console-tile-grid + #console-root)', () => {
+    expect(html).toMatch(/id\s*=\s*['"]tile-grid-root['"]/);
   });
 
-  it('starts the tile region hidden (display:none) so an unselected session does not steal layout', () => {
-    // Cheap heuristic: the tile region's inline style or initial CSS
-    // should mention display:none so the operator's first paint is
-    // identical to today's shell (kanban + chat only). Once a console
-    // is opened, the inline script flips visibility.
-    const regionMatch = html.match(
+  it('does NOT contain the legacy single-panel markers #console-tile-grid or #console-root', () => {
+    expect(html).not.toMatch(/id\s*=\s*['"]console-tile-grid['"]/);
+    expect(html).not.toMatch(/id\s*=\s*['"]console-root['"]/);
+  });
+
+  it('region is no longer hidden by inline display:none (WB12 uses flex-grow flow)', () => {
+    // WB12 removes the WB1-era `style="height: 240px; display: none;"`
+    // inline attribute. TileGridApp manages its own visibility (returns
+    // null on N=0); flex layout reclaims the space.
+    const inlineNoneMatch = html.match(
       /id\s*=\s*['"]console-tile-region['"][^>]*style\s*=\s*['"][^'"]*display\s*:\s*none/i,
     );
-    expect(regionMatch).not.toBeNull();
+    expect(inlineNoneMatch).toBeNull();
   });
 
-  it('places the tile region between #kanban-region and #splitter (operator-arbitrated layout)', () => {
-    // Per coord scaffold §1, Session-C's placement decision (operator-
-    // baked-in) is option (a) — embedded alongside chat panel as a new
-    // region between kanban and splitter. Asserting source-order so a
-    // future drift towards (b)/(c) re-arbitrates with operator first.
+  it('places the tile region between #kanban-region and #splitter (layout order unchanged)', () => {
+    // Operator-baked-in placement (option (a) embedded alongside chat
+    // panel as a new region between kanban and splitter). Asserts source
+    // order so a future drift to a different layout re-arbitrates with
+    // operator.
     const kanbanIdx = html.indexOf('id="kanban-region"');
     const tileIdx = html.indexOf('id="console-tile-region"');
     const splitterIdx = html.indexOf('id="splitter"');
@@ -64,13 +68,21 @@ describe('MB-F-CONSOLE-T03 — workstation-shell.html exposes the console tile r
     expect(tileIdx).toBeLessThan(splitterIdx);
   });
 
-  it('loads the bundled console-panel renderer so #console-root auto-mounts when the bridge fires', () => {
-    // The console-panel/mount.ts auto-mount path looks for window.consoleBridge
-    // (already exposed by preload.mts) + #console-root in the DOM. The shell
-    // must therefore (a) include a #console-root element somewhere inside
-    // the tile region and (b) load ../console-panel/renderer.js so the
-    // auto-mount fires on shell-load.
-    expect(html).toMatch(/id\s*=\s*['"]console-root['"]/);
+  it('loads the tile-grid renderer bundle so TileGridApp auto-mounts on shell-load', () => {
+    expect(html).toMatch(/tile-grid\/renderer\.js/);
+  });
+
+  it('still loads console-panel renderer (used by the WB11 detached-window standalone path)', () => {
     expect(html).toMatch(/console-panel\/renderer\.js/);
+  });
+
+  it('does NOT contain the legacy onConsoleOpen → display:block inline toggle (WB12 deleted it)', () => {
+    // Pre-WB12 shell had:
+    //   window.consoleBridge.onConsoleOpen(() => {
+    //     consoleTileRegion.style.display = 'block';
+    //   });
+    // WB12 deletes this — TileGridApp manages visibility, the bridge
+    // subscription happens inside React state.
+    expect(html).not.toMatch(/onConsoleOpen[^)]*\)\s*=>\s*\{[^}]*style\.display\s*=\s*['"]block/i);
   });
 });
