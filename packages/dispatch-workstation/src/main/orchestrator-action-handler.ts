@@ -54,10 +54,10 @@ import {
   type MBT11ActionType,
 } from './orchestrator-action-types.js';
 import {
-  resolveApprovalStub,
-  type ResolverInput,
-  type ResolverResult,
-} from './approval-policy-resolver-stub.js';
+  resolveApprovalShim,
+  type ShimResolverInput,
+  type ShimResolverResult,
+} from './approval-policy-resolver-shim.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public types
@@ -133,10 +133,13 @@ export interface AutopilotStartIntentResult {
  */
 export interface DispatchActionDeps {
   /**
-   * Resolver. Defaults to resolveApprovalStub (Q-MBT11-6=a). Replaced
-   * post-cross-merge per MB-F-T11-T13-RESOLVER-STUB.
+   * Resolver. Defaults to resolveApprovalShim — a thin wrapper around the
+   * real `resolveApproval` (sess-mbt13) that fetches the per-session policy
+   * via daemon HTTP. Async because of the fetch; underlying resolver is
+   * pure. Call-site rewrite that drops the shim is tracked at
+   * MB-F-T11-T13-RESOLVER-CALL-SITE-REWRITE.
    */
-  resolveApproval: (input: ResolverInput) => ResolverResult;
+  resolveApproval: (input: ShimResolverInput) => Promise<ShimResolverResult>;
 
   /**
    * Send-prompt fire (MB-T09 IPC). The handler invokes this with
@@ -225,13 +228,13 @@ export async function dispatchAction(
   // resolver — the operator's approval is the authority signal. For 'action'
   // inputs (fires-without-card), consult the resolver.
   if (output.type === 'action') {
-    const resolverResult = deps.resolveApproval({
+    const resolverResult = await deps.resolveApproval({
       actionType,
       sessionName,
-      // Predicates are intentionally unset in v3.0 — the stub ignores them
-      // and the real resolver (sess-mbt13) computes its own from payload +
-      // workstation state. This keeps the action-handler decoupled from
-      // the predicate-computation logic.
+      // Predicate-computation seam lives at the call-site rewrite tracked
+      // at MB-F-T11-T13-RESOLVER-CALL-SITE-REWRITE; the shim graceful-
+      // degrades to no predicates and the real resolver yields the most-
+      // permissive correct answer under medium (R3 contract).
     });
     if (resolverResult.approvalRequired) {
       return {
@@ -315,10 +318,10 @@ export async function dispatchAction(
  * narrow factory the caller supplies — this keeps the handler decoupled
  * from Electron and HTTP concerns at module-load time.
  *
- * v3.0 default: resolver = resolveApprovalStub (per Q-MBT11-6=a). The
- * other deps are caller-supplied because they require Electron's ipcMain
- * (not always available at unit-test time) or HTTP runtime (daemon
- * token, fetch).
+ * v3.0 default: resolver = resolveApprovalShim (real resolver wrapped with
+ * daemon-fetch of per-session policy). The other deps are caller-supplied
+ * because they require Electron's ipcMain (not always available at unit-
+ * test time) or HTTP runtime (daemon token, fetch).
  */
 export function defaultDispatchActionDeps(
   overrides: Partial<DispatchActionDeps> & {
@@ -330,7 +333,7 @@ export function defaultDispatchActionDeps(
   },
 ): DispatchActionDeps {
   return {
-    resolveApproval: overrides.resolveApproval ?? resolveApprovalStub,
+    resolveApproval: overrides.resolveApproval ?? resolveApprovalShim,
     fireSendPrompt: overrides.fireSendPrompt,
     fireSpawn: overrides.fireSpawn,
     fireKill: overrides.fireKill,

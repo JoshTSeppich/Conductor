@@ -40,7 +40,7 @@ describe('MB-T11 WB7 — router → handler integration', () => {
     //    Resolver overridden to NOT require approval so the action fires.
     const fireSendPrompt = vi.fn(async () => {});
     const deps = defaultDispatchActionDeps({
-      resolveApproval: () => ({ approvalRequired: false, reason: 'test' }),
+      resolveApproval: async () => ({ approvalRequired: false, reason: 'test' }),
       fireSendPrompt,
       fireSpawn: vi.fn(async () => ({ sessionName: 'unused' })),
       fireKill: vi.fn(async () => {}),
@@ -151,7 +151,7 @@ describe('MB-T11 WB7 — router → handler integration', () => {
 
     const startIntent = vi.fn(async () => ({ intent_id: 'mock-intent-1234' }));
     const deps = defaultDispatchActionDeps({
-      resolveApproval: () => ({ approvalRequired: false, reason: 'test' }),
+      resolveApproval: async () => ({ approvalRequired: false, reason: 'test' }),
       fireSendPrompt: vi.fn(async () => {}),
       fireSpawn: vi.fn(async () => ({ sessionName: 'unused' })),
       fireKill: vi.fn(async () => {}),

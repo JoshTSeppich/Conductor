@@ -81,7 +81,7 @@ function makeFixture(): AcceptanceFixture {
 
   const sharedDeps = (resolverApprovalRequired: boolean): DispatchActionDeps =>
     defaultDispatchActionDeps({
-      resolveApproval: () => ({
+      resolveApproval: async () => ({
         approvalRequired: resolverApprovalRequired,
         reason: resolverApprovalRequired ? 'fixture-stub' : 'fixture-allow',
       }),

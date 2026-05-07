@@ -64,7 +64,7 @@ export function buildDeps(
   overrides: Partial<DispatchActionDeps> = {},
 ): DispatchActionDeps {
   return {
-    resolveApproval: vi.fn(() => ({ approvalRequired: false, reason: 'noop fixture' })),
+    resolveApproval: vi.fn(async () => ({ approvalRequired: false, reason: 'noop fixture' })),
     fireSendPrompt: vi.fn(async () => {}),
     fireSpawn: vi.fn(async (p) => ({ sessionName: p.sessionName })),
     fireKill: vi.fn(async () => {}),

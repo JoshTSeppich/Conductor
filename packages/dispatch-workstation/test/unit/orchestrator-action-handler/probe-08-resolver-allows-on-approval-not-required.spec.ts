@@ -9,7 +9,7 @@ import { actionOutput, cardOutput, input, buildDeps } from './_helpers.js';
 describe('orchestrator-action-handler — probe 08: resolver allows / card short-circuits', () => {
   it('action variant + resolver returns approvalRequired:false → fires send', async () => {
     const deps = buildDeps({
-      resolveApproval: vi.fn(() => ({
+      resolveApproval: vi.fn(async () => ({
         approvalRequired: false,
         reason: 'fixture: no approval needed',
       })),
@@ -23,7 +23,7 @@ describe('orchestrator-action-handler — probe 08: resolver allows / card short
   });
 
   it('card variant skips resolver entirely (operator already approved)', async () => {
-    const resolveApproval = vi.fn(() => ({
+    const resolveApproval = vi.fn(async () => ({
       approvalRequired: true, // would block if consulted
       reason: 'should not be consulted',
     }));
@@ -39,10 +39,10 @@ describe('orchestrator-action-handler — probe 08: resolver allows / card short
 
   it('card variant fires kill even when stub resolver would block', async () => {
     const deps = buildDeps({
-      // Default stub blocks everything; card variant should bypass.
-      resolveApproval: vi.fn(() => ({
+      // Default resolver blocks everything; card variant should bypass.
+      resolveApproval: vi.fn(async () => ({
         approvalRequired: true,
-        reason: 'stub blocks',
+        reason: 'shim blocks',
       })),
     });
     const result = await dispatchAction(
@@ -55,9 +55,9 @@ describe('orchestrator-action-handler — probe 08: resolver allows / card short
 
   it('card variant fires assign-task and returns intent_id', async () => {
     const deps = buildDeps({
-      resolveApproval: vi.fn(() => ({
+      resolveApproval: vi.fn(async () => ({
         approvalRequired: true,
-        reason: 'stub blocks',
+        reason: 'shim blocks',
       })),
       startIntent: vi.fn(async () => ({ intent_id: 'card-approved-intent' })),
     });

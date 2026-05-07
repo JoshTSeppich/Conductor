@@ -8,7 +8,7 @@ import { actionOutput, input, buildDeps } from './_helpers.js';
 describe('orchestrator-action-handler — probe 07: resolver blocks on approval', () => {
   it('returns kind:pending-approval when resolver requires approval (action variant)', async () => {
     const deps = buildDeps({
-      resolveApproval: vi.fn(() => ({
+      resolveApproval: vi.fn(async () => ({
         approvalRequired: true,
         reason: 'fixture: must approve',
       })),
@@ -27,7 +27,7 @@ describe('orchestrator-action-handler — probe 07: resolver blocks on approval'
   });
 
   it('resolver called with correct ResolverInput shape', async () => {
-    const resolveApproval = vi.fn(() => ({
+    const resolveApproval = vi.fn(async () => ({
       approvalRequired: true,
       reason: 'r',
     }));
@@ -45,7 +45,7 @@ describe('orchestrator-action-handler — probe 07: resolver blocks on approval'
 
   it('all 5 MB-T11 action types respect approvalRequired:true', async () => {
     const deps = buildDeps({
-      resolveApproval: vi.fn(() => ({ approvalRequired: true, reason: 'r' })),
+      resolveApproval: vi.fn(async () => ({ approvalRequired: true, reason: 'r' })),
     });
     const fixtures = [
       actionOutput('send', 'sess-x', { prompt: 'p' }),
@@ -72,7 +72,7 @@ describe('orchestrator-action-handler — probe 07: resolver blocks on approval'
 
   it('payload is validated BEFORE resolver — invalid payload returns kind:error not pending-approval', async () => {
     // The resolver should not be consulted when the payload itself is bad.
-    const resolveApproval = vi.fn(() => ({ approvalRequired: true, reason: 'r' }));
+    const resolveApproval = vi.fn(async () => ({ approvalRequired: true, reason: 'r' }));
     const deps = buildDeps({ resolveApproval });
     const result = await dispatchAction(
       input(actionOutput('send', 'sess-x', {})),
