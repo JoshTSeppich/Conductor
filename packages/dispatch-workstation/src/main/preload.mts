@@ -85,6 +85,20 @@ contextBridge.exposeInMainWorld('workstationBridge', {
     ipcRenderer.on('tile:detach-closed', h as any);
     return () => ipcRenderer.removeListener('tile:detach-closed', h as any);
   },
+  // MB-T16 WB2: per-session approval-policy bridge per Q-MBT16-1..8.
+  // getSessionApprovalPolicy invokes 'workstation:approval-policy-get'
+  // → main-process ApprovalPolicyIpcController → daemon
+  // GET /v3/sessions/:name/approval-policy. Returns full GetResponse
+  // shape including updated_at (null for no-row default per Q-MBT13-4=c).
+  getSessionApprovalPolicy: (sessionName: string) =>
+    ipcRenderer.invoke('workstation:approval-policy-get', { sessionName }),
+  // MB-T16 WB2: putSessionApprovalPolicy invokes
+  // 'workstation:approval-policy-put' → daemon PUT
+  // /v3/sessions/:name/approval-policy. Returns the updated GetResponse
+  // with server-assigned updated_at. Caller (TileApprovalPicker)
+  // handles optimistic-UI rollback per Q-MBT16-3=a on rejection.
+  putSessionApprovalPolicy: (sessionName: string, policy: string) =>
+    ipcRenderer.invoke('workstation:approval-policy-put', { sessionName, policy }),
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
