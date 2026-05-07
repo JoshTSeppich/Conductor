@@ -9,7 +9,7 @@
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage --passWithNoTests",
     "typecheck": "tsc --noEmit",
-    "build": "tsc && node scripts/build-coarchitect.mjs && node scripts/build-shell.mjs && node scripts/build-preload.mjs && node scripts/build-console-panel.mjs && node scripts/build-card-bridge.mjs && node scripts/build-onboarding.mjs",
+    "build": "tsc && node scripts/build-coarchitect.mjs && node scripts/build-shell.mjs && node scripts/build-preload.mjs && node scripts/build-console-panel.mjs && node scripts/build-card-bridge.mjs && node scripts/build-onboarding.mjs && node scripts/build-audit-modal.mjs",
     "dev": "pnpm build && electron dist/main/main.js",
     "smoke": "pnpm build && node dist/main/run-smoke.js",
     "package": "pnpm build && electron-packager . dispatch-workstation --out=dist/packaged --overwrite --electron-version=41.3.0 --ignore=^/node_modules --ignore=^/spikes --ignore=^/src --ignore=^/test --ignore=^/scripts --ignore=^/coarchitect --ignore=^/SPIKES\\.md$ --ignore=^/tsconfig\\.json$ --ignore=^/vitest\\.config\\. --ignore=^/dist/packaged",

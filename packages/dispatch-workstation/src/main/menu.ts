@@ -7,6 +7,18 @@ let menuRegistered = false;
  * inserts the CONSOLE-T03 menu between "View" and "Window". */
 export interface ApplicationMenuOpts {
   readonly consoleMenu?: ConsoleMenuOpts;
+  /**
+   * MB-T13 WB8: click handler for the "Show recent orchestrator actions"
+   * menu item under View. When provided, the View submenu gains a
+   * separator + the labelled item. Click opens the audit-modal
+   * BrowserWindow per Phase 2 brief WB8 (renderer bundled to dist/audit
+   * -modal/ via scripts/build-audit-modal.mjs; HTML loads workstation
+   * preload + invokes workstationBridge.fetchAuditModal).
+   *
+   * When undefined, the menu item is omitted entirely (test-isolated
+   * unit specs don't need the production handler to exist).
+   */
+  readonly onShowAuditModal?: () => void;
 }
 
 export function buildMenuTemplate(
@@ -58,6 +70,18 @@ export function buildMenuTemplate(
         { role: 'zoomOut' },
         { type: 'separator' },
         { role: 'togglefullscreen' },
+        // MB-T13 WB8: audit-modal menu item — appended to View submenu
+        // when opts.onShowAuditModal is provided. Production main.ts
+        // wires this to a closure that opens the audit-modal BrowserWindow.
+        ...(opts.onShowAuditModal
+          ? ([
+              { type: 'separator' as const },
+              {
+                label: 'Show recent orchestrator actions',
+                click: opts.onShowAuditModal,
+              },
+            ] satisfies MenuItemConstructorOptions[])
+          : []),
       ],
     },
     {
