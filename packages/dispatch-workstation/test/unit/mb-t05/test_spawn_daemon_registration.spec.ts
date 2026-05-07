@@ -69,6 +69,7 @@ describe('MB-T05 cluster 3 — daemon registration + cleanup-on-failure', () => 
       sessionName: 'sherpa',
       sessionId: 'sherpa',
       panelMounted: false,
+      cwd: '/r',
     });
     // §8.1 (a) structural parity: registerSession was called with the
     // shape that DAEMON-T07 POST /v2/sessions expects (name + cwd +

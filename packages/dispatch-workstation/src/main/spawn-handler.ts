@@ -196,6 +196,15 @@ export interface SpawnSessionResult {
    * mounts the panel separately; spawn-handler does NOT auto-mount.
    */
   panelMounted: false;
+  /**
+   * Absolute path to the repo cwd for the spawned session. Mirrors
+   * `req.repoPath` for the renderer's consumption (MB-T18 WB2 — footer
+   * chrome). Workstation-internal field; daemon's GET /v2/sessions/:name
+   * does NOT expose cwd today (frozen surface §2.10), so the renderer
+   * picks up cwd via this spawn-result envelope rather than a daemon
+   * fetch. Per Q-MBT18-2=a operator-confirmed disposition.
+   */
+  cwd: string;
 }
 
 /**
@@ -379,5 +388,6 @@ export async function spawnSession(
     sessionName: registered.name,
     sessionId: registered.name,
     panelMounted: false,
+    cwd: req.repoPath,
   };
 }

@@ -88,6 +88,7 @@ describe('MB-T05 cluster 4 — spawn-ipc handler replaces test-hook', () => {
         sessionName: 'sherpa',
         sessionId: 'sherpa',
         panelMounted: false,
+        cwd: '/Users/test/code/foo',
       });
     }
   });
@@ -101,7 +102,7 @@ describe('MB-T05 cluster 4 — spawn-ipc handler replaces test-hook', () => {
     });
     expect(reply).toEqual({
       type: 'success',
-      result: { sessionName: 'foo', sessionId: 'foo', panelMounted: false },
+      result: { sessionName: 'foo', sessionId: 'foo', panelMounted: false, cwd: '/r' },
     });
   });
 

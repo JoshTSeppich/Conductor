@@ -1,52 +1,109 @@
-// MB-T18 WB1 — TileFooter skeleton.
+// MB-T18 WB2 — TileFooter real chrome implementation.
 //
-// React footer component for the per-tile chrome footer (MB-T18 ticket).
-// WB1 ships a skeleton component that renders a placeholder div; WB2
-// fills in the real chrome (cwd line + uptime line per Q-MBT18-1=e,
-// renderer-side mount-time snapshot for uptime per Q-MBT18-3=a, 5s
-// setInterval tick per Q-MBT18-9=b, auto-switching unit format per
-// Q-MBT18-8=a, CSS text-overflow:ellipsis + title= tooltip for cwd per
-// Q-MBT18-7=d).
+// Renders compact session-meta footer chrome inside the per-tile
+// `<div data-slot="footer">` wrapper:
+//   - cwd line: full path with CSS text-overflow:ellipsis + title=
+//     tooltip (Q-MBT18-7=d). Omitted when cwd prop is absent.
+//   - uptime line: time-since-mount, auto-switching units (Q-MBT18-8=a).
+//     Renderer-side mount-time snapshot per Q-MBT18-3=a; 5s tick per
+//     Q-MBT18-9=b.
 //
-// Per Q-MBT18-4=a operator-confirmed slot-population mechanism:
-// TileFooter is rendered by TileGridApp via a `renderFooterSlot`
-// render-prop closure passed down through Tile. It lives inside the
-// `<div data-slot="footer">` wrapper that survives in tile.tsx
-// (currently a self-closing placeholder; WB3 converts it to a
-// render-prop wrapper preserving the testid + data-slot attribute).
-//
-// Per Q-MBT18-5=a: separate file (mirrors tile-header.tsx,
-// tile-approval-picker.tsx, tile-autopilot-toggle.tsx).
-// Per Q-MBT18-6=a: NO bridge — footer is purely renderer-side data.
-// `cwd` arrives via TileGridSessionEntry (WB2 plumbs through
-// SpawnSessionResult extension); `uptime` is computed renderer-side
-// from a useEffect mount-time snapshot. NO IPC, NO preload extension,
-// NO main.ts wiring. Significant deviation from MB-T16 / MB-T17.
+// Per Q-MBT18-1=e operator-confirmed: cwd + uptime compound.
+// Per Q-MBT18-6=a: NO bridge — pure renderer-side data. cwd arrives
+// via TileGridSessionEntry.cwd (WB3 plumb-through from extended
+// SpawnSessionResult); mountedAt is renderer-internal (lazy-init via
+// useState; test-injection seam via optional prop).
+// Per Q-MBT18-4=a: rendered by TileGridApp via `renderFooterSlot`
+// render-prop closure (WB3 integration). Stays inside the slot
+// wrapper that preserves `data-slot="footer"` + `data-testid="tile-
+// footer-slot-{name}"` (MB-T12 WB5 contract).
 
-/** WB2 fills these in:
- *  - `cwd?: string` — full session working directory (from extended
- *    SpawnSessionResult; absent until WB2 lands the spawn-handler.ts
- *    field add).
- *  - `mountedAt?: number` — Date.now() snapshot at first mount, used
- *    as the uptime baseline (Q-MBT18-3=a). Optional so test fixtures
- *    can inject a deterministic value; production uses an internal
- *    useEffect snapshot.
+import { useEffect, useState } from 'react';
+
+const UPTIME_TICK_MS = 5000;
+
+/**
+ * Convert an elapsed-time delta in milliseconds into a compact chrome-
+ * formatted string with auto-switching units per Q-MBT18-8=a:
+ *   < 60s   → "Ns"
+ *   < 60m   → "Nm"
+ *   < 24h   → "Nh"
+ *   else    → "Nd"
+ *
+ * Negative or NaN inputs are clamped to 0s for defensive rendering
+ * (tests inject various edge values; production should never see
+ * negative since mountedAt is always ≤ Date.now()).
  */
+export function formatUptime(elapsedMs: number): string {
+  const safeMs = Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
+  const seconds = Math.floor(safeMs / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 export interface TileFooterProps {
   readonly sessionName: string;
-  /** WB2: full cwd path; renders truncated via CSS with title= tooltip
-   *  for the full string. Absent → footer omits the cwd line. */
+  /** Full session working-directory path (from extended
+   *  SpawnSessionResult plumbed through TileGridSessionEntry at WB3).
+   *  Renders truncated via CSS with title= tooltip showing the full
+   *  string. Absent → cwd line is omitted entirely (TileFooter still
+   *  renders the uptime line). */
   readonly cwd?: string;
-  /** WB2: optional mount-time injection seam for tests. Production
-   *  default snapshots Date.now() inside a useEffect. */
+  /** Test-injection seam for the mount-time baseline. Production omits
+   *  this prop and the lazy-init useState snapshots Date.now() at
+   *  first render. Tests inject a fixed value for deterministic uptime
+   *  assertions (avoids flakiness around first-render timing). */
   readonly mountedAt?: number;
 }
 
-export function TileFooter(_props: TileFooterProps): JSX.Element {
-  // WB1 placeholder render — WB2 replaces with real cwd line +
-  // uptime line. The data-mb-t18-stub attribute is the WB1 RED-state
-  // guard asserted by probe-00; WB2 removes it.
+export function TileFooter({
+  sessionName,
+  cwd,
+  mountedAt,
+}: TileFooterProps): JSX.Element {
+  // Lazy-init: mountedAt prop wins (test seam); otherwise Date.now()
+  // at first render. The snapshot is captured once + held stable
+  // across re-renders (semantics: "time since this tile was last
+  // mounted in this window" per Q-MBT18-3=a / R-MBT18-5).
+  const [mountTimestamp] = useState<number>(() => mountedAt ?? Date.now());
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, UPTIME_TICK_MS);
+    return () => clearInterval(interval);
+  }, []);
+
+  const uptime = formatUptime(now - mountTimestamp);
+
   return (
-    <div data-testid="tile-footer-content" data-mb-t18-stub="true" />
+    <div
+      data-testid="tile-footer-content"
+      data-mb-t18-content="true"
+      data-session-name={sessionName}
+    >
+      {cwd !== undefined && cwd.length > 0 ? (
+        <span
+          data-testid="tile-footer-cwd"
+          title={cwd}
+          style={{
+            display: 'inline-block',
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {cwd}
+        </span>
+      ) : null}
+      <span data-testid="tile-footer-uptime">{uptime}</span>
+    </div>
   );
 }
