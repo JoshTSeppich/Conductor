@@ -14,6 +14,7 @@ import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.
 import { registerIpcHandlers } from './coarchitect-ipc.js';
 import { registerSpawnIpcHandlers } from './spawn-ipc.js';
 import { registerSessionSendPromptIpcHandlers } from './session-send-prompt-ipc.js';
+import { registerSessionKillIpcHandlers } from './session-kill-ipc.js';
 import { registerAuditModalIpcHandlers } from './audit-modal-ipc.js';
 import {
   registerConsoleIpcHandlers,
@@ -333,6 +334,13 @@ app.whenReady().then(async () => {
   // canonical sendKeys (dispatch-core/src/transport/tmux.ts).
   registerSessionSendPromptIpcHandlers();
   // === end MB-T09 session-send-prompt IPC ===
+  // === MB-T11 WB3 session-kill IPC ===
+  // Per CONDUCTOR_V3_RESCOPE.md §3.6 + Q-MBT11-3=a — orchestrator-callable
+  // kill (orchestrator-action-handler in WB5 fires this; no renderer-direct
+  // tile-header kill in v3.0). Two-step: tmux kill-session + PATCH
+  // /v2/sessions/:name/state.
+  registerSessionKillIpcHandlers();
+  // === end MB-T11 WB3 session-kill IPC ===
   // === MB-T13 audit-modal-fetch IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.8 + Phase 2 brief WB7 — operator
   // menu item ("Show recent orchestrator actions") fires this IPC,

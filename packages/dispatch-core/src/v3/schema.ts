@@ -915,6 +915,29 @@ export const AssignTaskActionPayloadSchema = z
 export type AssignTaskActionPayload = z.infer<typeof AssignTaskActionPayloadSchema>;
 
 /**
+ * IPC payload for the new MB-T11 WB3 channel `workstation:session-kill`.
+ * Mirrors §10's WorkstationSessionSendPromptRequestSchema in placement +
+ * shape. The orchestrator-action-handler (WB5) and (post-merge) the tile
+ * header consume this surface.
+ *
+ * Reply shape is workstation-local in `session-kill-ipc.ts` rather than
+ * here because TmuxKillError and DaemonUnreachable error variants are not
+ * yet in WorkstationErrorSchema (§8), and §1-§11 are frozen for
+ * sess-mbt11 territory per coordination doc Rule 2 + R1 (R1 permits
+ * additive enum-value extension only, not discriminated-union member
+ * additions). A future v3.0.x ticket may promote the workstation-local
+ * variants into §8 with operator arbitration.
+ */
+export const WorkstationSessionKillRequestSchema = z
+  .object({
+    sessionName: z.string().min(1),
+  })
+  .strict();
+export type WorkstationSessionKillRequest = z.infer<
+  typeof WorkstationSessionKillRequestSchema
+>;
+
+/**
  * Helper: pick the payload sub-schema for an MB-T11 action type. Consumed
  * by orchestrator-action-handler.ts as the second-pass validator — the
  * first pass parses the discriminated OrchestratorOutputSchema (§3) which
