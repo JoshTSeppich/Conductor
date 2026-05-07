@@ -58,6 +58,11 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   // Consumed by orchestrator (MB-T11) and tile footer (MB-T12).
   sendPromptToSession: (payload: unknown) =>
     ipcRenderer.invoke('workstation:session-send-prompt', payload),
+  // MB-T13 WB7: audit-modal-fetch bridge per Q-MBT13-9=a.
+  // Consumed by the WB8 audit-modal renderer when the operator
+  // clicks "Show recent orchestrator actions" in the menu.
+  fetchAuditModal: () =>
+    ipcRenderer.invoke('workstation:audit-modal-fetch'),
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).

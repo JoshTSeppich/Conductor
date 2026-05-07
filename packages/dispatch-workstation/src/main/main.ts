@@ -14,6 +14,7 @@ import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.
 import { registerIpcHandlers } from './coarchitect-ipc.js';
 import { registerSpawnIpcHandlers } from './spawn-ipc.js';
 import { registerSessionSendPromptIpcHandlers } from './session-send-prompt-ipc.js';
+import { registerAuditModalIpcHandlers } from './audit-modal-ipc.js';
 import {
   registerConsoleIpcHandlers,
   DEFAULT_PANEL_CAP,
@@ -66,6 +67,10 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
 const SHELL_PATH = resolve(__dirname, 'workstation-shell.html');
+// MB-T13 WB8: bundled audit-modal HTML lives in dist/audit-modal/ per
+// scripts/build-audit-modal.mjs. From dist/main/main.js the relative
+// path is `../audit-modal/audit-modal.html`.
+const AUDIT_MODAL_PATH = resolve(__dirname, '..', 'audit-modal', 'audit-modal.html');
 
 // === BEGIN: Probe-92 obs-infra — userData isolation (do not modify outside this block) ===
 // Redirect Electron's userData directory (where Local Storage / leveldb
@@ -223,7 +228,38 @@ function refreshConsoleMenu(sessions: readonly string[] = []): void {
         refreshConsoleMenu(sessions);
       },
     },
+    // MB-T13 WB8: thread the audit-modal opener through every menu
+    // rebuild so the View > Show recent orchestrator actions item
+    // persists across CC Console submenu refreshes.
+    onShowAuditModal: openAuditModalWindow,
   });
+}
+
+/**
+ * MB-T13 WB8: open the audit-modal BrowserWindow.
+ *
+ * Loads dist/audit-modal/audit-modal.html with the main preload.cjs
+ * (reused per WB8 minimum-scope design — least-privilege audit-modal
+ * preload deferred as future-work; the modal renderer only calls
+ * window.workstationBridge.fetchAuditModal which is already exposed).
+ */
+function openAuditModalWindow(): void {
+  const win = new BrowserWindow({
+    width: 800,
+    height: 600,
+    title: 'Recent orchestrator actions',
+    resizable: true,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    webPreferences: {
+      preload: PRELOAD_PATH,
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  void win.loadFile(AUDIT_MODAL_PATH);
 }
 
 // MB-T08 — first-launch onboarding hook. The renderer-side React modal
@@ -256,7 +292,10 @@ function registerOnboardingIpc(): void {
 }
 
 app.whenReady().then(async () => {
-  registerApplicationMenu();
+  // MB-T13 WB8: pass onShowAuditModal so the initial menu (before
+  // CC Console subscription kicks in via refreshConsoleMenu) already
+  // has the View > Show recent orchestrator actions item.
+  registerApplicationMenu({ onShowAuditModal: openAuditModalWindow });
   // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
   // Cairn #84 Defect A: load safeStorage-persisted ANTHROPIC_API_KEY into
   // process.env so the chat client (anthropic-client.ts createAnthropicClient,
@@ -294,6 +333,14 @@ app.whenReady().then(async () => {
   // canonical sendKeys (dispatch-core/src/transport/tmux.ts).
   registerSessionSendPromptIpcHandlers();
   // === end MB-T09 session-send-prompt IPC ===
+  // === MB-T13 audit-modal-fetch IPC ===
+  // Per CONDUCTOR_V3_RESCOPE.md §3.8 + Phase 2 brief WB7 — operator
+  // menu item ("Show recent orchestrator actions") fires this IPC,
+  // controller fetches last-100 swarm-audit rows from daemon GET
+  // /v3/audit/swarm-audit?limit=100. Default deps wire production
+  // fetch + token reader.
+  registerAuditModalIpcHandlers();
+  // === end MB-T13 audit-modal-fetch IPC ===
   // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
   consoleController = registerConsoleIpcHandlers({
     getWebContents: () => mainWindow?.webContents ?? null,

@@ -14,5 +14,5 @@
   },
   "files": ["src/coarchitect/daemon-client.ts"],
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "spikes", "test", "src/coarchitect", "src/console-panel", "src/onboarding/onboarding-modal.tsx", "src/onboarding/mount.tsx", "src/error-display/error-toast.tsx"]
+  "exclude": ["node_modules", "dist", "spikes", "test", "src/coarchitect", "src/console-panel", "src/onboarding/onboarding-modal.tsx", "src/onboarding/mount.tsx", "src/error-display/error-toast.tsx", "src/audit-modal/audit-modal.tsx", "src/audit-modal/mount.tsx"]
 }
