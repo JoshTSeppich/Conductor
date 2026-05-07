@@ -1,10 +1,12 @@
-// MB-T12 WB6 + WB7 — top-level tile-grid React component.
+// MB-T12 WB6 + WB7 + WB8 + WB9 — top-level tile-grid React component.
 //
 // WB6: Renders N <Tile> children inside a CSS Grid sized via
 //      computeGridLayout(N). Empty state (N=0) returns null.
 // WB7: Adds drag-resize support via per-border <div> handles. On drag-end,
-//      fires onResizeEnd(GridOverride) which the parent persists via
-//      writeGridOverride(...) (tile-grid-state.ts).
+//      fires onResizeEnd(GridOverride).
+// WB8: Adds drag-swap on tile headers. Fires onSwap(a, b) on header→header drop.
+// WB9 (cleanup): hooks moved above the early-return so the hook order
+//      is consistent across N=0 ↔ N>0 transitions (React Rules of Hooks).
 //
 // Per Q-MBT12-1=a: pure-fn calc + CSS Grid (no layout libs).
 // Per Q-MBT12-2=a: vanilla mousedown/move/up handlers (no react-dnd).
@@ -36,8 +38,7 @@ export interface TileGridProps {
   /**
    * Initial grid override (drag-resize state) loaded from
    * tile-grid-state.ts. Only applied when its (rows, cols) shape
-   * matches the current layout — otherwise discarded (e.g., session
-   * count change shifted the grid from 2×2 to 2×3).
+   * matches the current layout — otherwise discarded.
    */
   readonly gridOverride?: GridOverride;
   /**
@@ -48,16 +49,11 @@ export interface TileGridProps {
   readonly onResizeEnd?: (override: GridOverride) => void;
   /**
    * Test seam: returns the current pixel sizes of grid bands. Production
-   * default reads via getBoundingClientRect on the grid root (equal-share
-   * since computeGridLayout outputs `repeat(N, 1fr)`). Tests inject
-   * deterministic sizes to avoid happy-dom layout quirks.
+   * default reads via getBoundingClientRect on the grid root.
    */
   readonly getCurrentPixelSizes?: () => { colPx: number[]; rowPx: number[] };
   /**
-   * WB8 drag-swap: fires when the operator drags one tile's header onto
-   * another's. Parent swaps the orderIndex of the two sessions in
-   * tile-grid-state and re-renders sessions in the new order. The
-   * callback is NOT fired when source === target (no-op drop on same tile).
+   * WB8 drag-swap: fires when one tile's header is dropped on another's.
    */
   readonly onSwap?: (a: string, b: string) => void;
 }
@@ -75,7 +71,6 @@ interface DragState {
   readonly startX: number;
   readonly startY: number;
   readonly initialSizes: number[];
-  readonly otherAxisSizes: number[];
 }
 
 export function TileGrid({
@@ -90,28 +85,19 @@ export function TileGrid({
   getCurrentPixelSizes,
   onSwap,
 }: TileGridProps): JSX.Element | null {
-  if (sessions.length === 0) {
-    return null;
-  }
-  const draggingSwapRef = useRef<string | null>(null);
+  // Hooks must be unconditional and run in the same order on every
+  // render (React Rules of Hooks). Layout / shape checks happen below
+  // the hook calls so the empty-state branch (return null) does NOT
+  // skip any hooks. WB9 fix: prior to this restructure the early
+  // return was above useState/useRef/useEffect, which produced
+  // "Internal React error: Expected static flag was missing" warnings
+  // on N=0 ↔ N>0 transitions (e.g., spawn auto-mount).
+  const isEmpty = sessions.length === 0;
+  const layout = isEmpty ? null : computeGridLayout(sessions.length);
 
-  function handleSwapDragStart(name: string): void {
-    draggingSwapRef.current = name;
-  }
-  function handleSwapDrop(targetName: string): void {
-    const source = draggingSwapRef.current;
-    draggingSwapRef.current = null;
-    if (source !== null && source !== targetName) {
-      onSwap?.(source, targetName);
-    }
-  }
-
-  const layout = computeGridLayout(sessions.length);
-  const explicitCellCount = layout.rows * layout.cols;
-
-  // gridOverride only applies if its (rows, cols) shape matches current
-  // layout. Otherwise discarded (session count drift since persistence).
   const overrideMatchesShape =
+    !isEmpty &&
+    layout !== null &&
     gridOverride !== undefined &&
     (gridOverride.colSizes === undefined ||
       gridOverride.colSizes.length === layout.cols) &&
@@ -124,8 +110,6 @@ export function TileGrid({
     ? gridOverride?.rowSizes
     : undefined;
 
-  // Working CSS sizes — initially from gridOverride (if shape-matched)
-  // or undefined (use repeat(N, 1fr)). Drag updates these in real time.
   const [colCss, setColCss] = useState<readonly string[] | undefined>(
     initialColCss,
   );
@@ -133,32 +117,32 @@ export function TileGrid({
     initialRowCss,
   );
   const dragRef = useRef<DragState | null>(null);
+  const draggingSwapRef = useRef<string | null>(null);
   const gridRootRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset working sizes when layout shape changes (sessions count change
-  // shifts rows/cols from a different layout → discard stale override).
+  // Reset working sizes when layout shape changes (sessions count drift
+  // shifts rows/cols → discard stale override).
   useEffect(() => {
     setColCss(initialColCss);
     setRowCss(initialRowCss);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout.rows, layout.cols, gridOverride]);
+  }, [layout?.rows, layout?.cols, gridOverride]);
 
   function readCurrentSizes(): { colPx: number[]; rowPx: number[] } {
     if (getCurrentPixelSizes) return getCurrentPixelSizes();
     const root = gridRootRef.current;
+    const cols = layout?.cols ?? 1;
+    const rows = layout?.rows ?? 1;
     if (!root) {
       return {
-        colPx: Array(layout.cols).fill(MIN_BAND_PX),
-        rowPx: Array(layout.rows).fill(MIN_BAND_PX),
+        colPx: Array(cols).fill(MIN_BAND_PX),
+        rowPx: Array(rows).fill(MIN_BAND_PX),
       };
     }
     const rect = root.getBoundingClientRect();
     return {
-      colPx: Array.from({ length: layout.cols }, () => rect.width / layout.cols),
-      rowPx: Array.from(
-        { length: layout.rows },
-        () => rect.height / layout.rows,
-      ),
+      colPx: Array.from({ length: cols }, () => rect.width / cols),
+      rowPx: Array.from({ length: rows }, () => rect.height / rows),
     };
   }
 
@@ -175,7 +159,6 @@ export function TileGrid({
       startX,
       startY,
       initialSizes: orientation === 'vertical' ? [...colPx] : [...rowPx],
-      otherAxisSizes: orientation === 'vertical' ? [...rowPx] : [...colPx],
     };
   }
 
@@ -206,10 +189,7 @@ export function TileGrid({
     if (!drag) return;
     if (onResizeEnd) {
       const override: GridOverride = {};
-      // Preserve the other axis if it was already overridden, otherwise
-      // emit only the axis that was dragged.
       if (drag.orientation === 'vertical') {
-        // Read latest colCss state via setState callback to avoid stale closure
         setColCss((latest) => {
           if (latest) override.colSizes = latest;
           if (rowCss) override.rowSizes = rowCss;
@@ -227,6 +207,17 @@ export function TileGrid({
     }
   }
 
+  function handleSwapDragStart(name: string): void {
+    draggingSwapRef.current = name;
+  }
+  function handleSwapDrop(targetName: string): void {
+    const source = draggingSwapRef.current;
+    draggingSwapRef.current = null;
+    if (source !== null && source !== targetName) {
+      onSwap?.(source, targetName);
+    }
+  }
+
   // Document-level mouse listeners during a drag — captures mousemove /
   // mouseup even when cursor leaves the handle's bounding box. Also
   // handles WB8 swap-drag cancellation (mouseup without a header drop).
@@ -238,9 +229,6 @@ export function TileGrid({
     function onUp(): void {
       if (dragRef.current) endDrag();
       // Cancel any in-flight swap-drag that didn't drop on a tile header.
-      // Tile-header onMouseUp would have already cleared the ref before
-      // this runs (React synthetic events fire before document handlers
-      // in our test harness), but defensively reset here anyway.
       draggingSwapRef.current = null;
     }
     document.addEventListener('mousemove', onMove);
@@ -251,6 +239,13 @@ export function TileGrid({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Empty state (N=0) — null after all hooks have run.
+  if (isEmpty || layout === null) {
+    return null;
+  }
+
+  const explicitCellCount = layout.rows * layout.cols;
 
   const gridStyle: React.CSSProperties = {
     display: 'grid',
@@ -270,8 +265,6 @@ export function TileGrid({
     gridStyle.overflowY = 'auto';
   }
 
-  // Build resize handles for the explicit grid only. Cols-1 vertical
-  // handles, rows-1 horizontal handles. Skip overflow rows.
   const verticalHandles: number[] = [];
   for (let i = 0; i < layout.cols - 1; i++) verticalHandles.push(i);
   const horizontalHandles: number[] = [];
@@ -324,8 +317,6 @@ export function TileGrid({
             cursor: 'col-resize',
             zIndex: 10,
             position: 'relative',
-            // Allow the handle to overlap the column boundary by half its
-            // width so it sits centered on the line.
             transform: `translateX(${HANDLE_THICKNESS_PX / 2}px)`,
             background: 'transparent',
           }}
