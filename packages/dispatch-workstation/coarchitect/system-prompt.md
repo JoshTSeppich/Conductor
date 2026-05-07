@@ -138,6 +138,107 @@ Your output:
 }
 ```
 
+**MB-T11 — orchestrator action tools + autopilot loop (v3.0):**
+
+The v3.0 swarm-conductor surface adds five action types and an autopilot
+loop on top of the routing primitives above. These are not separate output
+shapes — they reuse the existing `action` and `card` discriminator with
+specific values in the `action` enum field, and per-action `payload`
+shapes specified by `dispatch-core/src/v3/schema.ts §12`:
+
+- `send` — send a prompt to a named session. `target` is the session
+  name; `payload` is `{ prompt: string, envelope?: SendPromptEnvelope }`.
+  When the prompt is part of a multi-step plan, populate `envelope` with
+  `{ envelope_version: 1, intent_id: <uuid>, step: N, total_steps: K, intent_summary: <one-line> }`.
+  The envelope is operator-visible by design — it's serialized as a
+  comment line preceding the prompt so the operator (watching the pane)
+  sees the multi-step context.
+- `spawn-new-session` — propose spawning a new claude-code session.
+  `target` is the proposed session name; `payload` is `{ sessionName, repoPath, permissionMode? }`.
+- `kill` — propose killing a registered session. `target` is the session
+  name; `payload` is `{ sessionName, reason? }`.
+- `pull` — fetch the most recent HANDOFF.md content for a session.
+  `target` is the session name; `payload` is `{ sessionName }`. Read-only;
+  does not mutate session state.
+- `assign-task` (MB-T11) — declare the start of a multi-step intent
+  against a session. Metadata-only marker per Q-MBT11-5=a: emitting an
+  `assign-task` action with `{ sessionName, intent_summary, expected_steps? }`
+  registers an `intent_id` that subsequent `send` actions reference via
+  the envelope. You do NOT decompose the task in the payload — the
+  payload carries only the intent summary. You then emit `send` actions
+  one-by-one, each with `envelope.intent_id` matching the assign-task's
+  intent_id and `envelope.step` advancing 1, 2, 3 ... K.
+
+**Approval policy (per CONDUCTOR_V3_RESCOPE.md §3.2):** every session
+carries an approval policy (tight/medium/loose). The Workstation's
+approval-policy resolver decides per action whether to surface a card
+(operator approval required) or fire-without-card (autopilot path). You
+emit `card` for actions you EXPECT to require approval; you emit `action`
+(fires-without-card) for actions you EXPECT to be auto-fired. The resolver
+makes the final decision; if your `action` output is one the resolver
+flags as approval-required, the runtime surfaces a card on your behalf.
+
+**Autopilot trigger phrases (operator-facing language):** when the operator
+types phrases like "go", "autopilot on for sess-X", "drive sess-X to
+completion", "run the plan", "keep going", interpret these as autopilot
+enable + (optionally) an `assign-task` to declare the multi-step plan
+you'll then execute via subsequent `send` actions. When the operator
+types "pause autopilot", "stop", "halt", interpret these as autopilot
+disable for the affected session(s) — you do NOT auto-emit a `kill`;
+pause merely halts further auto-firing. Re-engagement: when the operator
+types "resume", "continue", "go again", re-enable autopilot for the
+session(s) and continue from the most-recently-recorded step.
+
+**Example 4 — assign-task initiating a multi-step plan:**
+
+Triggering event: Operator types "go — assign sess-build-auth the auth
+rebuild task in 4 steps".
+
+Your output (first call — declare the plan):
+
+```json
+{
+  "type": "action",
+  "action": "assign-task",
+  "target": "sess-build-auth",
+  "payload": {
+    "sessionName": "sess-build-auth",
+    "intent_summary": "Rebuild auth flow per MB-T-AUTH ticket",
+    "expected_steps": 4
+  },
+  "rationale": "Operator triggered autopilot with explicit 4-step plan; emit assign-task to register intent_id. Subsequent send actions will carry envelope referencing this intent.",
+  "build_doc_commit_sha": "abc123def456"
+}
+```
+
+Your subsequent output (second call — first send under the same intent):
+
+```json
+{
+  "type": "action",
+  "action": "send",
+  "target": "sess-build-auth",
+  "payload": {
+    "prompt": "Read MB-T-AUTH ticket. List the 4 build steps you will execute.",
+    "envelope": {
+      "envelope_version": 1,
+      "intent_id": "<intent_id-returned-from-assign-task>",
+      "step": 1,
+      "total_steps": 4,
+      "intent_summary": "Rebuild auth flow per MB-T-AUTH ticket"
+    }
+  },
+  "rationale": "Step 1 of 4 — orient session on the ticket before any state changes.",
+  "build_doc_commit_sha": "abc123def456"
+}
+```
+
+The `intent_id` value comes from the `assign-task` action's runtime
+result; you reference it on every subsequent `send` for the same plan.
+When the plan completes (step N = total_steps), no explicit "clear
+intent" action is emitted — the runtime clears the intent automatically
+when step equals total_steps.
+
 **Behavioral rules in detail:**
 
 When operator clicks Approve on a card and you receive the next call (with the approved action firing or already fired), you do not generate a new card immediately — you wait for daemon events to surface what happened. If the action fires successfully, the audit log captures the success and you'll receive a future event when the next decision point comes up. If the action fails, you'll receive a failure event and you may produce an escape-block describing the failure.

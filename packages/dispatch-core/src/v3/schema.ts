@@ -40,6 +40,8 @@ export const ActionTypeEnum = z.enum([
   'hold',
   'arm',
   'read-file',
+  // MB-T11 — assign-task action (metadata-only marker per Q-MBT11-5)
+  'assign-task',
 ]);
 export type ActionType = z.infer<typeof ActionTypeEnum>;
 
@@ -807,6 +809,163 @@ export const Tier4PayloadSchema = z
   })
   .strict();
 export type Tier4Payload = z.infer<typeof Tier4PayloadSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §12 — Orchestrator action tools (MB-T11 — CONDUCTOR_V3_RESCOPE.md §3.6 + §4)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Per-action payload sub-schemas. Validated post-OrchestratorOutputSchema.parse
+// by orchestrator-action-handler.ts via pickPayloadSchema(actionType) helper.
+// Q-MBT11-1=a applied: the `payload` field on ActionOutputSchema and
+// CardOutputSchema (§3) stays z.unknown(); the handler does the second-pass
+// validation against the per-action schema chosen by the discriminator.
+//
+// Action coverage (per CONDUCTOR_V3_RESCOPE.md §3.6):
+//   - 'send'              → SendPromptActionPayloadSchema     (existing IPC at §10)
+//   - 'spawn-new-session' → SpawnSessionActionPayloadSchema   (existing MB-T05 IPC)
+//   - 'kill'              → KillSessionActionPayloadSchema    (new MB-T11 WB3 IPC)
+//   - 'pull'              → PullHandoffActionPayloadSchema    (existing GET /v2/sessions/:name/handoff)
+//   - 'assign-task'       → AssignTaskActionPayloadSchema     (Q-MBT11-5=a metadata marker; autopilot-loop tracks intent_id)
+//
+// Other ActionTypeEnum members ('pause', 'hold', 'arm', 'read-file') are not
+// in MB-T11 scope and have no payload sub-schema here. pickPayloadSchema
+// throws for them so a consumer is forced to handle the missing case
+// explicitly rather than silently accepting an unvalidated payload.
+
+/**
+ * Send-prompt action payload. The orchestrator-action-handler forwards this
+ * (with the optional envelope) into the workstation:session-send-prompt IPC
+ * channel defined at §10. The envelope schema is shared with §10's
+ * WorkstationSessionSendPromptRequest so a multi-step intent_id round-trips
+ * unchanged from action emission to tmux send.
+ */
+export const SendPromptActionPayloadSchema = z
+  .object({
+    prompt: z.string().min(1),
+    envelope: SendPromptEnvelopeSchema.optional(),
+  })
+  .strict();
+export type SendPromptActionPayload = z.infer<typeof SendPromptActionPayloadSchema>;
+
+/**
+ * Spawn-session action payload. The orchestrator-action-handler forwards this
+ * to the existing MB-T05 spawn pipeline (workstation:spawn-requested IPC).
+ * permissionMode is forwarded to spawn-handler.ts SpawnPermissionMode; v3.0
+ * ships two operative values ('normal' = MB-T05 'ask', 'dangerously-skip' =
+ * MB-T05 'auto'). 'readonly' is reserved for a future v3.x permission tier
+ * with no current binding — accepted at the schema layer to avoid a
+ * follow-up schema bump when the tier lands.
+ */
+export const SpawnSessionActionPayloadSchema = z
+  .object({
+    sessionName: z.string().min(1),
+    repoPath: z.string().min(1),
+    permissionMode: z.enum(['readonly', 'normal', 'dangerously-skip']).optional(),
+  })
+  .strict();
+export type SpawnSessionActionPayload = z.infer<typeof SpawnSessionActionPayloadSchema>;
+
+/**
+ * Kill-session action payload. Forwarded by orchestrator-action-handler to
+ * the workstation:session-kill IPC channel defined at MB-T11 WB3
+ * (session-kill-ipc.ts). Optional `reason` is included in the audit row to
+ * support post-hoc forensics on why the orchestrator killed a session.
+ */
+export const KillSessionActionPayloadSchema = z
+  .object({
+    sessionName: z.string().min(1),
+    reason: z.string().optional(),
+  })
+  .strict();
+export type KillSessionActionPayload = z.infer<typeof KillSessionActionPayloadSchema>;
+
+/**
+ * Pull-handoff action payload. Forwarded by orchestrator-action-handler to
+ * the existing daemon HTTP route GET /v2/sessions/:name/handoff (handoff.ts).
+ * Per Q-MBT11-4=a the orchestrator reuses the v2 route; the archive +
+ * clipboard side-effects are operator-friendly behaviors that the
+ * orchestrator does not need to opt out of.
+ */
+export const PullHandoffActionPayloadSchema = z
+  .object({
+    sessionName: z.string().min(1),
+  })
+  .strict();
+export type PullHandoffActionPayload = z.infer<typeof PullHandoffActionPayloadSchema>;
+
+/**
+ * Assign-task action payload. Per Q-MBT11-5=a this is a metadata-only marker:
+ * the orchestrator emits assign-task to declare the start of a multi-step
+ * intent against `sessionName`; orchestrator-action-handler creates an
+ * intent_id via autopilot-loop.startIntent and records `intent_summary` plus
+ * `expected_steps` (when known) on the autopilot state. Subsequent
+ * send-prompt actions emitted by the orchestrator reference the same
+ * intent_id via the SendPromptEnvelope step=N/total_steps field. No
+ * structural decomposition happens at the payload level — the orchestrator
+ * decides each next prompt heuristically per CONDUCTOR_V3_RESCOPE.md §4
+ * out-of-scope language.
+ */
+export const AssignTaskActionPayloadSchema = z
+  .object({
+    sessionName: z.string().min(1),
+    intent_summary: z.string().min(1),
+    expected_steps: z.number().int().min(1).optional(),
+  })
+  .strict();
+export type AssignTaskActionPayload = z.infer<typeof AssignTaskActionPayloadSchema>;
+
+/**
+ * IPC payload for the new MB-T11 WB3 channel `workstation:session-kill`.
+ * Mirrors §10's WorkstationSessionSendPromptRequestSchema in placement +
+ * shape. The orchestrator-action-handler (WB5) and (post-merge) the tile
+ * header consume this surface.
+ *
+ * Reply shape is workstation-local in `session-kill-ipc.ts` rather than
+ * here because TmuxKillError and DaemonUnreachable error variants are not
+ * yet in WorkstationErrorSchema (§8), and §1-§11 are frozen for
+ * sess-mbt11 territory per coordination doc Rule 2 + R1 (R1 permits
+ * additive enum-value extension only, not discriminated-union member
+ * additions). A future v3.0.x ticket may promote the workstation-local
+ * variants into §8 with operator arbitration.
+ */
+export const WorkstationSessionKillRequestSchema = z
+  .object({
+    sessionName: z.string().min(1),
+  })
+  .strict();
+export type WorkstationSessionKillRequest = z.infer<
+  typeof WorkstationSessionKillRequestSchema
+>;
+
+/**
+ * Helper: pick the payload sub-schema for an MB-T11 action type. Consumed
+ * by orchestrator-action-handler.ts as the second-pass validator — the
+ * first pass parses the discriminated OrchestratorOutputSchema (§3) which
+ * leaves the `payload` field as z.unknown(); this helper supplies the
+ * per-action shape for the second pass.
+ *
+ * Throws on action types that have no MB-T11 payload schema. v3.0 ships
+ * payload schemas for the five §3.6 action types only; the legacy
+ * 'pause', 'hold', 'arm', 'read-file' enum members are not part of the
+ * MB-T11 surface, so pickPayloadSchema('pause') (etc.) is a programming
+ * error in MB-T11 callers and surfaces here.
+ */
+export function pickPayloadSchema(actionType: ActionType): z.ZodTypeAny {
+  switch (actionType) {
+    case 'send':
+      return SendPromptActionPayloadSchema;
+    case 'spawn-new-session':
+      return SpawnSessionActionPayloadSchema;
+    case 'kill':
+      return KillSessionActionPayloadSchema;
+    case 'pull':
+      return PullHandoffActionPayloadSchema;
+    case 'assign-task':
+      return AssignTaskActionPayloadSchema;
+    default:
+      throw new Error(`No payload schema for action type: ${actionType}`);
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §13 — Per-session approval policy + swarm audit (MB-T13 — CONDUCTOR_V3_RESCOPE.md §3.2 + §3.8 + §4)
