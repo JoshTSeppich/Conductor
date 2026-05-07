@@ -42,6 +42,22 @@ export interface TileProps {
   readonly onKill: (sessionName: string) => void;
   readonly onCollapse: (sessionName: string) => void;
   readonly onDetach: (sessionName: string) => void;
+  /** WB8 drag-swap source: fires on header mousedown (excluding button targets). */
+  readonly onSwapDragStart?: (sessionName: string) => void;
+  /** WB8 drag-swap target: fires on header mouseup (excluding button targets). */
+  readonly onSwapDrop?: (sessionName: string) => void;
+}
+
+// Skip drag-swap when the user clicks an interactive header element
+// (kill/collapse/detach buttons + future picker/autopilot inputs).
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.closest('button') !== null ||
+    target.closest('input') !== null ||
+    target.closest('select') !== null ||
+    target.closest('textarea') !== null
+  );
 }
 
 export function Tile({
@@ -53,6 +69,8 @@ export function Tile({
   onKill,
   onCollapse,
   onDetach,
+  onSwapDragStart,
+  onSwapDrop,
 }: TileProps): JSX.Element {
   return (
     <div
@@ -60,7 +78,17 @@ export function Tile({
       data-collapsed={collapsed ? 'true' : 'false'}
       data-status={status}
     >
-      <div data-testid="tile-header">
+      <div
+        data-testid="tile-header"
+        onMouseDown={(e) => {
+          if (isInteractiveTarget(e.target)) return;
+          onSwapDragStart?.(sessionName);
+        }}
+        onMouseUp={(e) => {
+          if (isInteractiveTarget(e.target)) return;
+          onSwapDrop?.(sessionName);
+        }}
+      >
         <span data-testid="tile-status-indicator" data-status={status} />
         <span data-testid="tile-session-name">{sessionName}</span>
         <div data-slot="picker" data-testid={`tile-picker-slot-${sessionName}`} />

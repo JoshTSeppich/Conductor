@@ -53,6 +53,13 @@ export interface TileGridProps {
    * deterministic sizes to avoid happy-dom layout quirks.
    */
   readonly getCurrentPixelSizes?: () => { colPx: number[]; rowPx: number[] };
+  /**
+   * WB8 drag-swap: fires when the operator drags one tile's header onto
+   * another's. Parent swaps the orderIndex of the two sessions in
+   * tile-grid-state and re-renders sessions in the new order. The
+   * callback is NOT fired when source === target (no-op drop on same tile).
+   */
+  readonly onSwap?: (a: string, b: string) => void;
 }
 
 const noop = (): void => {
@@ -81,9 +88,22 @@ export function TileGrid({
   gridOverride,
   onResizeEnd,
   getCurrentPixelSizes,
+  onSwap,
 }: TileGridProps): JSX.Element | null {
   if (sessions.length === 0) {
     return null;
+  }
+  const draggingSwapRef = useRef<string | null>(null);
+
+  function handleSwapDragStart(name: string): void {
+    draggingSwapRef.current = name;
+  }
+  function handleSwapDrop(targetName: string): void {
+    const source = draggingSwapRef.current;
+    draggingSwapRef.current = null;
+    if (source !== null && source !== targetName) {
+      onSwap?.(source, targetName);
+    }
   }
 
   const layout = computeGridLayout(sessions.length);
@@ -208,15 +228,20 @@ export function TileGrid({
   }
 
   // Document-level mouse listeners during a drag — captures mousemove /
-  // mouseup even when cursor leaves the handle's bounding box.
+  // mouseup even when cursor leaves the handle's bounding box. Also
+  // handles WB8 swap-drag cancellation (mouseup without a header drop).
   useEffect(() => {
     function onMove(e: MouseEvent): void {
       if (!dragRef.current) return;
       applyDrag(e.clientX, e.clientY);
     }
     function onUp(): void {
-      if (!dragRef.current) return;
-      endDrag();
+      if (dragRef.current) endDrag();
+      // Cancel any in-flight swap-drag that didn't drop on a tile header.
+      // Tile-header onMouseUp would have already cleared the ref before
+      // this runs (React synthetic events fire before document handlers
+      // in our test harness), but defensively reset here anyway.
+      draggingSwapRef.current = null;
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -278,6 +303,8 @@ export function TileGrid({
               onKill={onKill}
               onCollapse={onCollapse}
               onDetach={onDetach}
+              onSwapDragStart={onSwap ? handleSwapDragStart : undefined}
+              onSwapDrop={onSwap ? handleSwapDrop : undefined}
             />
           </div>
         );
