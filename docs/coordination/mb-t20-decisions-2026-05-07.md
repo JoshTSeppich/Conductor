@@ -66,3 +66,18 @@ WB1 red.
 ---
 
 **HALT 0 — Phase 1 decisions surface complete.**
+
+---
+
+## OPERATOR CONFIRMATION — 2026-05-07
+
+All Q-MBT20-1..13 = (a) ACCEPTED.
+All R-MBT20-1..8 ACCEPT/PRESERVE/AVOID dispositions ACCEPTED.
+
+Q-MBT20-1=a confirmed with rationale: "CLAUDE.md §5.3 sequencing
+(T20 shell → T21 Chat tab → T22 Commits tab → T23 Tasks tab) only
+makes sense if T20 is the shell that hosts those tabs. T21 wouldn't
+be a separate ticket if T20 already owned Chat content."
+
+Phase 2 WB1..WB5 AUTHORIZED under default mode. Status surface after
+WB3. HALT 0 only if cross-session contention surfaces.
