@@ -28,6 +28,7 @@
 // placeholder for MB-T18.
 
 import { ConsolePanel } from '../console-panel/console-panel.js';
+import { TileHeader } from './tile-header.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
 import type { TileStatus } from './types.js';
@@ -51,6 +52,22 @@ export interface TileProps {
   readonly onSwapDragStart?: (sessionName: string) => void;
   /** WB8 drag-swap target: fires on header mouseup (excluding button targets). */
   readonly onSwapDrop?: (sessionName: string) => void;
+  // ── MB-T15 WB4: tile-header chrome plumb-through ──────────────────
+  /** Branch name displayed in the tile-header chrome (MB-T15).
+   *  Defaults to 'main' inside TileHeader per Q-MBT15-2 stub. */
+  readonly branchName?: string;
+  /** Repo name (basename(cwd)) displayed in the tile-header chrome.
+   *  Hidden when empty or unset. */
+  readonly repoName?: string;
+  /** SDK model name (e.g., 'claude-sonnet-4-6'). Defaults to
+   *  'claude-sonnet-4-6' inside TileHeader per Q-MBT15-2 stub. */
+  readonly model?: string;
+  /** Tokens consumed in the current session window (MB-T15 token meter).
+   *  Default 0 per Q-MBT15-2 stub. */
+  readonly tokensUsed?: number;
+  /** Token budget (model context window). Default 200_000 per
+   *  Q-MBT15-2 stub. */
+  readonly tokenBudget?: number;
 }
 
 // Skip drag-swap when the user clicks an interactive header element
@@ -76,6 +93,11 @@ export function Tile({
   onDetach,
   onSwapDragStart,
   onSwapDrop,
+  branchName,
+  repoName,
+  model,
+  tokensUsed,
+  tokenBudget,
 }: TileProps): JSX.Element {
   return (
     <div
@@ -109,8 +131,22 @@ export function Tile({
           onSwapDrop?.(sessionName);
         }}
       >
-        <span data-testid="tile-status-indicator" data-status={status} />
-        <span data-testid="tile-session-name">{sessionName}</span>
+        {/* MB-T15 WB4: TileHeader provides the read-only chrome (status
+            dot, session name truncated, branch, repo, model chip,
+            token meter) per Q-MBT15-3=a operator-confirmed disposition.
+            Per Q-MBT15-3=a: TileHeader emits the legacy `tile-status-
+            indicator` + `tile-session-name` testids (with `data-status`
+            preserved on the indicator) so MB-T12 probe-01..04 tests
+            stay GREEN without migration. */}
+        <TileHeader
+          sessionName={sessionName}
+          status={status}
+          branchName={branchName}
+          repoName={repoName}
+          model={model}
+          tokensUsed={tokensUsed}
+          tokenBudget={tokenBudget}
+        />
         <div data-slot="picker" data-testid={`tile-picker-slot-${sessionName}`} />
         <div
           data-slot="autopilot"

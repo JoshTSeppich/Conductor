@@ -32,7 +32,7 @@ describe('MB-T15 WB3 — TileHeader chrome rendering', () => {
 
   it('renders the session name text content', () => {
     render(<TileHeader sessionName="sess-alpha" status="open" />);
-    expect(screen.getByTestId('tile-header-session-name')).toHaveTextContent(
+    expect(screen.getByTestId('tile-session-name')).toHaveTextContent(
       'sess-alpha',
     );
   });
@@ -40,14 +40,14 @@ describe('MB-T15 WB3 — TileHeader chrome rendering', () => {
   it('session-name has title attribute = full name (overflow tooltip)', () => {
     const longName = 'a-very-long-session-name-that-might-truncate';
     render(<TileHeader sessionName={longName} status="open" />);
-    expect(screen.getByTestId('tile-header-session-name').getAttribute('title')).toBe(
+    expect(screen.getByTestId('tile-session-name').getAttribute('title')).toBe(
       longName,
     );
   });
 
   it('session-name has CSS overflow:hidden + textOverflow:ellipsis (truncation)', () => {
     render(<TileHeader sessionName="sess-x" status="open" />);
-    const el = screen.getByTestId('tile-header-session-name');
+    const el = screen.getByTestId('tile-session-name');
     expect(el.style.overflow).toBe('hidden');
     expect(el.style.textOverflow).toBe('ellipsis');
     expect(el.style.whiteSpace).toBe('nowrap');
@@ -58,34 +58,34 @@ describe('MB-T15 WB3 — status dot (Q-MBT15-5=b)', () => {
   it('open → green', () => {
     render(<TileHeader sessionName="x" status="open" />);
     expect(
-      screen.getByTestId('tile-header-status-dot').getAttribute('data-status-color'),
+      screen.getByTestId('tile-status-indicator').getAttribute('data-status-color'),
     ).toBe('green');
   });
 
   it('killed → red', () => {
     render(<TileHeader sessionName="x" status="killed" />);
     expect(
-      screen.getByTestId('tile-header-status-dot').getAttribute('data-status-color'),
+      screen.getByTestId('tile-status-indicator').getAttribute('data-status-color'),
     ).toBe('red');
   });
 
   it('idle → gray', () => {
     render(<TileHeader sessionName="x" status="idle" />);
     expect(
-      screen.getByTestId('tile-header-status-dot').getAttribute('data-status-color'),
+      screen.getByTestId('tile-status-indicator').getAttribute('data-status-color'),
     ).toBe('gray');
   });
 
   it('detached → gray (Q-MBT15-5=b)', () => {
     render(<TileHeader sessionName="x" status="detached" />);
     expect(
-      screen.getByTestId('tile-header-status-dot').getAttribute('data-status-color'),
+      screen.getByTestId('tile-status-indicator').getAttribute('data-status-color'),
     ).toBe('gray');
   });
 
   it('renders dot as a small fixed-size element (8x8 with border-radius)', () => {
     render(<TileHeader sessionName="x" status="open" />);
-    const dot = screen.getByTestId('tile-header-status-dot');
+    const dot = screen.getByTestId('tile-status-indicator');
     expect(dot.style.width).toBe('8px');
     expect(dot.style.height).toBe('8px');
     expect(dot.style.borderRadius).toBe('50%');
@@ -305,7 +305,7 @@ describe('MB-T15 WB3 — render at 240px min-width (acceptance)', () => {
       />,
     );
     // session-name + branch-name + repo-name should all have flexShrink: 1
-    expect(screen.getByTestId('tile-header-session-name').style.flexShrink).toBe(
+    expect(screen.getByTestId('tile-session-name').style.flexShrink).toBe(
       '1',
     );
     expect(screen.getByTestId('tile-header-branch-name').style.flexShrink).toBe(
@@ -313,7 +313,7 @@ describe('MB-T15 WB3 — render at 240px min-width (acceptance)', () => {
     );
     expect(screen.getByTestId('tile-header-repo-name').style.flexShrink).toBe('1');
     // dot + chip + meter should NOT shrink (flexShrink: 0)
-    expect(screen.getByTestId('tile-header-status-dot').style.flexShrink).toBe(
+    expect(screen.getByTestId('tile-status-indicator').style.flexShrink).toBe(
       '0',
     );
     expect(screen.getByTestId('tile-header-model-chip').style.flexShrink).toBe(

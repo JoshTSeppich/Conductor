@@ -26,6 +26,17 @@ export interface TileGridSessionEntry {
   readonly name: string;
   readonly status?: TileStatus;
   readonly collapsed?: boolean;
+  // ── MB-T15 WB4: tile-header chrome plumb-through ────────────────────
+  /** Branch name displayed in the tile-header chrome (MB-T15). */
+  readonly branchName?: string;
+  /** Repo name (basename of cwd) displayed in tile-header. */
+  readonly repoName?: string;
+  /** SDK model name (e.g., 'claude-sonnet-4-6') for the model chip. */
+  readonly model?: string;
+  /** Tokens consumed in the current session window (MB-T15 token meter). */
+  readonly tokensUsed?: number;
+  /** Token budget (model context window). */
+  readonly tokenBudget?: number;
 }
 
 export interface TileGridProps {
@@ -301,6 +312,11 @@ export function TileGrid({
               onDetach={onDetach}
               onSwapDragStart={onSwap ? handleSwapDragStart : undefined}
               onSwapDrop={onSwap ? handleSwapDrop : undefined}
+              branchName={s.branchName}
+              repoName={s.repoName}
+              model={s.model}
+              tokensUsed={s.tokensUsed}
+              tokenBudget={s.tokenBudget}
             />
           </div>
         );

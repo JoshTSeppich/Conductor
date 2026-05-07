@@ -159,12 +159,13 @@ export function TileHeader(props: TileHeaderProps): JSX.Element {
   return (
     <div data-testid="tile-header-content" style={HEADER_STYLE}>
       <span
-        data-testid="tile-header-status-dot"
+        data-testid="tile-status-indicator"
+        data-status={status}
         data-status-color={dotColor}
         style={dotStyle}
       />
       <span
-        data-testid="tile-header-session-name"
+        data-testid="tile-session-name"
         title={sessionName}
         style={SESSION_NAME_STYLE}
       >
