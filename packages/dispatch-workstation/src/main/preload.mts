@@ -99,6 +99,22 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   // handles optimistic-UI rollback per Q-MBT16-3=a on rejection.
   putSessionApprovalPolicy: (sessionName: string, policy: string) =>
     ipcRenderer.invoke('workstation:approval-policy-put', { sessionName, policy }),
+  // MB-T17 WB2: per-session autopilot toggle bridge per Q-MBT17-1..13.
+  // getSessionAutopilotEnabled invokes 'workstation:autopilot-get'
+  // → main-process AutopilotIpcController → AutopilotLoop.isEnabled
+  // (workstation-side autopilot-state.json). Returns { enabled: boolean };
+  // default false per Q-MBT17-8=a / autopilot-state-store.ts:61.
+  // Significant deviation from MB-T16 picker bridge: NO daemon route;
+  // autopilot is workstation-side only (Phase 1 diagnose §I-E).
+  getSessionAutopilotEnabled: (sessionName: string) =>
+    ipcRenderer.invoke('workstation:autopilot-get', { sessionName }),
+  // MB-T17 WB2: setSessionAutopilotEnabled invokes
+  // 'workstation:autopilot-put' → AutopilotLoop.setEnabled. Returns
+  // { enabled: boolean } echoing the persisted value. Caller
+  // (TileAutopilotToggle) handles optimistic-UI rollback per
+  // Q-MBT17-3=a on rejection.
+  setSessionAutopilotEnabled: (sessionName: string, enabled: boolean) =>
+    ipcRenderer.invoke('workstation:autopilot-put', { sessionName, enabled }),
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
