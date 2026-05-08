@@ -1,6 +1,6 @@
 # Conductor v3.5 BUILD — Hot-Swap Orchestrator (HSO) Architecture
 
-**Status:** DRAFT-PENDING-SPIKE — operator-arbitrated proposal awaiting empirical validation via SPIKE-HSO-01 (§4.1) before any ticket fires. No CC-delegable scope is open until spike returns KNOWN evidence and operator ratifies §3 architecture.
+**Status:** DRAFT-PENDING-SPIKE-HSO-02 — SPIKE-HSO-01 ratified at commit `c1b78c4` (2026-05-08); §3 architecture KNOWN-VIABLE; D1-D5 architectural requirements operative. Pending: SPIKE-HSO-02 (handoff Shape A vs Shape B per §4.2) before §5 ticket dispatch (excepting MB-T36 per Q-V35-4 re-arbitration 2026-05-08).
 
 **Authoring posture:** Drafted by chat-Claude (Opus 4.7) under operator best-judgment authorization 2026-05-08 per project instructions §3.4 mechanical translation carve-out. Operator authors final text. This document is for review only.
 
@@ -95,7 +95,7 @@ The v3.0 foundational layer (MB-T01–T08, COARCH-T01–T04, CONSOLE-T01–T03, 
 
 [MODELED] Three-tier trigger hierarchy:
 
-1. **Token-pressure trigger (primary).** When active orchestrator's CC CLI surfaces context fullness above threshold (e.g., 70%, observable via the Anthropic-icon-orange-spinner-growing visual cue per operator observation 2026-05-08; need empirical mapping to a quantitative signal in SPIKE-HSO-01). Mapping: parse CC CLI's own context-window status from PTY stream OR poll a CC-CLI-exposed status endpoint if one exists OR use turn-count as proxy.
+1. **Token-count trigger (primary).** [KNOWN per SPIKE-HSO-01 D3] Monitor CC CLI status-bar token count via PTY stream subscription (CONSOLE-T01 broadcaster). Trigger handoff at 65% of model context window (~130,000 tokens for 200K window). Provides ~15-turn clean-handoff window before 70% (~140K) hard threshold. Token-count monitoring ratified over turn-count monitoring per SPIKE-HSO-01 finding F9: response length declines on repeated patterns; turn-count is unreliable proxy for actual capacity consumption. Production implementation: parse `[0-9]+ tokens$` regex from CC CLI status-bar last line of PTY stream output every N seconds (recommended N ≤ 5).
 2. **Turn-count trigger (backstop).** Every N turns regardless of context state — defends against token-pressure detection failure. Default N = 50 (SPECULATIVE; SPIKE-HSO-01 informs).
 3. **Quality-degradation trigger (deferred).** If active starts producing low-confidence outputs or repeating prior decisions. Hard to detect mechanically; likely v3.6+ scope.
 
@@ -108,6 +108,14 @@ The v3.0 foundational layer (MB-T01–T08, COARCH-T01–T04, CONSOLE-T01–T03, 
 **Shape A (fallback if Shape B fails empirically):** at handoff trigger, active is asked "produce 10-line handoff summary covering outstanding swarm goals, sessions in flight, pending decisions." Summary written to `docs/coordination/handoff-<timestamp>.md`. Standby reads BUILD.md + swarm-state.md + handoff summary as initial input.
 
 [MODELED] Shape B is more cairn-aligned (BUILD.md + swarm-state.md ARE the source of truth, no special-case handoff data), but requires active to maintain swarm-state.md correctly and continuously. Shape A is more defensive (orchestrator gets one explicit chance to summarize state before death).
+
+**[KNOWN per SPIKE-HSO-01 finding F6 + D2]:** swarm-state.md summary entries may not preserve the weight behind outstanding HALTs sufficiently for stateless workers reading from cold context. Active orchestrators with full conversation history apply more conservative HALT-discipline than fresh successors reading only fixture summaries. Production swarm-state.md schema MUST include explicit halt-urgency metadata per Shape A or Shape B implementation:
+
+- `halt_urgency: high | medium | low` per active HALT entry
+- `halt_emitted_at: <ISO timestamp>` per active HALT entry  
+- `halt_blocking: <list of dependent ticket scopes>` per active HALT entry
+
+These fields are operator-arbitrated additions to the swarm-state.md schema. MB-T38 (state-writer ticket) is responsible for emitting them; MB-T41 (system prompt) is responsible for instructing the orchestrator how to populate them. SPIKE-HSO-02 must validate against this enriched schema, not the candidate spike fixture format.
 
 **SPIKE-HSO-02 (§4.2) arbitrates Shape B vs Shape A based on empirical evidence.**
 
@@ -125,6 +133,15 @@ prompt: |
 
 [MODELED] Reuses existing `chat-content-markers.ts` parser already shipped via `chat-panel.tsx` integration. Parser extension required: add ACTION marker block parsing, validate inner content against per-action-type payload schema (existing in `dispatch-core/src/v3/schema.ts` §12), reject malformed markers with surfaced error (operator sees orchestrator's invalid output rather than silent drop).
 
+**[KNOWN per SPIKE-HSO-01 finding F4 + D4]:** pull-handoff-from-session is always a solo-turn action. The result of pull-handoff informs the NEXT turn's action (typically spawn-session or send-prompt-to-session), not the same turn. Bundling pull-handoff with a consequent action in a single turn violates the §2 "one action per turn" protocol and creates state-inconsistency risk.
+
+**Production system prompt (MB-T41) MUST explicitly state:**
+> "After emitting a pull-handoff-from-session action, the result content informs your NEXT turn's reasoning. Do NOT bundle pull-handoff with spawn-session, send-prompt-to-session, or any other action variant in the same turn. Wait for the handoff content to enter your context, then decide your next action on the subsequent turn."
+
+This rule was discovered during SPIKE-HSO-01 HALT 3.5 fixture construction (single fixture row conflated pull-handoff + spawn into one S04 entry; structural ambiguity surfaced).
+
+**[KNOWN per SPIKE-HSO-01 finding F3 + D1]:** HSO orchestrator initialization MUST use `--append-system-prompt` flag, NOT user-message injection. User-message injection of system-level authority claims triggers Sonnet 4.6's prompt-injection detection and is correctly refused as a §2.1 anti-fabrication response. MB-T37 (OrchestratorPoolManager) spawn logic MUST encode `claude --dangerously-skip-permissions --model claude-sonnet-4-6 --append-system-prompt "$(cat <hso-system-prompt-path>)"` as the canonical spawn command.
+
 **Halt protocol:** if marker validation fails, the action-variant-router emits a marker-error chat message visible to operator, does NOT fire the action, and surfaces the failure to active orchestrator's next turn (so it can self-correct). This is §3.18 operator-artifact halt-and-surface applied at the IPC layer.
 
 ### §3.7 Tier 4 self-summary harvesting
@@ -138,18 +155,22 @@ prompt: |
 5. If summary: append to swarm-state.md under that peer's section
 6. Action variant emission triggered by significant state changes (peer summary contains new error, peer summary indicates completion of assigned task, etc.)
 
+**[KNOWN per SPIKE-HSO-01 scenario 2]:** TURN_INCOMPLETE protocol is honored 1/1 binary in spike conditions. Sonnet 4.6 distinguishes mid-work peer turns from completed turns reliably when given explicit summary-prompt language. Latency: ~1 second for TURN_INCOMPLETE response (no partial-summary attempt). High-fidelity completed-turn summaries: 3/3 in spike (100%); summaries faithfully echo source qualifiers (F1 anti-fabrication applied autonomously to summary generation).
+
+**Summary format ratified by SPIKE-HSO-01:** task / files-touched / result / completion-status / no-follow-up. This format is currently EMERGENT (substrate behavior, not explicit prompt structure). MB-T41 (production system prompt) MUST formalize this as deterministic schema for downstream MB-T35-revised parser consumption. Emergent format is unsuitable for parser-anchored consumption.
+
 **Cost model:** [KNOWN] zero per-call API cost (Max subscription). **Latency:** ~3-5 seconds per summary roundtrip. **Fidelity:** session self-report — can lie or omit; cairn discipline mitigates but doesn't eliminate. Raw PTY stream remains available via console panel for operator verification when summary fidelity is in question.
 
-[MODELED] **Critical empirical question for SPIKE-HSO-01:** does Sonnet-under-CC-CLI honor the TURN_INCOMPLETE protocol? If it always summarizes regardless of completion state, summaries become noise. If it correctly distinguishes mid-work from completed-turn, summaries become high-signal.
+[KNOWN per SPIKE-HSO-01 scenario 2 KNOWN-PASS]: Sonnet 4.6 under CC CLI honors TURN_INCOMPLETE protocol with 100% binary fidelity (1/1 in spike conditions). Production HSO can rely on TURN_INCOMPLETE as a structured signal for "peer is mid-work; do not interpret partial output as turn-complete." MB-T39 (peer summary harvester) implementation: when peer response = "TURN_INCOMPLETE" string, hold for next quiescence window; do NOT update swarm-state.md with partial content.
 
 ### §3.8 Substrate-portability properties
 
 [MODELED] HSO architecture inherits all substrate-portability claims from cairn-arc-synthesis.md §8 because the orchestrator IS a CC CLI session running cairn primitives. Substrate selection is a spawn-flag choice:
 
-- Default: Sonnet 4.6 (operator-ratified default under current Max subscription, 2026-05-08)
-- Optional: Sonnet 4.5 (validated under Round 5 evidence base; substrate-portability evidence)
-- Optional: Haiku 4.5 (faster, cheaper subscription consumption, lower reasoning depth — appropriate for narrow orchestration tasks)
-- Optional: Opus 4.7 (highest reasoning, biggest context, when wide arbitration is needed)
+- Default: **Sonnet 4.6** (operator-ratified default under current Max subscription; KNOWN-VIABLE per SPIKE-HSO-01 ratification 2026-05-08)
+- Optional: Sonnet 4.5 (Round 5 substrate-portability evidence; not directly tested for HSO in SPIKE-HSO-01)
+- Optional: Haiku 4.5 (faster, cheaper subscription consumption, lower reasoning depth — appropriate for narrow orchestration tasks; substrate-viability untested for HSO; spike before deployment)
+- Optional: Opus 4.7 (highest reasoning, biggest context; substrate-viability untested for HSO; spike before deployment)
 - Operator can swap orchestrator substrate without code changes — only spawn-flag changes
 
 [MODELED] This makes substrate-experimentation cheap. Operator can A/B test orchestrator substrates by spawning HSO instances with different `--model` flags (Sonnet 4.6 is the Max default; explicit flags select alternates), observing decision quality on identical BUILD.md + swarm-state.md inputs, ratifying empirically.
@@ -158,7 +179,7 @@ prompt: |
 
 ## §4 — Spike requirements (must pass before any tickets fire)
 
-### §4.1 SPIKE-HSO-01 — Orchestrator-as-CC-session viability
+### §4.1 SPIKE-HSO-01 — Orchestrator-as-CC-session viability — [RATIFIED 2026-05-08, commit `c1b78c4`]
 
 **Scope:** spawn a single Sonnet 4.6 CC CLI session under a candidate HSO system prompt. Operator drives it through 5-10 simulated swarm scenarios. Measure structured-output reliability, conversation-state-management feasibility, latency, Max rate-limit headroom.
 
@@ -179,6 +200,8 @@ prompt: |
 
 **Operator-only territory:** SPIKE-HSO-01 is operator-supervised; chat-Claude does not author the spike system prompt as final text — drafts only.
 
+**Ratification result (2026-05-08):** All 5 acceptance scenarios PASS. Substrate ratified. 5 architectural requirements (D1-D5) operative. 5 followup tickets filed (MB-F-HSO-01-*). See `docs/adr/HSO-01-orchestrator-substrate-viability.md` for full evidence and ADR.
+
 ### §4.2 SPIKE-HSO-02 — Handoff protocol shape
 
 **Scope:** conditional on SPIKE-HSO-01 acceptance scenario 3 passing. Test Shape B (swarm-state.md only) vs Shape A (swarm-state.md + handoff document). Single CC orchestrator session forced through 5 simulated handoffs. Measure: which shape produces better continuity per operator subjective review.
@@ -191,11 +214,14 @@ prompt: |
 
 ### §4.3 Combined ratification gate
 
-[MODELED] Both spikes must pass with KNOWN evidence before §5 tickets fire. Failure modes:
+[KNOWN] SPIKE-HSO-01 ratified 2026-05-08 (commit `c1b78c4`). Architecture KNOWN-VIABLE per Sonnet 4.6 substrate. D1-D5 operative. 
 
-- **SPIKE-HSO-01 fails any acceptance scenario** → v3.5 architecture does not ratify. Fall back to v3.0 API-orchestrator path tickets in §5-fallback.
-- **SPIKE-HSO-01 passes, SPIKE-HSO-02 ratifies Shape B** → §5 tickets fire as written
-- **SPIKE-HSO-01 passes, SPIKE-HSO-02 ratifies Shape A** → §5 tickets fire with MB-T38 scope adjusted (handoff document generation in addition to swarm-state.md)
+[Q-V35-4 re-arbitrated 2026-05-08]: MB-T36 (orchestrator-fired spawn) authorized to fire post-SPIKE-HSO-01 / pre-SPIKE-HSO-02 due to architecture-independence per §5.2. All other §5 tickets remain gated on SPIKE-HSO-02 ratification + MB-T41 operator-only authoring.
+
+Remaining gate:
+- **SPIKE-HSO-02 ratifies Shape B** → §5 tickets MB-T35-revised + MB-T37 + MB-T38 + MB-T39 + MB-T40 + MB-T41 fire as written
+- **SPIKE-HSO-02 ratifies Shape A** → §5 tickets fire with MB-T38 scope adjusted (handoff document generation in addition to swarm-state.md)
+- **SPIKE-HSO-02 fails** → v3.5 architecture not viable at handoff layer; pivot operator decision required
 
 ---
 
@@ -346,7 +372,7 @@ Recmd: (b). Stays in operator's reading line of sight without polluting root.
 
 **Q-V35-3 — Single file vs directory for swarm-state.** Single `swarm-state.md` (simpler) or `swarm-state/<sessionName>.md` directory (cleaner per-session mapping). Recmd: single file for SPIKE-HSO-01; directory if spike surfaces single-file scaling issues.
 
-**Q-V35-4 — MB-T36 sequence.** Fire pre-spike (architecture-independent, parallelizable) or strict-post-spike (no scope authoring before §4 ratifies)? Operator best-judgment. Recmd: strict-post-spike per §3.4 cairn discipline. Strict cairn doesn't pre-author tickets even when content is architecture-stable.
+**Q-V35-4 — MB-T36 sequence.** [Re-arbitrated 2026-05-08 post-SPIKE-HSO-01 ratification.] MB-T36 may fire post-SPIKE-HSO-01 / pre-SPIKE-HSO-02 — architecture-independent scope per §5.2 (works for both v3.5 HSO and v3.0-fallback paths). Other §5 tickets remain strict-post-SPIKE-HSO-02 + post-MB-T41-operator-authoring. See `docs/build-docs/q-v35-4-re-arbitration.md` (or equivalent path) for full re-arbitration record.
 
 **Q-V35-5 — Substrate default.** Sonnet 4.5, Sonnet 4.6, Haiku 4.5, Opus 4.7? Operator-arbitrated 2026-05-08: Sonnet 4.6 (current Max subscription default). SPIKE-HSO-01 measures viability against this substrate; if Sonnet 4.6 fails acceptance, alternate substrate selection becomes a follow-on spike question.
 
@@ -367,7 +393,8 @@ Recmd: (a) for v3.5 dogfood entry. (b) for v3.5.1 ship-confidence.
 
 - **v3.0 wireframe-operational tickets (MB-T35–T40 v3.0-fallback) replaced** by v3.5 ticket set (MB-T35-revised + MB-T36 + MB-T37 + MB-T38 + MB-T39 + MB-T40 + MB-T41).
 - **Net ticket count:** 7 vs 5 v3.0-fallback, but some are smaller (MB-T36 is architecture-independent, MB-T38 is mostly write-discipline scaffolding) and infrastructure is reused.
-- **Spike calendar cost:** SPIKE-HSO-01 ~3-4 hours operator-supervised; SPIKE-HSO-02 ~1-2 hours conditional. Total ~5-6 hours operator-only territory.
+- **Spike calendar cost — actual:** SPIKE-HSO-01 took ~4-5 hours operator-supervised wall-clock (2026-05-08). SPIKE-HSO-02 estimated ~1-2 hours operator-supervised when authorized.
+- **Path α parallel work window (post-SPIKE-HSO-01, pre-SPIKE-HSO-02):** MB-T36 + operator-side authoring (Round 7 cairn evidence harvest, MB-T41 prep notes if operator chooses). ~2-4 hours wall-clock with parallel CC + operator tracks.
 - **Wall-clock to v3.5 wireframe-operational:** under two-agent-loop pacing, ~7-9 sessions + 2 spikes. Calendar bounded by review bandwidth per project instructions §2.1.
 - **Path-to-marvelous estimated calendar:** v3.5 ship adds ~2-4 weeks vs v3.0-direct path. Net path-to-Group-Alpha-binaries roughly neutral; HSO architecture reduces friction for downstream binaries because orchestrator-as-CC-session is the substrate Cairn-tooling and other Group Gamma work would consume anyway.
 
