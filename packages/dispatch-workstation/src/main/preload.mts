@@ -84,6 +84,16 @@ contextBridge.exposeInMainWorld('coarchitectBridge', {
       ipcRenderer.removeListener('coarchitect:rate-limit-update', h as any);
   },
   // === END: MB-T34 ===
+  // MB-T25 NOTE: `coarchitectBridge.onRateLimitUpdate` authorship lives in
+  // Terminal D's MB-T34 zone (f326d21 origin/mbt34-worktree at WB5).
+  // Per operator HALT 1 dual-authorship-overlap arbitration 2026-05-08:
+  // D's MB-T34 zone owns the preload.mts subscriber (with initial-fetch
+  // via 'coarchitect:getRateLimitState' invoke). MY MB-T25 ticket
+  // consumes via mount.ts CoarchitectBridge interface +
+  // plan-usage-ring.tsx PlanUsageRing component — purely consumer-side,
+  // no preload.mts authorship at MB-T25's territory. Incident filed as
+  // MB-F-PARALLEL-CAIRN-WORKTREE-DUAL-AUTHORSHIP-OVERLAP (Tier 1) at
+  // MB-T25 WB-final findings doc.
 });
 
 // Shell bridge for wrapper layout plumbing (splitter state persistence).
