@@ -180,6 +180,44 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   // Q-MBT17-3=a on rejection.
   setSessionAutopilotEnabled: (sessionName: string, enabled: boolean) =>
     ipcRenderer.invoke('workstation:autopilot-put', { sessionName, enabled }),
+  // === BEGIN: MB-T24 dispatch-mode gate IPC ===
+  // Q-MBT24-5=c (hard gate at spawn-ipc.ts) operator-confirmed at HALT 0
+  // 2026-05-08. spawn-ipc.ts emits 'workstation:spawn-confirm-required'
+  // when dispatchMode === 'ask' and the renderer fires
+  // 'workstation:spawn-requested'; renderer subscribes here, surfaces a
+  // confirmation modal (workstation-shell.html MB-T24 zone), and fires
+  // 'workstation:spawn-confirm-response' on the operator's choice.
+  //
+  // onSpawnConfirmRequired: subscribe to 'workstation:spawn-confirm-
+  // required'. Returns cleanup-fn (matches onSpawnResult / onStream*
+  // pattern). Payload shape: { requestId, repoPath, sessionName }.
+  onSpawnConfirmRequired: (
+    cb: (payload: {
+      requestId: string;
+      repoPath: string;
+      sessionName: string;
+    }) => void,
+  ) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (
+      _: unknown,
+      payload: { requestId: string; repoPath: string; sessionName: string },
+    ) => cb(payload);
+    ipcRenderer.on('workstation:spawn-confirm-required', h as any);
+    return () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ipcRenderer.removeListener('workstation:spawn-confirm-required', h as any);
+  },
+  // respondSpawnConfirm: fires 'workstation:spawn-confirm-response' with
+  // operator's decision. One-way send; main-process gate looks up by
+  // requestId and either fires the cached spawn (confirm) or discards
+  // it (cancel).
+  respondSpawnConfirm: (requestId: string, decision: 'confirm' | 'cancel') =>
+    ipcRenderer.send('workstation:spawn-confirm-response', {
+      requestId,
+      decision,
+    }),
+  // === END: MB-T24 ===
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
@@ -199,6 +237,32 @@ const consoleIpcAdapter: ConsoleBridgeIpc = {
   removeListener: (channel, listener) => { ipcRenderer.removeListener(channel, listener as any); },
 };
 contextBridge.exposeInMainWorld('consoleBridge', makeConsoleBridge(consoleIpcAdapter));
+
+// === BEGIN: MB-T24 dispatch-mode bridge ===
+// Q-MBT24-6=c operator-confirmed 2026-05-08: NEW dispatchModeBridge —
+// additive surface mirroring commitsBridge precedent. Two methods:
+//
+//   - getDispatchMode() — invokes 'dispatch-mode:get' main-process IPC
+//     handler (registered by src/main/dispatch-mode-ipc.ts at
+//     app.whenReady time per main.ts MB-T24 sentinel zone). Returns the
+//     persisted DispatchMode ('auto' | 'ask'); defaults to 'ask' per
+//     Q-MBT24-2=a when no file / malformed.
+//   - setDispatchMode(mode) — invokes 'dispatch-mode:set' with
+//     { mode } payload. Echoes the persisted value back so the renderer
+//     can reconcile after the write.
+//
+// Renderer-side consumer is src/chat-shell/dispatch-mode-toggle.tsx
+// (DispatchModeToggle component, mounted via mount.ts auto-build path 2
+// when window.dispatchModeBridge is exposed). Q-MBT24-5=c hard gate
+// at spawn-ipc.ts (WB4a) reads the persisted mode directly via
+// dispatch-mode-store.readDispatchMode() — does NOT route through
+// this bridge (which is renderer→main; spawn-ipc handler is main-side).
+contextBridge.exposeInMainWorld('dispatchModeBridge', {
+  getDispatchMode: () => ipcRenderer.invoke('dispatch-mode:get'),
+  setDispatchMode: (mode: unknown) =>
+    ipcRenderer.invoke('dispatch-mode:set', { mode }),
+});
+// === END: MB-T24 ===
 
 // === BEGIN: MB-T22 commits bridge ===
 // Q-MBT22-7=a operator-confirmed 2026-05-07: static window.commitsBridge

@@ -34,6 +34,18 @@ import {
 import type { SpawnEnv } from './spawn-env.js';
 import { HttpSessionListClient } from './session-cap.js';
 import { resolveClaudeBin } from './binary-resolver.js';
+// === BEGIN: MB-T24 dispatch-mode gate imports ===
+// Q-MBT24-5=c (hard gate at spawn-ipc.ts) operator-confirmed at HALT 0
+// 2026-05-08 — re-disposed from tentative (a) soft system-prompt
+// injection to (c) renderer-side hard gate at the operator-driven spawn
+// surface (the only currently-firing spawn path; orchestrator-fired
+// spawn throws per MB-F-T11-WB7-ORCHESTRATOR-SPAWN-DEFERRED).
+import { readDispatchMode } from './dispatch-mode-store.js';
+import {
+  SpawnConfirmGate,
+  type SpawnConfirmDecision,
+} from './spawn-confirm-gate.js';
+// === END: MB-T24 ===
 
 const execFileP = promisify(execFile);
 
@@ -284,12 +296,24 @@ export function registerSpawnIpcHandlers(opts: RegisterSpawnIpcOpts = {}): void 
     return result.filePaths[0];
   });
 
-  ipcMain.on('workstation:spawn-requested', (event, payload: unknown) => {
-    // MB-F-MB-T04-PAYLOAD-VALIDATION followup tracks the Zod schema
-    // boundary; for now we accept the shape implicitly (renderer is
-    // trusted within Workstation) and let the handler surface
-    // type errors via the error envelope.
-    const req = payload as SpawnSessionRequest;
+  // === BEGIN: MB-T24 dispatch-mode gate ===
+  // Per Q-MBT24-5=c, every operator-driven spawn passes through the gate
+  // before reaching SpawnIpcController. Gate reads the persisted
+  // dispatchMode fresh per request (so live toggle flips between modal
+  // open and Spawn-click are honored). Auto → fire-now (today's flow).
+  // Ask → emit 'workstation:spawn-confirm-required' to renderer; await
+  // 'workstation:spawn-confirm-response' before invoking the controller.
+  const spawnConfirmGate = new SpawnConfirmGate({
+    readDispatchMode,
+  });
+
+  // Helper: kicks off the actual spawn through the controller and routes
+  // the reply back to the renderer's webContents. Used by both the
+  // 'auto' fire-now path AND the 'ask' confirm-then-fire path.
+  function fireSpawnAndReply(
+    event: Electron.IpcMainEvent,
+    req: SpawnSessionRequest,
+  ): void {
     void controllerPromise
       .then((controller) => controller.handleSpawnRequest(req))
       .then((reply) => {
@@ -310,5 +334,45 @@ export function registerSpawnIpcHandlers(opts: RegisterSpawnIpcOpts = {}): void 
           // Renderer may have closed.
         }
       });
+  }
+
+  ipcMain.on('workstation:spawn-requested', (event, payload: unknown) => {
+    // MB-F-MB-T04-PAYLOAD-VALIDATION followup tracks the Zod schema
+    // boundary; for now we accept the shape implicitly (renderer is
+    // trusted within Workstation) and let the handler surface
+    // type errors via the error envelope.
+    const req = payload as SpawnSessionRequest;
+
+    // MB-T24: gate routes 'auto' through fire-now (existing flow);
+    // 'ask' caches the request and emits confirm-required to renderer.
+    const decision = spawnConfirmGate.decide(
+      { send: (channel, msg) => event.sender.send(channel, msg) },
+      req,
+      () => fireSpawnAndReply(event, req),
+    );
+    if (decision === 'fire-now') {
+      fireSpawnAndReply(event, req);
+    }
+    // 'await-confirm' path: fireSpawnAndReply will run later when
+    // 'workstation:spawn-confirm-response' arrives with decision='confirm'.
   });
+
+  // MB-T24: 'workstation:spawn-confirm-response' handler. Renderer fires
+  // this from the confirmation modal's Confirm/Cancel buttons.
+  ipcMain.on(
+    'workstation:spawn-confirm-response',
+    (_event, payload: unknown) => {
+      if (payload === null || typeof payload !== 'object') return;
+      const r = payload as Record<string, unknown>;
+      const requestId = r['requestId'];
+      const decision = r['decision'];
+      if (typeof requestId !== 'string' || requestId.length === 0) return;
+      if (decision !== 'confirm' && decision !== 'cancel') return;
+      spawnConfirmGate.handleResponse(
+        requestId,
+        decision as SpawnConfirmDecision,
+      );
+    },
+  );
+  // === END: MB-T24 ===
 }

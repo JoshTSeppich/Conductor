@@ -45,6 +45,14 @@ import { CostMeter } from './cost-meter.js';
 // === BEGIN: MB-T27 mix-indicator import ===
 import { MixIndicatorContainer } from './mix-indicator.js';
 // === END: MB-T27 ===
+// === BEGIN: MB-T24 dispatch-mode-toggle import ===
+// Type-only here at WB1 RED; component import lands at WB3 GREEN when
+// resolveRenderDispatchModeToggle path 2 (window.dispatchModeBridge auto-
+// build) is implemented. WB1 RED keeps only the type for the explicit-
+// override path (path 1).
+import type { DispatchModeBridge } from './dispatch-mode-toggle.js';
+import { DispatchModeToggle } from './dispatch-mode-toggle.js';
+// === END: MB-T24 ===
 // === BEGIN: MB-T22 WB4 commits-tab import ===
 // CommitsTab consumes window.commitsBridge (preload.mts MB-T22 zone) at
 // render time. Type-only import of CommitsBridge so type narrowing works
@@ -100,6 +108,17 @@ declare global {
     // registered by resolveTabs() below.
     commitsBridge?: CommitsBridge;
     // === END: MB-T22 WB4 ===
+    // === BEGIN: MB-T24 dispatchModeBridge global type ===
+    // Exposed by preload.mts MB-T24 zone (NEW additive bridge per
+    // Q-MBT24-6=c — mirrors commitsBridge precedent). Renderer
+    // consumer is DispatchModeToggle inside the renderDispatchModeToggle
+    // closure resolved by resolveRenderDispatchModeToggle() below.
+    // Routes via ipcRenderer.invoke('dispatch-mode:get') +
+    // ipcRenderer.invoke('dispatch-mode:set', mode) to dispatch-mode-
+    // ipc.ts handlers (registered at app.whenReady time per main.ts
+    // MB-T24 sentinel zone, lands at WB3 GREEN).
+    dispatchModeBridge?: DispatchModeBridge;
+    // === END: MB-T24 ===
   }
 }
 
@@ -145,6 +164,17 @@ export interface MountChatShellOptions {
   // GREEN).
   readonly renderPlanUsageRing?: () => ReactNode;
   // === END: MB-T25 ===
+  // === BEGIN: MB-T24 dispatch-mode-toggle slot option ===
+  // Q-MBT24-3=a (two-button segmented control) + Q-MBT24-4=a (FAR-LEFT
+  // slot) + Q-MBT24-6=c (NEW dispatchModeBridge — additive surface
+  // per commitsBridge precedent) operator-confirmed at HALT 0 2026-05-08.
+  // When supplied, used verbatim (test-override path). When omitted,
+  // mountChatShell at WB3 GREEN builds a closure from
+  // window.dispatchModeBridge (if defined). WB1 RED:
+  // resolveRenderDispatchModeToggle returns undefined when not explicitly
+  // supplied (no auto-build yet).
+  readonly renderDispatchModeToggle?: () => ReactNode;
+  // === END: MB-T24 ===
 }
 
 // Adapter from coarchitectBridge → ChatPanel's DaemonClient interface.
@@ -266,6 +296,35 @@ function resolveRenderCostMeter(
 // MixIndicatorContainer import + window.workstationBridge wiring
 // (path 2). Per Q-MBT27-3=a operator-confirmed at HALT 0 2026-05-07:
 // preload.mts UNCHANGED; reuses existing workstationBridge.onSpawnResult.
+// === BEGIN: MB-T24 dispatch-mode-toggle slot resolution ===
+// Resolution order mirrors resolveRenderCostMeter / resolveRenderModelMix
+// above:
+//   1. Explicit `opts.renderDispatchModeToggle` — used verbatim (test
+//      override path; probe-06 fixture sets this directly).
+//   2. window.dispatchModeBridge — build closure that wraps
+//      <DispatchModeToggle bridge={window.dispatchModeBridge}/>.
+//   3. Neither — return undefined (chat-shell renders empty MB-T24 slot
+//      per chat-shell.tsx MB-T24 zone fallback; integration tests that
+//      do not wire dispatchModeBridge see the toggle in non-interactive
+//      default state).
+//
+// WB1 RED: only paths (1) and (3) implemented. WB3 GREEN adds path 2
+// (window.dispatchModeBridge auto-build) once preload.mts MB-T24 zone
+// exposes the bridge per Q-MBT24-6=c.
+function resolveRenderDispatchModeToggle(
+  opts: MountChatShellOptions,
+): (() => ReactNode) | undefined {
+  if (opts.renderDispatchModeToggle) return opts.renderDispatchModeToggle;
+  // Path 2: peek window.dispatchModeBridge and wrap
+  // <DispatchModeToggle bridge={window.dispatchModeBridge}/>. Lands at
+  // WB3 GREEN once preload.mts MB-T24 zone exposes the bridge.
+  const bridge =
+    typeof window !== 'undefined' ? window.dispatchModeBridge : undefined;
+  if (!bridge) return undefined;
+  return () => createElement(DispatchModeToggle, { bridge });
+}
+// === END: MB-T24 ===
+
 function resolveRenderModelMix(
   opts: MountChatShellOptions,
 ): (() => ReactNode) | undefined {
@@ -351,12 +410,21 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
   // additively.
   const renderPlanUsageRing = resolveRenderPlanUsageRing(opts);
   // === END: MB-T25 ===
+  // === BEGIN: MB-T24 dispatch-mode-toggle slot passthrough ===
+  // Sibling resolution + render-prop pass-through. Slot ordering inside
+  // chat-shell-header-bar is FAR-LEFT per Q-MBT24-4=a — the JSX render
+  // order in chat-shell.tsx MB-T24 zone places this slot before the
+  // MB-T26 cost-meter slot. mount.ts simply hands closures via props;
+  // chat-shell.tsx owns left-to-right slot ordering.
+  const renderDispatchModeToggle = resolveRenderDispatchModeToggle(opts);
+  // === END: MB-T24 ===
   root.render(
     createElement(ChatShell, {
       tabs,
       renderCostMeter,
       renderModelMix,
       renderPlanUsageRing,
+      renderDispatchModeToggle,
     }),
   );
   // === END: MB-T26 ===
