@@ -381,6 +381,29 @@ app.whenReady().then(async () => {
   // === END: Fix-92 ===
   registerIpcHandlers();
   registerSpawnIpcHandlers();
+  // === BEGIN: MB-T24 dispatch-mode IPC (registered BEFORE createWindow) ===
+  // WB4b runtime-smoke finding: DispatchModeToggle component invokes
+  // getDispatchMode at mount (chat-shell renderer auto-mount). Renderer
+  // mounts during createWindow() at line below; therefore the IPC
+  // handler MUST register BEFORE createWindow or the initial fetch
+  // races and rejects with "No handler registered for 'dispatch-mode:get'".
+  // (MB-T16/T17 controllers can register post-createWindow because their
+  // bridge methods are only invoked on operator interaction with tile
+  // dropdowns/toggles AFTER startup; MB-T24 differs because the toggle
+  // fetches state at mount.)
+  //
+  // Companion sentinel zone with the actual controller construction
+  // remains in the post-createWindow region for symmetry with MB-T16/T17;
+  // this register call here is the load-bearing one. The renderer-side
+  // .catch fallback is a defense-in-depth (defaults to 'ask') but the
+  // ordering fix here eliminates the noisy error log + the brief flicker
+  // before the persisted value is fetched.
+  const dispatchModeControllerEarly = createDefaultDispatchModeIpcController();
+  dispatchModeControllerEarly.registerHandlers(ipcMain);
+  if (process.env['MB_TEST_HOOKS'] === '1') {
+    process.stdout.write('DISPATCH_MODE_IPC_MOUNTED\n');
+  }
+  // === END: MB-T24 ===
   // === MB-T09 session-send-prompt IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
   // tile footer (MB-T12) consume this surface. Default deps wire to
@@ -603,32 +626,12 @@ app.whenReady().then(async () => {
   }
   // === END: MB-T17 autopilot IPC ===
 
-  // === BEGIN: MB-T24 dispatch-mode IPC (do not modify outside this block) ===
-  // WB3 — wires `dispatch-mode:get` + `dispatch-mode:set` ipcMain handlers.
-  // The renderer-side DispatchModeToggle (mounted by mount.ts via
-  // resolveRenderDispatchModeToggle path 2 when window.dispatchModeBridge
-  // is exposed by preload.mts MB-T24 zone) invokes these channels through
-  // the preload contextBridge methods `getDispatchMode` / `setDispatchMode`.
-  //
-  // Default factory wires readDispatchMode + writeDispatchMode from
-  // dispatch-mode-store.ts (workstation-internal file-JSON persistence at
-  // <userData>/dispatch-mode-state.json, env-overridable via
-  // MB_DISPATCH_MODE_STATE_DIR for test isolation per CLAUDE.md §3.5).
-  //
-  // Q-MBT24-5=c hard gate at spawn-ipc.ts (WB4a) reads the persisted mode
-  // directly via dispatch-mode-store.readDispatchMode() at the
-  // 'workstation:spawn-requested' handler — does NOT route through the
-  // dispatchModeBridge (which is renderer→main; spawn-ipc handler is
-  // already main-side and reads the store directly).
-  //
-  // R-MBT24-2 honored: NEW sentinel-bracketed block adjacent to (NOT
-  // inside) the MB-T16 / MB-T17 sentinel zones.
-  const dispatchModeController = createDefaultDispatchModeIpcController();
-  dispatchModeController.registerHandlers(ipcMain);
-  if (process.env['MB_TEST_HOOKS'] === '1') {
-    process.stdout.write('DISPATCH_MODE_IPC_MOUNTED\n');
-  }
-  // === END: MB-T24 dispatch-mode IPC ===
+  // MB-T24 dispatch-mode IPC was relocated UP to register BEFORE
+  // createWindow (see WB4b runtime-smoke finding zone above near
+  // registerSpawnIpcHandlers). Renderer DispatchModeToggle invokes
+  // getDispatchMode at mount, so the handler must be live before the
+  // chat-shell renderer auto-mounts. The post-createWindow zone is
+  // intentionally absent.
 
   // ONBOARDING_READY sentinel is emitted after createWindow returns so the
   // smoke harness's runOnboarding() can wait deterministically.
