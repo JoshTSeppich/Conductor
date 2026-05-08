@@ -1,0 +1,1 @@
+- [Parallel-cairn courtesy-delay protocol](feedback_parallel_cairn_courtesy_delay.md) — ~30s pre-atomic-chain delay mitigates index-race; harness may block leading sleep — workaround is sleep AFTER a cheap initial command
