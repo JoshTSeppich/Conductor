@@ -18,6 +18,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Tile, type TileStatus } from './tile.js';
 import { computeGridLayout, computeNewSizesAfterDrag } from './tile-layout.js';
+import {
+  computeHeroSquadLayout,
+  type HeroSquadLayout,
+} from './tile-hero-squad-layout.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
@@ -94,6 +98,19 @@ export interface TileGridProps {
    * + renders <TileFooter sessionName cwd />.
    */
   readonly renderFooterSlot?: (sessionName: string) => ReactNode;
+  /**
+   * MB-T19 WB3 — hero/squad layout activation. When provided AND
+   * matches a session name in `sessions[]`, the layout switches to
+   * hero/squad geometry: hero on top (~75% vertical) spanning all
+   * cols, squad strip below (~25% vertical) with one cell per
+   * remaining tile. When undefined/null OR doesn't match any session,
+   * falls back to the uniform `computeGridLayout` (existing default
+   * — preserves all MB-T12 ladder tests). Per Q-MBT19-5=b: vertical
+   * resize handles between squad cols are SKIPPED in hero mode for
+   * v3.0 (within-strip resize deferred to v3.1); only the horizontal
+   * handle at the hero/squad boundary is operator-draggable.
+   */
+  readonly heroSessionName?: string | null;
 }
 
 const noop = (): void => {
@@ -125,6 +142,7 @@ export function TileGrid({
   renderPickerSlot,
   renderAutopilotSlot,
   renderFooterSlot,
+  heroSessionName,
 }: TileGridProps): JSX.Element | null {
   // Hooks must be unconditional and run in the same order on every
   // render (React Rules of Hooks). Layout / shape checks happen below
@@ -134,7 +152,19 @@ export function TileGrid({
   // "Internal React error: Expected static flag was missing" warnings
   // on N=0 ↔ N>0 transitions (e.g., spawn auto-mount).
   const isEmpty = sessions.length === 0;
-  const layout = isEmpty ? null : computeGridLayout(sessions.length);
+  // MB-T19 WB3 — hero/squad mode activates when heroSessionName matches
+  // a session in the array. When unmatched OR null, falls back to
+  // uniform layout (existing MB-T12 behavior unchanged).
+  const heroIndex =
+    heroSessionName != null && !isEmpty
+      ? sessions.findIndex((s) => s.name === heroSessionName)
+      : -1;
+  const isHeroMode = heroIndex >= 0;
+  const layout = isEmpty
+    ? null
+    : isHeroMode
+      ? computeHeroSquadLayout(sessions.length, heroIndex)
+      : computeGridLayout(sessions.length);
 
   const overrideMatchesShape =
     !isEmpty &&
@@ -291,9 +321,17 @@ export function TileGrid({
 
   const explicitCellCount = layout.rows * layout.cols;
 
+  // MB-T19 WB3 — hero mode uses HeroSquadLayout.defaultRowSizes
+  // (75%/25%) by default; uniform mode uses repeat(rows, 1fr). Drag-
+  // resize override (rowCss state) takes precedence when present
+  // (Q-MBT19-5=b: hero/squad boundary is operator-draggable).
+  const defaultRowsCss =
+    isHeroMode && 'defaultRowSizes' in layout
+      ? (layout as HeroSquadLayout).defaultRowSizes.join(' ')
+      : `repeat(${layout.rows}, 1fr)`;
   const gridStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateRows: rowCss ? rowCss.join(' ') : `repeat(${layout.rows}, 1fr)`,
+    gridTemplateRows: rowCss ? rowCss.join(' ') : defaultRowsCss,
     gridTemplateColumns: colCss
       ? colCss.join(' ')
       : `repeat(${layout.cols}, 1fr)`,
@@ -308,9 +346,22 @@ export function TileGrid({
     gridStyle.gridAutoRows = '1fr';
     gridStyle.overflowY = 'auto';
   }
+  // MB-T19 WB3 — hero mode allows horizontal scroll on squad strip
+  // overflow (Q-MBT19-10: horizontal scroll for v3.0). The squad
+  // strip will scroll horizontally when its tiles underflow available
+  // width; CSS overflow-x: auto handles the runtime decision.
+  if (isHeroMode) {
+    gridStyle.overflowX = 'auto';
+  }
 
   const verticalHandles: number[] = [];
-  for (let i = 0; i < layout.cols - 1; i++) verticalHandles.push(i);
+  // MB-T19 WB3 — Q-MBT19-5=b: in hero mode, vertical (col-border)
+  // resize handles are SUPPRESSED for v3.0. Only the horizontal
+  // (row-border) handle at the hero/squad boundary is operator-
+  // draggable; within-squad-strip resize is deferred to v3.1.
+  if (!isHeroMode) {
+    for (let i = 0; i < layout.cols - 1; i++) verticalHandles.push(i);
+  }
   const horizontalHandles: number[] = [];
   for (let j = 0; j < layout.rows - 1; j++) horizontalHandles.push(j);
 
@@ -319,6 +370,7 @@ export function TileGrid({
       ref={gridRootRef}
       data-testid="tile-grid-root"
       data-tile-count={sessions.length}
+      data-hero-mode={isHeroMode ? 'true' : 'false'}
       style={gridStyle}
     >
       {sessions.map((s, idx) => {
