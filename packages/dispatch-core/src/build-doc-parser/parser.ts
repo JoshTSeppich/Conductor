@@ -1,10 +1,14 @@
+import { buildDag } from './dag-builder.js';
 import type {
+  ApprovalPolicy,
+  ModelHint,
   ParseError,
   ParseResult,
   Preamble,
   Task,
   TaskGroup,
   TaskId,
+  Tier,
 } from './types.js';
 
 /**
@@ -15,8 +19,8 @@ import type {
  *
  * Implementation lands across WB2-WB8:
  *   WB2 — §3.1 preamble parsing
- *   WB3 — §3.2 task section extraction (THIS WB)
- *   WB4 — §3.3 fields + §3.4 ref resolution + DAG construction
+ *   WB3 — §3.2 task section extraction
+ *   WB4 — §3.3 fields + §3.4 ref resolution + DAG construction (THIS WB)
  *   WB5 — cycle detection
  *   WB6 — orphan + duplicate-branch + missing-preamble polish
  *   WB7 — error-surface polish
@@ -41,15 +45,16 @@ export function parseBuildDoc(text: string): ParseResult {
     return { ok: false, errors: allErrors };
   }
 
-  return {
-    ok: true,
-    dag: {
-      preamble: preamble.preamble,
-      tasks: taskBuild.tasks,
-      groups: taskBuild.groups,
-      edges: [], // WB4: §3.3 dependsOn + §3.4 ref resolution + edge expansion.
-    },
-  };
+  const { dag, errors: dagErrors } = buildDag(
+    preamble.preamble,
+    taskBuild.tasks,
+    taskBuild.groups,
+  );
+  if (dagErrors.length > 0) {
+    return { ok: false, errors: dagErrors };
+  }
+
+  return { ok: true, dag };
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +69,12 @@ const H3 = /^###\s+/;
 const TASK_HEADING_H2 = /^##\s+§([0-9]+(?:\.[0-9]+)?)\s+[—–-]\s+(.+)$/;
 /** `### §N — Title` or `### §N.M — Title`. */
 const TASK_HEADING_H3 = /^###\s+§([0-9]+(?:\.[0-9]+)?)\s+[—–-]\s+(.+)$/;
+/** Bullet line: leading whitespace + bullet char + space + content. R-MBT28-5 permissive. */
+const BULLET_LINE = /^\s*[-*+]\s+(.*)$/;
+/** §N reference, e.g. `§1` or `§3.1`. */
+const SECTION_REF = /^§([0-9]+(?:\.[0-9]+)?)$/;
+/** Cap value, e.g. `5%`, `12.5%`. */
+const CAP_VALUE = /^\d+(?:\.\d+)?%$/;
 
 // ---------------------------------------------------------------------------
 // §3.1 preamble parsing (WB2).
@@ -80,13 +91,11 @@ type PreambleParseOk = {
   ok: true;
   preamble: Preamble;
   errors: ParseError[];
-  /** 0-based index of the first line AFTER the preamble block. */
   nextIndex: number;
 };
 type PreambleParseFail = { ok: false; errors: ParseError[] };
 
 function parsePreamble(lines: string[]): PreambleParseOk | PreambleParseFail {
-  // Locate the first H1; spec §3.1 requires it to be `# BUILD`.
   let h1Index = -1;
   for (let i = 0; i < lines.length; i++) {
     if (H1.test(lines[i]!) && !H2.test(lines[i]!)) {
@@ -120,8 +129,6 @@ function parsePreamble(lines: string[]): PreambleParseOk | PreambleParseFail {
     };
   }
 
-  // Scan forward from the H1 collecting `**Field:** value` lines until the
-  // next H1 or H2 heading.
   const collected = new Map<string, { value: string; line: number }>();
   const errors: ParseError[] = [];
   let cursor = h1Index + 1;
@@ -133,7 +140,6 @@ function parsePreamble(lines: string[]): PreambleParseOk | PreambleParseFail {
     const fieldName = match[1]!.trim();
     const rawValue = match[2]!.trim();
     if (!PREAMBLE_FIELDS.includes(fieldName)) {
-      // Q-MBT28-9 ack=(a) strict: unknown fields are malformed.
       errors.push({
         code: 'preamble.field-malformed',
         message: `Unknown preamble field \`${fieldName}\` (spec §3.1 fields: ${PREAMBLE_FIELDS.join(', ')})`,
@@ -197,9 +203,8 @@ interface SectionRecord {
   title: string;
   sourceLine: number;
   level: 'h2' | 'h3';
-  /** Raw lines between this heading and the next H1/H2/H3 boundary, exclusive of the headings. */
+  /** Raw lines between this heading and the next H1/H2/H3 boundary, exclusive of headings. Contiguous in source so line numbers are recoverable. */
   bodyLines: string[];
-  /** For H3 sections, the id of the enclosing H2 (or undefined if H3 has no H2 parent). */
   parentH2Id?: TaskId;
 }
 
@@ -259,8 +264,6 @@ function scanSections(lines: string[], startIndex: number): SectionScanResult {
       continue;
     }
     if (H1.test(line) && !H2.test(line)) {
-      // H1 = meta-block per spec §3.5 (or stale `# BUILD` re-encounter).
-      // Resets H2 context; subsequent H3s without an H2 are treated as orphan-parent.
       flushCurrent();
       currentH2 = null;
       continue;
@@ -305,6 +308,24 @@ function parseTaskHeading(
   return { ok: true, id: m[1]!, title: m[2]!.trim() };
 }
 
+// ---------------------------------------------------------------------------
+// §3.3 task body field parsing + §3.4 ref resolution (WB4).
+// ---------------------------------------------------------------------------
+
+interface ParsedTaskBody {
+  goal?: string;
+  branch?: string;
+  dependsOn?: TaskId[];
+  acceptance?: string[];
+  hints?: string[];
+  approvalPolicy?: ApprovalPolicy;
+  model?: ModelHint;
+  tier?: Tier;
+  estimate?: string;
+  cap?: string;
+  speculative?: boolean;
+}
+
 interface TaskBuildResult {
   tasks: Task[];
   groups: TaskGroup[];
@@ -317,8 +338,6 @@ function buildTasksAndGroups(sections: SectionRecord[]): TaskBuildResult {
   const errors: ParseError[] = [];
   const taskIdToFirstLine = new Map<TaskId, number>();
 
-  // Per spec §3.2, an H2 is a task UNLESS it has H3 children — in which case
-  // the H2 is a "group" (informational, not a task) and each H3 is a task.
   const h2WithH3Children = new Set<TaskId>();
   for (const s of sections) {
     if (s.level === 'h3' && s.parentH2Id !== undefined) {
@@ -328,7 +347,6 @@ function buildTasksAndGroups(sections: SectionRecord[]): TaskBuildResult {
 
   for (const section of sections) {
     if (section.level === 'h2' && h2WithH3Children.has(section.id)) {
-      // Group: collect child H3 ids in document order.
       const childIds = sections
         .filter((s) => s.level === 'h3' && s.parentH2Id === section.id)
         .map((s) => s.id);
@@ -338,7 +356,6 @@ function buildTasksAndGroups(sections: SectionRecord[]): TaskBuildResult {
         taskIds: childIds,
         sourceLine: section.sourceLine,
       });
-      // Q-MBT28-1B ack=(a): H2 with body fields AND H3 children is malformed.
       const hasBodyFields = section.bodyLines.some((l) => FIELD_LINE.test(l));
       if (hasBodyFields) {
         errors.push({
@@ -351,7 +368,6 @@ function buildTasksAndGroups(sections: SectionRecord[]): TaskBuildResult {
       continue;
     }
 
-    // Task: H2 without H3 children, or any H3.
     if (taskIdToFirstLine.has(section.id)) {
       errors.push({
         code: 'task.id-conflict',
@@ -365,16 +381,194 @@ function buildTasksAndGroups(sections: SectionRecord[]): TaskBuildResult {
       continue;
     }
     taskIdToFirstLine.set(section.id, section.sourceLine);
-    tasks.push({
+
+    const { fields, errors: bodyErrors } = parseTaskBody(section);
+    errors.push(...bodyErrors);
+
+    const task: Task = {
       id: section.id,
       title: section.title,
-      goal: '', // WB4
-      branch: '', // WB4
-      dependsOn: [], // WB4
-      acceptance: [], // WB4
+      goal: fields.goal ?? '',
+      branch: fields.branch ?? '',
+      dependsOn: fields.dependsOn ?? [],
+      acceptance: fields.acceptance ?? [],
       sourceLine: section.sourceLine,
-    });
+    };
+    if (fields.hints !== undefined) task.hints = fields.hints;
+    if (fields.approvalPolicy !== undefined) task.approvalPolicy = fields.approvalPolicy;
+    if (fields.model !== undefined) task.model = fields.model;
+    if (fields.tier !== undefined) task.tier = fields.tier;
+    if (fields.estimate !== undefined) task.estimate = fields.estimate;
+    if (fields.cap !== undefined) task.cap = fields.cap;
+    if (fields.speculative !== undefined) task.speculative = fields.speculative;
+    tasks.push(task);
   }
 
   return { tasks, groups, errors };
+}
+
+function parseTaskBody(
+  section: SectionRecord,
+): { fields: ParsedTaskBody; errors: ParseError[] } {
+  const errors: ParseError[] = [];
+  const fields: ParsedTaskBody = {};
+  let goalLines: string[] | null = null;
+  // `currentList` is a direct reference to the bullet array on `fields`
+  // (either fields.acceptance or fields.hints); pushing into it mutates the
+  // field directly. null when we're not inside a list-field body.
+  let currentList: string[] | null = null;
+
+  for (let idx = 0; idx < section.bodyLines.length; idx++) {
+    const line = section.bodyLines[idx]!;
+    const sourceLineNum = section.sourceLine + 1 + idx;
+
+    const fieldMatch = line.match(FIELD_LINE);
+    if (fieldMatch) {
+      // Flush any in-progress goal accumulation, exit any list context.
+      if (goalLines !== null) {
+        fields.goal = goalLines.join(' ').trim();
+        goalLines = null;
+      }
+      currentList = null;
+
+      const fieldName = fieldMatch[1]!.trim();
+      const rawValue = fieldMatch[2]!.trim();
+
+      const malformed = (msg: string) => {
+        errors.push({
+          code: 'task.malformed-field',
+          message: `Task §${section.id}: ${msg}`,
+          line: sourceLineNum,
+          details: { taskId: section.id, fieldName, rawValue },
+        });
+      };
+
+      switch (fieldName) {
+        case 'Goal':
+          goalLines = [rawValue];
+          break;
+        case 'Branch':
+          if (rawValue === '') malformed('Branch field has empty value');
+          else fields.branch = rawValue;
+          break;
+        case 'Depends on':
+          fields.dependsOn = parseDependsOn(rawValue);
+          break;
+        case 'Acceptance': {
+          const list: string[] = [];
+          fields.acceptance = list;
+          currentList = list;
+          break;
+        }
+        case 'Hints': {
+          const list: string[] = [];
+          fields.hints = list;
+          currentList = list;
+          break;
+        }
+        case 'Approval policy':
+          if (rawValue === 'tight' || rawValue === 'medium' || rawValue === 'loose') {
+            fields.approvalPolicy = rawValue;
+          } else {
+            malformed(`Approval policy must be tight|medium|loose; got "${rawValue}"`);
+          }
+          break;
+        case 'Model':
+          if (
+            rawValue === 'S4.6' ||
+            rawValue === 'O4.6' ||
+            rawValue === 'O4.7·1M' ||
+            rawValue === 'H'
+          ) {
+            fields.model = rawValue;
+          } else {
+            malformed(`Model must be S4.6|O4.6|O4.7·1M|H; got "${rawValue}"`);
+          }
+          break;
+        case 'Tier':
+          if (rawValue === '1' || rawValue === '2' || rawValue === '3') {
+            fields.tier = parseInt(rawValue, 10) as Tier;
+          } else {
+            malformed(`Tier must be 1|2|3; got "${rawValue}"`);
+          }
+          break;
+        case 'Estimate':
+          fields.estimate = rawValue;
+          break;
+        case 'Cap':
+          if (CAP_VALUE.test(rawValue)) fields.cap = rawValue;
+          else malformed(`Cap must match "N%" format (e.g., "5%"); got "${rawValue}"`);
+          break;
+        case 'Speculative':
+          if (rawValue === 'true') fields.speculative = true;
+          else if (rawValue === 'false') fields.speculative = false;
+          else malformed(`Speculative must be true|false; got "${rawValue}"`);
+          break;
+        default:
+          // Q-MBT28-9 ack=(a) strict: unknown task fields are malformed.
+          malformed(`unknown field \`${fieldName}\``);
+      }
+      continue;
+    }
+
+    const bulletMatch = line.match(BULLET_LINE);
+    if (bulletMatch && currentList !== null) {
+      if (goalLines !== null) {
+        fields.goal = goalLines.join(' ').trim();
+        goalLines = null;
+      }
+      currentList.push(bulletMatch[1]!.trim());
+      continue;
+    }
+
+    if (goalLines !== null) {
+      if (line.trim() === '') {
+        fields.goal = goalLines.join(' ').trim();
+        goalLines = null;
+      } else {
+        goalLines.push(line.trim());
+      }
+    }
+  }
+
+  if (goalLines !== null) {
+    fields.goal = goalLines.join(' ').trim();
+  }
+
+  // Validate required fields per spec §3.3.
+  const requiredKeyMap: Record<string, keyof ParsedTaskBody> = {
+    Goal: 'goal',
+    Branch: 'branch',
+    'Depends on': 'dependsOn',
+    Acceptance: 'acceptance',
+  };
+  for (const required of ['Goal', 'Branch', 'Depends on', 'Acceptance'] as const) {
+    if (fields[requiredKeyMap[required]!] === undefined) {
+      errors.push({
+        code: 'task.missing-required-field',
+        message: `Task §${section.id}: missing required field \`${required}\``,
+        line: section.sourceLine,
+        details: { taskId: section.id, fieldName: required },
+      });
+    }
+  }
+
+  return { fields, errors };
+}
+
+function parseDependsOn(rawValue: string): TaskId[] {
+  const trimmed = rawValue.trim();
+  // Spec uses `—` (em-dash) for "no deps". Permissive: also accept `–` and `-`.
+  if (trimmed === '' || trimmed === '—' || trimmed === '–' || trimmed === '-') {
+    return [];
+  }
+  const parts = trimmed.split(',').map((p) => p.trim()).filter((p) => p !== '');
+  const ids: TaskId[] = [];
+  for (const part of parts) {
+    const m = part.match(SECTION_REF);
+    if (m) ids.push(m[1]!);
+    // Unparseable refs silently dropped at WB4; orphan validator (WB6) catches via
+    // dependsOn ∩ knownIds. Strict-malformed-ref tightening is v3.1 polish (FU).
+  }
+  return ids;
 }
