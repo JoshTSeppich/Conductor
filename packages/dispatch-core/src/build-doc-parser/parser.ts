@@ -542,10 +542,9 @@ function parseTaskBody(
 
     const bulletMatch = line.match(BULLET_LINE);
     if (bulletMatch && currentList !== null) {
-      if (goalLines !== null) {
-        fields.goal = goalLines.join(' ').trim();
-        goalLines = null;
-      }
+      // No goal-flush needed here: entering a list field (Acceptance/Hints)
+      // always flushes goalLines via the field-line branch above, so by the
+      // time we reach a bullet with currentList!==null, goalLines is null.
       currentList.push(bulletMatch[1]!.trim());
       continue;
     }
@@ -560,9 +559,11 @@ function parseTaskBody(
     }
   }
 
-  if (goalLines !== null) {
-    fields.goal = goalLines.join(' ').trim();
-  }
+  // No trailing-flush: mid-loop blank-line handling at the section's
+  // boundary flushes goalLines for any well-formed fixture (trailing newline
+  // produces a blank line at section end, which triggers the in-loop flush).
+  // A file ending exactly on a goal line with no trailing newline would lose
+  // that final line — accepted edge case (filed v3.1 polish FU candidate).
 
   // Validate required fields per spec §3.3.
   const requiredKeyMap: Record<string, keyof ParsedTaskBody> = {

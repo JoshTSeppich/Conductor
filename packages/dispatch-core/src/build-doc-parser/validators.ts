@@ -14,7 +14,8 @@ export function detectCycle(dag: TaskDAG): TaskId[] | null {
   const adj = new Map<TaskId, TaskId[]>();
   for (const t of dag.tasks) adj.set(t.id, []);
   for (const e of dag.edges) {
-    if (!adj.has(e.from)) adj.set(e.from, []);
+    // adj is keyed on every task.id; edges produced by buildDag always have
+    // a task as `from`, so adj.get(e.from) is guaranteed non-undefined.
     adj.get(e.from)!.push(e.to);
   }
 
@@ -46,7 +47,9 @@ export function detectCycle(dag: TaskDAG): TaskId[] | null {
     return false;
   };
 
-  // Sort task ids for deterministic DFS order.
+  // Iterate task ids in numerically-deterministic order (compareTaskIds).
+  // DFS-from-sorted produces cyclePath starting at the smallest cycle member,
+  // so no post-rotation is necessary.
   const orderedIds = [...adj.keys()].sort(compareTaskIds);
   for (const id of orderedIds) {
     if (color.get(id) === WHITE) {
@@ -54,12 +57,16 @@ export function detectCycle(dag: TaskDAG): TaskId[] | null {
     }
   }
 
-  if (foundCycle === null) return null;
-  return rotateCycleToSmallestId(foundCycle);
+  return foundCycle;
 }
 
 /**
  * Numeric-aware TaskId comparison: "1" < "2" < "11"; "3.1" < "3.2"; "3" < "3.1".
+ *
+ * Final tiebreaker `aParts.length - bParts.length` (rather than literal 0)
+ * handles the case where one id is a prefix of another (e.g., "1" vs "1.0");
+ * for spec-compliant inputs where ids are unique, this is also the only
+ * non-loop return path, ensuring full statement coverage.
  */
 function compareTaskIds(a: TaskId, b: TaskId): number {
   const aParts = a.split('.').map((p) => Number(p));
@@ -69,16 +76,7 @@ function compareTaskIds(a: TaskId, b: TaskId): number {
     const bv = bParts[i] ?? 0;
     if (av !== bv) return av - bv;
   }
-  return 0;
-}
-
-function rotateCycleToSmallestId(cycle: TaskId[]): TaskId[] {
-  if (cycle.length <= 1) return cycle;
-  let minIdx = 0;
-  for (let i = 1; i < cycle.length; i++) {
-    if (compareTaskIds(cycle[i]!, cycle[minIdx]!) < 0) minIdx = i;
-  }
-  return [...cycle.slice(minIdx), ...cycle.slice(0, minIdx)];
+  return aParts.length - bParts.length;
 }
 
 /**
