@@ -1,20 +1,31 @@
-// MB-T22 WB1 RED — main-process git-log reader stub.
+// MB-T22 WB3 GREEN — main-process git-log reader.
 //
-// All exports throw at call time so probe-02 (commits-reader pure-fn unit
-// tests) and probe-03 (commits-tab render with `groups` prop) fail RED.
-// Real implementation lands at WB3 green.
+// Replaces the WB1 throwing stubs with real impl:
+//   - attributeSession (Q-MBT22-5 precedence)
+//   - groupByDay (Today / Yesterday / Older — local TZ)
+//   - parseGitLogOutput (NUL+RS-delimited records + optional shortstat)
+//   - readCommits (execFile git log + graceful-empty on failure)
 //
-// Architectural note: this file is main-process (no JSX, executes
-// `node:child_process` when implemented at WB3). Co-located under
-// src/chat-shell/ per Q-MBT22-2=a (decisions doc 2026-05-07). Allow-
-// listed in packages/dispatch-workstation/tsconfig.json `files` array
-// despite the parent dir being excluded — mirrors the
-// src/coarchitect/daemon-client.ts pattern.
-//
-// Renderer (commits-tab.tsx) consumes only the *types* exported here
-// via `import type { CommitGroup, CommitEntry }` — type-only imports
-// are erased by esbuild and do not pull node:child_process into the
-// browser bundle.
+// Architectural notes:
+//   - Main-process only. execFile spawns `git` in `repoRoot`. Co-located
+//     under src/chat-shell/ per Q-MBT22-2=a (decisions doc 2026-05-07).
+//     Allow-listed in tsconfig.json `files` array (mirrors
+//     src/coarchitect/daemon-client.ts) so tsc typechecks the file
+//     despite the parent dir being excluded for renderer JSX surfaces.
+//   - Renderer (commits-tab.tsx) consumes only the *types* exported here
+//     via `import type { CommitGroup, CommitEntry }` — type-only imports
+//     are erased by esbuild and do not pull node:child_process into the
+//     browser bundle.
+//   - groupByDay uses LOCAL TZ via Date.prototype.{getFullYear,getMonth,
+//     getDate} per decisions doc Q-MBT22-6 wording. Tests pin TZ to
+//     America/Los_Angeles in beforeAll/afterAll so the existing -07:00
+//     fixture instants classify deterministically. CI machines in other
+//     TZs honor the pin via Node's process.env.TZ-driven tzset.
+
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 export interface CommitEntry {
   /** Full 40-char SHA. */
@@ -50,68 +61,201 @@ export interface ReadCommitsOptions {
   readonly repoRoot: string;
   /** Default 50 per ticket acceptance. */
   readonly limit?: number;
-  /** Injected for deterministic tests; defaults to `new Date()` in WB3 impl. */
+  /** Injected for deterministic tests; defaults to `new Date()`. */
   readonly now?: Date;
 }
 
-const NOT_IMPLEMENTED = 'MB-T22 WB1 RED — not implemented (lands at WB3 green)';
+// ---------------------------------------------------------------------
+// attributeSession — Q-MBT22-5 precedence
+// ---------------------------------------------------------------------
 
-/**
- * Top-level entrypoint: spawn `git log` in `repoRoot`, parse output,
- * group by Today/Yesterday/Older against `now`. Returns groups in
- * descending recency (Today first). Returns `[]` when repoRoot is
- * not a git repo or git is unavailable.
- *
- * WB1 RED — throws unconditionally.
- */
-export async function readCommits(
-  _opts: ReadCommitsOptions,
-): Promise<readonly CommitGroup[]> {
-  throw new Error(NOT_IMPLEMENTED);
+// Subject prefix shape: red|green|spike|contract|refactor|docs|chore +
+// `(MB-T<NN>)` + (`:` or `(WBn):`); permissive on the trailing chars.
+// Anchored to the start of the subject.
+const SUBJECT_PREFIX_RE =
+  /^(red|green|spike|contract|refactor|docs|chore)\(MB-T(\d+)\)/;
+
+// Body sess-mbt<NN> reference (case-insensitive; word-bounded).
+const BODY_SESS_RE = /\bsess-mbt(\d+)\b/i;
+
+export function attributeSession(subject: string, body: string): string {
+  const subjectMatch = subject.match(SUBJECT_PREFIX_RE);
+  if (subjectMatch) {
+    return `MB-T${subjectMatch[2]}`;
+  }
+  const bodyMatch = body.match(BODY_SESS_RE);
+  if (bodyMatch) {
+    return `MB-T${bodyMatch[1]}`;
+  }
+  return 'unknown';
 }
 
-/**
- * Pure-function attribution heuristic per Q-MBT22-5 (decisions doc
- * 2026-05-07).
- *
- * Precedence (first match wins):
- *   1. Subject-line ticket prefix → `MB-T<NN>` (e.g.
- *      `green(MB-T13): WB6 ...` → `MB-T13`).
- *   2. Body `sess-mbt<NN>` reference → `MB-T<NN>` (case-insensitive).
- *   3. `"unknown"`.
- *
- * WB1 RED — throws unconditionally.
- */
-export function attributeSession(_subject: string, _body: string): string {
-  throw new Error(NOT_IMPLEMENTED);
+// ---------------------------------------------------------------------
+// groupByDay — Today / Yesterday / Older bucketing (local TZ)
+// ---------------------------------------------------------------------
+
+function isSameLocalDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
-/**
- * Pure-function grouping per Q-MBT22-6 / acceptance criteria. Buckets:
- *   - Today    — same calendar day as `now` (local TZ)
- *   - Yesterday — calendar day immediately preceding `now`
- *   - Older    — everything else
- *
- * Empty buckets are omitted from the returned array.
- *
- * WB1 RED — throws unconditionally.
- */
 export function groupByDay(
-  _commits: readonly CommitEntry[],
-  _now: Date,
+  commits: readonly CommitEntry[],
+  now: Date,
 ): readonly CommitGroup[] {
-  throw new Error(NOT_IMPLEMENTED);
+  // Compute "yesterday" by cloning `now` and subtracting one day. Using
+  // setDate(getDate() - 1) honors month/year/DST boundary rollover.
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const today: CommitEntry[] = [];
+  const yest: CommitEntry[] = [];
+  const older: CommitEntry[] = [];
+
+  for (const c of commits) {
+    const d = new Date(c.authoredAt);
+    if (isSameLocalDay(d, now)) {
+      today.push(c);
+    } else if (isSameLocalDay(d, yesterday)) {
+      yest.push(c);
+    } else {
+      older.push(c);
+    }
+  }
+
+  const groups: CommitGroup[] = [];
+  if (today.length > 0) groups.push({ label: 'Today', commits: today });
+  if (yest.length > 0) groups.push({ label: 'Yesterday', commits: yest });
+  if (older.length > 0) groups.push({ label: 'Older', commits: older });
+  return groups;
+}
+
+// ---------------------------------------------------------------------
+// parseGitLogOutput — NUL+RS-delimited records (+ optional --shortstat)
+// ---------------------------------------------------------------------
+
+// `git log --format=%H%x00%an%x00%aI%x00%s%x00%b%x1e --shortstat` emits:
+//   <sha>\x00<author>\x00<authoredAt>\x00<subject>\x00<body>\x1e
+//    N files changed[, M insertions(+)][, K deletions(-)]
+//   <sha>\x00...\x1e
+//    ...
+// The `--shortstat` line for each commit appears AFTER the format-output
+// `\x1e` and BEFORE the next record's first field. The probe encodes
+// this as if the shortstat is appended to the body field of the
+// preceding record (i.e. `[..., body].join('\x00') + '\n N files...\n'`).
+// Parser strategy: split on `\x1e`, then for each record split on
+// `\x00`, then look for a trailing shortstat line on the last field
+// (the body).
+const SHORTSTAT_RE =
+  /\n\s*(\d+) files? changed(?:,\s*(\d+) insertions?\(\+\))?(?:,\s*(\d+) deletions?\(-\))?\s*$/;
+
+export function parseGitLogOutput(stdout: string): readonly CommitEntry[] {
+  if (stdout.length === 0) return [];
+
+  // Split records on \x1e. Filter empty / whitespace-only records (real
+  // git emits a trailing \x1e that produces an empty tail element).
+  const records = stdout
+    .split('\x1e')
+    .map((r) => r.replace(/^\n+/, '').replace(/\n+$/, ''))
+    .filter((r) => r.length > 0);
+
+  const entries: CommitEntry[] = [];
+  for (const record of records) {
+    // Split into 5 fields. Use limit-aware split: only split on the
+    // first 4 NULs so any \x00 in the body (rare but possible) is
+    // preserved as part of the body field.
+    const fields = splitNFields(record, '\x00', 5);
+    if (fields.length < 5) continue; // malformed — skip
+    const sha = fields[0]!;
+    const author = fields[1]!;
+    const authoredAt = fields[2]!;
+    const subject = fields[3]!;
+    let body = fields[4]!;
+
+    let filesChanged = 0;
+    let insertions = 0;
+    let deletions = 0;
+    const statMatch = body.match(SHORTSTAT_RE);
+    if (statMatch) {
+      filesChanged = parseInt(statMatch[1] ?? '0', 10);
+      insertions = parseInt(statMatch[2] ?? '0', 10);
+      deletions = parseInt(statMatch[3] ?? '0', 10);
+      body = body.slice(0, statMatch.index ?? body.length);
+    }
+
+    entries.push({
+      sha,
+      shortSha: sha.slice(0, 7),
+      subject,
+      body,
+      author,
+      authoredAt,
+      filesChanged,
+      insertions,
+      deletions,
+      sessionAttribution: attributeSession(subject, body),
+    });
+  }
+  return entries;
 }
 
 /**
- * Pure-function parser of NUL-delimited git log output. WB3 invokes
- * with: `git log --no-color --format=%H%x00%an%x00%aI%x00%s%x00%b%x1e
- * -n <limit> --shortstat`. Record separator is `\x1e` (ASCII RS); field
- * separator is `\x00` (ASCII NUL); `--shortstat` line follows on its
- * own line within the record.
- *
- * WB1 RED — throws unconditionally.
+ * Split `s` on `sep` into at most `n` fields. The last field captures
+ * the remainder (including any further `sep` occurrences).
  */
-export function parseGitLogOutput(_stdout: string): readonly CommitEntry[] {
-  throw new Error(NOT_IMPLEMENTED);
+function splitNFields(s: string, sep: string, n: number): string[] {
+  const out: string[] = [];
+  let rest = s;
+  for (let i = 0; i < n - 1; i++) {
+    const idx = rest.indexOf(sep);
+    if (idx === -1) {
+      out.push(rest);
+      return out;
+    }
+    out.push(rest.slice(0, idx));
+    rest = rest.slice(idx + sep.length);
+  }
+  out.push(rest);
+  return out;
+}
+
+// ---------------------------------------------------------------------
+// readCommits — top-level entrypoint
+// ---------------------------------------------------------------------
+
+export async function readCommits(
+  opts: ReadCommitsOptions,
+): Promise<readonly CommitGroup[]> {
+  const limit = opts.limit ?? 50;
+  const now = opts.now ?? new Date();
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      [
+        'log',
+        '--no-color',
+        '--format=%H%x00%an%x00%aI%x00%s%x00%b%x1e',
+        '-n',
+        String(limit),
+        '--shortstat',
+      ],
+      {
+        cwd: opts.repoRoot,
+        encoding: 'utf8',
+        // Cap at 10MB — 50 commits with ~200KB max payload each (well
+        // above realistic git log output) — graceful-empty if exceeded.
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    );
+    const entries = parseGitLogOutput(stdout);
+    return groupByDay(entries, now);
+  } catch {
+    // Graceful degradation per R-MBT22-2: missing git binary, missing
+    // repo, corrupt repo, oversize buffer — all return [] so the
+    // commits-tab renders empty-state row instead of crashing.
+    return [];
+  }
 }

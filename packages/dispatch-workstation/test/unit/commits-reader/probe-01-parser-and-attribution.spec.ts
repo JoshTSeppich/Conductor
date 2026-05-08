@@ -1,4 +1,4 @@
-// MB-T22 WB1 RED — commits-reader pure-function probes.
+// MB-T22 WB1 RED → WB3 GREEN — commits-reader pure-function probes.
 //
 // Operator-confirmed dispositions (decisions doc 2026-05-07):
 //   Q-MBT22-1=a — workstation child_process (no daemon route)
@@ -8,10 +8,19 @@
 //                 file at test/integration/commits-reader/, lands at WB4)
 //
 // This file exercises the *pure functions* of commits-reader (no
-// child_process). All tests fail RED at WB1 because the stubs throw
-// unconditionally; WB3 green replaces stubs with real impl.
+// child_process). WB1 RED authored failing tests against throwing stubs;
+// WB3 GREEN replaces stubs with real impl + migrates the readCommits
+// stub-throws test to assert graceful-empty behavior on nonexistent
+// repoRoot (per R-MBT22-2 mitigation).
+//
+// TZ pinning (WB3): groupByDay uses local-TZ calendar comparisons per
+// decisions doc Q-MBT22-6. The fixture instants in this file use -07:00
+// offsets (PDT) so we pin process.env.TZ = 'America/Los_Angeles' in
+// beforeAll/afterAll — Node's tzset honors the env mutation, so the
+// existing fixture values classify deterministically regardless of CI
+// machine TZ. Documented in WB3 commit body.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   attributeSession,
   groupByDay,
@@ -19,6 +28,21 @@ import {
   readCommits,
   type CommitEntry,
 } from '../../../src/chat-shell/commits-reader.js';
+
+// ---------------------------------------------------------------------------
+// TZ pin (WB3) — see file-header comment for rationale
+// ---------------------------------------------------------------------------
+const ORIGINAL_TZ = process.env['TZ'];
+beforeAll(() => {
+  process.env['TZ'] = 'America/Los_Angeles';
+});
+afterAll(() => {
+  if (ORIGINAL_TZ === undefined) {
+    delete process.env['TZ'];
+  } else {
+    process.env['TZ'] = ORIGINAL_TZ;
+  }
+});
 
 // ---------------------------------------------------------------------------
 // attributeSession — Q-MBT22-5 precedence
@@ -244,15 +268,20 @@ describe('MB-T22 WB1 RED — parseGitLogOutput (NUL-delimited records)', () => {
 // readCommits — top-level entrypoint (WB3 wires execFile + grouping)
 // ---------------------------------------------------------------------------
 
-describe('MB-T22 WB1 RED — readCommits (top-level entrypoint)', () => {
-  it('throws or rejects at WB1 (stub state)', async () => {
-    // WB1 stub throws unconditionally. WB3 green replaces with real
-    // execFile+parseGitLogOutput+groupByDay pipeline. Integration probe
-    // at test/integration/commits-reader/probe-01-fixture-repo.test.ts
-    // (Q-MBT22-8=a, lands at WB4) exercises the real pipeline against
-    // a tmpdir git init.
-    await expect(
-      readCommits({ repoRoot: '/nonexistent', limit: 50 }),
-    ).rejects.toThrow(/MB-T22 WB1 RED/);
+describe('MB-T22 WB3 GREEN — readCommits (top-level entrypoint)', () => {
+  it('returns [] for a nonexistent repoRoot (graceful degradation per R-MBT22-2)', async () => {
+    // WB1 RED stub threw; WB3 GREEN replaces with real
+    // execFile+parseGitLogOutput+groupByDay pipeline. The integration
+    // probe at test/integration/commits-reader/probe-01-fixture-repo.test
+    // .ts (Q-MBT22-8=a, lands at WB4) exercises the real pipeline against
+    // a tmpdir `git init` fixture. Here we exercise the negative path:
+    // execFile raises ENOENT / git rev-parse fails / etc., all of which
+    // collapse to `[]` per the catch-block in readCommits — the
+    // commits-tab renders the empty-state row rather than crashing.
+    const groups = await readCommits({
+      repoRoot: '/nonexistent-mbt22-test-path-does-not-exist',
+      limit: 50,
+    });
+    expect(groups).toEqual([]);
   });
 });
