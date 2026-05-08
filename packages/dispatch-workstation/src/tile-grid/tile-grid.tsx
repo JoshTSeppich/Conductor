@@ -37,6 +37,14 @@ export interface TileGridSessionEntry {
   readonly tokensUsed?: number;
   /** Token budget (model context window). */
   readonly tokenBudget?: number;
+  // ── MB-T18 WB3: per-tile footer chrome plumb-through ────────────────
+  /** Full session working-directory path. Sourced from the extended
+   *  SpawnSessionResult (workstation-internal — see spawn-handler.ts
+   *  cwd field, MB-T18 WB2). Consumed by the renderFooterSlot closure
+   *  which constructs <TileFooter cwd={...} /> per Q-MBT18-1=e. Absent
+   *  for sessions seeded via initialSessions without explicit cwd; the
+   *  footer's cwd line is omitted in that case (Q-MBT18-7=d). */
+  readonly cwd?: string;
 }
 
 export interface TileGridProps {
@@ -79,6 +87,13 @@ export interface TileGridProps {
    * docstring for semantics.
    */
   readonly renderAutopilotSlot?: (sessionName: string) => ReactNode;
+  /**
+   * MB-T18 WB3 — per-tile footer slot render-prop. Plumbed through to
+   * each <Tile> via direct pass-through. See Tile's prop docstring
+   * for semantics. Closure typically looks up cwd from session entry
+   * + renders <TileFooter sessionName cwd />.
+   */
+  readonly renderFooterSlot?: (sessionName: string) => ReactNode;
 }
 
 const noop = (): void => {
@@ -109,6 +124,7 @@ export function TileGrid({
   onSwap,
   renderPickerSlot,
   renderAutopilotSlot,
+  renderFooterSlot,
 }: TileGridProps): JSX.Element | null {
   // Hooks must be unconditional and run in the same order on every
   // render (React Rules of Hooks). Layout / shape checks happen below
@@ -333,6 +349,7 @@ export function TileGrid({
               tokenBudget={s.tokenBudget}
               renderPickerSlot={renderPickerSlot}
               renderAutopilotSlot={renderAutopilotSlot}
+              renderFooterSlot={renderFooterSlot}
             />
           </div>
         );

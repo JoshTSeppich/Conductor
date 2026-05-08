@@ -88,6 +88,17 @@ export interface TileProps {
    *  (preserves MB-T12 WB5 autopilot slot affordance for tests not
    *  exercising MB-T17). */
   readonly renderAutopilotSlot?: (sessionName: string) => ReactNode;
+  // ── MB-T18 WB3: per-tile footer slot render-prop ──────────────────
+  /** Render-prop for the footer slot (Q-MBT18-4=a). Mirrors
+   *  renderPickerSlot / renderAutopilotSlot semantics: when provided,
+   *  closure is called with the tile's `sessionName` and the result
+   *  renders INSIDE the existing `<div data-slot="footer"
+   *  data-testid="tile-footer-slot-{name}">` wrapper. When undefined,
+   *  the wrapper renders empty (preserves MB-T12 WB5 footer slot
+   *  affordance for tests not exercising MB-T18). The closure typically
+   *  captures `cwd` from the session entry + renders <TileFooter
+   *  sessionName cwd /> per Q-MBT18-1=e. */
+  readonly renderFooterSlot?: (sessionName: string) => ReactNode;
 }
 
 // Skip drag-swap when the user clicks an interactive header element
@@ -120,6 +131,7 @@ export function Tile({
   tokenBudget,
   renderPickerSlot,
   renderAutopilotSlot,
+  renderFooterSlot,
 }: TileProps): JSX.Element {
   return (
     <div
@@ -215,7 +227,9 @@ export function Tile({
           )}
         </div>
       )}
-      <div data-slot="footer" data-testid={`tile-footer-slot-${sessionName}`} />
+      <div data-slot="footer" data-testid={`tile-footer-slot-${sessionName}`}>
+        {renderFooterSlot ? renderFooterSlot(sessionName) : null}
+      </div>
     </div>
   );
 }

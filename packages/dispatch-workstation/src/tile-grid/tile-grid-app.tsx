@@ -29,6 +29,7 @@ import {
   TileAutopilotToggle,
   type TileAutopilotToggleBridge,
 } from './tile-autopilot-toggle.js';
+import { TileFooter } from './tile-footer.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
@@ -102,7 +103,14 @@ export interface TileGridAppProps {
 
 interface SpawnSuccessReply {
   type: 'success';
-  result: { sessionName: string };
+  result: {
+    sessionName: string;
+    /** MB-T18 WB3: cwd field on SpawnSessionResult (workstation-
+     *  internal extension landed at WB2). Optional in the type guard
+     *  for defensive parsing — absent → TileGridSessionEntry.cwd
+     *  stays undefined and the footer omits the cwd line. */
+    cwd?: string;
+  };
 }
 
 function isSpawnSuccessReply(x: unknown): x is SpawnSuccessReply {
@@ -134,12 +142,26 @@ export function TileGridApp({
     return workstationBridge.onSpawnResult((reply) => {
       if (!isSpawnSuccessReply(reply)) return;
       const sessionName = reply.result.sessionName;
+      // MB-T18 WB3: propagate `cwd` from the SpawnSessionResult
+      // envelope into the new TileGridSessionEntry. Conditional spread
+      // avoids creating an `cwd: undefined` field when the envelope
+      // didn't carry it (defensive — pre-WB2 workstation builds, test
+      // fixtures emitting partial replies).
+      const replyCwd = reply.result.cwd;
       setSessions((current) => {
         // Idempotent: a duplicate spawn-result for the same sessionName
         // (e.g., re-fired by daemon recovery) does NOT create a second
         // tile.
         if (current.some((s) => s.name === sessionName)) return current;
-        return [...current, { name: sessionName }];
+        return [
+          ...current,
+          {
+            name: sessionName,
+            ...(typeof replyCwd === 'string' && replyCwd.length > 0
+              ? { cwd: replyCwd }
+              : {}),
+          },
+        ];
       });
       if (onSessionMounted) onSessionMounted(sessionName);
     });
@@ -276,6 +298,22 @@ export function TileGridApp({
     );
   }
 
+  // MB-T18 WB3 — render-prop closure for the footer slot (Q-MBT18-4=a).
+  // Per Q-MBT18-6=a: NO bridge — pure renderer-side data. The closure
+  // looks up the session entry by sessionName + passes its cwd field
+  // to TileFooter. Lookup is O(N) per render but N ≤ 8 (session cap);
+  // negligible. Mount-time uptime is renderer-internal to TileFooter
+  // (Q-MBT18-3=a lazy useState snapshot).
+  function renderFooterSlot(sessionName: string): JSX.Element {
+    const session = sessions.find((s) => s.name === sessionName);
+    return (
+      <TileFooter
+        sessionName={sessionName}
+        {...(session?.cwd !== undefined ? { cwd: session.cwd } : {})}
+      />
+    );
+  }
+
   return (
     <TileGrid
       sessions={sessions}
@@ -287,6 +325,7 @@ export function TileGridApp({
       onSwap={handleSwap}
       renderPickerSlot={renderPickerSlot}
       renderAutopilotSlot={renderAutopilotSlot}
+      renderFooterSlot={renderFooterSlot}
       onResizeEnd={handleResizeEnd}
       gridOverride={initialGridOverride}
       getCurrentPixelSizes={getCurrentPixelSizes}
