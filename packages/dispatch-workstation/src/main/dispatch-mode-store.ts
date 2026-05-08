@@ -1,4 +1,4 @@
-// MB-T24 WB1 RED — Dispatch-mode persistence store (scaffold).
+// MB-T24 WB2 GREEN — Dispatch-mode persistence store.
 //
 // Operator-confirmed Q-MBT24-1=a (mirror splitter-state.ts pattern) +
 // Q-MBT24-2=a (default 'ask' on first install) +
@@ -13,11 +13,10 @@
 //
 // File contents (single object, single field):
 //   { "mode": "auto" | "ask" }
-//
-// WB1 RED: signatures present + types defined; bodies throw 'not yet
-// implemented'. probe-01-persistence asserts the eventual GREEN behavior;
-// tests fail at WB1.
-// WB2 GREEN: bodies implement read/write per splitter-state.ts pattern.
+
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { app as appSingleton } from 'electron';
 
 /**
  * Workstation-wide dispatch mode (Q-MBT24-7=a).
@@ -37,24 +36,56 @@
  */
 export type DispatchMode = 'auto' | 'ask';
 
+const DEFAULT_MODE: DispatchMode = 'ask'; // Q-MBT24-2=a — operator opts INTO 'auto'.
+const STATE_FILENAME = 'dispatch-mode-state.json';
+
+// MB_DISPATCH_MODE_STATE_DIR env var overrides userData path for test
+// isolation (mirrors MB_SPLITTER_STATE_DIR / MB_AUTOPILOT_STATE_DIR
+// patterns).
+function stateDir(): string {
+  const override = process.env['MB_DISPATCH_MODE_STATE_DIR'];
+  if (override && override.length > 0) {
+    return override;
+  }
+  return appSingleton.getPath('userData');
+}
+
+function isDispatchMode(v: unknown): v is DispatchMode {
+  return v === 'auto' || v === 'ask';
+}
+
 /**
  * Read the persisted dispatch mode. Returns 'ask' (Q-MBT24-2=a default)
- * when the file is absent or unparsable. Best-effort observability per
- * splitter-state.ts pattern; never throws.
- *
- * WB1 RED stub — throws 'not yet implemented'. WB2 GREEN fills in.
+ * when the file is absent, malformed, has wrong shape, or carries an
+ * invalid mode value. Best-effort observability per splitter-state.ts
+ * pattern; never throws.
  */
 export function readDispatchMode(): DispatchMode {
-  throw new Error('readDispatchMode: not yet implemented (WB2 GREEN)');
+  try {
+    const raw = readFileSync(join(stateDir(), STATE_FILENAME), 'utf8');
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return DEFAULT_MODE;
+    }
+    const mode = (parsed as Record<string, unknown>)['mode'];
+    if (isDispatchMode(mode)) return mode;
+  } catch {
+    // No saved state, parse error, or read failure — fall through to default.
+  }
+  return DEFAULT_MODE;
 }
 
 /**
  * Write the dispatch mode to the JSON file. Best-effort; on write failure
  * the in-memory state is unchanged but the next read will not see this
  * update (acceptable per v3.0 single-user single-workstation model).
- *
- * WB1 RED stub — throws 'not yet implemented'. WB2 GREEN fills in.
  */
-export function writeDispatchMode(_mode: DispatchMode): void {
-  throw new Error('writeDispatchMode: not yet implemented (WB2 GREEN)');
+export function writeDispatchMode(mode: DispatchMode): void {
+  try {
+    const dir = stateDir();
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, STATE_FILENAME), JSON.stringify({ mode }), 'utf8');
+  } catch {
+    // Non-fatal — best-effort persistence.
+  }
 }
