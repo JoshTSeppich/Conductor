@@ -1,4 +1,5 @@
 import { buildDag } from './dag-builder.js';
+import { detectCycle } from './validators.js';
 import type {
   ApprovalPolicy,
   ModelHint,
@@ -50,8 +51,26 @@ export function parseBuildDoc(text: string): ParseResult {
     taskBuild.tasks,
     taskBuild.groups,
   );
-  if (dagErrors.length > 0) {
-    return { ok: false, errors: dagErrors };
+
+  const validatorErrors: ParseError[] = [];
+
+  // WB5: cycle detection.
+  const cyclePath = detectCycle(dag);
+  if (cyclePath !== null) {
+    const firstId = cyclePath[0]!;
+    const firstTask = dag.tasks.find((t) => t.id === firstId);
+    const cycleArrow = cyclePath.map((id) => `§${id}`).join(' → ');
+    validatorErrors.push({
+      code: 'dependency.cycle',
+      message: `Dependency cycle detected: ${cycleArrow} → §${firstId}`,
+      line: firstTask?.sourceLine ?? 0,
+      details: { cyclePath },
+    });
+  }
+
+  const finalErrors = [...dagErrors, ...validatorErrors];
+  if (finalErrors.length > 0) {
+    return { ok: false, errors: finalErrors };
   }
 
   return { ok: true, dag };
