@@ -38,6 +38,9 @@ import type {
 // === BEGIN: MB-T26 cost-meter import ===
 import { CostMeter } from './cost-meter.js';
 // === END: MB-T26 ===
+// === BEGIN: MB-T27 mix-indicator import ===
+import { MixIndicatorContainer } from './mix-indicator.js';
+// === END: MB-T27 ===
 // === BEGIN: MB-T22 WB4 commits-tab import ===
 // CommitsTab consumes window.commitsBridge (preload.mts MB-T22 zone) at
 // render time. Type-only import of CommitsBridge so type narrowing works
@@ -235,9 +238,28 @@ function resolveRenderModelMix(
   opts: MountChatShellOptions,
 ): (() => ReactNode) | undefined {
   if (opts.renderModelMix) return opts.renderModelMix;
-  // WB2 GREEN: peek window.workstationBridge?.onSpawnResult and build
-  // closure wrapping <MixIndicatorContainer bridge={{ onSpawnResult }} />.
-  return undefined;
+  // Path 2: peek window.workstationBridge.onSpawnResult and wrap
+  // <MixIndicatorContainer bridge={{ onSpawnResult }} />. Inline
+  // narrow type cast — the workstationBridge global aug lives in
+  // tile-grid-app.tsx (a sibling renderer's territory); the
+  // chat-shell directory is tsconfig-excluded so the cast does not
+  // propagate type errors. preload.mts UNCHANGED per Q-MBT27-3=a;
+  // reuses workstationBridge.onSpawnResult exposed at
+  // preload.mts:55-56 (attachSpawnResultListener).
+  const ws =
+    typeof window !== 'undefined'
+      ? (
+          window as {
+            workstationBridge?: {
+              onSpawnResult?: (cb: (reply: unknown) => void) => () => void;
+            };
+          }
+        ).workstationBridge
+      : undefined;
+  const onSpawnResult = ws?.onSpawnResult;
+  if (!onSpawnResult) return undefined;
+  return () =>
+    createElement(MixIndicatorContainer, { bridge: { onSpawnResult } });
 }
 // === END: MB-T27 ===
 
