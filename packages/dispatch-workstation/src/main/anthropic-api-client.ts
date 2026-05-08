@@ -220,14 +220,48 @@ export class AnthropicAPIClient {
     params: StreamMessageParams,
     callbacks?: StreamCallbacks,
   ): AsyncIterable<RawMessageStreamEvent> {
-    // RED stub. WB2 implements stream-event parsing; WB3 wraps with
-    // retry; WB4 wires header capture via withResponse() into
-    // _lastRateLimitState + onRateLimit.
-    void this.client;
-    void params;
-    void callbacks;
-    void this._lastRateLimitState;
-    throw new NotImplementedError('AnthropicAPIClient.streamMessage');
+    // WB2 GREEN: stream-event parsing + onUsage end-of-stream emission.
+    // WB3 (retry wrapper) + WB4 (header capture / onRateLimit) layer on top.
+    //
+    // Header-capture seam: APIPromise.withResponse() returns the inner
+    // Stream alongside the raw fetch Response. We obtain the stream via
+    // .data and iterate normally; .response is unused here in WB2 and
+    // becomes load-bearing in WB4 for extractRateLimitState().
+    const apiPromise = this.client.messages.create({
+      model: params.model,
+      max_tokens: params.maxTokens,
+      ...(params.system !== undefined ? { system: params.system } : {}),
+      messages: params.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      stream: true,
+    });
+
+    const { data: stream } = await apiPromise.withResponse();
+
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let model = params.model;
+
+    for await (const event of stream as AsyncIterable<RawMessageStreamEvent>) {
+      if (event.type === 'message_start') {
+        // [KNOWN] from Phase 1 spike: message_start fires once at stream
+        // open with initial usage + model. input_tokens from
+        // message.usage.input_tokens; model from message.model.
+        inputTokens = event.message.usage.input_tokens;
+        model = event.message.model;
+      } else if (event.type === 'message_delta') {
+        // [KNOWN] from Phase 1 spike: message_delta.usage.output_tokens
+        // is cumulative across deltas; final delta wins.
+        outputTokens = event.usage.output_tokens;
+      }
+      yield event;
+    }
+
+    callbacks?.onUsage?.({ inputTokens, outputTokens, model });
+    void callbacks?.onRateLimit;  // wired in WB4
+    void this._lastRateLimitState;  // wired in WB4
   }
 
   /**
