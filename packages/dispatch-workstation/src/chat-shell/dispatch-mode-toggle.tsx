@@ -1,4 +1,4 @@
-// MB-T24 WB1 RED — DispatchModeToggle component (scaffold).
+// MB-T24 WB3 GREEN — DispatchModeToggle component.
 //
 // Operator-confirmed Q-MBT24-3=a (two-button segmented control) +
 // Q-MBT24-6=c (NEW dispatchModeBridge — additive surface, mirrors
@@ -17,28 +17,35 @@
 //       dispatch-mode-ipc.ts handler → dispatch-mode-store.readDispatchMode().
 //   - setDispatchMode(mode): Promise<DispatchMode>
 //       Persist new state and return the persisted value (echo-back).
-//       Routes via ipcRenderer.invoke('dispatch-mode:set', mode) →
+//       Routes via ipcRenderer.invoke('dispatch-mode:set', { mode }) →
 //       dispatch-mode-store.writeDispatchMode(mode) →
 //       dispatch-mode-store.readDispatchMode() echo.
 //
 // data-testid contract (probe-06-dispatch-mode-toggle):
 //   - chat-shell-dispatch-mode-toggle-slot — wrapper element
-//   - chat-shell-dispatch-mode-toggle-auto — Auto button (segmented control)
-//   - chat-shell-dispatch-mode-toggle-ask — Ask button (segmented control)
+//   - chat-shell-dispatch-mode-toggle-auto — Auto button
+//   - chat-shell-dispatch-mode-toggle-ask — Ask button
 //
-// WB1 RED: scaffold renders only the slot wrapper; segmented buttons +
-// bridge subscription deferred to WB3 GREEN. probe-06 asserts the eventual
-// GREEN behavior; tests fail at WB1 (no buttons rendered, no bridge calls).
-// WB3 GREEN fills in.
+// State machine (Q-MBT24-2=a default 'ask'):
+//   1. Initial render: useState 'ask' (Q-MBT24-2=a default-active state).
+//   2. useEffect on mount: if bridge supplied, fetch via getDispatchMode;
+//      on success, setState to fetched value. On reject, retain default.
+//   3. Click on inactive button:
+//      a. Optimistic: setState to clicked mode (UI flips immediately).
+//      b. Async: bridge.setDispatchMode(clicked); on success, reconcile
+//         with returned value (typically the same as clicked).
+//      c. On reject (rare — write fail-safe in store), the state is
+//         already optimistic; next mount will re-fetch.
+//   4. Click on already-active button: no-op (no setState, no bridge call).
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { DispatchMode } from '../main/dispatch-mode-store.js';
 
 /**
  * Bridge surface for DispatchModeToggle. Two async methods:
  *
  *   - getDispatchMode: read persisted state at mount. Fail-safe — if the
- *     IPC call rejects, the toggle defaults to 'ask' per Q-MBT24-2=a.
+ *     IPC call rejects, the toggle retains 'ask' default per Q-MBT24-2=a.
  *   - setDispatchMode: persist new state on click. Returns the persisted
  *     value for echo-confirmation; supports optimistic-UI rollback if the
  *     persist fails (mirrors MB-T16 TileApprovalPicker rollback per
@@ -53,28 +60,100 @@ export interface DispatchModeBridge {
 }
 
 export interface DispatchModeToggleProps {
-  /** Optional bridge — null/undefined → static default 'ask' display. */
+  /** Optional bridge — null/undefined → static 'ask' default display. */
   readonly bridge?: DispatchModeBridge | null;
 }
 
-/**
- * WB1 RED scaffold: renders only the slot wrapper (no segmented buttons,
- * no bridge subscription). probe-06 asserts the eventual GREEN behavior;
- * all interaction tests fail at WB1.
- *
- * WB3 GREEN: replaces this scaffold with full segmented-control render +
- * useEffect bridge.getDispatchMode() at mount + click handlers calling
- * bridge.setDispatchMode() with optimistic-UI updates.
- */
-export function DispatchModeToggle(
-  _props: DispatchModeToggleProps = {},
-): ReactNode {
+const DEFAULT_MODE: DispatchMode = 'ask'; // Q-MBT24-2=a — operator opts INTO 'auto'.
+
+const SLOT_STYLE: CSSProperties = {
+  fontFamily: 'monospace',
+  fontSize: '0.85em',
+  display: 'inline-flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: '2px',
+  padding: '2px 4px',
+};
+
+const BUTTON_STYLE: CSSProperties = {
+  fontFamily: 'monospace',
+  fontSize: '0.85em',
+  padding: '1px 6px',
+  border: '1px solid #4b5563',
+  background: 'transparent',
+  color: 'inherit',
+  cursor: 'pointer',
+};
+
+const BUTTON_ACTIVE_STYLE: CSSProperties = {
+  ...BUTTON_STYLE,
+  background: '#374151',
+  fontWeight: 600,
+};
+
+export function DispatchModeToggle({
+  bridge,
+}: DispatchModeToggleProps = {}): ReactNode {
+  const [mode, setMode] = useState<DispatchMode>(DEFAULT_MODE);
+
+  useEffect(() => {
+    if (!bridge) return;
+    let cancelled = false;
+    bridge
+      .getDispatchMode()
+      .then((m) => {
+        if (!cancelled) setMode(m);
+      })
+      .catch(() => {
+        // initial fetch failure — retain default 'ask'
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bridge]);
+
+  const handleClick = (clicked: DispatchMode): void => {
+    if (clicked === mode) return; // no-op on already-active
+    setMode(clicked); // optimistic UI
+    if (!bridge) return;
+    bridge.setDispatchMode(clicked).then(
+      (echoed) => {
+        // Reconcile with persisted value (typically === clicked).
+        setMode(echoed);
+      },
+      () => {
+        // Persist failure — retain optimistic state. Next mount re-fetches.
+      },
+    );
+  };
+
   return (
     <div
       data-testid="chat-shell-dispatch-mode-toggle-slot"
+      style={SLOT_STYLE}
+      role="group"
+      aria-label="Dispatch mode"
       title="Dispatch mode — Auto fires spawns immediately; Ask surfaces a confirmation modal"
     >
-      {/* WB1 RED: segmented buttons + bridge subscription land at WB3 GREEN. */}
+      <button
+        type="button"
+        data-testid="chat-shell-dispatch-mode-toggle-auto"
+        aria-pressed={mode === 'auto' ? 'true' : 'false'}
+        style={mode === 'auto' ? BUTTON_ACTIVE_STYLE : BUTTON_STYLE}
+        onClick={() => handleClick('auto')}
+      >
+        Auto
+      </button>
+      <button
+        type="button"
+        data-testid="chat-shell-dispatch-mode-toggle-ask"
+        aria-pressed={mode === 'ask' ? 'true' : 'false'}
+        style={mode === 'ask' ? BUTTON_ACTIVE_STYLE : BUTTON_STYLE}
+        onClick={() => handleClick('ask')}
+      >
+        Ask
+      </button>
     </div>
   );
 }

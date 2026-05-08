@@ -60,6 +60,16 @@ import { createDefaultApprovalPolicyIpcController } from './approval-policy-ipc.
 // AutopilotLoop instances).
 import { createDefaultAutopilotIpcController } from './autopilot-ipc.js';
 // === END: MB-T17 autopilot IPC imports ===
+// === BEGIN: MB-T24 dispatch-mode IPC imports (do not modify outside this block) ===
+// WB3 — DispatchModeIpcController + production factory for the workstation-
+// wide Auto/Ask dispatch-mode toggle consumed by DispatchModeToggle (chat-
+// shell header-bar slot, FAR-LEFT per Q-MBT24-4=a). Q-MBT24-6=c (NEW
+// dispatchModeBridge — additive surface, mirrors commitsBridge precedent)
+// + Q-MBT24-1=a (file-JSON persistence per splitter-state.ts pattern, no
+// daemon — workstation-internal only) + Q-MBT24-7=a (DispatchMode =
+// 'auto' | 'ask') operator-confirmed 2026-05-08 HALT 0.
+import { createDefaultDispatchModeIpcController } from './dispatch-mode-ipc.js';
+// === END: MB-T24 dispatch-mode IPC imports ===
 // === BEGIN: MB-T20 chat panel (do not modify outside this block) ===
 // Reserved zone for any future main-process wiring related to the
 // Conductor chat panel shell (src/chat-shell/). At WB4 the chat-shell
@@ -592,6 +602,33 @@ app.whenReady().then(async () => {
     process.stdout.write('AUTOPILOT_IPC_MOUNTED\n');
   }
   // === END: MB-T17 autopilot IPC ===
+
+  // === BEGIN: MB-T24 dispatch-mode IPC (do not modify outside this block) ===
+  // WB3 — wires `dispatch-mode:get` + `dispatch-mode:set` ipcMain handlers.
+  // The renderer-side DispatchModeToggle (mounted by mount.ts via
+  // resolveRenderDispatchModeToggle path 2 when window.dispatchModeBridge
+  // is exposed by preload.mts MB-T24 zone) invokes these channels through
+  // the preload contextBridge methods `getDispatchMode` / `setDispatchMode`.
+  //
+  // Default factory wires readDispatchMode + writeDispatchMode from
+  // dispatch-mode-store.ts (workstation-internal file-JSON persistence at
+  // <userData>/dispatch-mode-state.json, env-overridable via
+  // MB_DISPATCH_MODE_STATE_DIR for test isolation per CLAUDE.md §3.5).
+  //
+  // Q-MBT24-5=c hard gate at spawn-ipc.ts (WB4a) reads the persisted mode
+  // directly via dispatch-mode-store.readDispatchMode() at the
+  // 'workstation:spawn-requested' handler — does NOT route through the
+  // dispatchModeBridge (which is renderer→main; spawn-ipc handler is
+  // already main-side and reads the store directly).
+  //
+  // R-MBT24-2 honored: NEW sentinel-bracketed block adjacent to (NOT
+  // inside) the MB-T16 / MB-T17 sentinel zones.
+  const dispatchModeController = createDefaultDispatchModeIpcController();
+  dispatchModeController.registerHandlers(ipcMain);
+  if (process.env['MB_TEST_HOOKS'] === '1') {
+    process.stdout.write('DISPATCH_MODE_IPC_MOUNTED\n');
+  }
+  // === END: MB-T24 dispatch-mode IPC ===
 
   // ONBOARDING_READY sentinel is emitted after createWindow returns so the
   // smoke harness's runOnboarding() can wait deterministically.

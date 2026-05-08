@@ -159,6 +159,32 @@ const consoleIpcAdapter: ConsoleBridgeIpc = {
 };
 contextBridge.exposeInMainWorld('consoleBridge', makeConsoleBridge(consoleIpcAdapter));
 
+// === BEGIN: MB-T24 dispatch-mode bridge ===
+// Q-MBT24-6=c operator-confirmed 2026-05-08: NEW dispatchModeBridge —
+// additive surface mirroring commitsBridge precedent. Two methods:
+//
+//   - getDispatchMode() — invokes 'dispatch-mode:get' main-process IPC
+//     handler (registered by src/main/dispatch-mode-ipc.ts at
+//     app.whenReady time per main.ts MB-T24 sentinel zone). Returns the
+//     persisted DispatchMode ('auto' | 'ask'); defaults to 'ask' per
+//     Q-MBT24-2=a when no file / malformed.
+//   - setDispatchMode(mode) — invokes 'dispatch-mode:set' with
+//     { mode } payload. Echoes the persisted value back so the renderer
+//     can reconcile after the write.
+//
+// Renderer-side consumer is src/chat-shell/dispatch-mode-toggle.tsx
+// (DispatchModeToggle component, mounted via mount.ts auto-build path 2
+// when window.dispatchModeBridge is exposed). Q-MBT24-5=c hard gate
+// at spawn-ipc.ts (WB4a) reads the persisted mode directly via
+// dispatch-mode-store.readDispatchMode() — does NOT route through
+// this bridge (which is renderer→main; spawn-ipc handler is main-side).
+contextBridge.exposeInMainWorld('dispatchModeBridge', {
+  getDispatchMode: () => ipcRenderer.invoke('dispatch-mode:get'),
+  setDispatchMode: (mode: unknown) =>
+    ipcRenderer.invoke('dispatch-mode:set', { mode }),
+});
+// === END: MB-T24 ===
+
 // === BEGIN: MB-T22 commits bridge ===
 // Q-MBT22-7=a operator-confirmed 2026-05-07: static window.commitsBridge
 // mirroring window.coarchitectBridge shape. Single method `listCommits`
