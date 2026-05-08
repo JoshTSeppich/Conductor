@@ -3,6 +3,11 @@ import Anthropic, {
   AuthenticationError,
   APIConnectionError,
 } from '@anthropic-ai/sdk';
+import {
+  AnthropicAPIClient,
+  loadApiKey,
+  type RateLimitState,
+} from './anthropic-api-client.js';
 
 export const CHAT_MODEL = 'claude-sonnet-4-6';
 
@@ -35,25 +40,41 @@ export interface UsageInfo {
 }
 
 /**
- * Thin wrapper around @anthropic-ai/sdk for streaming chat messages.
- * Accepts an injected Anthropic client for testability (DI pattern).
- * All SDK calls happen in the Electron main process — this module must not
- * be imported from the renderer bundle.
+ * Thin chat-flow wrapper composing AnthropicAPIClient (MB-T34 WB5,
+ * Q-MBT34-1=(c) operator-acked HALT 0 2026-05-08).
+ *
+ * Public API surface unchanged for MB-T26 non-regression:
+ *   - streamMessage(content, onUsage?, onRateLimit?) → AsyncIterable<string>
+ *   - streamMessages(sys, msgs, onUsage?, onRateLimit?) → AsyncIterable<string>
+ *
+ * onRateLimit is the WB5 additive parameter (operator C-MBT34-1=(b mod)
+ * ack); chat-flow consumers may pass it to receive RateLimitState updates
+ * mirroring the cost-flow onUsage pattern. Existing callers that pass
+ * only onUsage continue to work unchanged.
+ *
+ * All SDK calls happen in the Electron main process — this module must
+ * not be imported from the renderer bundle.
  */
 export class AnthropicChatClient {
+  private readonly apiClient: AnthropicAPIClient;
+
   constructor(
-    private readonly client: Pick<Anthropic, 'messages'>,
+    client: Pick<Anthropic, 'messages'>,
     private readonly systemPrompt: string,
-  ) {}
+  ) {
+    this.apiClient = new AnthropicAPIClient(client);
+  }
 
   async *streamMessage(
     content: string,
     onUsage?: (usage: UsageInfo) => void,
+    onRateLimit?: (state: RateLimitState) => void,
   ): AsyncIterable<string> {
     yield* this.streamMessages(
       this.systemPrompt,
       [{ role: 'user', content }],
       onUsage,
+      onRateLimit,
     );
   }
 
@@ -61,44 +82,40 @@ export class AnthropicChatClient {
     systemPrompt: string,
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
     onUsage?: (usage: UsageInfo) => void,
+    onRateLimit?: (state: RateLimitState) => void,
   ): AsyncIterable<string> {
-    const stream = await this.client.messages.create({
-      model: CHAT_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: systemPrompt,
-      messages,
-      stream: true,
-    });
+    // Compose the low-level API client. It owns transport + retry +
+    // header-capture; we just project text deltas out of the stream.
+    const callbacks = {
+      ...(onUsage ? { onUsage } : {}),
+      ...(onRateLimit ? { onRateLimit } : {}),
+    };
 
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let modelObserved: string = CHAT_MODEL;
-
-    for await (const event of stream) {
-      if (event.type === 'message_start') {
-        // [KNOWN] message_start fires once at stream open with initial usage.
-        inputTokens = event.message.usage.input_tokens;
-        modelObserved = event.message.model;
-      } else if (event.type === 'message_delta') {
-        // [KNOWN] message_delta.usage.output_tokens is cumulative across
-        // deltas. Latest value wins; final delta has the total.
-        outputTokens = event.usage.output_tokens;
-      } else if (
+    for await (const event of this.apiClient.streamMessage(
+      {
+        model: CHAT_MODEL,
+        maxTokens: MAX_TOKENS,
+        system: systemPrompt,
+        messages,
+      },
+      callbacks,
+    )) {
+      if (
         event.type === 'content_block_delta' &&
         event.delta.type === 'text_delta'
       ) {
         yield event.delta.text;
       }
-      // message_stop, content_block_start, content_block_stop ignored —
-      // not load-bearing for cost capture.
+      // message_start, message_delta, message_stop, content_block_start,
+      // content_block_stop ignored at chat-flow projection layer —
+      // their usage data flows through the apiClient's onUsage / onRateLimit
+      // callbacks, not through the text iterator.
     }
+  }
 
-    if (onUsage) {
-      // Best-effort callback; consumer-side errors must not crash the
-      // streaming handler. Wrapped at the call site (coarchitect-ipc.ts
-      // MB-T26 sentinel zone).
-      onUsage({ inputTokens, outputTokens, model: modelObserved });
-    }
+  /** Underlying API client for non-chat-flow callers (e.g. MB-T35 reasoning loop). */
+  get api(): AnthropicAPIClient {
+    return this.apiClient;
   }
 }
 

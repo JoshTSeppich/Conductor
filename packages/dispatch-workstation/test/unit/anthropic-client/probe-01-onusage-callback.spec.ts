@@ -71,8 +71,21 @@ async function* fakeStream(
 }
 
 function makeClient(stream: AsyncIterable<unknown>): AnthropicChatClient {
+  // MB-T34 WB5 mock-update: AnthropicChatClient now composes
+  // AnthropicAPIClient, which uses APIPromise.withResponse() for header
+  // capture. The mock therefore returns a thenable with .withResponse
+  // (not a plain Promise<stream>). Empty Headers gives a null
+  // RateLimitState capture, which is safe — these tests assert onUsage
+  // semantics, not onRateLimit.
   const fakeMessages = {
-    create: vi.fn().mockResolvedValue(stream),
+    create: vi.fn().mockReturnValue({
+      withResponse: () =>
+        Promise.resolve({
+          data: stream,
+          response: { headers: new Headers() } as Response,
+          request_id: 'req_test',
+        }),
+    }),
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new AnthropicChatClient({ messages: fakeMessages } as any, 'sys');

@@ -137,10 +137,27 @@ export interface LoadApiKeyOptions {
 export async function loadApiKey(
   opts?: LoadApiKeyOptions,
 ): Promise<string | null> {
-  // RED stub. WB5 implements file-first + env fallback.
-  void fs;
-  void API_KEY_FILE_PATH;
-  void opts;
+  const filePath = opts?.filePath ?? API_KEY_FILE_PATH;
+  const envKey = opts?.envKey ?? 'ANTHROPIC_API_KEY';
+  const env = opts?.env ?? process.env;
+
+  // 1. File first. Any read error (missing, unreadable, EACCES) falls
+  //    through to env-var. Empty/whitespace-only contents also fall
+  //    through.
+  try {
+    const raw = await fs.readFile(filePath, 'utf-8');
+    const trimmed = raw.trim();
+    if (trimmed.length > 0) return trimmed;
+  } catch {
+    // fall through
+  }
+
+  // 2. Env-var fallback.
+  const fromEnv = env[envKey];
+  if (typeof fromEnv === 'string' && fromEnv.trim().length > 0) {
+    return fromEnv.trim();
+  }
+
   return null;
 }
 

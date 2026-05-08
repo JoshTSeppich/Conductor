@@ -53,6 +53,37 @@ contextBridge.exposeInMainWorld('coarchitectBridge', {
       ipcRenderer.removeListener('coarchitect:cost-update', h as any);
   },
   // === END: MB-T26 ===
+  // === BEGIN: MB-T34 rate-limit bridge ===
+  // C-MBT34-1=(b mod) operator-confirmed 2026-05-08. Mirrors MB-T26
+  // onCostUpdate pattern. Implementation: on registration, immediately
+  // invoke 'coarchitect:getRateLimitState' to fetch the current snapshot
+  // (or null if no API call has completed yet); subscribe to live
+  // 'coarchitect:rate-limit-update' broadcasts emitted by
+  // captureRateLimitToBroadcast in coarchitect-ipc.ts MB-T34 zone.
+  // Returns cleanup-fn matching the onStream* / onCostUpdate pattern.
+  //
+  // Cross-session: Terminal B (MB-T25 plan-usage ring) is the consumer.
+  // The cb param receives RateLimitState (nested-bucket shape per
+  // anthropic-api-client.ts). Typed as unknown here because preload
+  // runs in a separate module-resolution context; renderer-side
+  // narrows with a type guard.
+  onRateLimitUpdate: (cb: (state: unknown) => void) => {
+    ipcRenderer
+      .invoke('coarchitect:getRateLimitState')
+      .then((state: unknown) => {
+        if (state !== null && state !== undefined) cb(state);
+      })
+      .catch(() => {
+        // initial fetch failure — wait for next live update
+      });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (_: unknown, state: unknown) => cb(state);
+    ipcRenderer.on('coarchitect:rate-limit-update', h as any);
+    return () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ipcRenderer.removeListener('coarchitect:rate-limit-update', h as any);
+  },
+  // === END: MB-T34 ===
 });
 
 // Shell bridge for wrapper layout plumbing (splitter state persistence).

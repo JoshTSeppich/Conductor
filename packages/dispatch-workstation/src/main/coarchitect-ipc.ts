@@ -9,6 +9,7 @@ import {
   classifyAnthropicError,
   type UsageInfo,
 } from './anthropic-client.js';
+import type { RateLimitState } from './anthropic-api-client.js';
 import { readSplitterPosition, writeSplitterPosition } from './splitter-state.js';
 // === BEGIN: MB-T26 cost-meter imports ===
 import { computeCost } from './cost-calc.js';
@@ -170,6 +171,49 @@ function captureUsageToLedger(usage: UsageInfo): void {
 }
 // === END: MB-T26 ===
 
+// === BEGIN: MB-T34 rate-limit broadcast helpers ===
+//
+// Q-MBT34-2=(b)+(c) + C-MBT34-1=(b mod) operator-acked HALT 0 2026-05-08.
+//
+// Mirrors the MB-T26 cost-meter pattern: captureRateLimitToBroadcast is
+// the onRateLimit callback wired into chatClient.streamMessages /
+// .streamMessage at the 3 sendAndStream call sites below.
+// broadcastRateLimitUpdate sends the new state to all webContents
+// (renderers subscribe via coarchitectBridge.onRateLimitUpdate per
+// preload.mts MB-T34 zone).
+//
+// latestRateLimitState is the main-process snapshot consulted by the
+// 'coarchitect:getRateLimitState' IPC handler so that newly-attached
+// subscribers can fetch the current state without waiting for the next
+// live update.
+//
+// Cross-session signal: Terminal B (MB-T25 plan-usage ring widget)
+// consumes these broadcasts. Data contract = RateLimitState from
+// anthropic-api-client.ts (Q-MBT34-6=(b) nested-bucket shape, operator-
+// approved at HALT 0).
+
+let latestRateLimitState: RateLimitState | null = null;
+
+function broadcastRateLimitUpdate(state: RateLimitState): void {
+  for (const wc of allWebContents.getAllWebContents()) {
+    try {
+      wc.send('coarchitect:rate-limit-update', state);
+    } catch {
+      // per-webContents send failure non-fatal
+    }
+  }
+}
+
+function captureRateLimitToBroadcast(state: RateLimitState): void {
+  try {
+    latestRateLimitState = state;
+    broadcastRateLimitUpdate(state);
+  } catch {
+    // observability gap, not load-bearing — silent
+  }
+}
+// === END: MB-T34 ===
+
 export function registerIpcHandlers(): void {
   ipcMain.handle('coarchitect:fetchHistory', async () => {
     return daemonClient.fetchHistory();
@@ -189,6 +233,15 @@ export function registerIpcHandlers(): void {
     }
   });
   // === END: MB-T26 ===
+
+  // === BEGIN: MB-T34 rate-limit-state IPC handler ===
+  // C-MBT34-1=(b mod) operator-confirmed 2026-05-08. Renderer reads
+  // initial RateLimitState via coarchitectBridge.onRateLimitUpdate's
+  // internal invoke (see preload.mts MB-T34 zone) and receives live
+  // updates via the 'coarchitect:rate-limit-update' webContents.send
+  // broadcast emitted by captureRateLimitToBroadcast above.
+  ipcMain.handle('coarchitect:getRateLimitState', () => latestRateLimitState);
+  // === END: MB-T34 ===
 
   ipcMain.handle('coarchitect:postMessage', async (_event, msg: unknown) => {
     return daemonClient.postMessage(msg as ChatMessageInput);
@@ -285,19 +338,30 @@ export function registerIpcHandlers(): void {
               (m): m is { role: 'user' | 'assistant'; content: string } =>
                 m.role === 'user' || m.role === 'assistant',
             );
-            // MB-T26: onUsage callback (captureUsageToLedger) records cost
-            // after stream completes; preserves existing single-arg signature
-            // (third param is optional).
+            // MB-T26 onUsage (captureUsageToLedger) records cost after
+            // stream completes. MB-T34 onRateLimit
+            // (captureRateLimitToBroadcast) fires once per request at
+            // response-open, broadcasting plan-usage state to renderers
+            // for Terminal B's MB-T25 ring widget.
             stream = chatClient.streamMessages(
               context.systemPrompt,
               apiMessages,
               captureUsageToLedger,
+              captureRateLimitToBroadcast,
             );
           } catch {
-            stream = chatClient.streamMessage(content, captureUsageToLedger); // MB-T26 onUsage
+            stream = chatClient.streamMessage(
+              content,
+              captureUsageToLedger, // MB-T26 onUsage
+              captureRateLimitToBroadcast, // MB-T34 onRateLimit
+            );
           }
         } else {
-          stream = chatClient.streamMessage(content, captureUsageToLedger); // MB-T26 onUsage
+          stream = chatClient.streamMessage(
+            content,
+            captureUsageToLedger, // MB-T26 onUsage
+            captureRateLimitToBroadcast, // MB-T34 onRateLimit
+          );
         }
       }
 
