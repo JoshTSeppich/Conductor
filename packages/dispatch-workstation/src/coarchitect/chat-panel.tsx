@@ -17,9 +17,11 @@
 // bubbles. WB4 will compose <SpawnedList> + parseSpawnedMarker. ChatBubble
 // remains role+content only — composition happens at the ChatPanel level.
 
-import { useState, useEffect, useRef, type FormEvent, type RefObject } from 'react';
+import { useState, useEffect, useRef, Fragment, type FormEvent, type RefObject } from 'react';
 import type { DaemonClient, ChatMessage } from './daemon-client.js';
 import { ChatBubble } from './chat-bubble.js';
+import { QuickPickButtons } from './quick-pick-buttons.js';
+import { parseQuickPickMarker } from './chat-content-markers.js';
 
 export interface StreamingBridge {
   sendAndStream(content: string): void;
@@ -164,9 +166,25 @@ export function ChatPanel({ daemonClient, streamingBridge }: ChatPanelProps): JS
           padding: '8px 6px',
         }}
       >
-        {history.map((msg) => (
-          <ChatBubble key={msg.id} role={msg.role} content={msg.content} />
-        ))}
+        {history.map((msg) => {
+          if (msg.role === 'assistant') {
+            // Q-MBT21-2=b: parse QUICK_PICK marker; strip from bubble body;
+            // render parsed options as quick-pick buttons below the bubble.
+            const { stripped, options } = parseQuickPickMarker(msg.content);
+            return (
+              <Fragment key={msg.id}>
+                <ChatBubble role="assistant" content={stripped} />
+                {options && (
+                  <QuickPickButtons
+                    options={options}
+                    onSelect={(text) => streamingBridge?.sendAndStream(text)}
+                  />
+                )}
+              </Fragment>
+            );
+          }
+          return <ChatBubble key={msg.id} role={msg.role} content={msg.content} />;
+        })}
         {inProgress && <ChatBubble role="assistant" content={inProgress} />}
         {thinking && !inProgress && (
           <div
