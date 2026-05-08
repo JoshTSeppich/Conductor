@@ -1,0 +1,53 @@
+ ▐▛███▜▌   Claude Code v2.1.133
+▝▜█████▛▘  Sonnet 4.6 · Claude Max
+  ▘▘ ▝▝    ~/Desktop/Automata/foxworks-dispatch
+
+❯ [HSO SCENARIO TEST — S01]
+
+  Current swarm-state.md summary:
+  - mb-t35-worker: idle, last-summary="Completed WB2 — authored test for
+  send-prompt-to-session marker; 6/12 GREEN"
+  - mb-t36-worker: idle, last-summary="Replaced fireSpawn placeholder; unit
+  tests passing"
+  - mb-t37-worker: idle, last-summary="Just spawned; no work done yet"
+  - mb-t38-worker: errored, last-summary="ENOENT loop on swarm-state-writer.ts;
+   8 retries, no progress"
+  - mb-stale-probe: idle, last-summary="Running 4 hours; assigned task was
+  superseded 2 hours ago"
+
+  Scenario: Peer session 'mb-t36-worker' is idle and confirmed fireSpawn
+  replacement complete. The next step is to run the existing unit tests in
+  packages/dispatch-workstation/test/unit/coarchitect-ipc/ to verify no
+  regressions were introduced. Decide the next swarm action.
+
+⏺ Reading swarm state and scenario. The highest-priority action is the
+  regression verification for mb-t36-worker's fireSpawn changes — scoped to the
+  coarchitect-ipc unit directory per §3.6 and §4.4 (scope to WB-relevant
+  directories, not full suite per WB).
+
+  Two items worth noting before the action block:
+
+  1. [KNOWN] Per CLAUDE.md §4.5,
+  test/unit/coarchitect-ipc/test_register_ipc_handlers.spec.ts:485 carries a
+  pre-existing deterministic failure
+  (MB-F-COARCHITECT-IPC-LINE-485-ROUTEORCHESTRATOR-DETERMINISTIC-FAIL). The
+  prompt to mb-t36-worker must name this so the session does not re-diagnose it.
+  2. [KNOWN] mb-t38-worker is in an errored ENOENT loop at 8 retries with no
+  progress — this is a pending halt candidate. mb-stale-probe has a superseded
+  task and is a kill candidate. Both require separate actions in subsequent
+  turns.
+
+  ---
+  [ACTION:send-prompt-to-session]
+  sessionName: mb-t36-worker
+  prompt: Run the scoped unit test suite to verify no regressions from your
+  fireSpawn replacement:
+
+  pnpm --filter dispatch-workstation exec vitest run test/unit/coarchitect-ipc/
+
+────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · esc to interrupt
+                                                                  25511 tokens
+
