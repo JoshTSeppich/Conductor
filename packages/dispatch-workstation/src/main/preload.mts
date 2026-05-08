@@ -53,6 +53,33 @@ contextBridge.exposeInMainWorld('coarchitectBridge', {
       ipcRenderer.removeListener('coarchitect:cost-update', h as any);
   },
   // === END: MB-T26 ===
+  // === BEGIN: MB-T25 plan-usage bridge ===
+  // Q-MBT25-2=a (push-based) + Q-MBT25-2a=a (extend coarchitectBridge)
+  // operator-confirmed at HALT 0 2026-05-08. Subscribes to
+  // 'coarchitect:rate-limit-update' webContents.send broadcasts emitted
+  // by Terminal D's AnthropicAPIClient (MB-T34 WB-final) after each
+  // /v1/messages response with anthropic-ratelimit-* headers. Returns
+  // cleanup-fn matching onCostUpdate / onStream* / onSpawnResult pattern.
+  //
+  // No initial-fetch invoke at registration in v3.0 (unlike onCostUpdate
+  // which has 'coarchitect:getDailyCost'). Terminal D's spike confirmed
+  // header emission on every API response; v3.0 ring widget shows '—'
+  // placeholder until first response. Initial-fetch support deferred to
+  // v3.1 followup MB-F-T25-INITIAL-FETCH-ON-MOUNT (filed at WB-final).
+  //
+  // Cb receives RateLimitState — typed structurally here as a payload
+  // pass-through (the ring-helpers type definition lives in the
+  // chat-shell/ directory; preload.mts deliberately avoids importing
+  // chat-shell types to keep the renderer-isolation boundary clean).
+  onRateLimitUpdate: (cb: (state: unknown) => void) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (_: unknown, state: unknown) => cb(state);
+    ipcRenderer.on('coarchitect:rate-limit-update', h as any);
+    return () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ipcRenderer.removeListener('coarchitect:rate-limit-update', h as any);
+  },
+  // === END: MB-T25 ===
 });
 
 // Shell bridge for wrapper layout plumbing (splitter state persistence).

@@ -37,6 +37,7 @@ import type {
 } from '../coarchitect/daemon-client.js';
 // === BEGIN: MB-T25 plan-usage-ring import ===
 import { PlanUsageRing } from './plan-usage-ring.js';
+import type { RateLimitState } from './ring-helpers.js';
 // === END: MB-T25 ===
 // === BEGIN: MB-T26 cost-meter import ===
 import { CostMeter } from './cost-meter.js';
@@ -78,11 +79,14 @@ export interface CoarchitectBridge extends StreamingBridge {
   // plan-usage UX internally). Optional so existing CoarchitectBridge
   // mocks satisfy the interface unchanged. Cb receives RateLimitState
   // (4-dimension nested-bucket from D's diagnose §VIII data contract).
-  // Concrete RateLimitState type imported in plan-usage-ring.tsx
-  // (kept narrowly-typed at this surface as a structural shape to
-  // avoid coupling mount.ts to ring-helpers.ts; WB3 may tighten).
+  // WB1 RED used `state: unknown`; WB3 GREEN tightens to RateLimitState
+  // via deep import from ring-helpers (per CLAUDE.md §3.4 mechanical-
+  // translation discipline). [MODELED]→[KNOWN] ratchet at v3.1 once
+  // Terminal D ships its API client and exports the type from MB-T34
+  // surface; for v3.0 this local type is the canonical RateLimitState
+  // shape per operator's HALT 0 ack on D's diagnose §VIII data contract.
   readonly onRateLimitUpdate?: (
-    cb: (state: unknown) => void,
+    cb: (state: RateLimitState) => void,
   ) => () => void;
   // === END: MB-T25 ===
 }
@@ -308,19 +312,18 @@ function resolveRenderModelMix(
 //      means no slot child at all — operator-noted UX subtlety: empty
 //      slot vs null bridge are distinct cases).
 //
-// WB1 RED: only paths (1) and (3) implemented. WB3 GREEN adds path 2
-// (bridge.onRateLimitUpdate auto-build). The narrowing cast on
-// `state: unknown` at the bridge surface (CoarchitectBridge interface)
-// is widened to `RateLimitState` at WB3 GREEN by importing the type
-// from ring-helpers and tightening the ChannelBridge construction.
+// WB3 GREEN: paths (1), (2), (3) all implemented. CoarchitectBridge
+// `onRateLimitUpdate` is now typed `cb: (state: RateLimitState) => void`
+// (tightened from WB1 RED `unknown`). PlanUsageRingBridge surface is
+// structurally compatible — wrap directly.
 function resolveRenderPlanUsageRing(
   opts: MountChatShellOptions,
 ): (() => ReactNode) | undefined {
   if (opts.renderPlanUsageRing) return opts.renderPlanUsageRing;
-  // Path 2 deferred to WB3 GREEN per WB1 RED scaffold scope.
-  void opts.bridge;
-  void PlanUsageRing;
-  return undefined;
+  const onRateLimitUpdate = opts.bridge?.onRateLimitUpdate;
+  if (!onRateLimitUpdate) return undefined;
+  return () =>
+    createElement(PlanUsageRing, { bridge: { onRateLimitUpdate } });
 }
 // === END: MB-T25 ===
 
