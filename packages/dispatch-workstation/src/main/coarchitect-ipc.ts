@@ -4,8 +4,19 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { HttpDaemonClient } from './http-daemon-client.js';
-import { createAnthropicClient, classifyAnthropicError } from './anthropic-client.js';
+import {
+  createAnthropicClient,
+  classifyAnthropicError,
+  type UsageInfo,
+} from './anthropic-client.js';
 import { readSplitterPosition, writeSplitterPosition } from './splitter-state.js';
+// === BEGIN: MB-T26 cost-meter imports ===
+import { computeCost } from './cost-calc.js';
+import {
+  appendCostLedgerEntry,
+  todaysTotalCost,
+} from './cost-ledger.js';
+// === END: MB-T26 ===
 import type { ChatMessageInput } from '../coarchitect/daemon-client.js';
 import {
   readBuildDocConfig,
@@ -104,10 +115,80 @@ function readDaemonTokenForTier4(): string | null {
   }
 }
 
+// === BEGIN: MB-T26 cost-meter helpers ===
+//
+// Q-MBT26-3=c (onUsage callback in AnthropicChatClient signature) +
+// Q-MBT26-5=d (push-based via onCostUpdate bridge method) operator-
+// confirmed 2026-05-07.
+//
+// captureUsageToLedger is the onUsage callback wired into chatClient
+// .streamMessages/.streamMessage calls in the sendAndStream handler
+// below. It runs after each Conductor API call's stream completes.
+//
+// broadcastCostUpdate sends the new today-total to all webContents
+// (renderer subscribes via coarchitectBridge.onCostUpdate per
+// preload.mts MB-T26 zone).
+//
+// All work is best-effort: cost meter is observability, NOT load-bearing.
+// Errors are silenced so the streaming handler stays robust.
+
+function broadcastCostUpdate(): void {
+  let total: number;
+  try {
+    total = todaysTotalCost();
+  } catch {
+    return;
+  }
+  for (const wc of allWebContents.getAllWebContents()) {
+    try {
+      wc.send('coarchitect:cost-update', total);
+    } catch {
+      // per-webContents send failure non-fatal
+    }
+  }
+}
+
+function captureUsageToLedger(usage: UsageInfo): void {
+  try {
+    const cost = computeCost(
+      usage.model,
+      usage.inputTokens,
+      usage.outputTokens,
+    );
+    appendCostLedgerEntry({
+      timestamp: new Date().toISOString(),
+      model: usage.model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      costUsd: cost,
+    });
+    broadcastCostUpdate();
+  } catch {
+    // Unknown model (not in MODEL_RATES) or ledger write failure —
+    // silent. Cost meter is observability, not load-bearing.
+  }
+}
+// === END: MB-T26 ===
+
 export function registerIpcHandlers(): void {
   ipcMain.handle('coarchitect:fetchHistory', async () => {
     return daemonClient.fetchHistory();
   });
+
+  // === BEGIN: MB-T26 cost-meter IPC handler ===
+  // Q-MBT26-5=d operator-confirmed 2026-05-07. Renderer reads initial
+  // cost via coarchitectBridge.onCostUpdate's internal invoke (see
+  // preload.mts MB-T26 zone) and receives live updates via the
+  // 'coarchitect:cost-update' webContents.send broadcast emitted by
+  // captureUsageToLedger above.
+  ipcMain.handle('coarchitect:getDailyCost', () => {
+    try {
+      return todaysTotalCost();
+    } catch {
+      return 0;
+    }
+  });
+  // === END: MB-T26 ===
 
   ipcMain.handle('coarchitect:postMessage', async (_event, msg: unknown) => {
     return daemonClient.postMessage(msg as ChatMessageInput);
@@ -204,12 +285,19 @@ export function registerIpcHandlers(): void {
               (m): m is { role: 'user' | 'assistant'; content: string } =>
                 m.role === 'user' || m.role === 'assistant',
             );
-            stream = chatClient.streamMessages(context.systemPrompt, apiMessages);
+            // MB-T26: onUsage callback (captureUsageToLedger) records cost
+            // after stream completes; preserves existing single-arg signature
+            // (third param is optional).
+            stream = chatClient.streamMessages(
+              context.systemPrompt,
+              apiMessages,
+              captureUsageToLedger,
+            );
           } catch {
-            stream = chatClient.streamMessage(content);
+            stream = chatClient.streamMessage(content, captureUsageToLedger); // MB-T26 onUsage
           }
         } else {
-          stream = chatClient.streamMessage(content);
+          stream = chatClient.streamMessage(content, captureUsageToLedger); // MB-T26 onUsage
         }
       }
 

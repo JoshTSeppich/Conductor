@@ -35,6 +35,9 @@ import type {
   ChatMessage,
   ChatMessageInput,
 } from '../coarchitect/daemon-client.js';
+// === BEGIN: MB-T26 cost-meter import ===
+import { CostMeter } from './cost-meter.js';
+// === END: MB-T26 ===
 
 // Re-export TabConfig for downstream tab-config authors (e.g. WB4
 // commits TabConfig wiring; future MB-T23 Tasks tab).
@@ -47,6 +50,13 @@ export type { TabConfig };
 export interface CoarchitectBridge extends StreamingBridge {
   readonly fetchHistory: () => Promise<ChatMessage[]>;
   readonly postMessage: (msg: ChatMessageInput) => Promise<ChatMessage>;
+  // === BEGIN: MB-T26 cost-meter bridge surface (additive) ===
+  // Q-MBT26-5=d operator-confirmed 2026-05-07 (push-based via
+  // onCostUpdate). Optional so existing CoarchitectBridge mocks (probe-
+  // 02/03 + coarchitect-ipc test_register_ipc_handlers) continue to
+  // satisfy the interface without redefining their fixtures.
+  readonly onCostUpdate?: (cb: (totalUsd: number) => void) => () => void;
+  // === END: MB-T26 ===
 }
 
 declare global {
@@ -64,6 +74,13 @@ export interface MountChatShellOptions {
    * `defaultChatTabStub` (otherwise). When supplied, used verbatim.
    */
   readonly tabs?: readonly TabConfig[];
+  // === BEGIN: MB-T26 cost-meter slot option ===
+  // Q-MBT26-1=a (header-bar slot model) operator-confirmed 2026-05-07.
+  // When supplied, used verbatim. When omitted, mountChatShell builds
+  // a closure from `bridge.onCostUpdate` (if defined) — see
+  // resolveRenderCostMeter below.
+  readonly renderCostMeter?: () => ReactNode;
+  // === END: MB-T26 ===
 }
 
 // Adapter from coarchitectBridge → ChatPanel's DaemonClient interface.
@@ -122,12 +139,33 @@ function resolveTabs(opts: MountChatShellOptions): readonly TabConfig[] {
   ];
 }
 
+// === BEGIN: MB-T26 cost-meter slot resolution ===
+// Resolution order mirrors resolveTabs above:
+//   1. Explicit `opts.renderCostMeter` — used verbatim (test override path).
+//   2. `opts.bridge?.onCostUpdate` — build closure that wraps <CostMeter
+//      bridge={{ onCostUpdate: bridge.onCostUpdate }}/>.
+//   3. Neither — return undefined (chat-shell renders empty header-bar
+//      slot per chat-shell.tsx MB-T26 zone fallback).
+function resolveRenderCostMeter(
+  opts: MountChatShellOptions,
+): (() => ReactNode) | undefined {
+  if (opts.renderCostMeter) return opts.renderCostMeter;
+  const onCostUpdate = opts.bridge?.onCostUpdate;
+  if (!onCostUpdate) return undefined;
+  return () =>
+    createElement(CostMeter, { bridge: { onCostUpdate } });
+}
+// === END: MB-T26 ===
+
 export function mountChatShell(opts: MountChatShellOptions): () => void {
   const rootEl = document.getElementById(opts.rootElementId);
   if (!rootEl) throw new Error(`#${opts.rootElementId} not found`);
   const root: Root = createRoot(rootEl);
   const tabs = resolveTabs(opts);
-  root.render(createElement(ChatShell, { tabs }));
+  // === BEGIN: MB-T26 cost-meter slot passthrough ===
+  const renderCostMeter = resolveRenderCostMeter(opts);
+  root.render(createElement(ChatShell, { tabs, renderCostMeter }));
+  // === END: MB-T26 ===
   return () => root.unmount();
 }
 

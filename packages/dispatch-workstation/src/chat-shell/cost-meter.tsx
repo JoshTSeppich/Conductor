@@ -1,20 +1,70 @@
-// MB-T26 WB1 — CostMeter slot component (red scaffold).
+// MB-T26 WB3 — CostMeter slot component (green-integration).
 //
-// Operator-confirmed Q-MBT26-1=a (header-bar slot model — CostMeter
-// renders inside chat-shell-header-bar element added at WB3) +
-// Q-MBT26-5=c (polling via coarchitect: IPC handler — preserves
-// preload.mts UNCHANGED invariant) 2026-05-07.
+// Operator-confirmed Q-MBT26-1=a (header-bar slot model) + Q-MBT26-5=d
+// (push-based via onCostUpdate bridge method) 2026-05-07.
 //
-// WB3 (green-integration) implements:
-//   - chat-shell-header-bar element in chat-shell.tsx (sentinel-zoned
-//     per Q-MBT26-6=a so Terminal D's MB-T27 model-mix slot can land
-//     non-overlappingly)
-//   - CostMeter polling on a 2s interval via coarchitectBridge.getDailyCost
-//   - data-testid="chat-shell-cost-meter-slot" on the wrapper
+// Subscribes to coarchitectBridge.onCostUpdate at mount: the bridge
+// implementation (preload.mts MB-T26 zone) immediately invokes
+// 'coarchitect:getDailyCost' to fetch the initial value and subscribes
+// to 'coarchitect:cost-update' webContents.send broadcasts emitted by
+// coarchitect-ipc.ts captureUsageToLedger after each Conductor API call.
 //
-// WB1 only exposes the export so probe-01 (cost-calc unit) can compile-
-// pass while leaving the slot wiring red.
+// Display:
+//   - while no cost data observed: '—' (em-dash placeholder)
+//   - when cost observed: '$X.XXXX' (4 decimal places — granularity for
+//     Conductor's typical per-call sub-cent costs at Sonnet 4.6 rates)
+//
+// data-testid contract (probe-01-cost-meter-render):
+//   - chat-shell-cost-meter-slot — wrapper element
+//   - chat-shell-cost-meter-value — value span (text content asserts)
 
-export function CostMeter(): null {
-  return null;
+import { useEffect, useState } from 'react';
+
+export interface CostMeterBridge {
+  /**
+   * Subscribe to cost updates. Implementation immediately fetches today's
+   * running total then subscribes to live updates. Returns cleanup-fn.
+   */
+  readonly onCostUpdate: (cb: (totalUsd: number) => void) => () => void;
+}
+
+export interface CostMeterProps {
+  /** Optional bridge — null/undefined → static '—' placeholder. */
+  readonly bridge?: CostMeterBridge | null;
+}
+
+function formatCost(totalUsd: number | null): string {
+  if (totalUsd === null) return '—';
+  return `$${totalUsd.toFixed(4)}`;
+}
+
+const SLOT_STYLE: React.CSSProperties = {
+  fontFamily: 'monospace',
+  fontSize: '0.85em',
+  padding: '2px 6px',
+  display: 'inline-block',
+};
+
+export function CostMeter({ bridge }: CostMeterProps = {}): JSX.Element {
+  const [totalUsd, setTotalUsd] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!bridge) return undefined;
+    const cleanup = bridge.onCostUpdate((total) => {
+      setTotalUsd(total);
+    });
+    return cleanup;
+  }, [bridge]);
+
+  return (
+    <div
+      data-testid="chat-shell-cost-meter-slot"
+      style={SLOT_STYLE}
+      title="Conductor API cost today (USD) — resets at local midnight"
+    >
+      <span data-testid="chat-shell-cost-meter-value">
+        {formatCost(totalUsd)}
+      </span>
+    </div>
+  );
 }

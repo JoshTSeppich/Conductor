@@ -15,6 +15,25 @@ export interface AnthropicErrorInfo {
   readonly message: string;
 }
 
+// MB-T26 WB3 — UsageInfo emitted to onUsage callback after each stream
+// completes. Q-MBT26-3=c (onUsage callback in AnthropicChatClient signature)
+// operator-confirmed 2026-05-07.
+//
+// Field provenance ([KNOWN] from @anthropic-ai/sdk@0.92.0 .d.ts:
+//   resources/messages/messages.d.ts):
+//   - inputTokens: from RawMessageStartEvent.message.usage.input_tokens
+//     (Message.usage: Usage; Usage.input_tokens: number, line 690)
+//   - outputTokens: from RawMessageDeltaEvent.usage.output_tokens (cumulative
+//     across delta events; latest wins; MessageDeltaUsage.output_tokens:
+//     number, line 675)
+//   - model: from RawMessageStartEvent.message.model (Message.model: Model,
+//     line 53)
+export interface UsageInfo {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly model: string;
+}
+
 /**
  * Thin wrapper around @anthropic-ai/sdk for streaming chat messages.
  * Accepts an injected Anthropic client for testability (DI pattern).
@@ -27,13 +46,21 @@ export class AnthropicChatClient {
     private readonly systemPrompt: string,
   ) {}
 
-  async *streamMessage(content: string): AsyncIterable<string> {
-    yield* this.streamMessages(this.systemPrompt, [{ role: 'user', content }]);
+  async *streamMessage(
+    content: string,
+    onUsage?: (usage: UsageInfo) => void,
+  ): AsyncIterable<string> {
+    yield* this.streamMessages(
+      this.systemPrompt,
+      [{ role: 'user', content }],
+      onUsage,
+    );
   }
 
   async *streamMessages(
     systemPrompt: string,
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    onUsage?: (usage: UsageInfo) => void,
   ): AsyncIterable<string> {
     const stream = await this.client.messages.create({
       model: CHAT_MODEL,
@@ -43,13 +70,34 @@ export class AnthropicChatClient {
       stream: true,
     });
 
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let modelObserved: string = CHAT_MODEL;
+
     for await (const event of stream) {
-      if (
+      if (event.type === 'message_start') {
+        // [KNOWN] message_start fires once at stream open with initial usage.
+        inputTokens = event.message.usage.input_tokens;
+        modelObserved = event.message.model;
+      } else if (event.type === 'message_delta') {
+        // [KNOWN] message_delta.usage.output_tokens is cumulative across
+        // deltas. Latest value wins; final delta has the total.
+        outputTokens = event.usage.output_tokens;
+      } else if (
         event.type === 'content_block_delta' &&
         event.delta.type === 'text_delta'
       ) {
         yield event.delta.text;
       }
+      // message_stop, content_block_start, content_block_stop ignored —
+      // not load-bearing for cost capture.
+    }
+
+    if (onUsage) {
+      // Best-effort callback; consumer-side errors must not crash the
+      // streaming handler. Wrapped at the call site (coarchitect-ipc.ts
+      // MB-T26 sentinel zone).
+      onUsage({ inputTokens, outputTokens, model: modelObserved });
     }
   }
 }

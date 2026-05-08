@@ -191,15 +191,19 @@ beforeEach(() => {
 });
 
 describe('coarchitect-ipc — registerIpcHandlers (handler wiring)', () => {
-  it('registers all 7 request/response handlers via ipcMain.handle', () => {
+  it('registers all 8 request/response handlers via ipcMain.handle', () => {
     // KNOWN: handlers are registered once at module-import time (above).
     // Channel names match the renderer-side preload contract; renaming
     // any of them is a renderer-coupled breaking change.
+    // MB-T26 WB3: 'coarchitect:getDailyCost' added per Q-MBT26-5=d (push-
+    // based bridge with initial-fetch invoke; preload.mts onCostUpdate
+    // method invokes this channel).
     const channels = Array.from(ipcMocks.handleHandlers.keys()).sort();
     expect(channels).toEqual([
       'coarchitect:clearBuildDocConfig',
       'coarchitect:fetchHistory',
       'coarchitect:getBuildDocConfig',
+      'coarchitect:getDailyCost',
       'coarchitect:postMessage',
       'coarchitect:setBuildDocConfig',
       'shell:getSplitterPos',
@@ -441,7 +445,9 @@ describe('coarchitect-ipc — sendAndStream (streaming handler)', () => {
     fn(event, 'hello');
 
     await waitForSend(send, 'coarchitect:streamDone');
-    expect(streamMessage).toHaveBeenCalledWith('hello');
+    // MB-T26 WB3: streamMessage is invoked with (content, captureUsageToLedger)
+    // per Q-MBT26-3=c onUsage callback wiring.
+    expect(streamMessage).toHaveBeenCalledWith('hello', expect.any(Function));
     expect(streamMessages).not.toHaveBeenCalled();
   });
 
@@ -462,7 +468,8 @@ describe('coarchitect-ipc — sendAndStream (streaming handler)', () => {
     fn(event, 'no doc');
 
     await waitForSend(send, 'coarchitect:streamDone');
-    expect(streamMessage).toHaveBeenCalledWith('no doc');
+    // MB-T26 WB3: onUsage callback (captureUsageToLedger) passed as 2nd arg.
+    expect(streamMessage).toHaveBeenCalledWith('no doc', expect.any(Function));
     expect(ipcMocks.buildContext).not.toHaveBeenCalled();
   });
 

@@ -29,6 +29,30 @@ contextBridge.exposeInMainWorld('coarchitectBridge', {
     ipcRenderer.on('coarchitect:streamError', h as any);
     return () => ipcRenderer.removeListener('coarchitect:streamError', h as any);
   },
+  // === BEGIN: MB-T26 cost-meter bridge ===
+  // Q-MBT26-5=d operator-confirmed 2026-05-07 (push-based via onCostUpdate).
+  // Implementation: on registration, immediately invoke 'coarchitect:
+  // getDailyCost' to fetch today's running total; subscribe to live
+  // 'coarchitect:cost-update' broadcasts emitted by coarchitect-ipc.ts
+  // captureUsageToLedger after each Conductor API call. Returns cleanup-
+  // fn matching the onStream* / onSpawnResult / onTileDetachClosed pattern.
+  onCostUpdate: (cb: (totalUsd: number) => void) => {
+    ipcRenderer
+      .invoke('coarchitect:getDailyCost')
+      .then((total: unknown) => {
+        if (typeof total === 'number') cb(total);
+      })
+      .catch(() => {
+        // initial fetch failure — wait for next live update
+      });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (_: unknown, total: number) => cb(total);
+    ipcRenderer.on('coarchitect:cost-update', h as any);
+    return () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ipcRenderer.removeListener('coarchitect:cost-update', h as any);
+  },
+  // === END: MB-T26 ===
 });
 
 // Shell bridge for wrapper layout plumbing (splitter state persistence).
@@ -134,3 +158,22 @@ const consoleIpcAdapter: ConsoleBridgeIpc = {
   removeListener: (channel, listener) => { ipcRenderer.removeListener(channel, listener as any); },
 };
 contextBridge.exposeInMainWorld('consoleBridge', makeConsoleBridge(consoleIpcAdapter));
+
+// === BEGIN: MB-T22 commits bridge ===
+// Q-MBT22-7=a operator-confirmed 2026-05-07: static window.commitsBridge
+// mirroring window.coarchitectBridge shape. Single method `listCommits`
+// invokes 'commits:list' main-process IPC handler (registered by
+// src/main/commits-ipc.ts at app.whenReady time per main.ts MB-T22
+// sentinel zone). Renderer-side consumer is src/chat-shell/commits-tab
+// .tsx (lands at WB4). Result envelope: { groups, error? } per
+// commits-ipc.ts CommitsListResponse.
+//
+// Additive surface — does NOT extend coarchitectBridge (which already
+// hosts the chat domain). Commits view has its own bridge to keep
+// concerns separate and to avoid extending the StreamingBridge contract
+// surface that ChatPanel + chat-shell depend on.
+contextBridge.exposeInMainWorld('commitsBridge', {
+  listCommits: (opts?: { limit?: number }) =>
+    ipcRenderer.invoke('commits:list', opts ?? {}),
+});
+// === END: MB-T22 commits bridge ===

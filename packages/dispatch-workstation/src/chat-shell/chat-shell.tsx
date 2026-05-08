@@ -58,6 +58,15 @@ export interface ChatShellProps {
   // zone in the component body below. This zone preserves a documented
   // structural location ABOVE the tab strip; see operator coordination
   // 2026-05-07 (B WB2 ack message).
+  // === BEGIN: MB-T26 cost-meter slot prop ===
+  // Q-MBT26-1=a (header-bar slot model) + Q-MBT26-6=a (Terminal C lands
+  // first inside Terminal B's reserved zone) operator-confirmed
+  // 2026-05-07. Render-prop closure passed by mount.ts auto-mount
+  // block; auto-mount wraps <CostMeter bridge={coarchitectBridge}/>
+  // when bridge.onCostUpdate is defined (added at MB-T26 WB3 per
+  // Q-MBT26-5=d push-based bridge method).
+  readonly renderCostMeter?: () => ReactNode;
+  // === END: MB-T26 ===
   // === END: MB-T22 header-bar extension point (MB-T26/MB-T27 territory) ===
 }
 
@@ -65,6 +74,9 @@ export function ChatShell({
   tabs,
   activeTabId,
   onTabChange,
+  // === BEGIN: MB-T26 cost-meter slot destructure ===
+  renderCostMeter,
+  // === END: MB-T26 ===
 }: ChatShellProps) {
   // === BEGIN: MB-T22 multi-tab core ===
   // Hybrid controlled/uncontrolled state. When `activeTabId` is
@@ -91,8 +103,34 @@ export function ChatShell({
           C and D land their own sentinel zones HERE — DOM position
           ABOVE the tab strip. Per operator coordination 2026-05-07,
           C's WB3 plan adds `chat-shell-header-bar` element + cost-meter
-          slot in this zone. WB2 leaves the location empty by design.
-          === END: MB-T22 header-bar extension point (MB-T26/MB-T27 territory) === */}
+          slot in this zone. T27 will add a sibling `renderModelMix`
+          slot inside the same `chat-shell-header-bar` element via its
+          own non-overlapping sentinel zone (see
+          docs/coordination/t26-t27-coord.md).
+          === */}
+      {/* === BEGIN: MB-T26 cost-meter header-bar element + slot ===
+          Q-MBT26-1=a (header-bar slot model) + Q-MBT26-6=a (Terminal C
+          lands first; Terminal D adds model-mix slot to the SAME
+          header-bar element via its own non-overlapping sentinel zone).
+          Slot ordering left-to-right per t26-t27-coord.md:
+            [plan-usage MB-T25 future] | [cost-meter MB-T26] | [model-mix MB-T27]
+          === */}
+      <div
+        data-testid="chat-shell-header-bar"
+        role="toolbar"
+        aria-label="Chat shell header"
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '4px 8px',
+        }}
+      >
+        {renderCostMeter ? renderCostMeter() : null}
+      </div>
+      {/* === END: MB-T26 === */}
+      {/* === END: MB-T22 header-bar extension point (MB-T26/MB-T27 territory) === */}
 
       {/* === BEGIN: MB-T22 multi-tab core (DOM) === */}
       <div data-testid="chat-shell-tab-strip" role="tablist">
