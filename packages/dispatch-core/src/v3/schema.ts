@@ -236,12 +236,111 @@ export const EscapeBlockOutputSchema = z
   .strict();
 export type EscapeBlockOutput = z.infer<typeof EscapeBlockOutputSchema>;
 
-/** Discriminated union per §2.1 + cairn-Sonnet §2.5 (structured-output-discipline). */
+// ─── §3 MB-T11-A — Action-specific output variant schemas ─────────────────────
+// Per CONDUCTOR_V3_RESCOPE_DRAFT.md §3.6 + HALT-0 Q-MBT11A-2=authorized.
+// Placed in §3 (not a separate §14) due to TypeScript forward-reference
+// constraint: OrchestratorOutputSchema union below must reference these, and
+// const declarations are not hoisted. Existing §3 schemas are unchanged.
+
+/**
+ * Orchestrator proposes sending a prompt to a named session.
+ * Card surfaces when approval policy requires it (per-session policy + action
+ * type resolved by MB-T11-B resolver). Prompt preview (first 200 chars) is
+ * surfaced on the approval card. Envelope (multi-step intent tracking) is NOT
+ * included here: it is an IPC-transport detail added by MB-T11-B's action
+ * handler when forwarding to §10 WorkstationSessionSendPromptRequest.
+ */
+export const SendPromptToSessionOutputSchema = z
+  .object({
+    type: z.literal('send-prompt-to-session'),
+    sessionName: z.string().min(1),
+    prompt: z.string().min(1),
+    rationale: z.string().min(1),
+  })
+  .strict();
+export type SendPromptToSessionOutput = z.infer<typeof SendPromptToSessionOutputSchema>;
+
+/**
+ * Orchestrator proposes spawning a new session.
+ * Always card-surfaces: Medium+ policy treats spawn as approval-required
+ * per CONDUCTOR_V3_RESCOPE_DRAFT.md §3.2.
+ */
+export const SpawnSessionOutputSchema = z
+  .object({
+    type: z.literal('spawn-session'),
+    sessionName: z.string().min(1),
+    repoPath: z.string().min(1),
+    /** Optional initial prompt forwarded to the spawned session on start. */
+    initialPrompt: z.string().optional(),
+    rationale: z.string().min(1),
+  })
+  .strict();
+export type SpawnSessionOutput = z.infer<typeof SpawnSessionOutputSchema>;
+
+/**
+ * Orchestrator proposes killing a named session.
+ * Always card-surfaces per CONDUCTOR_V3_RESCOPE_DRAFT.md §3.6.
+ * `reason` is optional forensics context for why the session is being killed.
+ */
+export const KillSessionOutputSchema = z
+  .object({
+    type: z.literal('kill-session'),
+    sessionName: z.string().min(1),
+    /** Optional forensics context surfaced on the approval card. */
+    reason: z.string().optional(),
+    rationale: z.string().min(1),
+  })
+  .strict();
+export type KillSessionOutput = z.infer<typeof KillSessionOutputSchema>;
+
+/**
+ * Orchestrator proposes pulling HANDOFF.md from a session.
+ * Read-only; fires without card ("Logged" only per CONDUCTOR_V3_RESCOPE_DRAFT.md §3.6).
+ * No payload preview on the card — HANDOFF read is an endpoint call, not displayed.
+ */
+export const PullHandoffFromSessionOutputSchema = z
+  .object({
+    type: z.literal('pull-handoff-from-session'),
+    sessionName: z.string().min(1),
+    rationale: z.string().min(1),
+  })
+  .strict();
+export type PullHandoffFromSessionOutput = z.infer<typeof PullHandoffFromSessionOutputSchema>;
+
+/**
+ * Orchestrator proposes assigning a high-level task to a session.
+ * Orchestrator decomposes internally to send-prompt actions per §3.6
+ * ("assign-task decomposition is heuristic for v3.0").
+ * `parameters` is an optional key-value record rendered as a table on the card.
+ */
+export const AssignTaskOutputSchema = z
+  .object({
+    type: z.literal('assign-task'),
+    sessionName: z.string().min(1),
+    taskDescription: z.string().min(1),
+    /** Optional parameter table surfaced on the approval card. */
+    parameters: z.record(z.string(), z.unknown()).optional(),
+    rationale: z.string().min(1),
+  })
+  .strict();
+export type AssignTaskOutput = z.infer<typeof AssignTaskOutputSchema>;
+
+/**
+ * Discriminated union per §2.1 + cairn-Sonnet §2.5 (structured-output-discipline).
+ * Extended with MB-T11-A action variants per CONDUCTOR_V3_RESCOPE_DRAFT.md §3.6
+ * (Q-MBT11A-2=authorized). Existing members (action, card, multi-choice-card,
+ * escape-block) unchanged; 5 action-specific variants appended additively.
+ */
 export const OrchestratorOutputSchema = z.discriminatedUnion('type', [
   ActionOutputSchema,
   CardOutputSchema,
   MultiChoiceCardOutputSchema,
   EscapeBlockOutputSchema,
+  SendPromptToSessionOutputSchema,
+  SpawnSessionOutputSchema,
+  KillSessionOutputSchema,
+  PullHandoffFromSessionOutputSchema,
+  AssignTaskOutputSchema,
 ]);
 export type OrchestratorOutput = z.infer<typeof OrchestratorOutputSchema>;
 

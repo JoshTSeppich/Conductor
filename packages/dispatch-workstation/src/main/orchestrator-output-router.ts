@@ -6,7 +6,7 @@
 // Pure function (no Electron import); fully unit-testable.
 //
 // Schema variants per OrchestratorOutputSchema discriminated union in
-// dispatch-core/src/v3/schema.ts:238-244:
+// dispatch-core/src/v3/schema.ts §3 (extended by MB-T11-A):
 //   - 'card' / 'multi-choice-card' → emit orchestrator-card-rendered to
 //     the webview + populate cardContextCache.
 //   - 'escape-block' → keep in chat (chunks already streamed by the
@@ -14,6 +14,10 @@
 //   - 'action' → fire-without-card per cairn-Sonnet §2.7. Action
 //     execution wiring is deferred to MB-T11; F5 only routes the
 //     decision.
+//   - MB-T11-A action variants (send-prompt-to-session, spawn-session,
+//     kill-session, pull-handoff-from-session, assign-task) → text-passthrough
+//     for now; IPC routing wired in Round 6. Router recognizes them as valid
+//     OrchestratorOutput union members; falls through to avoid stale behavior.
 //   - non-JSON or non-OrchestratorOutput JSON → text-passthrough
 //     (chunks already streamed; no extra surface).
 
@@ -93,6 +97,11 @@ export function routeOrchestratorOutput(
   if (output.type === 'escape-block') {
     return { kind: 'escape-block', output };
   }
-  // Remaining variant: 'action'.
-  return { kind: 'action-fire-without-card', output };
+  if (output.type === 'action') {
+    return { kind: 'action-fire-without-card', output };
+  }
+  // MB-T11-A new action variant types: 'send-prompt-to-session', 'spawn-session',
+  // 'kill-session', 'pull-handoff-from-session', 'assign-task'. IPC routing for
+  // these variants is wired in Round 6; fall through to text-passthrough.
+  return { kind: 'text-passthrough' };
 }
