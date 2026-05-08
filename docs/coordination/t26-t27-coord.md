@@ -116,3 +116,34 @@ but should leave the rightmost slot trivially appendable for Terminal D.
   atomic-chain caught the contamination at the diff step (commit aborted);
   no double-commit. Disposition Q-MBT26-METHO-1=c (accept-as-is + file
   finding at WB4 docs).
+
+- **MB-T22 (Terminal B) shares chat-shell.tsx + mount.ts** — discovered
+  mid-WB3. Sequence is now T22 → T26 → T27 (each session adds its own
+  sentinel zone in landing order):
+    1. T22 WB2 (`a08b406`) — multi-tab API + reserved
+       `// === BEGIN: MB-T22 header-bar extension point (MB-T26/MB-T27 territory) ===`
+       sentinel zone in chat-shell.tsx and mount.ts migration to tabs[].
+    2. T26 WB3 (`09b38ce`) — Terminal C's MB-T26 cost-meter sentinel
+       zone is NESTED INSIDE Terminal B's reserved zone. Terminal C
+       added `chat-shell-header-bar` element + `renderCostMeter?` slot
+       prop. mount.ts gains `resolveRenderCostMeter()` + optional
+       `CoarchitectBridge.onCostUpdate?`.
+    3. T27 (Terminal D, future) — adds `renderModelMix?` slot prop to
+       ChatShellProps via own non-overlapping sentinel zone, renders
+       model-mix slot inside Terminal C's `chat-shell-header-bar`
+       element. Do NOT modify Terminal C's MB-T26 zone or Terminal B's
+       outer MB-T22 zone.
+
+- **`09b38ce` content-sweep at preload.mts** — my WB3 atomic-chain
+  commit captured Terminal B's uncommitted MB-T22 commits-bridge
+  content (lines 158-179) along with my MB-T26 cost-meter bridge zone
+  (lines 32-55) in the same file. Atomic-chain diff-verify confirmed
+  the path was expected (preload.mts is mine to edit) but did NOT
+  verify content provenance within the path. My WB3 commit body Q7
+  claim of "Zero T22 territory bleed" was [INACCURATE] in retrospect.
+  Terminal B's `427c6a3 green(MB-T22): WB3 — ...` commit body
+  explicitly cites the `09b38ce content-sweep`. Tier 1 methodology
+  followup: `MB-F-PARALLEL-CAIRN-SHARED-TREE-CONTENT-SWEEP`. Forward
+  fix: git worktree-per-session per CLAUDE.md §4.3 — atomic-chain
+  diff-verify CANNOT prevent this failure mode in shared-tree
+  contexts.
