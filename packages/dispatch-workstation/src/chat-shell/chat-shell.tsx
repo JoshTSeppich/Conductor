@@ -67,6 +67,17 @@ export interface ChatShellProps {
   // Q-MBT26-5=d push-based bridge method).
   readonly renderCostMeter?: () => ReactNode;
   // === END: MB-T26 ===
+  // === BEGIN: MB-T27 model-mix slot prop ===
+  // Q-MBT27-1=a (header-bar slot model, sibling to MB-T26) +
+  // Q-MBT27-2=a (discrete named slot prop) operator-confirmed at
+  // HALT 0 2026-05-07. Render-prop closure passed by mount.ts
+  // auto-mount block; auto-mount wraps <MixIndicatorContainer
+  // bridge={{ onSpawnResult }}/> when window.workstationBridge is
+  // exposed (preload.mts UNCHANGED per Q-MBT27-3=a). WB1 RED: prop
+  // reserved + JSX slot reserved; resolveRenderModelMix returns
+  // undefined → empty slot. WB2 GREEN fills in.
+  readonly renderModelMix?: () => ReactNode;
+  // === END: MB-T27 ===
   // === END: MB-T22 header-bar extension point (MB-T26/MB-T27 territory) ===
 }
 
@@ -77,6 +88,9 @@ export function ChatShell({
   // === BEGIN: MB-T26 cost-meter slot destructure ===
   renderCostMeter,
   // === END: MB-T26 ===
+  // === BEGIN: MB-T27 model-mix slot destructure ===
+  renderModelMix,
+  // === END: MB-T27 ===
 }: ChatShellProps) {
   // === BEGIN: MB-T22 multi-tab core ===
   // Hybrid controlled/uncontrolled state. When `activeTabId` is
@@ -128,6 +142,19 @@ export function ChatShell({
         }}
       >
         {renderCostMeter ? renderCostMeter() : null}
+        {/* === BEGIN: MB-T27 model-mix slot ===
+            Sibling slot inside the chat-shell-header-bar element per
+            t26-t27-coord.md slot ordering left-to-right:
+              [plan-usage MB-T25 future] | [cost-meter MB-T26] | [model-mix MB-T27]
+            Nested inside MB-T26's outer zone scope per C's authored
+            intent in MB-T26 zone header comment 2026-05-07: "Terminal
+            D adds model-mix slot to the SAME header-bar element via
+            its own non-overlapping sentinel zone." C's logic
+            UNCHANGED; no modification of cost-meter slot rendering.
+            WB1 RED: renderModelMix resolves to undefined → empty.
+            === */}
+        {renderModelMix ? renderModelMix() : null}
+        {/* === END: MB-T27 === */}
       </div>
       {/* === END: MB-T26 === */}
       {/* === END: MB-T22 header-bar extension point (MB-T26/MB-T27 territory) === */}

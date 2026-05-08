@@ -81,6 +81,15 @@ export interface MountChatShellOptions {
   // resolveRenderCostMeter below.
   readonly renderCostMeter?: () => ReactNode;
   // === END: MB-T26 ===
+  // === BEGIN: MB-T27 model-mix slot option ===
+  // Q-MBT27-1=a (header-bar slot model) + Q-MBT27-2=a (discrete named
+  // slot prop) operator-confirmed at HALT 0 2026-05-07. When supplied,
+  // used verbatim. When omitted, mountChatShell at WB2 GREEN will
+  // build a closure from window.workstationBridge.onSpawnResult (if
+  // defined). WB1 RED: resolveRenderModelMix returns undefined when
+  // not explicitly supplied (no auto-build yet).
+  readonly renderModelMix?: () => ReactNode;
+  // === END: MB-T27 ===
 }
 
 // Adapter from coarchitectBridge → ChatPanel's DaemonClient interface.
@@ -157,6 +166,29 @@ function resolveRenderCostMeter(
 }
 // === END: MB-T26 ===
 
+// === BEGIN: MB-T27 model-mix slot resolution ===
+// Resolution order mirrors resolveRenderCostMeter / resolveTabs above:
+//   1. Explicit `opts.renderModelMix` — used verbatim (test override path).
+//   2. window.workstationBridge?.onSpawnResult — build closure that
+//      wraps <MixIndicatorContainer bridge={{ onSpawnResult }} />.
+//   3. Neither — return undefined (chat-shell renders empty model-mix
+//      slot per chat-shell.tsx MB-T27 zone fallback; zero-state
+//      acceptance preserved when no renderer wired).
+//
+// WB1 RED: only paths (1) and (3) implemented. WB2 GREEN adds
+// MixIndicatorContainer import + window.workstationBridge wiring
+// (path 2). Per Q-MBT27-3=a operator-confirmed at HALT 0 2026-05-07:
+// preload.mts UNCHANGED; reuses existing workstationBridge.onSpawnResult.
+function resolveRenderModelMix(
+  opts: MountChatShellOptions,
+): (() => ReactNode) | undefined {
+  if (opts.renderModelMix) return opts.renderModelMix;
+  // WB2 GREEN: peek window.workstationBridge?.onSpawnResult and build
+  // closure wrapping <MixIndicatorContainer bridge={{ onSpawnResult }} />.
+  return undefined;
+}
+// === END: MB-T27 ===
+
 export function mountChatShell(opts: MountChatShellOptions): () => void {
   const rootEl = document.getElementById(opts.rootElementId);
   if (!rootEl) throw new Error(`#${opts.rootElementId} not found`);
@@ -164,7 +196,16 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
   const tabs = resolveTabs(opts);
   // === BEGIN: MB-T26 cost-meter slot passthrough ===
   const renderCostMeter = resolveRenderCostMeter(opts);
-  root.render(createElement(ChatShell, { tabs, renderCostMeter }));
+  // === BEGIN: MB-T27 model-mix slot passthrough ===
+  // Sibling resolution + render-prop pass-through to ChatShell. Nested
+  // inside MB-T26 zone per C's authored intent (chat-shell.tsx MB-T26
+  // zone header comment 2026-05-07: "Terminal D adds model-mix slot
+  // to the SAME header-bar element via its own non-overlapping
+  // sentinel zone"). C's renderCostMeter resolution UNCHANGED; the
+  // root.render call below extends its props object additively.
+  const renderModelMix = resolveRenderModelMix(opts);
+  // === END: MB-T27 ===
+  root.render(createElement(ChatShell, { tabs, renderCostMeter, renderModelMix }));
   // === END: MB-T26 ===
   return () => root.unmount();
 }
