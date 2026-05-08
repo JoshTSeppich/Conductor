@@ -51,6 +51,11 @@ export interface GridOverride {
 interface TileGridStateFile {
   perTile: Record<string, TileLayoutState>;
   gridOverride?: GridOverride;
+  /** MB-T19 WB4: hero session designation. When non-null, TileGridApp
+   *  routes to hero/squad layout per Q-MBT19-1; when null/absent,
+   *  uniform grid layout (existing default). null and absent are
+   *  observationally equivalent — both deserialize to null on read. */
+  heroSessionName?: string | null;
 }
 
 export function defaultTileLayoutState(orderIndex = 0): TileLayoutState {
@@ -94,6 +99,15 @@ function readFile(): TileGridStateFile {
     const rawOverride = root['gridOverride'];
     if (isGridOverride(rawOverride)) {
       out.gridOverride = rawOverride;
+    }
+    // MB-T19 WB4: parse heroSessionName field. Accepts null (explicit
+    // "no hero") or non-empty string (the designated session name);
+    // empty strings + non-string/non-null values are dropped.
+    const rawHero = root['heroSessionName'];
+    if (rawHero === null) {
+      out.heroSessionName = null;
+    } else if (typeof rawHero === 'string' && rawHero.length > 0) {
+      out.heroSessionName = rawHero;
     }
     return out;
   } catch {
@@ -164,6 +178,36 @@ export function writeGridOverride(override: GridOverride | null): void {
     delete file.gridOverride;
   } else {
     file.gridOverride = override;
+  }
+  writeFile(file);
+}
+
+// ─── Hero session designation (MB-T19 WB4) ────────────────────────────────
+
+/**
+ * Read the persisted hero-session designation. Returns null when no
+ * hero is set (uniform grid layout); returns the designated session
+ * name when hero/squad layout should activate per Q-MBT19-1.
+ *
+ * Persistence wire to mount.ts → TileGridApp.heroSessionName is
+ * gated on the existing MB-F-T12-RENDERER-PERSISTENCE-WIRING followup
+ * — until that closes, this read is operator-edit-then-restart only.
+ */
+export function readHeroSessionName(): string | null {
+  return readFile().heroSessionName ?? null;
+}
+
+/**
+ * Write or clear the hero-session designation. Pass null (or empty
+ * string) to clear. Per-tile state and gridOverride are preserved
+ * across hero writes.
+ */
+export function writeHeroSessionName(name: string | null): void {
+  const file = readFile();
+  if (name === null || name === '') {
+    delete file.heroSessionName;
+  } else {
+    file.heroSessionName = name;
   }
   writeFile(file);
 }

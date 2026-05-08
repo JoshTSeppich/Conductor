@@ -99,6 +99,16 @@ export interface TileGridAppProps {
   /** Test seam — passed through to TileGrid for happy-dom layout
    *  determinism in drag-resize tests. */
   readonly getCurrentPixelSizes?: () => { colPx: number[]; rowPx: number[] };
+  /** MB-T19 WB4: hero session designation seeded from tile-grid-state
+   *  (`readHeroSessionName()`) on app startup. Passed through to
+   *  <TileGrid>'s heroSessionName for hero/squad layout activation
+   *  per Q-MBT19-1. v3.0 accepts the value as read-only render-time
+   *  input; mutation flow + state setter deferred to v3.1. The
+   *  end-to-end persistence wire (mount.ts → readHeroSessionName())
+   *  shares the existing MB-F-T12-RENDERER-PERSISTENCE-WIRING
+   *  followup; until that closes, this prop receives null in
+   *  production and is operator-edit-then-restart only. */
+  readonly heroSessionName?: string | null;
 }
 
 interface SpawnSuccessReply {
@@ -133,6 +143,7 @@ export function TileGridApp({
   onPersistGridOverride,
   onPersistSessions,
   getCurrentPixelSizes,
+  heroSessionName,
 }: TileGridAppProps): JSX.Element | null {
   const [sessions, setSessions] = useState<readonly TileGridSessionEntry[]>([
     ...initialSessions,
@@ -329,6 +340,7 @@ export function TileGridApp({
       onResizeEnd={handleResizeEnd}
       gridOverride={initialGridOverride}
       getCurrentPixelSizes={getCurrentPixelSizes}
+      heroSessionName={heroSessionName ?? null}
     />
   );
 }
