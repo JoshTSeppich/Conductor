@@ -157,6 +157,10 @@ describe('MB-T34 WB1 RED — AnthropicAPIClient retry on 429 + 5xx', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = new AnthropicAPIClient({ messages: { create } } as any);
     const drainPromise = drain(client);
+    // Attach a no-op catch immediately to prevent unhandled-rejection
+    // warnings during the timer-advance window before
+    // expect.rejects.toThrow() attaches its handler.
+    drainPromise.catch(() => undefined);
     await vi.runAllTimersAsync().catch(() => undefined);
     await expect(drainPromise).rejects.toThrow();
     // 1 initial + DEFAULT_MAX_RETRIES retries = 4 total attempts

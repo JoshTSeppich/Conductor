@@ -166,6 +166,10 @@ export function extractRateLimitState(
   return null;
 }
 
+const RETRY_BASE_MS = 1000;
+const RETRY_MAX_CAP_MS = 30_000;
+const RETRY_JITTER_FRACTION = 0.25;
+
 /**
  * Compute retry delay (ms) for the Nth attempt using jittered exponential
  * backoff. Honors retry-after header if present.
@@ -182,10 +186,56 @@ export function computeRetryDelayMs(
   attempt: number,
   retryAfterSeconds: number | null,
 ): number {
-  // RED stub. WB3 implements jittered exp backoff + retry-after honor.
-  void attempt;
-  void retryAfterSeconds;
-  return 0;
+  // Server is authoritative when retry-after is present.
+  if (retryAfterSeconds !== null && retryAfterSeconds >= 0) {
+    return retryAfterSeconds * 1000;
+  }
+  const exp = RETRY_BASE_MS * Math.pow(2, Math.max(0, attempt));
+  const jitterDelta = exp * RETRY_JITTER_FRACTION * (Math.random() * 2 - 1);
+  const withJitter = Math.round(exp + jitterDelta);
+  return Math.max(0, Math.min(RETRY_MAX_CAP_MS, withJitter));
+}
+
+/**
+ * True if the error indicates a retryable pre-stream failure (429 or 5xx).
+ * 4xx other than 429 are NOT retryable (client errors, retry won't help).
+ */
+function isRetryableError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const status = (err as { status?: unknown }).status;
+  if (typeof status !== 'number') return false;
+  if (status === 429) return true;
+  if (status >= 500 && status < 600) return true;
+  return false;
+}
+
+/**
+ * Extract retry-after seconds from an error's headers if present.
+ * @anthropic-ai/sdk attaches the original Response headers to error
+ * instances on rate-limit / server errors.
+ */
+function extractRetryAfterFromError(err: unknown): number | null {
+  if (!err || typeof err !== 'object') return null;
+  const headers = (err as { headers?: unknown }).headers;
+  if (!headers || typeof headers !== 'object') return null;
+  // Headers may be a plain object (axios-style) or a Headers instance.
+  let raw: string | null = null;
+  if (typeof (headers as Headers).get === 'function') {
+    raw = (headers as Headers).get('retry-after');
+  } else {
+    const h = headers as Record<string, unknown>;
+    const v = h['retry-after'] ?? h['Retry-After'];
+    if (typeof v === 'string') raw = v;
+  }
+  if (raw === null) return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function delayMs(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -220,48 +270,67 @@ export class AnthropicAPIClient {
     params: StreamMessageParams,
     callbacks?: StreamCallbacks,
   ): AsyncIterable<RawMessageStreamEvent> {
-    // WB2 GREEN: stream-event parsing + onUsage end-of-stream emission.
-    // WB3 (retry wrapper) + WB4 (header capture / onRateLimit) layer on top.
+    // WB2: stream-event parsing + onUsage end-of-stream.
+    // WB3: outer retry loop on PRE-stream 429/5xx (R-MBT34-3 — stream-mid
+    //      errors propagate; re-emitting in-flight stream would double
+    //      count tokens).
+    // WB4 will wire .response.headers → extractRateLimitState →
+    //     _lastRateLimitState + callbacks?.onRateLimit at response-open.
     //
     // Header-capture seam: APIPromise.withResponse() returns the inner
-    // Stream alongside the raw fetch Response. We obtain the stream via
-    // .data and iterate normally; .response is unused here in WB2 and
-    // becomes load-bearing in WB4 for extractRateLimitState().
-    const apiPromise = this.client.messages.create({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      ...(params.system !== undefined ? { system: params.system } : {}),
-      messages: params.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      stream: true,
-    });
+    // Stream alongside the raw fetch Response. APIPromise must NOT be
+    // awaited first — the type system enforces this because Stream has
+    // no withResponse member.
 
-    const { data: stream } = await apiPromise.withResponse();
+    let attempt = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let stream: AsyncIterable<RawMessageStreamEvent> | null = null;
+
+    while (stream === null) {
+      try {
+        const apiPromise = this.client.messages.create({
+          model: params.model,
+          max_tokens: params.maxTokens,
+          ...(params.system !== undefined ? { system: params.system } : {}),
+          messages: params.messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          stream: true,
+        });
+        const withResp = await apiPromise.withResponse();
+        stream = withResp.data as AsyncIterable<RawMessageStreamEvent>;
+      } catch (err) {
+        if (!isRetryableError(err) || attempt >= DEFAULT_MAX_RETRIES) {
+          throw err;
+        }
+        const retryAfter = extractRetryAfterFromError(err);
+        await delayMs(computeRetryDelayMs(attempt, retryAfter));
+        attempt += 1;
+      }
+    }
 
     let inputTokens = 0;
     let outputTokens = 0;
     let model = params.model;
 
-    for await (const event of stream as AsyncIterable<RawMessageStreamEvent>) {
+    for await (const event of stream) {
       if (event.type === 'message_start') {
-        // [KNOWN] from Phase 1 spike: message_start fires once at stream
-        // open with initial usage + model. input_tokens from
-        // message.usage.input_tokens; model from message.model.
+        // [KNOWN] Phase 1 spike: message_start fires once at stream open
+        // with initial usage + model.
         inputTokens = event.message.usage.input_tokens;
         model = event.message.model;
       } else if (event.type === 'message_delta') {
-        // [KNOWN] from Phase 1 spike: message_delta.usage.output_tokens
-        // is cumulative across deltas; final delta wins.
+        // [KNOWN] Phase 1 spike: message_delta.usage.output_tokens is
+        // cumulative across deltas; final delta wins.
         outputTokens = event.usage.output_tokens;
       }
       yield event;
     }
 
     callbacks?.onUsage?.({ inputTokens, outputTokens, model });
-    void callbacks?.onRateLimit;  // wired in WB4
-    void this._lastRateLimitState;  // wired in WB4
+    void callbacks?.onRateLimit; // wired in WB4
+    void this._lastRateLimitState; // wired in WB4
   }
 
   /**
