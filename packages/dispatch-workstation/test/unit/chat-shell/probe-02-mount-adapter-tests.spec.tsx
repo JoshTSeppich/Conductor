@@ -1,14 +1,19 @@
 // @vitest-environment happy-dom
 //
-// MB-T20 WB3 — mountChatShell adapter tests (probe-02).
+// MB-T20 WB3 → MB-T22 WB2 migrated — mountChatShell adapter tests (probe-02).
+//
+// Migrated 2026-05-07 from the MB-T20 single-tab `renderChatTab` option
+// to the MB-T22 multi-tab `tabs: TabConfig[]` option (Q-MBT22-3=a;
+// closes MB-F-T20-FAMILY-B-ADDITIONAL-TABS).
 //
 // Asserts mount adapter contract:
 //   - mountChatShell(opts) mounts ChatShell into the target element
 //   - returns an unmount fn that tears down the React tree
 //   - throws when target element is missing
-//   - renders the WB3 default chat-tab stub when no renderChatTab
-//   - renders custom renderChatTab when provided (WB4 will pass a
-//     closure that wraps coarchitect/chat-panel.js's ChatPanel)
+//   - renders the default chat-tab stub when neither tabs nor bridge
+//     provided
+//   - renders custom tabs when provided (WB3 of MB-T22 wires the
+//     Commits TabConfig; future tickets add Tasks tab, etc.)
 //
 // Auto-mount block in mount.ts is gated on window.coarchitectBridge
 // existence; test env has no bridge, so importing mount.js is safe.
@@ -58,7 +63,7 @@ describe('MB-T20 WB3 — mountChatShell adapter', () => {
     );
   });
 
-  it('renders default chat-tab stub when neither renderChatTab nor bridge provided', async () => {
+  it('renders default chat-tab stub when neither tabs nor bridge provided', async () => {
     await act(async () => {
       mountChatShell({ rootElementId: 'chat-shell-mount-target' });
     });
@@ -67,11 +72,19 @@ describe('MB-T20 WB3 — mountChatShell adapter', () => {
     expect(stub?.textContent).toContain('Chat tab body');
   });
 
-  it('renders custom renderChatTab when provided', async () => {
+  it('renders custom tabs when provided (overrides default Chat-tab construction)', async () => {
     await act(async () => {
       mountChatShell({
         rootElementId: 'chat-shell-mount-target',
-        renderChatTab: () => <div data-testid="chat-shell-custom-body">custom</div>,
+        tabs: [
+          {
+            id: 'chat',
+            label: 'Chat',
+            render: () => (
+              <div data-testid="chat-shell-custom-body">custom</div>
+            ),
+          },
+        ],
       });
     });
     const body = document.querySelector('[data-testid="chat-shell-custom-body"]');

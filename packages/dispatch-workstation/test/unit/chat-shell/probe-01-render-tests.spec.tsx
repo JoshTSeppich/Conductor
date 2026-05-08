@@ -1,38 +1,44 @@
 // @vitest-environment happy-dom
 //
-// MB-T20 WB2 — ChatShell render tests (probe-01).
-// Operator-confirmed Q-MBT20-1=a (Family-B tab-host shell) 2026-05-07.
+// MB-T20 WB2 → MB-T22 WB2 migrated — ChatShell render tests (probe-01).
 //
-// Asserts the WB2 contract:
-//   - chat-shell-root      → outer container (panel chrome)
-//   - chat-shell-tab-strip → tab header position (role=tablist)
-//   - chat-shell-tab-chat  → initial Chat tab (role=tab; aria-selected)
-//   - chat-shell-tab-content → active-tab content slot (role=tabpanel)
-//   - renderChatTab render-prop slot (mirrors MB-T16 picker pattern):
-//     called when provided; empty when undefined.
+// Migrated 2026-05-07 from the MB-T20 single-tab API to the MB-T22
+// multi-tab API (Q-MBT22-3=a; closes MB-F-T20-FAMILY-B-ADDITIONAL-TABS).
+// The data-testid contract is preserved verbatim — chat-shell-root,
+// chat-shell-tab-strip, chat-shell-tab-chat (now via tabs[]),
+// chat-shell-tab-content. Only the props shape changes:
+//   MB-T20:  <ChatShell renderChatTab={() => ...} />
+//   MB-T22:  <ChatShell tabs={[{ id:'chat', label:'Chat', render:... }]} />
 //
-// WB4 wires renderChatTab to render coarchitect/chat-panel.js's ChatPanel
-// inline (Q-MBT20-3=a wrap; Q-MBT20-5=a coarchitectBridge passthrough).
+// Multi-tab API behavioral assertions (controlled mode, click-to-switch,
+// onTabChange, etc.) live in probe-04-multi-tab-api.spec.tsx (the WB1
+// RED probe that flips GREEN at WB2).
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ChatShell } from '../../../src/chat-shell/chat-shell.js';
+import { ChatShell, type TabConfig } from '../../../src/chat-shell/chat-shell.js';
 
-describe('MB-T20 WB2 — ChatShell tab-host render', () => {
+const chatTab: TabConfig = {
+  id: 'chat',
+  label: 'Chat',
+  render: () => null,
+};
+
+describe('MB-T22 WB2 — ChatShell tab-host render (Chat tab via tabs[])', () => {
   it('renders chat-shell-root container', () => {
-    render(<ChatShell />);
+    render(<ChatShell tabs={[chatTab]} />);
     expect(screen.getByTestId('chat-shell-root')).toBeInTheDocument();
   });
 
   it('renders chat-shell-tab-strip in the tab-host header position', () => {
-    render(<ChatShell />);
+    render(<ChatShell tabs={[chatTab]} />);
     const strip = screen.getByTestId('chat-shell-tab-strip');
     expect(strip).toBeInTheDocument();
     expect(strip).toHaveAttribute('role', 'tablist');
   });
 
-  it('renders the initial Chat tab (chat-shell-tab-chat) selected by default', () => {
-    render(<ChatShell />);
+  it('renders the Chat tab (chat-shell-tab-chat) selected by default', () => {
+    render(<ChatShell tabs={[chatTab]} />);
     const tab = screen.getByTestId('chat-shell-tab-chat');
     expect(tab).toBeInTheDocument();
     expect(tab).toHaveAttribute('role', 'tab');
@@ -41,20 +47,26 @@ describe('MB-T20 WB2 — ChatShell tab-host render', () => {
   });
 
   it('renders the active-tab content slot (chat-shell-tab-content)', () => {
-    render(<ChatShell />);
+    render(<ChatShell tabs={[chatTab]} />);
     const content = screen.getByTestId('chat-shell-tab-content');
     expect(content).toBeInTheDocument();
     expect(content).toHaveAttribute('role', 'tabpanel');
   });
 });
 
-describe('MB-T20 WB2 — ChatShell renderChatTab slot (Q-MBT20-3=a wrap)', () => {
-  it('renders renderChatTab content inside chat-shell-tab-content when provided', () => {
+describe('MB-T22 WB2 — ChatShell tab body render (TabConfig.render slot)', () => {
+  it('renders the active TabConfig.render() output inside chat-shell-tab-content', () => {
     render(
       <ChatShell
-        renderChatTab={() => (
-          <div data-testid="chat-shell-test-tab-body">tab body content</div>
-        )}
+        tabs={[
+          {
+            id: 'chat',
+            label: 'Chat',
+            render: () => (
+              <div data-testid="chat-shell-test-tab-body">tab body content</div>
+            ),
+          },
+        ]}
       />,
     );
     const body = screen.getByTestId('chat-shell-test-tab-body');
@@ -64,21 +76,27 @@ describe('MB-T20 WB2 — ChatShell renderChatTab slot (Q-MBT20-3=a wrap)', () =>
     expect(slot.contains(body)).toBe(true);
   });
 
-  it('renders empty chat-shell-tab-content when renderChatTab is undefined', () => {
-    render(<ChatShell />);
+  it('renders empty chat-shell-tab-content when active tab render returns null', () => {
+    render(<ChatShell tabs={[chatTab]} />);
     const slot = screen.getByTestId('chat-shell-tab-content');
     expect(slot).toBeInTheDocument();
     expect(slot.children.length).toBe(0);
   });
 
-  it('calls renderChatTab exactly once per render', () => {
+  it('calls active TabConfig.render exactly once per render', () => {
     let callCount = 0;
     render(
       <ChatShell
-        renderChatTab={() => {
-          callCount += 1;
-          return <span data-testid="chat-shell-callcount-marker" />;
-        }}
+        tabs={[
+          {
+            id: 'chat',
+            label: 'Chat',
+            render: () => {
+              callCount += 1;
+              return <span data-testid="chat-shell-callcount-marker" />;
+            },
+          },
+        ]}
       />,
     );
     expect(screen.getByTestId('chat-shell-callcount-marker')).toBeInTheDocument();
