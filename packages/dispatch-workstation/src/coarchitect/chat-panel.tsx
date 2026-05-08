@@ -21,7 +21,8 @@ import { useState, useEffect, useRef, Fragment, type FormEvent, type RefObject }
 import type { DaemonClient, ChatMessage } from './daemon-client.js';
 import { ChatBubble } from './chat-bubble.js';
 import { QuickPickButtons } from './quick-pick-buttons.js';
-import { parseQuickPickMarker } from './chat-content-markers.js';
+import { SpawnedList } from './spawned-list.js';
+import { parseQuickPickMarker, parseSpawnedMarker } from './chat-content-markers.js';
 
 export interface StreamingBridge {
   sendAndStream(content: string): void;
@@ -168,15 +169,21 @@ export function ChatPanel({ daemonClient, streamingBridge }: ChatPanelProps): JS
       >
         {history.map((msg) => {
           if (msg.role === 'assistant') {
-            // Q-MBT21-2=b: parse QUICK_PICK marker; strip from bubble body;
-            // render parsed options as quick-pick buttons below the bubble.
-            const { stripped, options } = parseQuickPickMarker(msg.content);
+            // Q-MBT21-2=b + Q-MBT21-3=b: parse QUICK_PICK + spawned: markers;
+            // strip both from bubble body; render spawned-list + quick-pick
+            // buttons inline below the bubble. Order: bubble → spawned-list
+            // → quick-pick (informational context first, action last).
+            const afterQuickPick = parseQuickPickMarker(msg.content);
+            const afterSpawned = parseSpawnedMarker(afterQuickPick.stripped);
             return (
               <Fragment key={msg.id}>
-                <ChatBubble role="assistant" content={stripped} />
-                {options && (
+                <ChatBubble role="assistant" content={afterSpawned.stripped} />
+                {afterSpawned.sessions && (
+                  <SpawnedList sessions={afterSpawned.sessions} />
+                )}
+                {afterQuickPick.options && (
                   <QuickPickButtons
-                    options={options}
+                    options={afterQuickPick.options}
                     onSelect={(text) => streamingBridge?.sendAndStream(text)}
                   />
                 )}
