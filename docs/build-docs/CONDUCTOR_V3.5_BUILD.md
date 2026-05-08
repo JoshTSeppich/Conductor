@@ -1,6 +1,6 @@
 # Conductor v3.5 BUILD — Hot-Swap Orchestrator (HSO) Architecture
 
-**Status:** DRAFT-PENDING-SPIKE-HSO-02 — SPIKE-HSO-01 ratified at commit `c1b78c4` (2026-05-08); §3 architecture KNOWN-VIABLE; D1-D5 architectural requirements operative. Pending: SPIKE-HSO-02 (handoff Shape A vs Shape B per §4.2) before §5 ticket dispatch (excepting MB-T36 per Q-V35-4 re-arbitration 2026-05-08).
+**Status:** RATIFIED — SPIKE-HSO-01 ratified at commit `c1b78c4` (2026-05-08); SPIKE-HSO-02 ratified at commit `05154fb` (2026-05-08); §3 architecture KNOWN-VIABLE under Shape A handoff protocol; D1-D10 architectural requirements operative. §5 ticket dispatch unblocked pending MB-T41 production system prompt operator-only authoring (per Q-V35-4 amended).
 
 **Authoring posture:** Drafted by chat-Claude (Opus 4.7) under operator best-judgment authorization 2026-05-08 per project instructions §3.4 mechanical translation carve-out. Operator authors final text. This document is for review only.
 
@@ -117,7 +117,15 @@ The v3.0 foundational layer (MB-T01–T08, COARCH-T01–T04, CONSOLE-T01–T03, 
 
 These fields are operator-arbitrated additions to the swarm-state.md schema. MB-T38 (state-writer ticket) is responsible for emitting them; MB-T41 (system prompt) is responsible for instructing the orchestrator how to populate them. SPIKE-HSO-02 must validate against this enriched schema, not the candidate spike fixture format.
 
-**SPIKE-HSO-02 (§4.2) arbitrates Shape B vs Shape A based on empirical evidence.**
+**[KNOWN per SPIKE-HSO-02 ratification 2026-05-08, commit `05154fb`]:** Shape A is the ratified handoff protocol for v3.5 HSO architecture. Active orchestrator MUST generate handoff document at handoff trigger time (path: `docs/coordination/handoff-<timestamp>.md` per §5 conditional scope expansion now activated). Successor reads swarm-state.md + handoff document + BUILD.md cold. Handoff document is a one-shot artifact at trigger time; not maintained continuously (that is swarm-state.md's role).
+
+**[KNOWN per SPIKE-HSO-02 D7 + F13]:** Handoff document templates MUST use formal protocol blocks (`[ACTION:type]...[/ACTION]`, `[HALT]`) matching candidate system prompt §2 + §4 syntax. Prose templates leak successor protocol drift (H2 Shape A evidence). MB-T41 production prompt §H (handoff procedure section) MUST specify formal blocks in all illustrative content; mechanical enforcement tracked at `MB-F-HSO-02-PROTOCOL-DRIFT-TEMPLATE-ENFORCEMENT`.
+
+**[KNOWN per SPIKE-HSO-02 D8]:** Handoff document minimum content requirements:
+- Verbatim unsent prompts for in-flight peer sessions (mandatory per F11; H1 + H3 evidence — Shape B successors composed degraded prompts without verbatim transfer)
+- Sequencing intent across peers when non-obvious from swarm-state.md (mandatory per F14; H3 evidence — Shape B unilaterally re-prioritized)
+- HALT severity rationale when halt_urgency field alone may be insufficient context (recommended per F12; D2 may be sufficient but rationale reduces ambiguity)
+- Explicit "do not" list for the immediate successor turn (avoids re-spawning live peers, premature prompting of blocked peers)
 
 ### §3.6 Action variant emission via markdown markers
 
@@ -202,7 +210,7 @@ This rule was discovered during SPIKE-HSO-01 HALT 3.5 fixture construction (sing
 
 **Ratification result (2026-05-08):** All 5 acceptance scenarios PASS. Substrate ratified. 5 architectural requirements (D1-D5) operative. 5 followup tickets filed (MB-F-HSO-01-*). See `docs/adr/HSO-01-orchestrator-substrate-viability.md` for full evidence and ADR.
 
-### §4.2 SPIKE-HSO-02 — Handoff protocol shape
+### §4.2 SPIKE-HSO-02 — Handoff protocol shape — [RATIFIED 2026-05-08, commit `05154fb`]
 
 **Scope:** conditional on SPIKE-HSO-01 acceptance scenario 3 passing. Test Shape B (swarm-state.md only) vs Shape A (swarm-state.md + handoff document). Single CC orchestrator session forced through 5 simulated handoffs. Measure: which shape produces better continuity per operator subjective review.
 
@@ -212,20 +220,28 @@ This rule was discovered during SPIKE-HSO-01 HALT 3.5 fixture construction (sing
 - Otherwise Shape A ratified
 - Result documented as ADR `docs/adr/HSO-02-handoff-shape.md`
 
+**Ratification result (2026-05-08):** Shape A ratified per reduced-scope ≥2/3 acceptance threshold. Tally: H1 mid-WB-ladder (Shape A CONSISTENT, Shape B PARTIAL); H2 pending-decision (Shape A CONSISTENT, Shape B CONSISTENT); H3 multi-peer (Shape A CONSISTENT, Shape B PARTIAL). Shape B ≥ Shape A on 1 of 3. 5 architectural requirements (D6-D10) operative. 5 findings (F11-F15). 3 followup tickets filed (MB-F-HSO-02-*).
+
+**Reduced-scope caveat (F15):** SPIKE-HSO-02 measured 3 of spec'd 5 handoffs due to operator-side weekly Max constraint at H1 completion. H4 (recently-completed-ticket) and H5 (cross-cutting-finding) handoffs deferred to dogfood window per `MB-F-HSO-02-FULL-SCOPE-DOGFOOD` (Tier 1). Production HSO deployment must validate full-scope measurement before declaring v3.5 wireframe-operational complete.
+
+See `docs/adr/HSO-02-handoff-shape.md` for full evidence and ADR.
+
 ### §4.3 Combined ratification gate
 
-[KNOWN] SPIKE-HSO-01 ratified 2026-05-08 (commit `c1b78c4`). Architecture KNOWN-VIABLE per Sonnet 4.6 substrate. D1-D5 operative. 
+[KNOWN] Both SPIKE-HSO-01 (commit `c1b78c4`) and SPIKE-HSO-02 (commit `05154fb`) ratified 2026-05-08. Architecture KNOWN-VIABLE under Sonnet 4.6 substrate + Shape A handoff protocol. D1-D10 operative.
 
-[Q-V35-4 re-arbitrated 2026-05-08]: MB-T36 (orchestrator-fired spawn) authorized to fire post-SPIKE-HSO-01 / pre-SPIKE-HSO-02 due to architecture-independence per §5.2. All other §5 tickets remain gated on SPIKE-HSO-02 ratification + MB-T41 operator-only authoring.
+[KNOWN] MB-T36 closed 2026-05-08 at commit `a93ad74` (orchestrator-fired spawn shipped; closes `MB-F-T11-WB7-ORCHESTRATOR-SPAWN-DEFERRED` + `MB-F-T24-ORCHESTRATOR-FIRED-SPAWN-GATE`).
 
-Remaining gate:
-- **SPIKE-HSO-02 ratifies Shape B** → §5 tickets MB-T35-revised + MB-T37 + MB-T38 + MB-T39 + MB-T40 + MB-T41 fire as written
-- **SPIKE-HSO-02 ratifies Shape A** → §5 tickets fire with MB-T38 scope adjusted (handoff document generation in addition to swarm-state.md)
-- **SPIKE-HSO-02 fails** → v3.5 architecture not viable at handoff layer; pivot operator decision required
+Remaining gate before §5 ticket dispatch:
+- **MB-T41 operator-only authoring (production HSO system prompt)** — per §3.4 mechanical-translation carve-out; chat-Claude drafts §A-§H sections, operator authors final text. Closes `MB-F-HSO-01-SYSTEM-PROMPT-MB-T41`. Once MB-T41 lands, §5 tickets MB-T35-revised + MB-T37 + MB-T38 (with D9 scope expansion) + MB-T39 + MB-T40 fire per dependency graph.
+
+Dogfood validation gate before v3.5 wireframe-operational ship:
+- **Full-scope SPIKE-HSO-02 measurement** per `MB-F-HSO-02-FULL-SCOPE-DOGFOOD` — H4 + H5 handoffs measured during dogfood window with both shapes; closes the F15 reduced-scope caveat
+- **Full-scope SPIKE-HSO-01 scenario 5 measurement** per `MB-F-HSO-01-WEEKLY-RATE-LIMIT-DOGFOOD` — 30-min × 3+ peer sustained measurement with Claude.ai weekly bar visible; closes the SPIKE-HSO-01 reduced-scope caveat
 
 ---
 
-## §5 — Tickets (DRAFT-PENDING-SPIKE; conditional on §4 ratification)
+## §5 — Tickets (RATIFIED-PENDING-MB-T41; §5 ticket dispatch fires post-MB-T41 operator-only authoring)
 
 [MODELED] All tickets below are DRAFT and do not fire until SPIKE-HSO-01 and SPIKE-HSO-02 return ratification-positive evidence. After ratification, tickets are operator-arbitrated for inclusion in V3_TICKETS.md or a sibling V3.5_TICKETS.md per operator choice.
 
@@ -296,6 +312,8 @@ Each handler checks `approvalRequired` against session policy resolver (already 
 **Frozen-contract preservation:** §3.4 boundary held. Orchestrator does not write to BUILD.md, contracts, schemas, or other frozen surfaces. Writes are scoped to swarm-state.md only.
 
 **Conditional scope expansion:** if SPIKE-HSO-02 ratifies Shape A, this ticket also generates handoff-summary documents at `docs/coordination/handoff-<timestamp>.md` on handoff trigger.
+
+**[KNOWN per SPIKE-HSO-02 D9]:** MB-T38 scope EXPANDED to include handoff document generation logic at handoff trigger, in addition to continuous swarm-state.md writes. Handoff document path: `docs/coordination/handoff-<timestamp>.md`. MB-T38 MUST NOT attempt to merge swarm-state.md continuous writes with handoff document generation into a single write operation — these are distinct triggers and distinct artifacts. Handoff document content per D8 minimum requirements: verbatim unsent prompts, sequencing intent, severity rationale (when applicable), explicit "do not" list.
 
 **Out-of-scope:** orchestrator pool management (MB-T37). Self-summary harvesting (MB-T39).
 
@@ -385,6 +403,8 @@ Recmd: (b). Stays in operator's reading line of sight without polluting root.
 
 Recmd: (a) for v3.5 dogfood entry. (b) for v3.5.1 ship-confidence.
 
+**All Q-V35-* operator arbitrations resolved as of 2026-05-08.** Remaining operator-only territory per §3.4: MB-T41 production system prompt authoring (incorporates D1-D10 + F1-F15 evidence base); v3.5 BUILD doc minor amendments as evidence accumulates during ticket execution.
+
 ---
 
 ## §8 — Roadmap impact (relative to v3.0)
@@ -393,8 +413,10 @@ Recmd: (a) for v3.5 dogfood entry. (b) for v3.5.1 ship-confidence.
 
 - **v3.0 wireframe-operational tickets (MB-T35–T40 v3.0-fallback) replaced** by v3.5 ticket set (MB-T35-revised + MB-T36 + MB-T37 + MB-T38 + MB-T39 + MB-T40 + MB-T41).
 - **Net ticket count:** 7 vs 5 v3.0-fallback, but some are smaller (MB-T36 is architecture-independent, MB-T38 is mostly write-discipline scaffolding) and infrastructure is reused.
-- **Spike calendar cost — actual:** SPIKE-HSO-01 took ~4-5 hours operator-supervised wall-clock (2026-05-08). SPIKE-HSO-02 estimated ~1-2 hours operator-supervised when authorized.
-- **Path α parallel work window (post-SPIKE-HSO-01, pre-SPIKE-HSO-02):** MB-T36 + operator-side authoring (Round 7 cairn evidence harvest, MB-T41 prep notes if operator chooses). ~2-4 hours wall-clock with parallel CC + operator tracks.
+- **Spike calendar cost — actual:** SPIKE-HSO-01 ~4-5 hours operator-supervised (commit `c1b78c4`); SPIKE-HSO-02 ~2-3 hours operator-supervised (commit `05154fb`). Total architecture validation ~6-8 hours; both spikes ratified.
+- **Pattern α parallel work window 1 (post-SPIKE-HSO-01, pre-SPIKE-HSO-02):** MB-T36 production code + Q-V35-4 re-arbitration + Round 7 cairn evidence + first BUILD amendment. ~3-4 hours wall-clock with parallel CC + operator tracks. Validated 2-session shared-working-tree discipline empirically.
+- **Pattern α parallel work window 2 (post-SPIKE-HSO-02, pre-MB-T41):** SPIKE-HSO-02 + MB-T41 prep notes + this second BUILD amendment. ~3-4 hours wall-clock with parallel CC + operator tracks. Both spikes ratified by end of window 2.
+- **Remaining wall-clock to v3.5 wireframe-operational:** MB-T41 operator-only authoring (~1-2 hrs) + Wave 1 (MB-T35-revised + MB-T38, ~2-4 hrs) + Wave 2 (MB-T37 + MB-T39, ~2-4 hrs) + Wave 3 (MB-T40, ~1-2 hrs) + dogfood validation (~half-day). Total ~7-13 hours focused operator runway under bounded review bandwidth.
 - **Wall-clock to v3.5 wireframe-operational:** under two-agent-loop pacing, ~7-9 sessions + 2 spikes. Calendar bounded by review bandwidth per project instructions §2.1.
 - **Path-to-marvelous estimated calendar:** v3.5 ship adds ~2-4 weeks vs v3.0-direct path. Net path-to-Group-Alpha-binaries roughly neutral; HSO architecture reduces friction for downstream binaries because orchestrator-as-CC-session is the substrate Cairn-tooling and other Group Gamma work would consume anyway.
 
