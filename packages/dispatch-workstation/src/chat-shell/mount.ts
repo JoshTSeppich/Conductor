@@ -38,6 +38,13 @@ import type {
 // === BEGIN: MB-T26 cost-meter import ===
 import { CostMeter } from './cost-meter.js';
 // === END: MB-T26 ===
+// === BEGIN: MB-T22 WB4 commits-tab import ===
+// CommitsTab consumes window.commitsBridge (preload.mts MB-T22 zone) at
+// render time. Type-only import of CommitsBridge so type narrowing works
+// without pulling commits-reader's node:child_process into the renderer
+// bundle.
+import { CommitsTab, type CommitsBridge } from './commits-tab.js';
+// === END: MB-T22 WB4 ===
 
 // Re-export TabConfig for downstream tab-config authors (e.g. WB4
 // commits TabConfig wiring; future MB-T23 Tasks tab).
@@ -62,6 +69,12 @@ export interface CoarchitectBridge extends StreamingBridge {
 declare global {
   interface Window {
     coarchitectBridge?: CoarchitectBridge;
+    // === BEGIN: MB-T22 WB4 commitsBridge global type ===
+    // Exposed by preload.mts MB-T22 zone (`commits:list` IPC handler).
+    // Renderer consumer is CommitsTab inside the Commits TabConfig
+    // registered by resolveTabs() below.
+    commitsBridge?: CommitsBridge;
+    // === END: MB-T22 WB4 ===
   }
 }
 
@@ -81,6 +94,13 @@ export interface MountChatShellOptions {
   // resolveRenderCostMeter below.
   readonly renderCostMeter?: () => ReactNode;
   // === END: MB-T26 ===
+  // === BEGIN: MB-T22 WB4 commits-bridge override ===
+  // Q-MBT22-7=a — explicit commitsBridge for test injection. When
+  // omitted at runtime, the Commits TabConfig render closure pulls
+  // `window.commitsBridge` (preload.mts MB-T22 zone). When supplied
+  // (integration test fixture path), used verbatim.
+  readonly commitsBridge?: CommitsBridge;
+  // === END: MB-T22 WB4 ===
   // === BEGIN: MB-T27 model-mix slot option ===
   // Q-MBT27-1=a (header-bar slot model) + Q-MBT27-2=a (discrete named
   // slot prop) operator-confirmed at HALT 0 2026-05-07. When supplied,
@@ -120,6 +140,26 @@ function defaultChatTabStub(): ReactNode {
   );
 }
 
+// === BEGIN: MB-T22 WB4 commits-tab render helper ===
+// Closure resolution order at render time:
+//   1. opts.commitsBridge (test injection — integration fixture path)
+//   2. window.commitsBridge (production via preload.mts MB-T22 zone)
+//   3. undefined → CommitsTab renders empty-state row
+// Resolved at render call (not at resolveTabs call) so window.commitsBridge
+// can be set after mount.ts import (e.g. in integration tests that wire
+// the global before mountChatShell()).
+function makeCommitsTabRender(
+  explicit?: CommitsBridge,
+): () => ReactNode {
+  return () => {
+    const bridge =
+      explicit ??
+      (typeof window !== 'undefined' ? window.commitsBridge : undefined);
+    return createElement(CommitsTab, bridge ? { bridge } : {});
+  };
+}
+// === END: MB-T22 WB4 ===
+
 // Resolution order (preserves MB-T20 probe-02 + probe-03 + A's
 // quick-pick integration test behavior under the new API):
 //   1. Explicit `opts.tabs` — used verbatim (probe-02 test 5 path).
@@ -137,6 +177,18 @@ function resolveTabs(opts: MountChatShellOptions): readonly TabConfig[] {
         label: 'Chat',
         render: makeChatPanelRender(opts.bridge),
       },
+      // === BEGIN: MB-T22 WB4 Commits TabConfig ===
+      // Sibling to Chat in the bridge path. Closes the renderer-second-tab
+      // level of MB-F-T20-FAMILY-B-ADDITIONAL-TABS — structural multi-tab
+      // API closure landed at WB2 (a08b406); this is the actual second
+      // tab body. CommitsTab pulls data from window.commitsBridge or
+      // opts.commitsBridge (test injection).
+      {
+        id: 'commits',
+        label: 'Commits',
+        render: makeCommitsTabRender(opts.commitsBridge),
+      },
+      // === END: MB-T22 WB4 ===
     ];
   }
   return [
