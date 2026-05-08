@@ -1,5 +1,9 @@
 import { buildDag } from './dag-builder.js';
-import { detectCycle } from './validators.js';
+import {
+  detectCycle,
+  detectDuplicateBranches,
+  detectOrphans,
+} from './validators.js';
 import type {
   ApprovalPolicy,
   ModelHint,
@@ -54,6 +58,9 @@ export function parseBuildDoc(text: string): ParseResult {
 
   const validatorErrors: ParseError[] = [];
 
+  // WB6: orphan detection.
+  validatorErrors.push(...detectOrphans(dag));
+
   // WB5: cycle detection.
   const cyclePath = detectCycle(dag);
   if (cyclePath !== null) {
@@ -67,6 +74,9 @@ export function parseBuildDoc(text: string): ParseResult {
       details: { cyclePath },
     });
   }
+
+  // WB6: duplicate-branch-non-sequential detection.
+  validatorErrors.push(...detectDuplicateBranches(dag.tasks, dag.edges));
 
   const finalErrors = [...dagErrors, ...validatorErrors];
   if (finalErrors.length > 0) {

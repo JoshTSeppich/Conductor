@@ -85,22 +85,95 @@ function rotateCycleToSmallestId(cycle: TaskId[]): TaskId[] {
  * Orphan-dependency detection — references in `Task.dependsOn` that don't
  * resolve to any known Task or TaskGroup. Per Q-MBT28-1A, "forward references"
  * (§3.4) is folded into orphan detection.
- *
- * WB6 land.
  */
-export function detectOrphans(_dag: TaskDAG): ParseError[] {
-  return [];
+export function detectOrphans(dag: TaskDAG): ParseError[] {
+  const taskIds = new Set<TaskId>(dag.tasks.map((t) => t.id));
+  const groupIds = new Set<TaskId>(dag.groups.map((g) => g.id));
+  const errors: ParseError[] = [];
+
+  for (const task of dag.tasks) {
+    for (const dep of task.dependsOn) {
+      if (taskIds.has(dep) || groupIds.has(dep)) continue;
+      errors.push({
+        code: 'dependency.orphan',
+        message: `Task §${task.id}: \`Depends on §${dep}\` references a task or group that does not exist`,
+        line: task.sourceLine,
+        details: { taskId: task.id, missingRef: dep },
+      });
+    }
+  }
+  return errors;
 }
 
 /**
  * Duplicate-branch-non-sequential detection per spec §4.5 + §3.3.
- * Two tasks sharing a branch must form a sequential chain via Depends on.
  *
- * WB6 land.
+ * Two tasks sharing a branch must form a sequential chain via Depends on —
+ * for every pair of tasks (A, B) on the same branch, there must exist a
+ * directed dependency path A→…→B or B→…→A. Tasks parallel on the same branch
+ * are a parse error.
  */
 export function detectDuplicateBranches(
-  _tasks: Task[],
-  _edges: TaskDAG['edges'],
+  tasks: Task[],
+  edges: TaskDAG['edges'],
 ): ParseError[] {
-  return [];
+  const byBranch = new Map<string, Task[]>();
+  for (const t of tasks) {
+    if (!t.branch) continue;
+    const list = byBranch.get(t.branch) ?? [];
+    list.push(t);
+    byBranch.set(t.branch, list);
+  }
+
+  const errors: ParseError[] = [];
+  for (const [branch, branchTasks] of byBranch) {
+    if (branchTasks.length < 2) continue;
+    if (isSequentialChain(branchTasks, edges)) continue;
+    errors.push({
+      code: 'branch.duplicate-non-sequential',
+      message: `Branch \`${branch}\` is shared by ${branchTasks
+        .map((t) => `§${t.id}`)
+        .join(
+          ', ',
+        )} without a sequential dependency chain — parallel tasks on the same branch are a parse error (spec §4.5)`,
+      line: branchTasks[0]!.sourceLine,
+      details: {
+        branch,
+        taskIds: branchTasks.map((t) => t.id),
+      },
+    });
+  }
+  return errors;
+}
+
+function isSequentialChain(branchTasks: Task[], edges: TaskDAG['edges']): boolean {
+  const reachable = new Map<TaskId, Set<TaskId>>();
+  for (const t of branchTasks) {
+    reachable.set(t.id, computeReachable(t.id, edges));
+  }
+  for (let i = 0; i < branchTasks.length; i++) {
+    for (let j = i + 1; j < branchTasks.length; j++) {
+      const a = branchTasks[i]!.id;
+      const b = branchTasks[j]!.id;
+      const aReachesB = reachable.get(a)!.has(b);
+      const bReachesA = reachable.get(b)!.has(a);
+      if (!aReachesB && !bReachesA) return false;
+    }
+  }
+  return true;
+}
+
+function computeReachable(start: TaskId, edges: TaskDAG['edges']): Set<TaskId> {
+  const reachable = new Set<TaskId>();
+  const queue: TaskId[] = [start];
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    for (const e of edges) {
+      if (e.from === node && !reachable.has(e.to)) {
+        reachable.add(e.to);
+        queue.push(e.to);
+      }
+    }
+  }
+  return reachable;
 }
