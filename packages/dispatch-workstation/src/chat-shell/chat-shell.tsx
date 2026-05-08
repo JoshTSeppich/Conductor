@@ -58,6 +58,20 @@ export interface ChatShellProps {
   // zone in the component body below. This zone preserves a documented
   // structural location ABOVE the tab strip; see operator coordination
   // 2026-05-07 (B WB2 ack message).
+  // === BEGIN: MB-T25 plan-usage slot prop ===
+  // Q-MBT25-2=a (push-based via onRateLimitUpdate) + Q-MBT25-2a=a
+  // (extend coarchitectBridge) operator-confirmed at HALT 0
+  // 2026-05-08. Q-MBT25-3 slot ordering operator-arbitrated at
+  // Terminal A's Q-MBT24-4=far-left HALT 0 ack:
+  //   [Auto/Ask MB-T24] | [plan-usage MB-T25 — this] | [cost-meter MB-T26] | [model-mix MB-T27]
+  // Render-prop closure passed by mount.ts auto-mount block at WB3;
+  // auto-mount wraps <PlanUsageRing bridge={coarchitectBridge}/> when
+  // bridge.onRateLimitUpdate is defined (added by Terminal D's MB-T34
+  // WB-final per operator HALT 0 ack 2026-05-08). WB1 RED: prop
+  // reserved + JSX slot reserved; resolveRenderPlanUsageRing returns
+  // undefined → empty slot. WB3 GREEN fills in.
+  readonly renderPlanUsageRing?: () => ReactNode;
+  // === END: MB-T25 ===
   // === BEGIN: MB-T26 cost-meter slot prop ===
   // Q-MBT26-1=a (header-bar slot model) + Q-MBT26-6=a (Terminal C lands
   // first inside Terminal B's reserved zone) operator-confirmed
@@ -85,6 +99,9 @@ export function ChatShell({
   tabs,
   activeTabId,
   onTabChange,
+  // === BEGIN: MB-T25 plan-usage slot destructure ===
+  renderPlanUsageRing,
+  // === END: MB-T25 ===
   // === BEGIN: MB-T26 cost-meter slot destructure ===
   renderCostMeter,
   // === END: MB-T26 ===
@@ -141,6 +158,23 @@ export function ChatShell({
           padding: '4px 8px',
         }}
       >
+        {/* === BEGIN: MB-T25 plan-usage slot ===
+            Q-MBT25-3 slot ordering operator-arbitrated at A's Q-MBT24-4
+            HALT 0 ack 2026-05-08:
+              [Auto/Ask MB-T24] | [plan-usage MB-T25] | [cost-meter MB-T26] | [model-mix MB-T27]
+            MB-T24 zone (Terminal A's mbt24-worktree branch) lands LEFT
+            of this slot at operator-side merge time. This zone nests
+            inside MB-T26's outer zone (same shape as MB-T27 nest per
+            MB-F-T27-WB1-MB-T26-ZONE-NEST Tier 3 observation; authorized
+            by C's MB-T26 zone header comment lines 116-124 — "additive
+            sentinel zones in the SAME header-bar element"). C's logic
+            UNCHANGED; no modification of cost-meter slot rendering.
+            WB1 RED: renderPlanUsageRing resolves to undefined → empty.
+            WB3 GREEN auto-mount fills in via mount.ts
+            resolveRenderPlanUsageRing path 2.
+            === */}
+        {renderPlanUsageRing ? renderPlanUsageRing() : null}
+        {/* === END: MB-T25 === */}
         {renderCostMeter ? renderCostMeter() : null}
         {/* === BEGIN: MB-T27 model-mix slot ===
             Sibling slot inside the chat-shell-header-bar element per

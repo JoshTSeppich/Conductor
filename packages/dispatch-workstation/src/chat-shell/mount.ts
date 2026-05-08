@@ -35,6 +35,9 @@ import type {
   ChatMessage,
   ChatMessageInput,
 } from '../coarchitect/daemon-client.js';
+// === BEGIN: MB-T25 plan-usage-ring import ===
+import { PlanUsageRing } from './plan-usage-ring.js';
+// === END: MB-T25 ===
 // === BEGIN: MB-T26 cost-meter import ===
 import { CostMeter } from './cost-meter.js';
 // === END: MB-T26 ===
@@ -67,6 +70,21 @@ export interface CoarchitectBridge extends StreamingBridge {
   // satisfy the interface without redefining their fixtures.
   readonly onCostUpdate?: (cb: (totalUsd: number) => void) => () => void;
   // === END: MB-T26 ===
+  // === BEGIN: MB-T25 plan-usage bridge surface (additive) ===
+  // Q-MBT25-2=a (push-based) + Q-MBT25-2a=a (extend coarchitectBridge)
+  // operator-confirmed at HALT 0 2026-05-08. Bridge method name
+  // `onRateLimitUpdate` aligns with Terminal D's MB-T34
+  // C-MBT34-1 disposition (API-level concept; widget translates to
+  // plan-usage UX internally). Optional so existing CoarchitectBridge
+  // mocks satisfy the interface unchanged. Cb receives RateLimitState
+  // (4-dimension nested-bucket from D's diagnose §VIII data contract).
+  // Concrete RateLimitState type imported in plan-usage-ring.tsx
+  // (kept narrowly-typed at this surface as a structural shape to
+  // avoid coupling mount.ts to ring-helpers.ts; WB3 may tighten).
+  readonly onRateLimitUpdate?: (
+    cb: (state: unknown) => void,
+  ) => () => void;
+  // === END: MB-T25 ===
 }
 
 declare global {
@@ -113,6 +131,16 @@ export interface MountChatShellOptions {
   // not explicitly supplied (no auto-build yet).
   readonly renderModelMix?: () => ReactNode;
   // === END: MB-T27 ===
+  // === BEGIN: MB-T25 plan-usage slot option ===
+  // Q-MBT25-2=a (push-based) + Q-MBT25-2a=a (extend coarchitectBridge)
+  // operator-confirmed at HALT 0 2026-05-08. When supplied, used
+  // verbatim (test override path). When omitted, mountChatShell at
+  // WB3 GREEN builds a closure from `bridge.onRateLimitUpdate` if
+  // defined. WB1 RED: resolveRenderPlanUsageRing returns undefined
+  // when not explicitly supplied (path 2 auto-build deferred to WB3
+  // GREEN).
+  readonly renderPlanUsageRing?: () => ReactNode;
+  // === END: MB-T25 ===
 }
 
 // Adapter from coarchitectBridge → ChatPanel's DaemonClient interface.
@@ -263,6 +291,39 @@ function resolveRenderModelMix(
 }
 // === END: MB-T27 ===
 
+// === BEGIN: MB-T25 plan-usage slot resolution ===
+// Resolution order mirrors resolveRenderCostMeter / resolveRenderModelMix
+// / resolveTabs above:
+//   1. Explicit `opts.renderPlanUsageRing` — used verbatim (test
+//      override path; consumed by probe-07-plan-usage-ring's
+//      explicit-bridge fixtures).
+//   2. `opts.bridge?.onRateLimitUpdate` — build closure that wraps
+//      <PlanUsageRing bridge={{ onRateLimitUpdate }} /> (WB3 GREEN
+//      wires this; Terminal D's MB-T34 WB-final adds onRateLimitUpdate
+//      to coarchitectBridge per HALT 0 ack 2026-05-08).
+//   3. Neither — return undefined (chat-shell renders empty plan-usage
+//      slot per chat-shell.tsx MB-T25 zone fallback; placeholder
+//      em-dash is rendered by PlanUsageRing itself when bridge is
+//      null/undefined, but at the slot level an undefined render-prop
+//      means no slot child at all — operator-noted UX subtlety: empty
+//      slot vs null bridge are distinct cases).
+//
+// WB1 RED: only paths (1) and (3) implemented. WB3 GREEN adds path 2
+// (bridge.onRateLimitUpdate auto-build). The narrowing cast on
+// `state: unknown` at the bridge surface (CoarchitectBridge interface)
+// is widened to `RateLimitState` at WB3 GREEN by importing the type
+// from ring-helpers and tightening the ChannelBridge construction.
+function resolveRenderPlanUsageRing(
+  opts: MountChatShellOptions,
+): (() => ReactNode) | undefined {
+  if (opts.renderPlanUsageRing) return opts.renderPlanUsageRing;
+  // Path 2 deferred to WB3 GREEN per WB1 RED scaffold scope.
+  void opts.bridge;
+  void PlanUsageRing;
+  return undefined;
+}
+// === END: MB-T25 ===
+
 export function mountChatShell(opts: MountChatShellOptions): () => void {
   const rootEl = document.getElementById(opts.rootElementId);
   if (!rootEl) throw new Error(`#${opts.rootElementId} not found`);
@@ -279,7 +340,22 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
   // root.render call below extends its props object additively.
   const renderModelMix = resolveRenderModelMix(opts);
   // === END: MB-T27 ===
-  root.render(createElement(ChatShell, { tabs, renderCostMeter, renderModelMix }));
+  // === BEGIN: MB-T25 plan-usage slot passthrough ===
+  // Sibling resolution + render-prop pass-through to ChatShell. Nested
+  // inside MB-T26 zone (same shape as MB-T27 nest per
+  // MB-F-T27-WB1-MB-T26-ZONE-NEST Tier 3 observation). C's logic
+  // UNCHANGED; root.render call below extends its props object
+  // additively.
+  const renderPlanUsageRing = resolveRenderPlanUsageRing(opts);
+  // === END: MB-T25 ===
+  root.render(
+    createElement(ChatShell, {
+      tabs,
+      renderCostMeter,
+      renderModelMix,
+      renderPlanUsageRing,
+    }),
+  );
   // === END: MB-T26 ===
   return () => root.unmount();
 }
