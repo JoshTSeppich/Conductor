@@ -151,19 +151,45 @@ export async function loadApiKey(
  * captured by Phase 1 spike. Returns null if any required header missing
  * or if any limit/remaining value fails Number parse.
  *
- * @param headers Response.headers (Headers instance)
+ * Header set [KNOWN] from Phase 1 spike (commit c09bd09):
+ *   anthropic-ratelimit-{requests,tokens,input-tokens,output-tokens}-
+ *     {limit,remaining,reset}
+ *
+ * @param headers Response.headers (Headers instance, case-insensitive get)
  * @param capturedAt ISO-8601 UTC timestamp of capture
  */
 export function extractRateLimitState(
   headers: Headers,
   capturedAt: string,
 ): RateLimitState | null {
-  // RED stub. WB4 implements parse of:
-  //   anthropic-ratelimit-{requests,tokens,input-tokens,output-tokens}-
-  //     {limit,remaining,reset}
-  void headers;
-  void capturedAt;
-  return null;
+  const requests = readBucket(headers, 'requests');
+  const tokens = readBucket(headers, 'tokens');
+  const inputTokens = readBucket(headers, 'input-tokens');
+  const outputTokens = readBucket(headers, 'output-tokens');
+  if (
+    requests === null ||
+    tokens === null ||
+    inputTokens === null ||
+    outputTokens === null
+  ) {
+    return null;
+  }
+  return { requests, tokens, inputTokens, outputTokens, capturedAt };
+}
+
+function readBucket(headers: Headers, dim: string): RateLimitBucket | null {
+  const limitRaw = headers.get(`anthropic-ratelimit-${dim}-limit`);
+  const remainingRaw = headers.get(`anthropic-ratelimit-${dim}-remaining`);
+  const resetRaw = headers.get(`anthropic-ratelimit-${dim}-reset`);
+  if (limitRaw === null || remainingRaw === null || resetRaw === null) {
+    return null;
+  }
+  const limit = Number.parseInt(limitRaw, 10);
+  const remaining = Number.parseInt(remainingRaw, 10);
+  if (!Number.isFinite(limit) || !Number.isFinite(remaining)) {
+    return null;
+  }
+  return { limit, remaining, reset: resetRaw };
 }
 
 const RETRY_BASE_MS = 1000;
@@ -283,8 +309,8 @@ export class AnthropicAPIClient {
     // no withResponse member.
 
     let attempt = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let stream: AsyncIterable<RawMessageStreamEvent> | null = null;
+    let response: Response | null = null;
 
     while (stream === null) {
       try {
@@ -300,6 +326,7 @@ export class AnthropicAPIClient {
         });
         const withResp = await apiPromise.withResponse();
         stream = withResp.data as AsyncIterable<RawMessageStreamEvent>;
+        response = withResp.response;
       } catch (err) {
         if (!isRetryableError(err) || attempt >= DEFAULT_MAX_RETRIES) {
           throw err;
@@ -307,6 +334,21 @@ export class AnthropicAPIClient {
         const retryAfter = extractRetryAfterFromError(err);
         await delayMs(computeRetryDelayMs(attempt, retryAfter));
         attempt += 1;
+      }
+    }
+
+    // WB4: Header capture at response-open (BEFORE stream iteration so
+    // consumers see plan-usage state without waiting for the model to
+    // finish generating). Q-MBT34-2=(b)+(c) operator-acked HALT 0:
+    // accessor + callback both populated from the same observation.
+    if (response !== null) {
+      const captured = extractRateLimitState(
+        response.headers,
+        new Date().toISOString(),
+      );
+      if (captured !== null) {
+        this._lastRateLimitState = captured;
+        callbacks?.onRateLimit?.(captured);
       }
     }
 
@@ -329,8 +371,6 @@ export class AnthropicAPIClient {
     }
 
     callbacks?.onUsage?.({ inputTokens, outputTokens, model });
-    void callbacks?.onRateLimit; // wired in WB4
-    void this._lastRateLimitState; // wired in WB4
   }
 
   /**
