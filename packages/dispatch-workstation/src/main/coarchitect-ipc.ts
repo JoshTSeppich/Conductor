@@ -34,10 +34,37 @@ import { cardContextCache } from './card-context-cache.js';
 import {
   dispatchAction,
   defaultDispatchActionDeps,
+  type SpawnIpcResult,
 } from './orchestrator-action-handler.js';
 import { AutopilotLoop } from './autopilot-loop.js';
 import { buildTier4Payload } from './tier4-fan-out.js';
 import { HttpSessionListClient } from './session-cap.js';
+// === BEGIN: MB-T36 orchestrator-fired spawn imports ===
+import {
+  fireOrchestratorSpawn,
+} from './orchestrator-fire-spawn.js';
+import {
+  sharedSpawnConfirmGate,
+  SpawnIpcController,
+  defaultSpawnHandlerDeps,
+} from './spawn-ipc.js';
+import { readDispatchMode } from './dispatch-mode-store.js';
+// === END: MB-T36 ===
+
+// === BEGIN: MB-T36 controller cache ===
+// Lazy controller promise — same controllerPromise pattern as
+// registerSpawnIpcHandlers:286. Resolved once; subsequent calls share the
+// same controller (avoids re-resolving the claude binary path per spawn).
+let _orchestratorSpawnControllerPromise: Promise<SpawnIpcController> | null = null;
+function getOrchestratorSpawnController(): Promise<SpawnIpcController> {
+  if (!_orchestratorSpawnControllerPromise) {
+    _orchestratorSpawnControllerPromise = defaultSpawnHandlerDeps().then(
+      (deps) => new SpawnIpcController(deps),
+    );
+  }
+  return _orchestratorSpawnControllerPromise;
+}
+// === END: MB-T36 ===
 
 const MOCK_RESPONSES: Record<string, string> = {
   self_check: `I'll analyze the current state and surface the self-check block.
@@ -426,17 +453,29 @@ export function registerIpcHandlers(): void {
               }
               autopilot.recordAction(sessionName, 'send', payload);
             },
-            fireSpawn: async () => {
-              // v3.0: orchestrator-driven spawn-new-session is not wired
-              // in this WB. Operator-driven spawn flows through the
-              // existing renderer → workstation:spawn-requested path
-              // (MB-T05 spawn-ipc). Followup
-              // MB-F-T11-WB7-ORCHESTRATOR-SPAWN-DEFERRED tracks the
-              // wiring for orchestrator-fired spawn.
-              throw new Error(
-                'orchestrator-fired spawn-new-session not wired in v3.0 (MB-F-T11-WB7-ORCHESTRATOR-SPAWN-DEFERRED)',
-              );
+            // === BEGIN: MB-T36 fireSpawn implementation ===
+            // Closes MB-F-T11-WB7-ORCHESTRATOR-SPAWN-DEFERRED.
+            // Dispatch-mode-aware: 'auto' fires directly; 'ask' gates through
+            // sharedSpawnConfirmGate + existing workstation:spawn-confirm-response
+            // IPC handler. Operator decline resolves { declined: true } which
+            // is mapped to a thrown error so dispatchAction returns kind:'error'.
+            fireSpawn: async (payload): Promise<SpawnIpcResult> => {
+              const result = await fireOrchestratorSpawn(payload, {
+                readDispatchMode,
+                getController: getOrchestratorSpawnController,
+                spawnConfirmGate: sharedSpawnConfirmGate,
+                broadcast: (channel, msg) => {
+                  for (const wc of allWebContents.getAllWebContents()) {
+                    wc.send(channel, msg);
+                  }
+                },
+              });
+              if ('declined' in result) {
+                throw new Error('orchestrator spawn declined by operator');
+              }
+              return result;
             },
+            // === END: MB-T36 ===
             fireKill: async (sessionName, payload) => {
               const { SessionKillIpcController, defaultSessionKillDeps } =
                 await import('./session-kill-ipc.js');

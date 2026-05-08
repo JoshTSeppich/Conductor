@@ -47,6 +47,15 @@ import {
 } from './spawn-confirm-gate.js';
 // === END: MB-T24 ===
 
+// === BEGIN: MB-T36 shared gate ===
+// Module-scope singleton shared by the operator-driven 'workstation:spawn-requested'
+// path (registered in registerSpawnIpcHandlers below) AND the orchestrator-driven
+// fireOrchestratorSpawn path (orchestrator-fire-spawn.ts). The shared instance
+// ensures the existing 'workstation:spawn-confirm-response' handler resolves pending
+// entries from both sources via the same gate.
+export const sharedSpawnConfirmGate = new SpawnConfirmGate({ readDispatchMode });
+// === END: MB-T36 ===
+
 const execFileP = promisify(execFile);
 
 // ─── Wire shape for the renderer-bound IPC reply ─────────────────
@@ -303,9 +312,9 @@ export function registerSpawnIpcHandlers(opts: RegisterSpawnIpcOpts = {}): void 
   // open and Spawn-click are honored). Auto → fire-now (today's flow).
   // Ask → emit 'workstation:spawn-confirm-required' to renderer; await
   // 'workstation:spawn-confirm-response' before invoking the controller.
-  const spawnConfirmGate = new SpawnConfirmGate({
-    readDispatchMode,
-  });
+  // MB-T36: use sharedSpawnConfirmGate so orchestrator-fired pending entries
+  // are resolved by the same 'workstation:spawn-confirm-response' handler.
+  const spawnConfirmGate = sharedSpawnConfirmGate;
 
   // Helper: kicks off the actual spawn through the controller and routes
   // the reply back to the renderer's webContents. Used by both the

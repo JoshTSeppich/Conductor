@@ -22,7 +22,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { SpawnConfirmGate } from '../../../src/main/spawn-confirm-gate.js';
-import { fireOrchestratorSpawn } from '../../../src/main/orchestrator-spawn-gate.js';
+import { fireOrchestratorSpawn } from '../../../src/main/orchestrator-fire-spawn.js';
 
 // ─── case-1: auto mode ────────────────────────────────────────────────────────
 

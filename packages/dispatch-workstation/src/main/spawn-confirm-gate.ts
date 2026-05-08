@@ -84,6 +84,10 @@ interface PendingSpawn {
   readonly event: SpawnConfirmEventSink;
   readonly payload: SpawnSessionRequest;
   readonly onConfirm: () => void;
+  // MB-T36: orchestrator-fired spawn passes onCancel to resolve the awaiting
+  // promise when the operator declines. Optional so the 3-arg operator-driven
+  // path (registerSpawnIpcHandlers) is backward-compatible.
+  readonly onCancel?: () => void;
 }
 
 export class SpawnConfirmGate {
@@ -99,11 +103,12 @@ export class SpawnConfirmGate {
     event: SpawnConfirmEventSink,
     payload: SpawnSessionRequest,
     onConfirm: () => void,
+    onCancel?: () => void,
   ): DecideResult {
     const mode = this.deps.readDispatchMode();
     if (mode === 'auto') return 'fire-now';
     const requestId = (this.deps.genRequestId ?? randomUUID)();
-    this.pending.set(requestId, { event, payload, onConfirm });
+    this.pending.set(requestId, { event, payload, onConfirm, onCancel });
     const requiredPayload: SpawnConfirmRequiredPayload = {
       requestId,
       repoPath: payload.repoPath,
@@ -130,6 +135,7 @@ export class SpawnConfirmGate {
       cached.onConfirm();
       return 'fired';
     }
+    cached.onCancel?.();
     return 'cancelled';
   }
 
