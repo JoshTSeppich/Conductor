@@ -274,6 +274,86 @@
       </button>
     </div>
 
+    <!-- === BEGIN: MB-T24 spawn-confirm modal ===
+         Q-MBT24-5=c (hard gate at spawn-ipc.ts) operator-confirmed at
+         HALT 0 2026-05-08. Surfaces when dispatchMode === 'ask' and the
+         operator clicks [Spawn] in the spawn-modal. Confirm fires
+         workstation:spawn-confirm-response with decision='confirm';
+         Cancel fires with decision='cancel'. Modal styling reuses the
+         spawn-modal CSS classes (operator instruction "renderer-side
+         modal styled to match existing dispatch-workstation surfaces").
+         === -->
+    <div
+      id="spawn-confirm-modal"
+      data-testid="spawn-confirm-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="spawn-confirm-modal-title"
+      hidden
+      style="
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 1000;
+      "
+    >
+      <div
+        id="spawn-confirm-modal-overlay"
+        style="
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.5);
+        "
+      ></div>
+      <div
+        id="spawn-confirm-modal-content"
+        style="
+          position: relative;
+          margin: 80px auto 0;
+          max-width: 460px;
+          padding: 18px 22px;
+          background: #1f2937;
+          color: #f3f4f6;
+          border: 1px solid #4b5563;
+          border-radius: 6px;
+          font-family: system-ui, sans-serif;
+        "
+      >
+        <h2
+          id="spawn-confirm-modal-title"
+          style="margin: 0 0 12px; font-size: 16px;"
+        >
+          Confirm Spawn
+        </h2>
+        <p
+          data-testid="spawn-confirm-modal-message"
+          id="spawn-confirm-modal-message"
+          style="margin: 0 0 16px; font-size: 14px; line-height: 1.4;"
+        >
+          <!-- populated by JS at fire time -->
+        </p>
+        <div
+          class="spawn-modal-buttons"
+          style="display: flex; flex-direction: row; gap: 8px; justify-content: flex-end;"
+        >
+          <button
+            id="spawn-confirm-modal-cancel-button"
+            data-testid="spawn-confirm-modal-cancel-button"
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            id="spawn-confirm-modal-confirm-button"
+            data-testid="spawn-confirm-modal-confirm-button"
+            type="button"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- === END: MB-T24 === -->
+
     <div id="spawn-modal" data-testid="spawn-modal" role="dialog" aria-modal="true" hidden>
       <div id="spawn-modal-overlay" data-testid="spawn-modal-overlay"></div>
       <div id="spawn-modal-content">
@@ -440,6 +520,104 @@
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !spawnModal.hidden) closeSpawnModal();
       });
+
+      // ────────────────────────────────────────────────────────────────────────
+      // === BEGIN: MB-T24 spawn-confirm modal JS ===
+      // Q-MBT24-5=c (hard gate at spawn-ipc.ts) operator-confirmed at HALT 0
+      // 2026-05-08. Subscribes to workstationBridge.onSpawnConfirmRequired
+      // (preload.mts MB-T24 zone). On receipt, surfaces the spawn-confirm-
+      // modal with the payload's repoPath + sessionName. Operator clicks
+      // Confirm or Cancel; renderer fires workstationBridge.respondSpawnConfirm
+      // (which sends 'workstation:spawn-confirm-response' to the main-process
+      // gate). Spawn fires (or doesn't) based on operator choice.
+      // ────────────────────────────────────────────────────────────────────────
+      const spawnConfirmModal = document.getElementById('spawn-confirm-modal');
+      const spawnConfirmModalMessage = document.getElementById(
+        'spawn-confirm-modal-message',
+      );
+      const spawnConfirmModalConfirmButton = document.getElementById(
+        'spawn-confirm-modal-confirm-button',
+      );
+      const spawnConfirmModalCancelButton = document.getElementById(
+        'spawn-confirm-modal-cancel-button',
+      );
+      let spawnConfirmPendingRequestId = null;
+
+      function openSpawnConfirmModal(requestId, repoPath, sessionName) {
+        spawnConfirmPendingRequestId = requestId;
+        spawnConfirmModalMessage.textContent =
+          'Spawn session "' + sessionName + '" in ' + repoPath + '?';
+        spawnConfirmModal.hidden = false;
+        spawnConfirmModalConfirmButton.focus();
+        console.log('SPAWN_CONFIRM_MODAL_OPENED ' + requestId);
+      }
+
+      function closeSpawnConfirmModal() {
+        spawnConfirmPendingRequestId = null;
+        spawnConfirmModal.hidden = true;
+      }
+
+      function respondSpawnConfirm(decision) {
+        if (spawnConfirmPendingRequestId === null) return;
+        if (window.workstationBridge && window.workstationBridge.respondSpawnConfirm) {
+          window.workstationBridge.respondSpawnConfirm(
+            spawnConfirmPendingRequestId,
+            decision,
+          );
+        } else {
+          console.error('workstationBridge.respondSpawnConfirm unavailable');
+        }
+        console.log(
+          'SPAWN_CONFIRM_MODAL_RESPONSE ' +
+            spawnConfirmPendingRequestId +
+            ' ' +
+            decision,
+        );
+        closeSpawnConfirmModal();
+      }
+
+      spawnConfirmModalConfirmButton.addEventListener('click', () => {
+        respondSpawnConfirm('confirm');
+      });
+      spawnConfirmModalCancelButton.addEventListener('click', () => {
+        respondSpawnConfirm('cancel');
+      });
+
+      // Esc on the confirm modal cancels (matches spawn-modal Esc semantics).
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !spawnConfirmModal.hidden) {
+          respondSpawnConfirm('cancel');
+        }
+      });
+
+      if (
+        window.workstationBridge &&
+        window.workstationBridge.onSpawnConfirmRequired
+      ) {
+        window.workstationBridge.onSpawnConfirmRequired((payload) => {
+          if (
+            !payload ||
+            typeof payload.requestId !== 'string' ||
+            typeof payload.repoPath !== 'string' ||
+            typeof payload.sessionName !== 'string'
+          ) {
+            console.error(
+              'spawn-confirm-required: malformed payload ' + JSON.stringify(payload),
+            );
+            return;
+          }
+          openSpawnConfirmModal(
+            payload.requestId,
+            payload.repoPath,
+            payload.sessionName,
+          );
+        });
+      } else {
+        console.error(
+          'workstationBridge.onSpawnConfirmRequired unavailable — Ask-mode confirmation modal will not surface',
+        );
+      }
+      // === END: MB-T24 ===
 
       // ────────────────────────────────────────────────────────────────────────
       // MB-F-#83 spawn-result subscription (Fix-B / batch fix-batch-1).

@@ -111,6 +111,19 @@ vi.mock('../../../src/main/binary-resolver.js', () => ({
   resolveClaudeBin: mocks.resolveClaudeBin,
 }));
 
+// MB-T24 WB4a: mock dispatch-mode-store to return 'auto' so the SpawnConfirmGate
+// fires through the today-flow (workstation:spawn-result first emission) rather
+// than emitting workstation:spawn-confirm-required. The 'ask'-mode gate path is
+// covered by test/unit/spawn-confirm-gate/probe-01-gate.spec.ts. Per Q-MBT24-5=c
+// gate scope: existing spawn-ipc tests assert the auto-mode pass-through which is
+// the no-op gate behavior.
+vi.mock('../../../src/main/dispatch-mode-store.js', () => ({
+  readDispatchMode: () => 'auto',
+  writeDispatchMode: () => {
+    /* no-op */
+  },
+}));
+
 import {
   SpawnIpcController,
   defaultSpawnHandlerDeps,

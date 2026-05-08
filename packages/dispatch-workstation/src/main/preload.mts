@@ -139,6 +139,44 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   // Q-MBT17-3=a on rejection.
   setSessionAutopilotEnabled: (sessionName: string, enabled: boolean) =>
     ipcRenderer.invoke('workstation:autopilot-put', { sessionName, enabled }),
+  // === BEGIN: MB-T24 dispatch-mode gate IPC ===
+  // Q-MBT24-5=c (hard gate at spawn-ipc.ts) operator-confirmed at HALT 0
+  // 2026-05-08. spawn-ipc.ts emits 'workstation:spawn-confirm-required'
+  // when dispatchMode === 'ask' and the renderer fires
+  // 'workstation:spawn-requested'; renderer subscribes here, surfaces a
+  // confirmation modal (workstation-shell.html MB-T24 zone), and fires
+  // 'workstation:spawn-confirm-response' on the operator's choice.
+  //
+  // onSpawnConfirmRequired: subscribe to 'workstation:spawn-confirm-
+  // required'. Returns cleanup-fn (matches onSpawnResult / onStream*
+  // pattern). Payload shape: { requestId, repoPath, sessionName }.
+  onSpawnConfirmRequired: (
+    cb: (payload: {
+      requestId: string;
+      repoPath: string;
+      sessionName: string;
+    }) => void,
+  ) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (
+      _: unknown,
+      payload: { requestId: string; repoPath: string; sessionName: string },
+    ) => cb(payload);
+    ipcRenderer.on('workstation:spawn-confirm-required', h as any);
+    return () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ipcRenderer.removeListener('workstation:spawn-confirm-required', h as any);
+  },
+  // respondSpawnConfirm: fires 'workstation:spawn-confirm-response' with
+  // operator's decision. One-way send; main-process gate looks up by
+  // requestId and either fires the cached spawn (confirm) or discards
+  // it (cancel).
+  respondSpawnConfirm: (requestId: string, decision: 'confirm' | 'cancel') =>
+    ipcRenderer.send('workstation:spawn-confirm-response', {
+      requestId,
+      decision,
+    }),
+  // === END: MB-T24 ===
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
