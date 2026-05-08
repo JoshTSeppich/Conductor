@@ -58,6 +58,24 @@ export interface ChatShellProps {
   // zone in the component body below. This zone preserves a documented
   // structural location ABOVE the tab strip; see operator coordination
   // 2026-05-07 (B WB2 ack message).
+  //
+  // Round 4 extension: MB-T24 (Auto/Ask toggle) + MB-T25 (plan-usage
+  // ring) land sibling sentinel zones inside this same outer reserved
+  // zone via per-session worktree isolation (Round 4 §3.12 pivot).
+  // Slot ordering left-to-right per Q-MBT24-4=a (operator-confirmed
+  // 2026-05-08, HALT 0 ack):
+  //   [Auto/Ask MB-T24] | [plan-usage MB-T25] | [cost-meter MB-T26] | [model-mix MB-T27]
+  // === BEGIN: MB-T24 dispatch-mode-toggle slot prop ===
+  // Q-MBT24-3=a (two-button segmented control) + Q-MBT24-4=a (FAR-LEFT
+  // slot, higher-priority operator-control surface) operator-confirmed
+  // 2026-05-08. Render-prop closure passed by mount.ts auto-mount
+  // block; auto-mount wraps <DispatchModeToggle bridge={dispatchModeBridge}/>
+  // when window.dispatchModeBridge is exposed (preload.mts MB-T24 zone
+  // adds the bridge per Q-MBT24-6=c at WB3 GREEN). WB1 RED: prop
+  // reserved + JSX slot reserved; resolveRenderDispatchModeToggle returns
+  // undefined → empty slot. WB3 GREEN fills in.
+  readonly renderDispatchModeToggle?: () => ReactNode;
+  // === END: MB-T24 ===
   // === BEGIN: MB-T26 cost-meter slot prop ===
   // Q-MBT26-1=a (header-bar slot model) + Q-MBT26-6=a (Terminal C lands
   // first inside Terminal B's reserved zone) operator-confirmed
@@ -85,6 +103,9 @@ export function ChatShell({
   tabs,
   activeTabId,
   onTabChange,
+  // === BEGIN: MB-T24 dispatch-mode-toggle slot destructure ===
+  renderDispatchModeToggle,
+  // === END: MB-T24 ===
   // === BEGIN: MB-T26 cost-meter slot destructure ===
   renderCostMeter,
   // === END: MB-T26 ===
@@ -141,6 +162,17 @@ export function ChatShell({
           padding: '4px 8px',
         }}
       >
+        {/* === BEGIN: MB-T24 dispatch-mode-toggle slot ===
+            FAR-LEFT slot per Q-MBT24-4=a (operator-confirmed 2026-05-08
+            HALT 0): operator-control surface gets prime position.
+            Slot ordering left-to-right:
+              [Auto/Ask MB-T24 — this] | [plan-usage MB-T25] | [cost-meter MB-T26] | [model-mix MB-T27]
+            Sibling to MB-T26 + MB-T27 zones inside MB-T22 reserved zone.
+            WB1 RED: renderDispatchModeToggle resolves to undefined → empty slot.
+            WB3 GREEN fills in via window.dispatchModeBridge auto-build.
+            === */}
+        {renderDispatchModeToggle ? renderDispatchModeToggle() : null}
+        {/* === END: MB-T24 === */}
         {renderCostMeter ? renderCostMeter() : null}
         {/* === BEGIN: MB-T27 model-mix slot ===
             Sibling slot inside the chat-shell-header-bar element per
