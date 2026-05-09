@@ -155,6 +155,24 @@ export class ConsoleIpcController {
     }
   }
 
+  // === BEGIN: MB-T37 addStdoutObserver + addStreamCloseObserver taps ===
+  // WB1 stub: methods exist with correct signatures; observers stored but never
+  // fired. All tap probes (10-15) are RED. WB2 GREEN wires observers into
+  // handleWsMessage (stdout) and wireSocket close handler (stream-close).
+  //
+  // Non-redirecting: both paths (emitToWebview + observer fan-out) fire in
+  // parallel. setSessionTarget is NOT used; existing routing is unaffected.
+  // Terminal Y (MB-T39) consumes addStdoutObserver post-WB2 merge.
+
+  addStdoutObserver(_fn: (sessionName: string, chunk: string) => void): () => void {
+    return () => {};
+  }
+
+  addStreamCloseObserver(_fn: (sessionName: string) => void): () => void {
+    return () => {};
+  }
+  // === END: MB-T37 addStdoutObserver + addStreamCloseObserver taps ===
+
   /** WB11: internal multi-target emit. Inspects payload for sessionName,
    *  routes to a per-session target if registered, else falls back to default. */
   private emitToWebview(channel: string, payload: unknown): void {
