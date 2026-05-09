@@ -64,6 +64,8 @@ export interface PeerSummaryHarvesterDeps {
   orchestratorNamePattern?: RegExp;
   /** Injected prompt text per Q-MBT39-1 ratification. */
   summaryPromptText?: string;
+  /** Inner quiescence window for per-peer response buffer. Default 500ms per Q-MCFIX-1(d). */
+  responseQuiescenceMs?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,6 +78,8 @@ interface PeerEntry {
   state: PeerHarvestState;
   quiescenceTimer: ReturnType<typeof setTimeout> | null;
   timeoutTimer: ReturnType<typeof setTimeout> | null;
+  responseBuffer: string;
+  responseQuiescenceTimer: ReturnType<typeof setTimeout> | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,6 +122,7 @@ export class PeerSummaryHarvester {
   private readonly awaitingResponseTimeoutMs: number;
   private readonly orchestratorNamePattern: RegExp;
   private readonly summaryPromptText: string;
+  private readonly responseQuiescenceMs: number;
 
   private readonly peers = new Map<string, PeerEntry>();
   private disposeObserver: (() => void) | null = null;
@@ -130,6 +135,7 @@ export class PeerSummaryHarvester {
     this.awaitingResponseTimeoutMs = deps.awaitingResponseTimeoutMs ?? 30000;
     this.orchestratorNamePattern = deps.orchestratorNamePattern ?? /^__orchestrator_/;
     this.summaryPromptText = deps.summaryPromptText ?? DEFAULT_SUMMARY_PROMPT;
+    this.responseQuiescenceMs = deps.responseQuiescenceMs ?? 500;
   }
 
   start(): void {
@@ -154,7 +160,7 @@ export class PeerSummaryHarvester {
   private _getOrCreate(sessionName: string): PeerEntry {
     let entry = this.peers.get(sessionName);
     if (entry === undefined) {
-      entry = { state: 'IDLE', quiescenceTimer: null, timeoutTimer: null };
+      entry = { state: 'IDLE', quiescenceTimer: null, timeoutTimer: null, responseBuffer: '', responseQuiescenceTimer: null };
       this.peers.set(sessionName, entry);
     }
     return entry;
@@ -168,6 +174,10 @@ export class PeerSummaryHarvester {
     if (peer.timeoutTimer !== null) {
       clearTimeout(peer.timeoutTimer);
       peer.timeoutTimer = null;
+    }
+    if (peer.responseQuiescenceTimer !== null) {
+      clearTimeout(peer.responseQuiescenceTimer);
+      peer.responseQuiescenceTimer = null;
     }
   }
 
@@ -186,9 +196,29 @@ export class PeerSummaryHarvester {
       this._onQuiescence(sessionName, peer);
     }, this.quiescenceThresholdMs);
 
-    // Q-MBT39-3: in AWAITING_RESPONSE, parse chunk as candidate response
+    // Q-MBT39-3 / Q-MCFIX: in AWAITING_RESPONSE, accumulate buffer + inner quiescence
     if (peer.state === 'AWAITING_RESPONSE') {
-      this._parseResponse(sessionName, peer, chunk);
+      // Q-MCFIX-4(a): first-chunk fast-path — empty buffer means no prior chunks this
+      // AWAITING_RESPONSE cycle; exact TURN_INCOMPLETE match → immediate IDLE without
+      // buffering or inner-quiescence wait; outer quiescenceTimer continues unaffected
+      if (peer.responseBuffer === '' && chunk.trim() === 'TURN_INCOMPLETE') {
+        if (peer.timeoutTimer !== null) {
+          clearTimeout(peer.timeoutTimer);
+          peer.timeoutTimer = null;
+        }
+        peer.state = 'IDLE';
+        return;
+      }
+      // Multi-chunk accumulation: append to buffer; reset inner-quiescence timer
+      peer.responseBuffer += chunk;
+      if (peer.responseQuiescenceTimer !== null) {
+        clearTimeout(peer.responseQuiescenceTimer);
+      }
+      peer.responseQuiescenceTimer = setTimeout(
+        () => { this._onResponseQuiescence(sessionName); },
+        this.responseQuiescenceMs,
+      );
+      return;
     }
   }
 
@@ -203,6 +233,11 @@ export class PeerSummaryHarvester {
       peer.timeoutTimer = null;
       if (peer.state === 'AWAITING_RESPONSE') {
         peer.state = 'IDLE';
+        peer.responseBuffer = '';
+        if (peer.responseQuiescenceTimer !== null) {
+          clearTimeout(peer.responseQuiescenceTimer);
+          peer.responseQuiescenceTimer = null;
+        }
         this.stateEmitter.emit('error:recorded', {
           sessionName,
           message: `peer summary response timeout after ${this.awaitingResponseTimeoutMs}ms`,
@@ -218,6 +253,16 @@ export class PeerSummaryHarvester {
     });
   }
 
+  private _onResponseQuiescence(sessionName: string): void {
+    const peer = this.peers.get(sessionName);
+    if (peer === undefined) return;
+    if (peer.state !== 'AWAITING_RESPONSE') return;
+    const accumulatedBuffer = peer.responseBuffer;
+    peer.responseBuffer = '';
+    peer.responseQuiescenceTimer = null;
+    this._parseResponse(sessionName, peer, accumulatedBuffer);
+  }
+
   private _parseResponse(sessionName: string, peer: PeerEntry, chunk: string): void {
     const text = chunk.trim();
 
@@ -228,6 +273,11 @@ export class PeerSummaryHarvester {
     }
 
     peer.state = 'IDLE';
+    peer.responseBuffer = '';
+    if (peer.responseQuiescenceTimer !== null) {
+      clearTimeout(peer.responseQuiescenceTimer);
+      peer.responseQuiescenceTimer = null;
+    }
 
     // §3 TURN_INCOMPLETE protocol: hold for next quiescence window; no emit
     if (text === 'TURN_INCOMPLETE') return;
