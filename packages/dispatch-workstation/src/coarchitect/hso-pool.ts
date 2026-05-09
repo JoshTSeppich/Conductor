@@ -1,4 +1,4 @@
-// MB-T37 WB1 (red) — OrchestratorPoolManager skeleton + ITileGridRegistry thin wrapper.
+// MB-T37 WB2 (green) — OrchestratorPoolManager full lifecycle implementation.
 //
 // ITileGridRegistry interface + TileGridRegistryAdapter authored here per HALT 0 V2(a)
 // arbitration. tile-grid-state.ts lives at src/main/ (dispatch §1 claimed src/coarchitect/
@@ -6,11 +6,14 @@
 // TileGridRegistryAdapter wraps those exports; tile-grid-state.ts NOT modified.
 //
 // HALT 1 V3(A): ConsoleIpcController injected directly (concrete class); addStdoutObserver
-// tap authored in WB2 GREEN scope. addStreamCloseObserver tap also authored in WB2
-// (stream-close observer ratified at HALT 1(a) for Q-MBT37-4 (c) PTY EOF path).
+// tap co-shipped in this WB. addStreamCloseObserver tap also co-shipped (Q-MBT37-4(c)).
 //
-// WB1 stub: start() + stop() are no-ops. All 9 pool-lifecycle probes fail.
-// WB2 GREEN ships full lifecycle per dispatch §3.4 + HALT 0/1 arbitrations.
+// Pool lifecycle per dispatch §3.4:
+//   - start(): spawn active → tile → spawn standby → tile → subscribe stdout + stream-close
+//   - Token threshold: HANDOFF_TOKEN_THRESHOLD (130K) → send [HANDOFF-NOW]
+//   - Marker detection: [HANDOFF-EMITTED] → promote standby → spawn fresh standby
+//   - Crash paths: PTY stream-close (first-fires-wins) + tmux poll (POLL_INTERVAL_MS)
+//   - Parse fail: PARSE_FAIL_MAX consecutive non-parseable lines → halt
 
 import type { SpawnIpcController } from '../main/spawn-ipc.js';
 import type { ConsoleIpcController } from '../main/console-ipc.js';
@@ -95,16 +98,150 @@ export interface OrchestratorPoolManagerDeps {
 }
 
 export class OrchestratorPoolManager {
+  private _activeSessionName: string = RESERVED_ACTIVE;
+  private _standbySessionName: string | null = RESERVED_STANDBY;
+  private _awaitingMarker = false;
+  private _midAction = false;
+  private _parseFailCount = 0;
+  private _activeCrashHandled = false;
+  private _standbyCrashHandled = false;
+  private _stdoutDisposer: (() => void) | null = null;
+  private _streamCloseDisposer: (() => void) | null = null;
+  private _pollTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor(private readonly _deps: OrchestratorPoolManagerDeps) {}
 
   async start(): Promise<void> {
-    // WB1 stub: no-op
-    // WB2: spawn active → register tile → subscribe stdout/stream-close observers
-    //      → spawn standby → register tile → start tmux poll interval
+    this._stdoutDisposer = this._deps.consoleIpc.addStdoutObserver(
+      (sn, chunk) => { this._onPtyChunk(sn, chunk); },
+    );
+    this._streamCloseDisposer = this._deps.consoleIpc.addStreamCloseObserver(
+      (sn) => { this._onSessionClose(sn); },
+    );
+    await this._spawnAndRegister(RESERVED_ACTIVE);
+    await this._spawnAndRegister(RESERVED_STANDBY);
+    this._startPoll();
   }
 
   stop(): void {
-    // WB1 stub: no-op
-    // WB2: dispose all observers, clear poll interval
+    this._stdoutDisposer?.();
+    this._streamCloseDisposer?.();
+    if (this._pollTimer !== null) {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
+    }
+  }
+
+  private async _spawnAndRegister(sessionName: string): Promise<void> {
+    const orderIndex = sessionName === RESERVED_ACTIVE ? 0 : 1;
+    const result = await this._deps.spawnController.handleSpawnRequest({
+      repoPath: process.cwd(),
+      sessionName,
+      permissionMode: 'auto',
+    });
+    if (result.type === 'error') {
+      this._deps.halt(
+        `OrchestratorPoolManager: spawn failed for ${sessionName}: ${result.error.message}`,
+      );
+      return;
+    }
+    this._deps.tileRegistry.addSession(sessionName, defaultTileLayoutState(orderIndex));
+    if (sessionName === RESERVED_ACTIVE) {
+      this._activeSessionName = RESERVED_ACTIVE;
+      this._activeCrashHandled = false;
+    } else if (sessionName === RESERVED_STANDBY) {
+      this._standbySessionName = RESERVED_STANDBY;
+      this._standbyCrashHandled = false;
+    }
+  }
+
+  private _startPoll(): void {
+    this._pollTimer = setInterval(() => {
+      void this._pollOnce();
+    }, POLL_INTERVAL_MS);
+  }
+
+  private async _pollOnce(): Promise<void> {
+    try {
+      await this._deps.runTmuxHasSession(this._activeSessionName);
+    } catch {
+      this._onActiveCrash();
+    }
+    if (this._standbySessionName !== null) {
+      try {
+        await this._deps.runTmuxHasSession(this._standbySessionName);
+      } catch {
+        this._onStandbyCrash();
+      }
+    }
+  }
+
+  private _onPtyChunk(sessionName: string, chunk: string): void {
+    if (sessionName !== this._activeSessionName) return;
+
+    if (chunk.includes('[ACTION:')) this._midAction = true;
+    if (chunk.includes('[/ACTION]')) this._midAction = false;
+
+    if (chunk.includes(HANDOFF_EMITTED_MARKER)) {
+      this._awaitingMarker = false;
+      this._promote();
+      return;
+    }
+
+    const lastNonEmpty =
+      chunk.split('\n').filter((l) => l.trim().length > 0).at(-1) ?? '';
+    const match = TOKEN_COUNT_REGEX.exec(lastNonEmpty);
+
+    if (match === null) {
+      this._parseFailCount++;
+      if (this._parseFailCount === PARSE_FAIL_MAX) {
+        this._deps.halt(
+          `OrchestratorPoolManager: status-bar parse failure ${PARSE_FAIL_MAX}× consecutive`,
+        );
+      }
+      return;
+    }
+
+    this._parseFailCount = 0;
+    const tokenCount = parseInt(match[1]!, 10);
+    if (tokenCount >= HANDOFF_TOKEN_THRESHOLD && !this._awaitingMarker && !this._midAction) {
+      void this._deps.consoleIpc.handleSendStdin(
+        this._activeSessionName,
+        HANDOFF_NOW_DIRECTIVE,
+        'utf8',
+      );
+      this._awaitingMarker = true;
+    }
+  }
+
+  private _promote(): void {
+    this._deps.tileRegistry.removeSession(RESERVED_STANDBY);
+    this._deps.tileRegistry.addSession(RESERVED_ACTIVE, defaultTileLayoutState(0));
+    this._activeSessionName = this._standbySessionName ?? RESERVED_STANDBY;
+    this._standbySessionName = null;
+    this._awaitingMarker = false;
+    this._parseFailCount = 0;
+    this._midAction = false;
+    this._activeCrashHandled = false;
+    void this._spawnAndRegister(RESERVED_STANDBY);
+  }
+
+  private _onSessionClose(sessionName: string): void {
+    if (sessionName === this._activeSessionName) this._onActiveCrash();
+    else if (sessionName === this._standbySessionName) this._onStandbyCrash();
+  }
+
+  private _onActiveCrash(): void {
+    if (this._activeCrashHandled) return;
+    this._activeCrashHandled = true;
+    this._promote();
+  }
+
+  private _onStandbyCrash(): void {
+    if (this._standbyCrashHandled) return;
+    this._standbyCrashHandled = true;
+    this._deps.tileRegistry.removeSession(RESERVED_STANDBY);
+    this._standbySessionName = null;
+    void this._spawnAndRegister(RESERVED_STANDBY);
   }
 }

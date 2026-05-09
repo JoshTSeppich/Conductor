@@ -127,6 +127,7 @@ describe('MB-T37 WB1 — OrchestratorPoolManager pool lifecycle', () => {
   });
 
   afterEach(() => {
+    manager.stop();
     vi.clearAllMocks();
   });
 
@@ -213,6 +214,7 @@ describe('MB-T37 WB1 — OrchestratorPoolManager pool lifecycle', () => {
     vi.mocked(deps.tileRegistry.addSession).mockClear();
 
     deps.registeredStdoutObs?.(RESERVED_ACTIVE, HANDOFF_EMITTED_MARKER);
+    await Promise.resolve();
 
     expect(deps.spawnController.handleSpawnRequest).toHaveBeenCalledWith(
       expect.objectContaining({ sessionName: RESERVED_STANDBY }),
@@ -225,6 +227,7 @@ describe('MB-T37 WB1 — OrchestratorPoolManager pool lifecycle', () => {
   it('probe-07: active crash (PTY stream-close + tmux not-found) → promotes standby + spawns new standby', async () => {
     await manager.start();
     vi.mocked(deps.tileRegistry.removeSession).mockClear();
+    vi.mocked(deps.tileRegistry.addSession).mockClear();
     vi.mocked(deps.spawnController.handleSpawnRequest).mockClear();
 
     // Path A: PTY stream-close without preceding [HANDOFF-EMITTED]

@@ -129,6 +129,8 @@ export class ConsoleIpcController {
     string,
     (channel: string, payload: unknown) => void
   >();
+  private readonly stdoutObservers = new Set<(sessionName: string, chunk: string) => void>();
+  private readonly streamCloseObservers = new Set<(sessionName: string) => void>();
 
   constructor(opts: ConsoleIpcOptions) {
     this.daemonClient = opts.daemonClient;
@@ -164,12 +166,14 @@ export class ConsoleIpcController {
   // parallel. setSessionTarget is NOT used; existing routing is unaffected.
   // Terminal Y (MB-T39) consumes addStdoutObserver post-WB2 merge.
 
-  addStdoutObserver(_fn: (sessionName: string, chunk: string) => void): () => void {
-    return () => {};
+  addStdoutObserver(fn: (sessionName: string, chunk: string) => void): () => void {
+    this.stdoutObservers.add(fn);
+    return () => { this.stdoutObservers.delete(fn); };
   }
 
-  addStreamCloseObserver(_fn: (sessionName: string) => void): () => void {
-    return () => {};
+  addStreamCloseObserver(fn: (sessionName: string) => void): () => void {
+    this.streamCloseObservers.add(fn);
+    return () => { this.streamCloseObservers.delete(fn); };
   }
   // === END: MB-T37 addStdoutObserver + addStreamCloseObserver taps ===
 
@@ -291,6 +295,7 @@ export class ConsoleIpcController {
       if (!stillOpen) return;
       stillOpen.socket = null;
       if (stillOpen.closedByOperator) return;
+      for (const obs of this.streamCloseObservers) obs(sessionName);
       // Per §4.7.3 reconnection semantics: only retry on non-terminal codes.
       // Production reconnect uses a small backoff (cluster 2 GREEN ships
       // 1s fixed; production may revisit). Tests fire reconnects via
@@ -348,6 +353,7 @@ export class ConsoleIpcController {
         bytes,
         encoding,
       });
+      for (const obs of this.stdoutObservers) obs(sessionName, bytes);
       return;
     }
 
