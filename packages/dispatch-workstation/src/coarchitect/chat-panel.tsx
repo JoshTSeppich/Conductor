@@ -82,7 +82,20 @@ export function ChatPanel({ daemonClient, streamingBridge }: ChatPanelProps): JS
       setInProgress((prev) => prev + chunk);
     });
 
-    const removeDone = streamingBridge.onStreamDone((preview) => {
+    const removeDone = streamingBridge.onStreamDone((text) => {
+      // A2 ratification (MB-T40): PTY messages not persisted to daemon DB;
+      // push assistant message directly to history state (no fetchHistory on done path).
+      setHistory((prev) => [
+        ...prev,
+        {
+          id: `pty-${Date.now()}`,
+          role: 'assistant' as const,
+          content: text,
+          created_at: new Date().toISOString(),
+          build_doc_id: null,
+          build_doc_commit_sha: null,
+        },
+      ]);
       setThinking(false);
       setDeliberating(false);
       setInProgress('');
@@ -91,8 +104,7 @@ export function ChatPanel({ daemonClient, streamingBridge }: ChatPanelProps): JS
         clearTimeout(deliberatingTimerRef.current);
         deliberatingTimerRef.current = null;
       }
-      daemonClient.fetchHistory().then(setHistory);
-      console.log(`STREAM_DONE ${preview}`);
+      console.log(`STREAM_DONE ${text.slice(0, 60)}`);
     });
 
     const removeError = streamingBridge.onStreamError((err) => {

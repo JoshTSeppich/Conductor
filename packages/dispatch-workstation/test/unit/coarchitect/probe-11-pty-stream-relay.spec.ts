@@ -52,6 +52,8 @@ import {
 } from '../../../src/chat-shell/mount.js';
 import type { StreamingBridge } from '../../../src/coarchitect/chat-panel.js';
 import { parseActionMarker } from '../../../src/coarchitect/chat-content-markers.js';
+import { registerPtyRelay } from '../../../src/main/pty-stream-relay.js';
+import { PtyStreamingBridgeImpl } from '../../../src/coarchitect/pty-streaming-bridge.js';
 
 vi.mock('electron', () => ({
   ipcRenderer: {
@@ -65,7 +67,15 @@ vi.mock('electron', () => ({
   webContents: { getAllWebContents: vi.fn().mockReturnValue([]) },
 }));
 
-// ─── WB2 targets (undefined at WB1 RED) ──────────────────────────────────────
+// ─── WB2 GREEN: production imports replace WB1 undefined stubs ───────────────
+//
+// registerPtyRelay  ← src/main/pty-stream-relay.ts (A4 re-arbitration: α)
+// PtyStreamingBridgeImpl ← src/coarchitect/pty-streaming-bridge.ts (A1: α)
+//
+// Local interfaces below are retained as test-side structural documentation.
+// Production types (IConsoleBroadcaster, IWebContents, PtyRelayDeps) in the
+// imported modules are structurally identical; TypeScript resolves via
+// structural subtyping — no cast required.
 
 /** Minimal broadcaster interface matching MB-T37 console-ipc.ts:169 signature. */
 export interface IConsoleBroadcasterLocal {
@@ -82,20 +92,9 @@ interface PtyRelayDeps {
   outerQuiescenceMs?: number;
 }
 
-type RegisterPtyRelayFn = (deps: PtyRelayDeps) => () => void;
-
-// WB2 GREEN: exported from src/main/pty-stream-relay.ts (A4 ratification).
-// At WB1: undefined — probes 01-05, 08 fail at toBeDefined() guard.
-const registerPtyRelay: RegisterPtyRelayFn | undefined = undefined;
-
-type PtyStreamingBridgeCtor = new (deps: {
-  broadcaster: IConsoleBroadcasterLocal;
-  outerQuiescenceMs?: number;
-}) => StreamingBridge & { start(): void; dispose(): void };
-
-// WB2 GREEN: exported from src/coarchitect/pty-streaming-bridge.ts (A1 ratification).
-// At WB1: undefined — probes 06, 09, 11 fail at toBeDefined() guard.
-const PtyStreamingBridgeImpl: PtyStreamingBridgeCtor | undefined = undefined;
+// Structural contract (documentation only — no runtime assertion needed):
+// PtyStreamingBridgeImpl satisfies: new({ broadcaster, outerQuiescenceMs? })
+// → StreamingBridge & { start(): void; dispose(): void }.
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -153,9 +152,6 @@ describe('MB-T40 WB1 — PTY stream relay probes', () => {
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
   it('probe-01: __orchestrator_active chunk → coarchitect:ptyChunk forwarded; other sessions NOT forwarded', () => {
-    expect(registerPtyRelay, 'probe-01 RED: registerPtyRelay not yet implemented at WB1').toBeDefined();
-    if (!registerPtyRelay) return;
-
     const { broadcaster, getObserver } = makeBroadcaster();
     const { wc, sends } = makeWcMock();
     registerPtyRelay({ broadcaster, getWebContents: () => [wc], outerQuiescenceMs: OUTER_QUIESCENCE_MS });
@@ -169,9 +165,6 @@ describe('MB-T40 WB1 — PTY stream relay probes', () => {
   });
 
   it('probe-02: 3 consecutive __orchestrator_active chunks → 3 ptyChunk events; ptyTurnDone NOT fired within quiescence window', () => {
-    expect(registerPtyRelay, 'probe-02 RED: registerPtyRelay not yet implemented').toBeDefined();
-    if (!registerPtyRelay) return;
-
     const { broadcaster, getObserver } = makeBroadcaster();
     const { wc, sends } = makeWcMock();
     registerPtyRelay({ broadcaster, getWebContents: () => [wc], outerQuiescenceMs: OUTER_QUIESCENCE_MS });
@@ -189,9 +182,6 @@ describe('MB-T40 WB1 — PTY stream relay probes', () => {
   });
 
   it('probe-03: outer quiescence fires → ptyTurnDone carries accumulated text; buffer reset on next chunk', () => {
-    expect(registerPtyRelay, 'probe-03 RED: registerPtyRelay not yet implemented').toBeDefined();
-    if (!registerPtyRelay) return;
-
     const { broadcaster, getObserver } = makeBroadcaster();
     const { wc, sends } = makeWcMock();
     registerPtyRelay({ broadcaster, getWebContents: () => [wc], outerQuiescenceMs: OUTER_QUIESCENCE_MS });
@@ -217,9 +207,6 @@ describe('MB-T40 WB1 — PTY stream relay probes', () => {
   });
 
   it('probe-04: complete action marker in buffer → immediate ptyTurnDone (fast-path, before quiescence); buffer reset', () => {
-    expect(registerPtyRelay, 'probe-04 RED: registerPtyRelay not yet implemented').toBeDefined();
-    if (!registerPtyRelay) return;
-
     const { broadcaster, getObserver } = makeBroadcaster();
     const { wc, sends } = makeWcMock();
     registerPtyRelay({ broadcaster, getWebContents: () => [wc], outerQuiescenceMs: OUTER_QUIESCENCE_MS });
@@ -250,9 +237,6 @@ describe('MB-T40 WB1 — PTY stream relay probes', () => {
   });
 
   it('probe-05: partial action marker → parseActionMarker null → ptyTurnDone NOT fired until quiescence', () => {
-    expect(registerPtyRelay, 'probe-05 RED: registerPtyRelay not yet implemented').toBeDefined();
-    if (!registerPtyRelay) return;
-
     const { broadcaster, getObserver } = makeBroadcaster();
     const { wc, sends } = makeWcMock();
     registerPtyRelay({ broadcaster, getWebContents: () => [wc], outerQuiescenceMs: OUTER_QUIESCENCE_MS });
@@ -270,9 +254,6 @@ describe('MB-T40 WB1 — PTY stream relay probes', () => {
   });
 
   it('probe-08: dispose clears outer quiescence timer; ptyTurnDone NOT fired after dispose', () => {
-    expect(registerPtyRelay, 'probe-08 RED: registerPtyRelay not yet implemented').toBeDefined();
-    if (!registerPtyRelay) return;
-
     const { broadcaster, getObserver } = makeBroadcaster();
     const { wc, sends } = makeWcMock();
     const dispose = registerPtyRelay({ broadcaster, getWebContents: () => [wc], outerQuiescenceMs: OUTER_QUIESCENCE_MS });
@@ -292,9 +273,6 @@ describe('MB-T40 WB1 — PtyStreamingBridge probes', () => {
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
   it('probe-06: sendAndStream fires workstation:session-send-prompt with sessionName=__orchestrator_active', async () => {
-    expect(PtyStreamingBridgeImpl, 'probe-06 RED: PtyStreamingBridgeImpl not yet implemented').toBeDefined();
-    if (!PtyStreamingBridgeImpl) return;
-
     const { ipcRenderer } = await import('electron');
     vi.mocked(ipcRenderer.invoke).mockClear();
 
@@ -309,9 +287,6 @@ describe('MB-T40 WB1 — PtyStreamingBridge probes', () => {
   });
 
   it('probe-09: sendAndStream does NOT fire coarchitect:sendAndStream (AnthropicChatClient regression guard)', async () => {
-    expect(PtyStreamingBridgeImpl, 'probe-09 RED: PtyStreamingBridgeImpl not yet implemented').toBeDefined();
-    if (!PtyStreamingBridgeImpl) return;
-
     const { ipcRenderer } = await import('electron');
     vi.mocked(ipcRenderer.send).mockClear();
 
@@ -328,9 +303,6 @@ describe('MB-T40 WB1 — PtyStreamingBridge probes', () => {
   });
 
   it('probe-11: start() registers addStdoutObserver; dispose() removes subscription', () => {
-    expect(PtyStreamingBridgeImpl, 'probe-11 RED: PtyStreamingBridgeImpl not yet implemented').toBeDefined();
-    if (!PtyStreamingBridgeImpl) return;
-
     const { broadcaster } = makeBroadcaster();
     const bridge = new PtyStreamingBridgeImpl({ broadcaster, outerQuiescenceMs: OUTER_QUIESCENCE_MS });
 

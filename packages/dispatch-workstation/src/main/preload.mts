@@ -7,27 +7,36 @@ import { attachSpawnResultListener } from './spawn-result-listener.js';
 contextBridge.exposeInMainWorld('coarchitectBridge', {
   fetchHistory: () => ipcRenderer.invoke('coarchitect:fetchHistory'),
   postMessage: (msg: unknown) => ipcRenderer.invoke('coarchitect:postMessage', msg),
-  sendAndStream: (content: string) => ipcRenderer.send('coarchitect:sendAndStream', content),
+  // MB-T40 WB2: channel rebindings per A3 ratification.
+  // sendAndStream → workstation:session-send-prompt invoke (was: coarchitect:sendAndStream send)
+  // onStreamChunk → coarchitect:ptyChunk (was: coarchitect:streamChunk)
+  // onStreamDone  → coarchitect:ptyTurnDone (was: coarchitect:streamDone)
+  // onStreamError → no-op stub (A3: PTY model has no stream error semantics)
+  // AnthropicChatClient class preserved; chat-panel no longer reaches it via this path.
+  // coarchitect:sendAndStream handler in coarchitect-ipc.ts retained for non-chat-panel callers.
+  sendAndStream: (content: string) =>
+    ipcRenderer.invoke('workstation:session-send-prompt', {
+      sessionName: '__orchestrator_active',
+      prompt: content,
+    }),
   getBuildDocConfig: () => ipcRenderer.invoke('coarchitect:getBuildDocConfig'),
   setBuildDocConfig: (config: unknown) => ipcRenderer.invoke('coarchitect:setBuildDocConfig', config),
   clearBuildDocConfig: () => ipcRenderer.invoke('coarchitect:clearBuildDocConfig'),
   onStreamChunk: (cb: (chunk: string) => void) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const h = (_: unknown, chunk: string) => cb(chunk);
-    ipcRenderer.on('coarchitect:streamChunk', h as any);
-    return () => ipcRenderer.removeListener('coarchitect:streamChunk', h as any);
+    ipcRenderer.on('coarchitect:ptyChunk', h as any);
+    return () => ipcRenderer.removeListener('coarchitect:ptyChunk', h as any);
   },
-  onStreamDone: (cb: (preview: string) => void) => {
+  onStreamDone: (cb: (text: string) => void) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const h = (_: unknown, preview: string) => cb(preview);
-    ipcRenderer.on('coarchitect:streamDone', h as any);
-    return () => ipcRenderer.removeListener('coarchitect:streamDone', h as any);
+    const h = (_: unknown, text: string) => cb(text);
+    ipcRenderer.on('coarchitect:ptyTurnDone', h as any);
+    return () => ipcRenderer.removeListener('coarchitect:ptyTurnDone', h as any);
   },
-  onStreamError: (cb: (err: { code: string; message: string }) => void) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const h = (_: unknown, err: { code: string; message: string }) => cb(err);
-    ipcRenderer.on('coarchitect:streamError', h as any);
-    return () => ipcRenderer.removeListener('coarchitect:streamError', h as any);
+  onStreamError: (_cb: (err: { code: string; message: string }) => void) => {
+    // A3 ratification: no-op stub; PTY model has no stream error semantics
+    return () => {};
   },
   // === BEGIN: MB-T26 cost-meter bridge ===
   // Q-MBT26-5=d operator-confirmed 2026-05-07 (push-based via onCostUpdate).

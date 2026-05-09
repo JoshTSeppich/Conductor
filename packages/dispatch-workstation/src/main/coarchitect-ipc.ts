@@ -28,6 +28,7 @@ import {
 import { readBuildDoc } from '../coarchitect/build-doc-reader.js';
 import { buildContext } from '../coarchitect/context-builder.js';
 import { routeOrchestratorOutput } from './orchestrator-output-router.js';
+import { registerPtyRelay, type IConsoleBroadcaster } from './pty-stream-relay.js';
 import { emitCardEnvelopes, type CardEmitter } from './orchestrator-card-emitter.js';
 import { cardContextCache } from './card-context-cache.js';
 // === MB-T11 WB7 imports — action-fire route + Tier4 wiring closure ===
@@ -240,6 +241,18 @@ function captureRateLimitToBroadcast(state: RateLimitState): void {
   }
 }
 // === END: MB-T34 ===
+
+// MB-T40 WB2: wirePtyRelay — called from main.ts after consoleController is
+// initialized (line ~437). Single registerPtyRelay call; no inline relay logic.
+// Wired separately from registerIpcHandlers because consoleController is null
+// at the registerIpcHandlers call site (line ~382); PTY output flows only after
+// createWindow() at line ~468, so the late wiring is safe.
+export function wirePtyRelay(broadcaster: IConsoleBroadcaster): void {
+  registerPtyRelay({
+    broadcaster,
+    getWebContents: () => allWebContents.getAllWebContents(),
+  });
+}
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('coarchitect:fetchHistory', async () => {

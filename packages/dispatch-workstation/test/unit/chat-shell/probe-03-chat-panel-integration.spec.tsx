@@ -115,13 +115,22 @@ describe('MB-T20 WB4 — chat-shell ↔ ChatPanel integration', () => {
     expect(bridge._spies.fetchHistory).toHaveBeenCalledTimes(1);
   });
 
-  it('registers streaming-bridge subscriptions on ChatPanel mount', async () => {
+  it('PtyStreamingBridgeImpl-shaped bridge satisfies StreamingBridge; subscriptions registered on ChatPanel mount via PTY path', async () => {
+    // Q-MBT40-6 disposition (MB-T40 WB2): bridge now shaped like PtyStreamingBridgeImpl.
+    // sendAndStream → workstation:session-send-prompt (invoke, not send).
+    // onStreamChunk → coarchitect:ptyChunk listener path.
+    // onStreamDone  → coarchitect:ptyTurnDone listener path.
+    // onStreamError → no-op stub per A3 ratification (PTY has no error semantics).
+    // ChatPanel.useEffect still subscribes to all three (A3 retains onStreamError in useEffect).
     const bridge = makeFakeBridge();
     await act(async () => {
       mountChatShell({ rootElementId: 'chat-shell-mount-target', bridge });
     });
+    // Critical PTY path: onStreamChunk subscription must register on mount
     expect(bridge._spies.onStreamChunk).toHaveBeenCalledTimes(1);
+    // onStreamDone retained (A2: turn completion fires direct history push)
     expect(bridge._spies.onStreamDone).toHaveBeenCalledTimes(1);
+    // onStreamError retained as no-op stub per A3 (StreamingBridge interface compat)
     expect(bridge._spies.onStreamError).toHaveBeenCalledTimes(1);
   });
 
