@@ -86,11 +86,36 @@ export interface ParsedActionMarker {
   readonly fields: Readonly<Record<string, string>>;
 }
 
+// Matches [ACTION:<type>]\n<inner-content>[/ACTION] anywhere in a string.
+// Non-greedy inner capture handles blocks embedded in surrounding prose.
+const ACTION_BLOCK_RE = /\[ACTION:([^\]]+)\]\n([\s\S]*?)\[\/ACTION\]/;
+
+// Matches a `key: value` field line. Captures camelCase/alphanumeric key +
+// everything after the first ": " as the value. Value may contain colons.
+const FIELD_LINE_RE = /^([a-zA-Z][a-zA-Z0-9]*):\s*(.*)$/;
+
 /**
  * Extract the first [ACTION:type]...[/ACTION] block from content.
- * Returns null if no complete block is found.
- * WB1 RED stub — returns null unconditionally until WB2 GREEN implementation.
+ * Returns null if no complete block is found (no opening tag, unclosed block).
+ * Returns ParsedActionMarker with actionType + extracted fields on success.
+ * The parser does not validate action type or field requirements.
  */
-export function parseActionMarker(_content: string): ParsedActionMarker | null {
-  return null;
+export function parseActionMarker(content: string): ParsedActionMarker | null {
+  const blockMatch = content.match(ACTION_BLOCK_RE);
+  if (!blockMatch || blockMatch[1] === undefined || blockMatch[2] === undefined) {
+    return null;
+  }
+
+  const actionType = blockMatch[1].trim();
+  const innerContent = blockMatch[2];
+
+  const fields: Record<string, string> = {};
+  for (const line of innerContent.split('\n')) {
+    const fieldMatch = line.match(FIELD_LINE_RE);
+    if (fieldMatch && fieldMatch[1] !== undefined && fieldMatch[2] !== undefined) {
+      fields[fieldMatch[1]] = fieldMatch[2].trim();
+    }
+  }
+
+  return { actionType, fields };
 }
