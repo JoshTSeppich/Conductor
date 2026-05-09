@@ -11,7 +11,7 @@ import { dirname, resolve } from 'node:path';
 import { WEB_UI_URL } from './webview-loader.js';
 import { registerApplicationMenu, rebuildApplicationMenu } from './menu.js';
 import { createManagedWindow, registerLifecycleHooks } from './window-lifecycle.js';
-import { registerIpcHandlers } from './coarchitect-ipc.js';
+import { registerIpcHandlers, wirePtyRelay } from './coarchitect-ipc.js';
 import { registerSpawnIpcHandlers } from './spawn-ipc.js';
 import { registerSessionSendPromptIpcHandlers } from './session-send-prompt-ipc.js';
 import { registerSessionKillIpcHandlers } from './session-kill-ipc.js';
@@ -437,6 +437,12 @@ app.whenReady().then(async () => {
   consoleController = registerConsoleIpcHandlers({
     getWebContents: () => mainWindow?.webContents ?? null,
   });
+  // === BEGIN: MB-T40 PTY relay wiring ===
+  // wirePtyRelay called here (not at registerIpcHandlers line ~382) because
+  // consoleController is null at that site; PTY output flows only after
+  // createWindow() below. Dispatch authoring drift caught at HALT-WB2.
+  wirePtyRelay(consoleController);
+  // === END: MB-T40 ===
   // === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
   wireCardIpc({ ipcOn: (channel, listener) => ipcMain.on(channel, listener) });
   // === end MB-T07 card wiring ===
