@@ -41,6 +41,7 @@ import {
 // Fast thresholds for unit tests; real defaults 3000ms / 30000ms per Q-MBT39-2 + HALT 1.
 const QUIESCENCE_MS = 100;
 const TIMEOUT_MS = 500;
+const RESPONSE_QUIESCENCE_MS = 50;
 const SUMMARY_PROMPT =
   '[SYSTEM-METADATA] Peer summary harvester request. Per MB-T41 §3 + §7: if your current turn is mid-work (incomplete sentence, mid-tool-call, thinking indicator, peer process still writing), output exactly the literal string "TURN_INCOMPLETE" with no trailing newline. Otherwise, emit your turn summary in §7 YAML format with exact parser-anchored field names: peer_session, task, files_touched, result, completion_status, no_follow_up, follow_up_action.';
 
@@ -86,7 +87,10 @@ describe('MB-T39 WB1 — PeerSummaryHarvester probes', () => {
       awaitingResponseTimeoutMs: TIMEOUT_MS,
       orchestratorNamePattern: /^__orchestrator_/,
       summaryPromptText: SUMMARY_PROMPT,
-    });
+      // WB2 extends PeerSummaryHarvesterDeps with responseQuiescenceMs; TS excess-prop resolved then
+      responseQuiescenceMs: RESPONSE_QUIESCENCE_MS,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
   }
 
   // ── Probe 01 ───────────────────────────────────────────────────────────────
@@ -177,6 +181,7 @@ describe('MB-T39 WB1 — PeerSummaryHarvester probes', () => {
     ].join('\n');
 
     capturedObserver?.('alpha', validYaml);
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS + 1);
 
     // peer:turn-complete emitted with camelCase PeerTurnCompletePayload
     // (snake_case→camelCase translation ratified at HALT 0 PF4)
@@ -210,6 +215,7 @@ describe('MB-T39 WB1 — PeerSummaryHarvester probes', () => {
 
     // Sub-case (a): non-YAML prose response
     capturedObserver?.('alpha', 'Sure, here is my update! I finished the task and everything looks good.');
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS + 1);
 
     expect(emitSpy).toHaveBeenCalledWith(
       'error:recorded',
@@ -237,6 +243,7 @@ describe('MB-T39 WB1 — PeerSummaryHarvester probes', () => {
     ].join('\n');
 
     capturedObserver?.('alpha', driftedYaml);
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS + 1);
 
     expect(emitSpy).toHaveBeenCalledWith(
       'error:recorded',
@@ -335,6 +342,7 @@ describe('MB-T39 WB1 — PeerSummaryHarvester probes', () => {
     capturedObserver?.('alpha', makeYaml('alpha'));
     capturedObserver?.('beta', makeYaml('beta'));
     capturedObserver?.('gamma', makeYaml('gamma'));
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS + 1);
 
     // 3 peer:turn-complete events emitted — one per peer, each independently
     const turnCompleteEmits = emitSpy.mock.calls.filter(
@@ -385,5 +393,148 @@ describe('MB-T39 WB1 — PeerSummaryHarvester probes', () => {
     capturedObserver?.('alpha', 'new output after timeout');
     vi.advanceTimersByTime(QUIESCENCE_MS + 1);
     expect(injectorSpy).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Probe 10 ──────────────────────────────────────────────────────────────
+
+  it('probe-10: multi-chunk YAML accumulation — 3 chunks < responseQuiescenceMs intervals; inner quiescence fires; peer:turn-complete emitted', () => {
+    const harvester = makeHarvester();
+    harvester.start();
+
+    const emitSpy = vi.spyOn(emitter, 'emit');
+
+    // Trigger outer quiescence → AWAITING_RESPONSE
+    capturedObserver?.('alpha', 'working...');
+    vi.advanceTimersByTime(QUIESCENCE_MS + 1);
+    expect(injectorSpy).toHaveBeenCalledOnce();
+
+    // Valid §7 YAML split across 3 chunks; inter-chunk gaps < RESPONSE_QUIESCENCE_MS
+    const chunk1 = 'peer_session: alpha\ntask: implement feature X\n';
+    const chunk2 = 'files_touched:\n  - src/foo.ts\n';
+    const chunk3 = 'result: shipped WB2 GREEN\ncompletion_status: complete\nno_follow_up: false';
+
+    capturedObserver?.('alpha', chunk1);
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS - 10);
+    capturedObserver?.('alpha', chunk2);
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS - 10);
+    capturedObserver?.('alpha', chunk3);
+
+    // peer:turn-complete NOT emitted before inner quiescence fires
+    expect(emitSpy).not.toHaveBeenCalledWith('peer:turn-complete', expect.anything());
+
+    // Inner quiescence fires → accumulated buffer = complete YAML → parsed + emitted
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS + 1);
+
+    expect(emitSpy).toHaveBeenCalledWith('peer:turn-complete', {
+      sessionName: 'alpha',
+      task: 'implement feature X',
+      filesTouched: ['src/foo.ts'],
+      result: 'shipped WB2 GREEN',
+      completionStatus: 'complete',
+      noFollowUp: false,
+    });
+    expect(emitSpy).not.toHaveBeenCalledWith('error:recorded', expect.anything());
+  });
+
+  // ── Probe 11 ──────────────────────────────────────────────────────────────
+
+  it('probe-11: premature inner quiescence on streaming pause — partial YAML at inner-quiescence fires error:recorded; state recovers to IDLE (Q-MCFIX-2(a))', () => {
+    const harvester = makeHarvester();
+    harvester.start();
+
+    const emitSpy = vi.spyOn(emitter, 'emit');
+
+    // Trigger outer quiescence → AWAITING_RESPONSE
+    capturedObserver?.('alpha', 'working...');
+    vi.advanceTimersByTime(QUIESCENCE_MS + 1);
+    expect(injectorSpy).toHaveBeenCalledOnce();
+
+    // Partial YAML — first 2 fields only; syntactically valid but missing required fields
+    // (A-1 ratification: field-boundary chunk pauses are the actual production failure mode)
+    const partialYaml = 'peer_session: alpha\ntask: implement feature X';
+    capturedObserver?.('alpha', partialYaml);
+
+    // error:recorded NOT yet emitted — buffer has not yet reached inner quiescence
+    expect(emitSpy).not.toHaveBeenCalledWith('error:recorded', expect.anything());
+
+    // Inner quiescence fires → _parseResponse on partial YAML → validation fails
+    // (missing required fields: files_touched, result, completion_status, no_follow_up) → error:recorded
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS + 1);
+
+    expect(emitSpy).toHaveBeenCalledWith(
+      'error:recorded',
+      expect.objectContaining({
+        sessionName: 'alpha',
+        message: expect.any(String),
+        timestamp: expect.any(String),
+      }),
+    );
+    expect(emitSpy).not.toHaveBeenCalledWith('peer:turn-complete', expect.anything());
+
+    // State recovered to IDLE: subsequent outer quiescence re-fires summary prompt
+    capturedObserver?.('alpha', 'new output after premature parse');
+    vi.advanceTimersByTime(QUIESCENCE_MS + 1);
+    expect(injectorSpy).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Probe 12 ──────────────────────────────────────────────────────────────
+
+  it('probe-12: multi-chunk TURN_INCOMPLETE — accumulated buffer equals TURN_INCOMPLETE at inner quiescence; IDLE without peer:turn-complete', () => {
+    const harvester = makeHarvester();
+    harvester.start();
+
+    const emitSpy = vi.spyOn(emitter, 'emit');
+
+    // Trigger outer quiescence → AWAITING_RESPONSE
+    capturedObserver?.('alpha', 'working...');
+    vi.advanceTimersByTime(QUIESCENCE_MS + 1);
+    expect(injectorSpy).toHaveBeenCalledOnce();
+
+    // TURN_INCOMPLETE split across 3 chunks (A-2 ratification: 'TURN' + '_INCOM' + 'PLETE')
+    // Fast-path does NOT trigger: first chunk 'TURN' !== 'TURN_INCOMPLETE'
+    capturedObserver?.('alpha', 'TURN');
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS - 10);
+    capturedObserver?.('alpha', '_INCOM');
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS - 10);
+    capturedObserver?.('alpha', 'PLETE');
+
+    // Inner quiescence fires → accumulated buffer.trim() === 'TURN_INCOMPLETE' → IDLE; no emit
+    vi.advanceTimersByTime(RESPONSE_QUIESCENCE_MS + 1);
+
+    expect(emitSpy).not.toHaveBeenCalledWith('peer:turn-complete', expect.anything());
+    expect(emitSpy).not.toHaveBeenCalledWith('error:recorded', expect.anything());
+
+    // State recovered to IDLE: subsequent outer quiescence re-fires summary prompt
+    capturedObserver?.('alpha', 'new output after TURN_INCOMPLETE');
+    vi.advanceTimersByTime(QUIESCENCE_MS + 1);
+    expect(injectorSpy).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Probe 13 ──────────────────────────────────────────────────────────────
+
+  it('probe-13: TURN_INCOMPLETE fast-path — single chunk exact match; immediate IDLE without inner-quiescence wait; state recovery via outer quiescence only', () => {
+    const harvester = makeHarvester();
+    harvester.start();
+
+    const emitSpy = vi.spyOn(emitter, 'emit');
+
+    // Trigger outer quiescence → AWAITING_RESPONSE
+    capturedObserver?.('alpha', 'working...');
+    vi.advanceTimersByTime(QUIESCENCE_MS + 1);
+    expect(injectorSpy).toHaveBeenCalledOnce();
+
+    // Single TURN_INCOMPLETE chunk — fast-path triggers; IDLE transition is immediate
+    capturedObserver?.('alpha', 'TURN_INCOMPLETE');
+
+    // peer:turn-complete NOT emitted (no advance needed — fast-path is synchronous IDLE transition)
+    expect(emitSpy).not.toHaveBeenCalledWith('peer:turn-complete', expect.anything());
+
+    // Fast-path recovery: outer quiescence re-fires WITHOUT any inner-quiescence advance (A-3 ratification).
+    // Slow-path (no fast-path) would leave state AWAITING_RESPONSE or produce error:recorded from
+    // jumbled buffer when 'new output' arrives; fast-path leaves state cleanly IDLE.
+    capturedObserver?.('alpha', 'new output after TURN_INCOMPLETE');
+    vi.advanceTimersByTime(QUIESCENCE_MS + 1);
+    expect(injectorSpy).toHaveBeenCalledTimes(2);
+    expect(emitSpy).not.toHaveBeenCalledWith('error:recorded', expect.anything());
   });
 });
