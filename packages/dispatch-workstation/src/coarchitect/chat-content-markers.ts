@@ -65,3 +65,32 @@ export function parseSpawnedMarker(content: string): ParsedSpawned {
   const stripped = content.replace(SPAWNED_RE, '').replace(/\s+$/, '');
   return { stripped, sessions: arr };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MB-T35-revised — [ACTION:type]...[/ACTION] block parser
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Parses HSO orchestrator action variant markers emitted per MB-T41 §2.
+// The parser is pure extraction: it does NOT validate action types or
+// required fields. Validation + IPC dispatch live in action-variant-ipc.ts.
+//
+// Marker format (per orchestrator.md §2):
+//   [ACTION:<type>]
+//   key: value
+//   key2: value2
+//   [/ACTION]
+
+/** Parsed [ACTION:type]...[/ACTION] block from orchestrator output. */
+export interface ParsedActionMarker {
+  readonly actionType: string;
+  readonly fields: Readonly<Record<string, string>>;
+}
+
+/**
+ * Extract the first [ACTION:type]...[/ACTION] block from content.
+ * Returns null if no complete block is found.
+ * WB1 RED stub — returns null unconditionally until WB2 GREEN implementation.
+ */
+export function parseActionMarker(_content: string): ParsedActionMarker | null {
+  return null;
+}
