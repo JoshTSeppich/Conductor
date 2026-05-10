@@ -90,6 +90,23 @@ Each item lists: question, options with confidence-labeled rationale, downstream
 
 **Downstream blocked by §A.1:** §A.3 (PlanRing/MixIndicator placement — option 3 of §A.3 requires §A.1 = (2) or (3) to give them a stable toolbar to live in), §C branches (§C.1 vs §C.1′ vs §C.2), §10.4 (shell-level pills — only meaningful with toolbar room) §10.5 (filter row — only meaningful in Frame C list view) §10.8 (in-page titlebar — only meaningful if frame-tab-strip occupies header-bar).
 
+### §A.1.R — Ratification (2026-05-10)
+
+[KNOWN] Operator arbitration: option (2) Frame-C-primary + A toggle ratified during §A arbitration session, plan HEAD 18be117. Per wireframe-author FrameN recommendation (wireframes.jsx:570-571); audit §10.1 (1) declined.
+
+Downstream activations:
+- §C.1′ becomes the v3.5 chrome track (4 tickets: router, Frame C surface, detail-pane actions, compact mode)
+- §C.1 (three-region chasers) + §C.2 (full A/B/C/D frames) closed as not-selected
+- MB-F-T15-MODEL-CHIP-HEX-COLORS-PLACEHOLDER + MB-F-T27-MODEL-FIELD-PLUMB-FROM-SPAWN + MB-F-T27-KILL-EVENT-PROPAGATION closure folds into §C.1′ ticket scope
+- §A.3 option (3) "move-only to #header-bar" now eligible (was gated on §A.1 outcome); arbitration pending
+- §10.4 / §10.5 / §10.8 re-evaluate post-§C.1′ ship; toolbar + list-view affordances become available
+
+Followup status under (2):
+- MB-F-T19-MUTATION-UI Tier 2 — remains open; Frame B not in §C.1′ scope; full Frame B deferred to v3.6+
+- §F.2 Q3 disposition updates to: "deferred to v3.6+ (Frame B not in v3.5 scope under §A.1 = (2))"
+
+Ticket-authoring unlock: §C.1′ ticket bodies authorable post-§A.2 (token source needed for ctx N% text in Frame C list-row + detail-pane per wireframes.jsx:458, 470) and §A.3 (PlanRing placement informs router-ticket toolbar scope).
+
 ### §A.2 — Token source selection
 
 [KNOWN] Audit §10.6. Three sub-options (a/b/c).
@@ -108,6 +125,33 @@ Each item lists: question, options with confidence-labeled rationale, downstream
 
 **Downstream blocked by §A.2:** `ctx N%` text wiring across 4 wireframe surfaces (Pane `wireframes.jsx:233`, Hero `:403`, Frame-C detail `:470`, Frame-C list-row `:458`); MB-F-T15-MODEL-CHIP-HEX-COLORS-PLACEHOLDER closure is independent but the token-meter tints (`tbarClass(t) > 0.85 → danger`, `> 0.7 → warn` at `wireframes.jsx:165`) depend on a real ratio.
 
+### §A.2.R — Ratification (2026-05-10)
+
+[KNOWN] Operator arbitration: option (c) PTY scrape ratified during §A arbitration session, plan HEAD 18be117. Architectural consistency with HSO PTY token monitoring (SPIKE-HSO-01 F9+D3 ratified) prevailed over (a) cost_info ratio's lower nominal effort.
+
+Rationale:
+- HSO commits architecture to PTY-based token monitoring for orchestrator; (c) extends same pattern to tiles, avoiding heterogeneity (API for tiles + PTY for orchestrator under (a))
+- (a)'s prerequisite — cost_info.token_count populates for CC-CLI-spawned peer sessions under HSO architecture — is [MODELED, unverified]; would require verification ticket prior to §C.3
+- (c)'s prerequisite — PTY-scrape infrastructure works — is [KNOWN] per SPIKE-HSO-01 commit c1b78c4
+- Side-benefit: same PTY-scrape infrastructure can feed CostMeter post-AnthropicChatClient wind-down (MB-T40 shipped at HEAD 5704dd2; CostMeter data path becomes STUB under HSO without replacement)
+
+Downstream activations:
+- §C.5 ticket activates as token-source closure path: PTY scrape regex parse + per-tile subscription via existing consoleBridge infrastructure (audit §8.C) + model→context-window denominator lookup
+- §C.5 spike scope: cross-substrate regex stability ([0-9]+ tokens$ pattern on Sonnet 4.6 / Opus 4.7 / Haiku 4.5). 1 WB. Precedes §C.5 ticket.
+- §C.3 + §C.4 closed as not-selected
+- ctx N% text wiring across Frame C list-row + detail-pane + Frame A tile (per §A.1.R) consumes §C.5 output
+- model→context-window denominator lookup: hand-authored static table + ADR per plan §C.5; needed under any §A.2 outcome that builds the meter (so this artifact survives the (c) selection)
+
+Followup status under (c):
+- Existing followups unaffected (no token-source-specific followups in inventory)
+- New followup filed: MB-F-A2C-PTY-SCRAPE-COST-METER-MIGRATION (Tier 3) at commit 719ec34
+
+Ticket-authoring unlock: §C.5 spike authorable now (independent of §A.3 + §A.4); §C.5 ticket post-spike + post-§C.1′ ticket #1 (router) for ctx N% wiring on Frame C surfaces.
+
+Cross-track:
+- HSO Wave 1 (MB-T35-revised) reuses pty-stream-relay regex parse — §C.5 lands additional regex variant for token count (vs. handoff-trigger regex). No structural conflict.
+- §A.3 PlanRing/MixIndicator placement (next gate) is independent of §A.2 outcome.
+
 ### §A.3 — PlanRing / MixIndicator placement
 
 [KNOWN] Per §1.3 reconciliation: wireframe has PlanRing in BOTH FrameShell toolbar (36px) AND Conductor chead (44px). Audit §10.7's "pick one location" framing is wrong.
@@ -125,6 +169,32 @@ Each item lists: question, options with confidence-labeled rationale, downstream
 **Cross-track dependency:** none. Both instances consume existing `coarchitectBridge.onRateLimitUpdate` push subscription; MixIndicator consumes existing model-mix store.
 
 **Downstream blocked:** none load-bearing. Independent of other §A items.
+
+### §A.3.R — Ratification (2026-05-10)
+
+[KNOWN] Operator arbitration: option (2) add second instance ratified during §A arbitration session, plan HEAD 18be117. Full wireframe parity per dual-placement intent (chead 44px+labeled + toolbar 36px+unlabeled per wireframes.jsx:255-272 + :343-351).
+
+Rationale:
+- Wireframe places PlanRing in BOTH locations at different sizes [KNOWN per :255-272 + :343-351]; option (1) status quo ships only chead (partial parity); option (3) move-only deletes chead instance (parity loss)
+- MixIndicator placement matches wireframe (toolbar-only, not chead) under (2) — adds it to #header-bar without redundancy
+- Effort bounded: 2-3 WBs reusing existing bridge subscriptions; no new IPC; CSS + render-prop slot work only
+- §A.1.R = (2) creates toolbar room: Frame-tab-strip A/C + Spawn + (right-aligned) MixIndicator + PlanRing 36px is well under wireframe FrameShell toolbar's 7+ element count
+
+Downstream activations:
+- §C.1′ ticket #1 (Frame router) toolbar scope expands to include MixIndicator + PlanRing-36px right-aligned slot
+- §E.1 v3.5 cosmetic Option B checklist gains: ☐ #header-bar PlanRing-36px + MixIndicator render real data
+- MB-F-T27-MODEL-FIELD-PLUMB-FROM-SPAWN + MB-F-T27-KILL-EVENT-PROPAGATION closure (folded into §C.1′ ticket scope per §A.1.R) feeds both MixIndicator instances simultaneously
+
+Followup status under (2):
+- Existing followups: MB-F-T27-* close via §C.1′ regardless (unchanged)
+- New followup filed: MB-F-A3-PLAN-RING-DATA-PATH-POST-HSO (Tier 2) at commit 719ec34
+
+Ticket-authoring unlock: header-bar PlanRing-36px + MixIndicator slot work bundles into §C.1′ ticket #1 (Frame router) scope; no standalone §A.3 ticket.
+
+Cross-track:
+- HSO track: none; §A.3 is workstation-renderer territory
+- §A.2.R coupling: PlanRing data path concern (orthogonal) parallels §A.2.R CostMeter migration concern (orthogonal); same architectural pattern (post-AnthropicChatClient data-source replacement)
+- §A.4 ship-gate impact: §E.1 Option B checklist gains 1 row
 
 ### §A.4 — v3.5 ship-gate criteria
 
@@ -146,6 +216,44 @@ Each item lists: question, options with confidence-labeled rationale, downstream
 **Cross-track dependency:** §A.4 IS the cross-track integration point. Decision finalizes the §E checklist.
 
 **Downstream blocked by §A.4:** all of §E.
+
+### §A.4.R — Ratification (2026-05-10)
+
+[KNOWN] Operator arbitration: Sub-A = Option-C-revised, Sub-B = 60-min v3.5-alpha + 120-min v3.5.1, Sub-C = two-gate split. Ratified during §A arbitration session, plan HEAD 18be117. All three sub-questions answered as plan-recommended; rationale per Opus 1M §A.4 surface.
+
+Sub-A — Audit §12 option: Option-C-revised
+- Plan-as-written assumed §12 Option C structural-item menu was {BUILD.md tab, running-count pill}. Under §A.1.R = (2), Frame-C-primary becomes the wireframe-author-recommended structural focus.
+- §C.1′ Frame-C-primary chrome track (4 tickets) = the v3.5 structural item, replacing BUILD.md tab in the original Option C menu.
+- BUILD.md tab moves to v3.5.1 per §C.6 HSO-Wave-1-blocked dependency.
+- Running-count pill remains v3.6 territory per §C.7 data-model-blocked status.
+
+Sub-B — HSO Q-V35-7 threshold: 60-min v3.5-alpha + 120-min v3.5.1
+- Q-V35-7 (a) 60-min was operator-arbitrated 2026-05-08 as v3.5 wireframe-operational threshold per CONDUCTOR_V3.5_BUILD.md §7
+- Q-V35-7 (b) 120-min was authored as v3.5.1 ship-confidence threshold
+- Sub-B adopts BUILD doc's existing arbitration; no re-arbitration
+- v3.5 ship-gate uses 60-min (alpha-and-ship); v3.5.1 ship-confidence escalates to 120-min sustained dogfood
+
+Sub-C — Coupling: two-gate split
+- v3.5-alpha = HSO infrastructure alone (operator can demo orchestration before chrome work completes)
+- v3.5 = combined HSO + audit-track chrome ship (HSO + §B closures + §C.1′ + §C.5 + §A.3 (2))
+- v3.5.1 = confidence-extended dogfood (120-min sustained) + §C.6 BUILD.md tab (post-HSO Wave 1)
+- Rationale: HSO is binary works/doesn't — clean gate independent of chrome polish; decouples chrome bugs from infrastructure ship signal; matches portfolio-plan §5 clean-stops pattern; two-gate is minimum capturing "HSO ships before sustained 3-parallel-CC work" per portfolio §4.5
+
+Downstream activations:
+- §E.1 ship-gate matrix replaced with revised 4-row version (v3.5-alpha / v3.5 / v3.5.1 / v3.6+) per §1.2 below
+- §F.3 ticket-authoring order revised to match two-gate sequencing
+- §F.1 followup tracking: 4 followups filed pre-arbitration at commit 719ec34 (2 audit-anchored + 2 §A-arbitration-anchored); all relate to v3.5 ship-gate criteria via §E.1
+
+Followup status:
+- MB-F-HSO-02-FULL-SCOPE-DOGFOOD Tier 1 — closes during v3.5.1 dogfood window per CONDUCTOR_V3.5_BUILD.md §4.3
+- MB-F-HSO-01-WEEKLY-RATE-LIMIT-DOGFOOD — same window
+- MB-F-A2C-PTY-SCRAPE-COST-METER-MIGRATION Tier 3 — closes post-v3.5 ship as CostMeter migration
+- MB-F-A3-PLAN-RING-DATA-PATH-POST-HSO Tier 2 — closes during or post-v3.5 ship as PlanRing data-source verification
+- MB-F-AUDIT-EXTERNAL-SESSION-DEATH-RECONCILIATION + MB-F-AUDIT-IPC-SCHEMA-VALIDATION-UNIFORMITY — filed pre-v3.5 at 719ec34; closure deferred to v3.6
+
+Cross-track:
+- HSO track: Sub-B references HSO BUILD doc Q-V35-7 arbitrations; this §A.4.R does NOT re-arbitrate HSO criteria
+- Audit-track + HSO-track ship as union under Sub-C two-gate split; alpha gate is HSO-only, ship gate is union
 
 ---
 
@@ -205,7 +313,7 @@ Each item lists: question, options with confidence-labeled rationale, downstream
 
 ## §C — Conditional work (gated on §A arbitrations)
 
-### §C.1 — IF §A.1 = (1) three-region permanent
+### §C.1 — IF §A.1 = (1) three-region permanent (CLOSED — not selected per §A.1.R)
 
 [MODELED] **Tickets to author** (all consume current `#shell` three-region architecture):
 - **MB-T15-followup-hex-colors** — close `MB-F-T15-MODEL-CHIP-HEX-COLORS-PLACEHOLDER` Tier 2. Update `color-helpers.ts` model-chip palette from placeholder hex to wireframe `wireframes.jsx:200-204` `modelClass()` mapping (S / O46 / O47 / H). 2-3 WBs.
@@ -231,7 +339,7 @@ Each item lists: question, options with confidence-labeled rationale, downstream
 
 **Cross-track dependency:** Frame C detail-pane footer's "merge" action overlaps with potential future `MB-F-WORKSTATION-KANBAN-EMPTY-STATE-UX` (kanban currently consumes merge commits). Surface to operator at ticket-authoring time.
 
-### §C.2 — IF §A.1 = (3) full A/B/C/D switching
+### §C.2 — IF §A.1 = (3) full A/B/C/D switching (CLOSED — not selected per §A.1.R)
 
 [MODELED] §C.1′ items PLUS:
 
@@ -243,14 +351,14 @@ Each item lists: question, options with confidence-labeled rationale, downstream
 
 **Rough total:** 23-32 WBs. Significantly above ticket-inventory's 12-WB single-session ceiling per CLAUDE.md §4.1 — would split into multiple sessions.
 
-### §C.3 — IF §A.2 = (a) `cost_info` ratio
+### §C.3 — IF §A.2 = (a) `cost_info` ratio (CLOSED — not selected per §A.2.R)
 
 [MODELED] **Spike + ticket:**
 
 - **Spike:** model SKU → context-window max lookup. Confirm Anthropic SDK doesn't already export this; if not, hand-author static table + ADR.
 - **Ticket: token-meter-wiring-cost-info.** Wire `SessionResponseV2.cost_info.token_count` from daemon → TileGridApp → TileHeader props. Compute ratio against static table. Update `tbarClass()` thresholds (`> 0.7` warn, `> 0.85` danger per `wireframes.jsx:165`). Add `ctx N%` text element to TileHeader. 4-6 WBs.
 
-### §C.4 — IF §A.2 = (b) new daemon field
+### §C.4 — IF §A.2 = (b) new daemon field (CLOSED — not selected per §A.2.R)
 
 [MODELED] **Operator-arbitrated frozen-contract amendment + ticket:**
 
@@ -375,14 +483,14 @@ HSO dogfood validation (Q-V35-7)
 
 ### §E.1 — Audit §12 × HSO Q-V35-7 matrix
 
-[KNOWN per audit §12 + `CONDUCTOR_V3.5_BUILD.md §7 Q-V35-7`]
+[KNOWN per §A.4.R ratification (2026-05-10) + audit §12 + `CONDUCTOR_V3.5_BUILD.md §7 Q-V35-7`]
 
 | Combined gate | Audit §12 row | HSO Q-V35-7 row | Concrete checklist |
 |---|---|---|---|
 | **v3.5-alpha (HSO infrastructure)** | — | (a) 60-min continuous | ☐ MB-T41 authored + ratified<br>☐ MB-T35-revised merged (action-variant emission)<br>☐ MB-T36 already closed ✓<br>☐ MB-T37 merged (pool manager)<br>☐ MB-T38 merged (swarm-state.md writer with D9 handoff doc scope)<br>☐ MB-T39 merged (peer summary harvester)<br>☐ MB-T40 merged (chat-panel PTY refactor — already shipped ✓ per HEAD)<br>☐ HSO active runs 60-min orchestration without crash<br>☐ ≥2 successful handoffs during run<br>☐ Action variants fire correctly ≥80% per Q-V35-7 (a) |
-| **v3.5 minimal (Option A + alpha)** | Option A — ship as-is | (a) 60-min | v3.5-alpha checklist<br>☐ §B.3 audit findings filed |
-| **v3.5 cosmetic (Option B + alpha)** | Option B — cheap cosmetic | (a) 60-min | v3.5 minimal<br>☐ §B.1 tile visual separation merged + smoke-verified<br>☐ §B.2 window title suffix merged + smoke-verified<br>☐ §A.2 token source decided + `ctx N%` text wired on one surface (if §A.2 = (a) or (c), the cheap source) |
-| **v3.5.1 confidence (Option C + 120-min)** | Option C — cheap + one structural | (b) 120-min | v3.5 cosmetic<br>☐ HSO active runs 120-min orchestration without crash<br>☐ One of: §A.1 = (2) Frame-C-primary shipped (recommended structural) OR §C.6 BUILD.md tab shipped (predicated on HSO Wave 1) |
+| **v3.5 (HSO + audit-track chrome)** | Option C-revised: §B cosmetic + §C.1′ structural (Frame-C-primary) | (a) 60-min | v3.5-alpha checklist ✓<br>☐ §B.1 tile visual separation merged + smoke-verified<br>☐ §B.2 window title suffix merged + smoke-verified<br>☐ §B.3 audit findings filed at commit 719ec34 ✓<br>☐ §C.1′ ticket #1 merged (Frame router + §A.3 (2) header-bar PlanRing-36px + MixIndicator)<br>☐ §C.1′ ticket #2 merged (Frame C surface)<br>☐ §C.1′ ticket #3 merged (detail-pane footer actions)<br>☐ §C.1′ ticket #4 merged (compact tile mode for Frame A)<br>☐ §C.5 spike ratified + token-wiring ticket merged (`ctx N%` text on Frame C + Pane + Hero surfaces) |
+| **v3.5.1 (confidence-extended)** | Option C-revised + §C.6 structural | (b) 120-min | v3.5 checklist ✓<br>☐ HSO active runs 120-min orchestration without crash<br>☐ §C.6 BUILD.md tab merged (post-HSO Wave 1 / MB-T38)<br>☐ MB-F-HSO-02-FULL-SCOPE-DOGFOOD Tier 1 measured (H4+H5 handoffs during 120-min window) |
+| **v3.6+ (deferred)** | — | — | §C.7 items deferred (shell pills, filter row, in-page titlebar — data-model-blocked or toolbar-gated)<br>Frame B hero+squad full UI (`MB-F-T19-MUTATION-UI` Tier 2; §C.2 closed)<br>Frame D / FrameN (§C.2 tickets #6-7; closed)<br>§F.2 Q7 profile location (`.foxworks/` vs `.conductor.yaml`) |
 
 ### §E.2 — Operator decisions to finalize criteria
 
@@ -418,6 +526,8 @@ HSO dogfood validation (Q-V35-7)
 | `MB-F-DISPATCH-CORE-POST-PULL-REBUILD-DISCIPLINE` | filed | CLAUDE.md §3.4 — relevant for any §C ticket touching dispatch-core schema | Operational hygiene, not a ship-gate item |
 | `MB-F-WORKSTATION-RUNTIME-RELAUNCH-AS-MERGE-GATE` | filed | CLAUDE.md §4.6 — relevant for §B + any §C work touching `src/main/*.ts` | Operational hygiene |
 | `MB-F-WORKSTATION-KANBAN-EMPTY-STATE-UX` | filed | §C.1′ ticket #3 detail-pane merge action may interact | Cross-reference at ticket-authoring |
+| `MB-F-A2C-PTY-SCRAPE-COST-METER-MIGRATION` | 3 | §A.2.R (c) downstream; CostMeter data-path migration post-AnthropicChatClient wind-down (MB-T40 at HEAD 5704dd2) | Post-v3.5 ship; §C.5 PTY scrape infrastructure closes this as the replacement CostMeter data source |
+| `MB-F-A3-PLAN-RING-DATA-PATH-POST-HSO` | 2 | §A.3.R (2) downstream; PlanRing data-source verification when HSO PTY relay replaces AnthropicChatClient API path | During/post-v3.5 ship; verify both instances (chead 44px + header-bar 36px per §A.3.R) receive real data from HSO PTY relay |
 
 ### §F.2 — Wireframe inventory Q1-Q7 disposition
 
@@ -427,7 +537,7 @@ HSO dogfood validation (Q-V35-7)
 |---|---|---|---|
 | **Q1** | LLM-backed conductor vs deterministic state machine? | **HSO ratifies LLM-backed.** SPIKE-HSO-01 ratified Sonnet 4.6 CC CLI substrate per `CONDUCTOR_V3.5_BUILD.md §4.1` 2026-05-08. | Resolved — no plan action |
 | **Q2** | BUILD.md in v3.0 ship-gate? | **Now BUILD.md tab in v3.5 ship-gate.** Deferred to v3.5.1 per §E.1 Option C OR §C.6 if structural pick is BUILD.md tab. | §C.6 + §E.1 |
-| **Q3** | MB-T19 (hero+squad) in v3.0? | **Deferred to §A.1.** If §A.1 = (3), shipped via §C.2 ticket #5. If §A.1 = (1) or (2), `MB-F-T19-MUTATION-UI` closes via §C.1 ticket but full Frame B is v3.6+. | §A.1 + §C.1/§C.2 |
+| **Q3** | MB-T19 (hero+squad) in v3.0? | deferred to v3.6+ (Frame B not in v3.5 scope under §A.1.R = (2)) | §A.1.R |
 | **Q4** | Max-plan auth vs API key? | **HSO ratifies Max-plan.** CC CLI substrate inherits keychain reuse per SPIKE-HSO-01 commit `c1b78c4`. | Resolved — no plan action |
 | **Q5** | Commits via daemon endpoint vs `child_process`? | **Shipped via `child_process`** per `commits-ipc.ts` (audit §8.F). | Resolved — close as shipped |
 | **Q6** | UI-first vs intelligence-first sequencing? | **HSO answers intelligence-first** (HSO Wave 1 lands MB-T35-revised, MB-T38 before §C.6 BUILD.md tab). Audit-track UI work (§B, §C.1/§C.1′) can ship in parallel with HSO since they touch different files. | §D.3 dependency graph |
@@ -435,22 +545,22 @@ HSO dogfood validation (Q-V35-7)
 
 ### §F.3 — Recommended ticket-authoring order (post-§A arbitration)
 
-[MODELED] Assuming recommended §A outcomes (D1=Option B, D2=60-min for alpha then 120 for v3.5.1, D3=two-gate, D5=Frame-C-primary, D6=cost_info ratio or PTY scrape, D7=add-second-instance):
+[KNOWN] §A fully ratified (§A.1.R = (2), §A.2.R = (c), §A.3.R = (2), §A.4.R = Option-C-revised + 60-min/120-min + two-gate split):
 
 1. **Immediately (no §A dependency):**
-   - §B.3 file 2 findings (verify not already filed)
+   - §B.3 followups filed at commit 719ec34 ✓
    - §B.1 tile visual separation ticket
    - §B.2 window title suffix ticket
    - HSO MB-T41 operator-only authoring (parallel to operator)
 
-2. **After §A.1 + §A.2 + §A.3 arbitration:**
+2. **post-§A (RATIFIED) — proceed to:**
    - §C.1′ ticket #1 (Frame router) — load-bearing for tickets #2-4
-   - §A.3 (2) → header-bar PlanRing+MixIndicator ticket (can parallel ticket #1)
-   - §C.3 or §C.5 spike (token source)
+   - §A.3 (2) header-bar PlanRing+MixIndicator slot (bundles into §C.1′ ticket #1 scope per §A.3.R)
+   - §C.5 spike (PTY scrape token-source; independent of §A.3)
 
 3. **After §C.1′ ticket #1 + spike:**
    - §C.1′ tickets #2 + #4 (Frame C surface + compact mode) in parallel
-   - §C.3 or §C.5 token-wiring ticket (with ctx N% text on Pane + Hero surfaces)
+   - §C.5 token-wiring ticket (ctx N% on Frame C list-row + detail-pane + Pane + Hero)
    - HSO Wave 1 (MB-T35-revised + MB-T38) per `CONDUCTOR_V3.5_BUILD.md §8` Pattern α — parallel to Frame C work
 
 4. **After §C.1′ ticket #2:**
@@ -459,10 +569,10 @@ HSO dogfood validation (Q-V35-7)
 
 5. **After HSO Wave 1+2:**
    - §C.6 BUILD.md tab (depends on swarm-state.md from MB-T38)
-   - HSO dogfood validation (Q-V35-7 60-min for alpha, 120-min for v3.5.1)
+   - HSO dogfood validation
 
-6. **v3.5-alpha ship-gate:** HSO infrastructure complete + dogfood passed
-7. **v3.5 ship-gate:** v3.5-alpha + §B closures + §C.1′ + §A.3 (2) shipped
+6. **v3.5-alpha ship-gate:** HSO infrastructure complete + 60-min dogfood passed
+7. **v3.5 ship-gate:** v3.5-alpha + §B closures + §C.1′ + §A.3 (2) + §C.5 shipped
 8. **v3.5.1 ship-confidence:** v3.5 + §C.6 BUILD.md tab + 120-min HSO dogfood
 
 ---
