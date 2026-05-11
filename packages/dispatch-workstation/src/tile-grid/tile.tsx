@@ -32,6 +32,7 @@ import { ConsolePanel } from '../console-panel/console-panel.js';
 import { TileHeader } from './tile-header.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
+import type { FrameMode } from '../main/frame-mode-state.js';
 import type { TileStatus } from './types.js';
 
 // Re-export TileStatus so existing consumers (tile-grid.tsx) keep
@@ -99,6 +100,29 @@ export interface TileProps {
    *  captures `cwd` from the session entry + renders <TileFooter
    *  sessionName cwd /> per Q-MBT18-1=e. */
   readonly renderFooterSlot?: (sessionName: string) => ReactNode;
+  // ── MB-T-WIREFRAME-C1P4 WB2: compact-mode gate ────────────────────
+  /** Frame-shell mode toggle per §C.1′ Frame Router (44764fd).
+   *  When `'A'`, the Tile renders in compact wireframe-aligned variant:
+   *  SHIPPED-BEYOND-WIREFRAME chrome (collapse + detach buttons + picker
+   *  + autopilot slot children) is suppressed per audit §4.1 +
+   *  Sub-Q-MBTWBCTM-A=(i) strict alignment. TileHeader chrome
+   *  (status-indicator + session-name + branch + repo + model-chip +
+   *  token-meter) renders under both modes — wireframe-aligned subset
+   *  preserved per probe-04. When omitted or `'C'`, the Tile renders
+   *  full chrome (bit-identical to pre-WB2 default render).
+   *
+   *  Sub-Q-MBTWBCTM-B=(α) prop-drilled (recommended default): the
+   *  parent (TileGridApp) reads FrameMode via the §C.1′ subscription
+   *  + threads as a prop to each <Tile>. NOTE: at WB2 ship time,
+   *  TileGridApp does NOT yet subscribe to FrameMode (verified at WB1
+   *  RED authoring: grep tile-grid-app.tsx for FrameMode → 0 matches).
+   *  Until that upstream wiring lands (separate amendment commit or
+   *  follow-on ticket per body §5.2), the `frameMode` prop is undefined
+   *  in production renders → `isCompact === false` → full chrome
+   *  renders unconditionally. WB1 probe asserts the COMPONENT contract
+   *  (Tile branches correctly when prop is supplied) — not the
+   *  end-to-end production behavior. */
+  readonly frameMode?: FrameMode;
 }
 
 // Skip drag-swap when the user clicks an interactive header element
@@ -132,7 +156,13 @@ export function Tile({
   renderPickerSlot,
   renderAutopilotSlot,
   renderFooterSlot,
+  frameMode,
 }: TileProps): JSX.Element {
+  // MB-T-WIREFRAME-C1P4 WB2: compact-mode gate. Strict equality on 'A'
+  // so undefined / 'C' / any unknown value renders full chrome (defaults
+  // are conservative — only the explicit Frame A toggle activates the
+  // compact branch).
+  const isCompact = frameMode === 'A';
   return (
     <div
       data-testid={`tile-${sessionName}`}
@@ -182,28 +212,34 @@ export function Tile({
           tokenBudget={tokenBudget}
         />
         <div data-slot="picker" data-testid={`tile-picker-slot-${sessionName}`}>
-          {renderPickerSlot ? renderPickerSlot(sessionName) : null}
+          {/* MB-T-WIREFRAME-C1P4: closure suppressed under compact;
+              wrapper preserved for testid-stability per body §1.1 bullet 3. */}
+          {!isCompact && renderPickerSlot ? renderPickerSlot(sessionName) : null}
         </div>
         <div
           data-slot="autopilot"
           data-testid={`tile-autopilot-slot-${sessionName}`}
         >
-          {renderAutopilotSlot ? renderAutopilotSlot(sessionName) : null}
+          {!isCompact && renderAutopilotSlot ? renderAutopilotSlot(sessionName) : null}
         </div>
-        <button
-          type="button"
-          data-testid="tile-collapse-btn"
-          onClick={() => onCollapse(sessionName)}
-        >
-          {collapsed ? 'Expand' : 'Collapse'}
-        </button>
-        <button
-          type="button"
-          data-testid="tile-detach-btn"
-          onClick={() => onDetach(sessionName)}
-        >
-          Detach
-        </button>
+        {!isCompact && (
+          <button
+            type="button"
+            data-testid="tile-collapse-btn"
+            onClick={() => onCollapse(sessionName)}
+          >
+            {collapsed ? 'Expand' : 'Collapse'}
+          </button>
+        )}
+        {!isCompact && (
+          <button
+            type="button"
+            data-testid="tile-detach-btn"
+            onClick={() => onDetach(sessionName)}
+          >
+            Detach
+          </button>
+        )}
         <button
           type="button"
           data-testid="tile-kill-btn"
