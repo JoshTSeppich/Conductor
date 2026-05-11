@@ -174,6 +174,17 @@ import type { MBT11ActionType } from './orchestrator-action-types.js';
 // avoid collision with the Fix-C alias at line 99.
 import { readFileSync as swarmStateReadFileSync } from 'node:fs';
 // === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read imports ===
+// === BEGIN: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS-ipc imports (do not modify outside this block) ===
+// WB4-followup — Frame C detail-pane ActionBar IPC controller wiring.
+// Three channels (`frame-c:diff`, `frame-c:merge`, `frame-c:focus`)
+// landed in consolidated §6 amendment `0f0e762`. Controller class +
+// types ship at WB4 (`48032cf` src/main/frame-c-ipc.ts); renderer-side
+// `window.frameCBridge` exposure shipped at same commit (preload.mts).
+// This zone wires the registration call site at app.whenReady() —
+// previously blocked on Wave B WB10 GREEN landing per dispatch
+// serialization rule (now unblocked at `ea11bc7`).
+import { createDefaultFrameCIpcController } from './frame-c-ipc.js';
+// === END: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS-ipc imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
@@ -526,6 +537,48 @@ app.whenReady().then(async () => {
   // invocation, and `workstation-shell.html:270` for the `#frame-c-root`
   // DOM region (shipped at §C.1′ ticket #1) that hosts the React tree.
   // === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE wiring ===
+  // === BEGIN: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS-ipc ===
+  // WB4-followup — register `frame-c:{diff,merge,focus}` IPC handlers per
+  // consolidated `WORKSTATION_CONTRACT.md §6` amendment `0f0e762`. Three
+  // channels back the detail-pane ActionBar's per-session action callbacks
+  // (renderer-side `window.frameCBridge.*` exposure landed at WB4
+  // `48032cf` preload.mts).
+  //
+  // Action semantics per Sub-Q-MBTWBDPFA-B operator arbitration (coord
+  // note `9fe6358` §3):
+  // - diff:  `git diff main...<branch>` via child_process
+  // - merge: `git merge --no-commit --no-ff <branch>` via child_process
+  // - focus: writeFrameMode('A') + scroll-to-session event emit
+  //
+  // DEP WIRING POSTURE (current ship):
+  // - lookupSession: STUB returning null (handlers respond
+  //   `error_type='SessionNotFound'` for every invocation). The
+  //   production lookup requires a TileGridApp ↔ main bridge that
+  //   doesn't exist today; will be filed as Tier 2 followup at WB7
+  //   docs. Same posture as `MB-F-TILEGRIDAPP-FRAMEMODE-SUBSCRIPTION-
+  //   GAP-2026-05-11` (component contract shipped; integration deferred
+  //   to a downstream commit). Operator visibility: clicking any action
+  //   button under a real session surfaces a failure-state inline
+  //   banner (Sub-Q-C=α; WB6 banner UX at `cdf05db`) reading
+  //   "SessionNotFound — session 'X' not registered with workstation".
+  //   Operator can still verify the IPC roundtrip + banner rendering;
+  //   real session-data wiring is the next ticket-scope step.
+  // - emitScroll: fan-out via mainWindow.webContents.send.
+  // - writeFrameMode: imported helper from frame-mode-state.ts (Frame
+  //   Router `44764fd` shipped contract).
+  // - runGit: omitted → uses defaultRunGit (child_process.spawn-based)
+  //   in frame-c-ipc.ts.
+  createDefaultFrameCIpcController({
+    // STUB lookup — Tier 2 followup MB-F-FRAME-C-IPC-LOOKUP-SESSION-STUB
+    // filed at WB7 docs. Production wiring depends on TileGridApp ↔
+    // main session-shape exposure (cwd + branchName per session).
+    lookupSession: () => null,
+    emitScroll: (payload) => {
+      mainWindow?.webContents.send('frame-c:scroll-to-session', payload);
+    },
+    writeFrameMode,
+  }).registerHandlers(ipcMain);
+  // === END: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS-ipc ===
   // === MB-T09 session-send-prompt IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
   // tile footer (MB-T12) consume this surface. Default deps wire to
