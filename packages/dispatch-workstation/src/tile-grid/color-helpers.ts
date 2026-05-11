@@ -78,13 +78,13 @@ export function modelChipShortcode(sdkName: string): ModelChip | null {
 export function modelChipColor(chip: ModelChip): string {
   switch (chip) {
     case 'S4.6':
-      return '#4a9eff'; // blue/cyan — Sonnet
+      return '#5b9d6e'; // green — Sonnet (Conductor Wireframes.html:186)
     case 'O4.6':
-      return '#a36cff'; // light purple — Opus 4.6
+      return '#c97a3a'; // orange — Opus 4.6 (Conductor Wireframes.html:187)
     case 'O4.7·1M':
-      return '#7c3eed'; // deeper purple — Opus 4.7 (1M context)
+      return '#b13a8e'; // purple — Opus 4.7·1M (Conductor Wireframes.html:188)
     case 'H':
-      return '#facc15'; // amber/yellow — Haiku
+      return '#6a7891'; // gray-blue — Haiku (Conductor Wireframes.html:189)
   }
 }
 

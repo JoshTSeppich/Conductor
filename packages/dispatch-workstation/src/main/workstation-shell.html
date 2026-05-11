@@ -42,6 +42,16 @@
       #spawn-button:hover {
         background: #4a8a4a;
       }
+      /* === BEGIN: §C.1′ frame-mode visibility === */
+      /* Default (no attribute): Frame A behavior preserved (tile-grid visible). */
+      #frame-c-root { display: none; }
+      #shell[data-frame-mode="A"] #console-tile-region { display: flex; }
+      #shell[data-frame-mode="A"] #frame-c-root { display: none; }
+      #shell[data-frame-mode="C"] #console-tile-region { display: none; }
+      #shell[data-frame-mode="C"] #frame-c-root { display: flex; flex-direction: column; }
+      /* header-indicators fills the remaining header-bar space to the right */
+      #header-indicators-root { display: contents; }
+      /* === END: §C.1′ frame-mode visibility === */
       #kanban-region {
         flex: 1;
         min-height: 80px;
@@ -228,6 +238,13 @@
     <div id="shell">
       <div id="header-bar">
         <button id="spawn-button" data-testid="spawn-button" type="button">+ Spawn Session</button>
+        <!-- === BEGIN: §C.1′ frame-shell-header mount root ===
+             FrameShellHeader (tab strip A/C + MixIndicator + PlanRing-36px)
+             mounts here via tile-grid/mount.ts tryAutoMountFrameShellHeader().
+             display:contents on #header-indicators-root makes its children
+             direct flex children of #header-bar. -->
+        <div id="header-indicators-root" data-testid="header-indicators-root"></div>
+        <!-- === END: §C.1′ frame-shell-header mount root === -->
       </div>
       <div id="kanban-region">
         <webview id="kanban-webview" allowpopups preload="./card-bridge.cjs"></webview>
@@ -247,6 +264,11 @@
         <div id="tile-grid-root" data-testid="tile-grid-root"></div>
       </div>
       <!-- === end MB-T12 WB12 tile-grid region === -->
+      <!-- === BEGIN: §C.1′ Frame C stub root ===
+           Empty stub for Frame C (ticket #2 will mount FrameC list-view here).
+           Hidden by default; shown when #shell[data-frame-mode="C"]. -->
+      <div id="frame-c-root" data-testid="frame-c-root"></div>
+      <!-- === END: §C.1′ Frame C stub root === -->
       <div id="splitter" role="separator" aria-label="Resize panel" data-testid="splitter"></div>
       <div id="chat-region" style="height: 280px">
         <div id="root"></div>

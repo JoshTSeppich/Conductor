@@ -60,6 +60,9 @@ import { createDefaultApprovalPolicyIpcController } from './approval-policy-ipc.
 // AutopilotLoop instances).
 import { createDefaultAutopilotIpcController } from './autopilot-ipc.js';
 // === END: MB-T17 autopilot IPC imports ===
+// === BEGIN: §C.1′ frame-mode imports (do not modify outside this block) ===
+import { readFrameMode, writeFrameMode } from './frame-mode-state.js';
+// === END: §C.1′ frame-mode imports ===
 // === BEGIN: §C.5 tile token scraper imports (do not modify outside this block) ===
 import { registerTileTokenScraper } from './tile-token-scraper.js';
 // === END: §C.5 tile token scraper imports ===
@@ -407,6 +410,15 @@ app.whenReady().then(async () => {
     process.stdout.write('DISPATCH_MODE_IPC_MOUNTED\n');
   }
   // === END: MB-T24 ===
+  // === BEGIN: §C.1′ frame-mode IPC ===
+  // Registered before createWindow so mount.ts can call frame-mode:get
+  // at auto-mount time without racing (same pattern as dispatch-mode).
+  ipcMain.handle('frame-mode:get', () => readFrameMode());
+  ipcMain.handle('frame-mode:set', (_evt, { mode }: { mode: unknown }) => {
+    if (mode === 'A' || mode === 'C') writeFrameMode(mode);
+    return readFrameMode();
+  });
+  // === END: §C.1′ frame-mode IPC ===
   // === MB-T09 session-send-prompt IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
   // tile footer (MB-T12) consume this surface. Default deps wire to

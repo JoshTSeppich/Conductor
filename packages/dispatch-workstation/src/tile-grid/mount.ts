@@ -23,6 +23,7 @@ import {
   TileGridApp,
   type WorkstationBridgeShape,
 } from './tile-grid-app.js';
+import { FrameShellHeader, type FrameMode } from './frame-shell-header.js';
 import {
   createXtermAdapter,
   type TerminalAdapter,
@@ -34,6 +35,11 @@ declare global {
     /** Exposed by preload.mts contextBridge (workstationBridge + WB11b
      *  detachTile/onTileDetachClosed extensions). */
     workstationBridge?: WorkstationBridgeShape & Record<string, unknown>;
+    /** §C.1′ — frame-mode persistence bridge (preload.mts §C.1′ zone). */
+    frameModeBridge?: {
+      getFrameMode: () => Promise<FrameMode>;
+      setFrameMode: (mode: FrameMode) => Promise<FrameMode>;
+    };
   }
 }
 
@@ -113,6 +119,47 @@ function defaultLazyAdapterFactory(): TerminalAdapter {
   };
 }
 
+// §C.1′ — apply frame mode to the shell DOM so CSS shows/hides regions.
+function applyFrameMode(mode: FrameMode): void {
+  const shell = document.getElementById('shell');
+  if (shell) shell.setAttribute('data-frame-mode', mode);
+}
+
+// §C.1′ — mount FrameShellHeader into #header-indicators-root with initial
+// frame mode read from frameModeBridge. Falls back to 'C' when bridge is
+// unavailable (test environments without preload).
+async function tryAutoMountFrameShellHeader(): Promise<void> {
+  const root = document.getElementById('header-indicators-root');
+  if (!root) return;
+
+  const bridge = window.frameModeBridge ?? null;
+  const initialMode: FrameMode = bridge
+    ? await bridge.getFrameMode().catch(() => 'C' as const)
+    : 'C';
+
+  applyFrameMode(initialMode);
+
+  const coarchitectBridge =
+    (window as Record<string, unknown>)['coarchitectBridge'] as
+      | Parameters<typeof FrameShellHeader>[0]['coarchitectBridge']
+      | undefined ?? null;
+
+  const workstationBridge = window.workstationBridge ?? null;
+
+  createRoot(root).render(
+    createElement(FrameShellHeader, {
+      initialMode,
+      workstationBridge,
+      coarchitectBridge,
+      onModeChange: (mode) => {
+        applyFrameMode(mode);
+        void bridge?.setFrameMode(mode).catch(() => undefined);
+      },
+    }),
+  );
+}
+
 // Production auto-mount on bundle load. Tests skip this by importing the
 // function directly and supplying their own TileGridMountOptions.
 tryAutoMountTileGrid();
+void tryAutoMountFrameShellHeader();

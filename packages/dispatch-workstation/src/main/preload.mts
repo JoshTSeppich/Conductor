@@ -303,3 +303,13 @@ contextBridge.exposeInMainWorld('commitsBridge', {
     ipcRenderer.invoke('commits:list', opts ?? {}),
 });
 // === END: MB-T22 commits bridge ===
+// === BEGIN: §C.1′ frame-mode bridge ===
+// Exposes getFrameMode / setFrameMode to the tile-grid renderer.
+// Main-process handlers registered in main.ts §C.1′ sentinel zone before
+// createWindow() so mount.ts can call getFrameMode() at auto-mount time
+// without racing. Mirrors dispatchModeBridge pattern (Q-MBT24-6=c).
+contextBridge.exposeInMainWorld('frameModeBridge', {
+  getFrameMode: () => ipcRenderer.invoke('frame-mode:get'),
+  setFrameMode: (mode: unknown) => ipcRenderer.invoke('frame-mode:set', { mode }),
+});
+// === END: §C.1′ frame-mode bridge ===
