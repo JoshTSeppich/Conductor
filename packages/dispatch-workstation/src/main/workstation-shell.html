@@ -52,6 +52,30 @@
       /* header-indicators fills the remaining header-bar space to the right */
       #header-indicators-root { display: contents; }
       /* === END: §C.1′ frame-mode visibility === */
+      /* === BEGIN: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE frame-c-root sizing === */
+      /* WB10 GREEN — §C.1′ ticket #1 shipped #frame-c-root visibility
+         rules above (display: flex; flex-direction: column in Frame C
+         mode). This zone augments with SIZING parity matching
+         #console-tile-region (lines ~66-72): flex-grow to fill the
+         available vertical space inside #shell, min-height: 0 so
+         flex children can shrink below their intrinsic height,
+         overflow: hidden so child overflow scrolls within the region
+         rather than blowing out the #shell flex layout, border-top +
+         background matching tile-grid for visual continuity across
+         the Frame A ↔ Frame C toggle.
+         Without these, Frame C would collapse to zero height in the
+         empty-sessions state (no content driving intrinsic size →
+         operator sees invisible Frame C surface even though the DOM
+         + visibility CSS are correct). Per operator Q-WB10-A=β
+         rationale + MB-F-WIREFRAME-VISUAL-VERIFICATION-GAP framing. */
+      #shell[data-frame-mode="C"] #frame-c-root {
+        flex: 1 1 auto;
+        min-height: 0;
+        border-top: 1px solid #303030;
+        background: #0a0a0a;
+        overflow: hidden;
+      }
+      /* === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE frame-c-root sizing === */
       #kanban-region {
         flex: 1;
         min-height: 80px;

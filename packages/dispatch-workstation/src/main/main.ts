@@ -506,6 +506,26 @@ app.whenReady().then(async () => {
     }
   });
   // === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read IPC ===
+  // === BEGIN: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE wiring ===
+  // WB10 — Frame C renderer surface is auto-mounted RENDERER-SIDE via
+  // `tile-grid/mount.ts:tryAutoMountFrameC()` at the same bottom-of-file
+  // auto-mount block where `tryAutoMountFrameShellHeader()` lives
+  // (tile-grid/mount.ts:165 precedent). main.ts has NO additional main-
+  // process IPC to register for Frame C beyond the WB8 swarm-state-read
+  // IPC zone above — Sub-Q-MBTWBFCS-A=α (operator-pre-arbitrated 2026-
+  // 05-11) keeps selection state renderer-only (no persistence IPC).
+  //
+  // This sentinel zone exists to document the cross-process wiring
+  // boundary per CLAUDE.md §3.3 sentinel-zone discipline: the auto-
+  // mount call site is renderer-side (tile-grid renderer bundle, which
+  // imports `mountFrameC` from `../frame-c/index.js`); main.ts's
+  // responsibility for Frame C is limited to the `workstation:read-
+  // swarm-state` IPC (above zone) which feeds DetailPane.
+  //
+  // See `tile-grid/mount.ts:tryAutoMountFrameC()` for the actual mount
+  // invocation, and `workstation-shell.html:270` for the `#frame-c-root`
+  // DOM region (shipped at §C.1′ ticket #1) that hosts the React tree.
+  // === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE wiring ===
   // === MB-T09 session-send-prompt IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
   // tile footer (MB-T12) consume this surface. Default deps wire to

@@ -24,6 +24,7 @@ import {
   type WorkstationBridgeShape,
 } from './tile-grid-app.js';
 import { FrameShellHeader, type FrameMode } from './frame-shell-header.js';
+import { mountFrameC } from '../frame-c/index.js';
 import {
   createXtermAdapter,
   type TerminalAdapter,
@@ -159,7 +160,28 @@ async function tryAutoMountFrameShellHeader(): Promise<void> {
   );
 }
 
+// MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE WB10 — auto-mount Frame C into
+// the #frame-c-root region shipped at workstation-shell.html:270
+// (§C.1′ ticket #1 stub: `<div id="frame-c-root" data-testid="frame-c-
+// root">`). Per Sub-Q-MBTWBFCS-A=α renderer-only selection state and
+// Sub-Q-MBTWBFCS-B=i swarm-state.md detail source.
+//
+// Initial sessions: empty []. SessionList renders empty-state per
+// the WB4 GREEN contract. Sessions-stream integration with tile-grid-
+// app's state stream is DEFERRED to MB-F-FRAME-C-SESSIONS-STREAM-
+// INTEGRATION (Tier 2 followup, filed in WB11 findings doc). For now,
+// Frame C visibly mounts but lists no sessions until that follower
+// lands; honest empty-state placeholder per ticket §8 risk row.
+function tryAutoMountFrameC(): void {
+  const root = document.getElementById('frame-c-root');
+  if (!root) return;
+  // Tests skip this function by importing the mountFrameC factory
+  // directly and supplying their own container + props.
+  mountFrameC(root, { sessions: [] });
+}
+
 // Production auto-mount on bundle load. Tests skip this by importing the
 // function directly and supplying their own TileGridMountOptions.
 tryAutoMountTileGrid();
 void tryAutoMountFrameShellHeader();
+tryAutoMountFrameC();
