@@ -294,6 +294,155 @@ Example error response (schema validation failure):
 
 Action-handler errors propagate through the same shape with appropriate `error_type` discriminators.
 
+### §6.6 Renderer ↔ main workstation IPC channels
+
+Per operator-arbitrated amendment 2026-05-11 (under §3.4 operator-supervised mechanical translation framing per CLAUDE.md §3.4 + §2.4). This subsection enumerates the additive renderer-↔-main IPC channels exposed by the Electron main process (`ipcMain.handle`) to the renderer via `contextBridge.exposeInMainWorld` in `preload.mts`. Distinct from §7 (which governs `Shell ↔ Webview` v3-schema-bound messages); this subsection captures the renderer-↔-main control-plane IPC that the workstation Electron shell uses for file-read, dialog, policy, and per-session-action operations.
+
+Existing channels in this category predate this contract subsection (`workstation:open-repo-dialog`, `:audit-modal-fetch`, `:approval-policy-get/put`, `:autopilot-get/put`, `:session-send-prompt`, `:session-kill`, `:spawn-requested`, `:spawn-result`, `:spawn-confirm-required/response`, `:tile-token-update`; plus `dispatch-mode:*`, `commits:*`, `frame-mode:*`, `shell:*`, `console:*`). Documenting these retroactively is OUT OF SCOPE for this amendment; queued as Tier 2 followup `MB-F-WORKSTATION-CONTRACT-SECTION-6-DRIFT-AUDIT` per T3's coord note `docs/coordination/wave-c-3-channel-signatures-2026-05-11.md` §5.4 — operator-arbitrated filing target (FOLLOWUPS.md is T2-successor territory per parallel-cairn dispatch).
+
+**This amendment adds FOUR channels** (additive only; no removal, no signature change to any other channel; co-authored across Wave B + Wave C #3 per Q-WB8-IPC + Q-WBT3-3-A=(β-consolidated) arbitrations 2026-05-11):
+
+#### Channel #1 — `workstation:read-swarm-state` (Wave B, T4-successor)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `workstation:read-swarm-state` |
+| **Direction** | renderer → main (invoke/handle) |
+| **Payload** | none |
+| **Response** | `Promise<string>` — raw UTF-8 file content of `docs/swarm-state.md` |
+| **Bridge surface** | `window.workstationBridge.readSwarmState(): Promise<string>` |
+| **Bridge style** | getter (no args) — extends EXISTING `workstationBridge` |
+| **Path resolution** | `resolve(app.getAppPath(), '..', '..', 'docs/swarm-state.md')` — mirrors `SwarmStateWriter` init path (`main.ts:557`) |
+| **ENOENT fallback** | empty string (HSO has not yet emitted any action → `SwarmStateWriter` has not yet created the file) — caller surfaces honest placeholder |
+| **Other errors** | propagate as `ipcRenderer.invoke` rejection — renderer caller surfaces error text |
+| **Consumer** | `src/frame-c/detail-pane.tsx` (Frame C DetailPane component) — parses returned text via `extractSwarmStateSection()` to surface the section for the currently-selected session |
+| **Authoring ticket** | `MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE` WB8 GREEN |
+| **Signature choice rationale** | `Promise<string>` rather than `Promise<SwarmState>` — no `SwarmState` Zod type exists in the type-graph (only `SwarmStateWriterConfig` at `swarm-state-writer.ts:70`, which is writer-config not parsed-content). Renderer-side parser (`extractSwarmStateSection`) operates on raw string. Narrower contract; defer typed shape to a future ticket if/when a parsed-content Zod schema lands. |
+
+#### Channel #2 — `frame-c:diff` (Wave C #3, T3 via coord note `9fe6358`)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `frame-c:diff` |
+| **Direction** | renderer → main (invoke/handle) |
+| **Payload** | `{ sessionName: string }` |
+| **Response** | `Promise<DiffResult>` (discriminated union — see Result Types appendix below) |
+| **Bridge surface** | `window.frameCBridge.diff(sessionName: string): Promise<DiffResult>` |
+| **Bridge style** | action (takes session name) — NEW `frameCBridge` `contextBridge.exposeInMainWorld` binding (per Sub-Q-MBTWBDPFA-D=(α) per-IPC-family convention) |
+| **Argv** | `['diff', \`main...${branchName}\`]` (triple-dot symmetric difference against merge base) |
+| **Cwd** | session's cwd (from `lookupSession(sessionName).cwd`) |
+| **Exec** | `child_process.spawn('git', argv, { cwd })` — collect stdout (diff text) + stderr; await exit code |
+| **Success** | exit code 0 → `{ ok: true, diffText: <stdout> }` |
+| **Failure modes** | `SessionNotFound` (lookup returns null); `NotARepository` (stderr matches); `BranchNotFound` (stderr matches "unknown revision"); `GitInvocationFailed` (other non-zero OR spawn-system error) |
+| **Output handling note** | Diff text may be large (thousands of lines). Renderer-side display (inline OR external `git difftool`) is renderer concern. Future Tier 3 followup `MB-F-FRAME-C-DIFF-MERGE-ENV-FALLBACK` per Wave C #3 body §5.2. |
+| **Consumer** | `src/frame-c/action-bar.tsx` callback (ActionBar component, Wave C #3 territory) |
+| **Authoring ticket** | `MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS` (body `32c7eee`) Sub-Q-B-diff=(i) |
+
+#### Channel #3 — `frame-c:merge` (Wave C #3, T3 via coord note `9fe6358`)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `frame-c:merge` |
+| **Direction** | renderer → main (invoke/handle) |
+| **Payload** | `{ sessionName: string }` |
+| **Response** | `Promise<MergeResult>` (discriminated union — see Result Types appendix below) |
+| **Bridge surface** | `window.frameCBridge.merge(sessionName: string): Promise<MergeResult>` |
+| **Bridge style** | action (takes session name) — NEW `frameCBridge` |
+| **Argv** | `['merge', '--no-commit', '--no-ff', branchName]` |
+| **Cwd** | session's cwd |
+| **Exec** | `child_process.spawn('git', argv, { cwd })` — collect stdout + stderr; await exit code |
+| **Success (staged-not-committed)** | exit code 0 → `{ ok: true, state: 'staged', message: 'Merge staged successfully; no commit made. Operator must commit or abort manually.' }`. Staged-not-committed posture is the safety stop (Sub-Q-B-merge=(i)). This ticket does NOT provide a confirm-commit UI; operator commits or aborts via terminal. |
+| **Failure modes** | `SessionNotFound`; `MergeConflict` (with `conflictFiles: readonly string[]` parsed from stderr/stdout `CONFLICT (content): Merge conflict in <path>` lines — working tree left in conflict state for manual resolution OR `git merge --abort`); `NotARepository`; `NothingToMerge` (stderr "Already up to date" or "merge requires a single non-option"); `DirtyWorkingTree` (stderr "Your local changes"); `GitInvocationFailed` (other) |
+| **Conflict file parsing** | parse `stderr`/`stdout` for `CONFLICT (content): Merge conflict in <path>` lines; return matched paths in `conflictFiles: readonly string[]`. ActionBar inline-banner UX renders the list. |
+| **Consumer** | `src/frame-c/action-bar.tsx` callback |
+| **Authoring ticket** | `MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS` Sub-Q-B-merge=(i) |
+
+#### Channel #4 — `frame-c:focus` (Wave C #3, T3 via coord note `9fe6358`)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `frame-c:focus` |
+| **Direction** | renderer → main (invoke/handle) |
+| **Payload** | `{ sessionName: string }` |
+| **Response** | `Promise<FocusResult>` (discriminated union — see Result Types appendix below) |
+| **Bridge surface** | `window.frameCBridge.focus(sessionName: string): Promise<FocusResult>` |
+| **Bridge style** | action (takes session name) — NEW `frameCBridge` |
+| **Action** | Two-step: (1) `writeFrameMode('A')` — persist FrameMode to `frame-mode-state.json` (`44764fd` Frame Router contract); (2) emit `frame-c:scroll-to-session` event to renderer via `mainWindow.webContents.send(...)` for tile-grid to scroll/highlight the named session's tile in Frame A. |
+| **Success** | both steps complete → `{ ok: true, message: 'Focused to compact-tile mode; tile scrolled/highlighted.' }` |
+| **Failure modes** | `SessionNotFound` (lookup null — FrameMode NOT toggled to avoid operator-visible mode-flip with no effect); `FrameModeWriteFailed` (writeFrameMode throws — defer surfacing per `writeFrameMode` swallowing errors silently at `frame-mode-state.ts:26-33`; Tier 3 followup `MB-F-FRAME-C-FOCUS-FRAMEMODE-WRITE-FAILURE-DETECTION` for post-dogfood ratcheting). `emitScroll` failure: out-of-scope (no-op if `mainWindow.webContents` null/destroyed). |
+| **Production-wiring dependency** | End-to-end Frame A render-coherence requires `MB-F-TILEGRIDAPP-FRAMEMODE-SUBSCRIPTION-GAP-2026-05-11` (Tier 2, FOLLOWUPS.md `6217ea0`) closure. Pre-closure: `writeFrameMode('A')` persists but `tile-grid-app.tsx` does not subscribe → `tile.tsx`'s `frameMode` prop stays undefined → full chrome renders. Focus action ships its component contract regardless; full operator effect arrives post-closure. Renderer-side scroll/highlight consumption of `frame-c:scroll-to-session`: future ticket territory. |
+| **Consumer** | `src/frame-c/action-bar.tsx` callback |
+| **Authoring ticket** | `MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS` Sub-Q-B-focus=(i) |
+
+#### Result-type discriminated unions (Wave C #3 contract per coord note §4)
+
+Inline-banner UX (Sub-Q-MBTWBDPFA-C=(α)): when host (Frame C detail-pane) catches a non-`ok` result from any `frameCBridge.*` call, it passes the result down to `ActionBar` via `failureState` prop. `ActionBar` renders a `<div role="alert" data-testid="action-bar-failure-banner">` element with `error_type` + `message` + Dismiss button. Auto-dismiss on next successful action (persistent-on-error semantics).
+
+```typescript
+// packages/dispatch-workstation/src/main/frame-c-ipc.ts (Wave C #3 WB exported types)
+
+export interface FrameCActionSuccess {
+  readonly ok: true;
+}
+
+export interface FrameCActionError {
+  readonly ok: false;
+  readonly error_type: string;
+  readonly message: string;
+}
+
+// ── diff ──────────────────────────────────────────────────────────────
+export type DiffResult =
+  | (FrameCActionSuccess & { readonly diffText: string })
+  | (FrameCActionError & {
+      readonly error_type:
+        | 'SessionNotFound'
+        | 'NotARepository'
+        | 'BranchNotFound'
+        | 'GitInvocationFailed';
+    });
+
+// ── merge ─────────────────────────────────────────────────────────────
+export type MergeResult =
+  | (FrameCActionSuccess & {
+      readonly state: 'staged';
+      readonly message: string;
+    })
+  | (FrameCActionError & {
+      readonly error_type:
+        | 'SessionNotFound'
+        | 'MergeConflict'
+        | 'NotARepository'
+        | 'NothingToMerge'
+        | 'DirtyWorkingTree'
+        | 'GitInvocationFailed';
+      /** Present only when `error_type === 'MergeConflict'`. */
+      readonly conflictFiles?: readonly string[];
+    });
+
+// ── focus ─────────────────────────────────────────────────────────────
+export type FocusResult =
+  | (FrameCActionSuccess & { readonly message: string })
+  | (FrameCActionError & {
+      readonly error_type: 'SessionNotFound' | 'FrameModeWriteFailed';
+    });
+```
+
+#### Bridge naming + style notes (consolidation observations)
+
+- **Channel naming:** `workstation:read-swarm-state` uses the existing `workstation:*` prefix (matching `workstation:open-repo-dialog` et al). `frame-c:*` uses the per-IPC-family-prefix pattern (matching `dispatch-mode:*`, `commits:*`, `approval-policy:*`, `frame-mode:*`). Both are §6-compliant per existing precedent; this amendment preserves both prefixes verbatim per operator arbitration (Q-WB8-IPC-A=(i) for Wave B; Sub-Q-MBTWBDPFA-D=(α) for Wave C #3).
+- **Bridge style coexistence:** `workstationBridge.readSwarmState` is getter-style (no args; returns content) extending the EXISTING `workstationBridge` `exposeInMainWorld` binding. `frameCBridge.{diff,merge,focus}` are action-style (take `sessionName`; return discriminated-union result) on a NEW `frameCBridge` binding. Both shapes are §6-compliant (consistent with MB-T22 commits `listCommits()` getter-style vs MB-T24 dispatch-mode `setDispatchMode(payload)` action-style).
+- **Bridge-coexistence serialization** (per coord note §1 final paragraph): T4-successor's `workstationBridge.readSwarmState` and T3's `frameCBridge.{diff,merge,focus}` are ADDITIVE to separate top-level world bindings. No shared symbol; no `contextBridge.exposeInMainWorld` collision. T4-successor's `preload.mts` edit lands first (with consolidated §6 amendment commit + Wave B WB8 GREEN); T3's WB-equivalent GREEN edit adds the `frameCBridge` block as a separate `exposeInMainWorld` call.
+
+#### Cross-references
+
+This consolidated amendment integrates three source documents:
+- **Wave B source:** `2bc5cda` WB7 RED commit body (IPC research finding) — established that no existing fs-read IPC channel exists in renderer↔main surface, motivating `workstation:read-swarm-state` introduction.
+- **Wave C #3 source:** `docs/coordination/wave-c-3-channel-signatures-2026-05-11.md` (commit `9fe6358`) — T3-authored canonical signature inventory for `frame-c:{diff,merge,focus}` channels with action semantics + result-type discriminated unions.
+- **Wave C #3 ticket body:** `MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS` body at commit `32c7eee`.
+
+**Frozen-surface authority:** operator-arbitrated per CLAUDE.md §2.4. CC-authored implementation under §3.4 mechanical translation across two cross-coordinated sessions: T4-successor (`commit-plan-doc-1334`, Wave B) drafts Channel #1; T3 (`c5-ticket-wb1`, Wave C #3) contributes Channels #2-#4 verbatim via coord note `9fe6358`. Single consolidated `contract(GATE-W3-§6-consolidated): ...` commit per operator-arbitrated commit-grammar 2026-05-11 (Q-WB8-IPC + Q-WBT3-3-A=(β-consolidated) arbitrations).
+
 ---
 
 ## §7 — IPC contract
