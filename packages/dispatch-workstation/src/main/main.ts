@@ -142,6 +142,15 @@ import {
 // from MB-T40 pty-stream-relay; same broadcaster fan-out per MB-T37.
 import { registerActionMarkerRouter } from './action-marker-router.js';
 import { dispatchActionVariant } from './action-variant-ipc.js';
+// WB9 — resolveApprovalShim (MB-F-T11-T13-RESOLVER-STUB closure thin shim;
+// at approval-policy-resolver-shim.ts:137). Fetches per-session policy via
+// daemon HTTP GET /v3/sessions/:name/approval-policy + delegates to pure
+// resolveApproval. MBT11ActionType type-import for the value-safe cast at
+// the call site (action-variant-ipc.ts:137 deps surface uses string; shim
+// wants MBT11ActionType — identical 5-member literal sets per shim
+// docblock §2-line 9). Retired by MB-F-T11-T13-ACTION-TYPE-ENUM-DEDUP.
+import { resolveApprovalShim } from './approval-policy-resolver-shim.js';
+import type { MBT11ActionType } from './orchestrator-action-types.js';
 // === END: MB-T-HSO-WIRE shared-emitter-and-writer imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -588,10 +597,18 @@ app.whenReady().then(async () => {
     broadcaster: consoleController,
     dispatch: dispatchActionVariant,
     dispatchDeps: {
-      resolveApproval: async () => ({
-        approvalRequired: false,
-        reason: 'wb7-placeholder',
-      }),
+      // WB9 GREEN — real MB-T13 approval-policy resolver (replaces WB7 stub).
+      // resolveApprovalShim fetches per-session policy via daemon HTTP
+      // (GET /v3/sessions/:name/approval-policy), then delegates to the pure
+      // resolveApproval. Failure-graceful: returns 'tight' (conservative
+      // gate) on any error per shim docblock §15-35; daemon's no-row default
+      // is 'medium' per approval-policy.ts L82 + Q-MBT13-4=c (SQL DEFAULT
+      // + workstation-side resolver fallback both 'medium').
+      resolveApproval: ({ actionType, sessionName }) =>
+        resolveApprovalShim({
+          actionType: actionType as MBT11ActionType,
+          sessionName,
+        }),
       fireSendPrompt: async () => undefined,
       fireSpawn: async (sessionName) => ({ sessionName }),
       fireKill: async () => undefined,
