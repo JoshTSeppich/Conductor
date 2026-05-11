@@ -1,7 +1,8 @@
 // MB-F-T11-T13-RESOLVER-STUB closure — thin shim wrapping the real resolver.
 //
-// Bridges sess-mbt11's orchestrator-action-handler call site
-// (which passes `{ actionType, sessionName }`) to sess-mbt13's real resolver
+// Bridges the v3.5 action-marker-router call site (WB9; calls via
+// dispatchActionVariant.deps.resolveApproval) — passes
+// `{ actionType, sessionName }` — to sess-mbt13's real resolver
 // (which expects `{ policy, actionType }`). Responsibilities:
 //
 //   1. Fetch the per-session ApprovalPolicy via daemon HTTP
@@ -36,10 +37,11 @@
 //
 // Inline fetch helper instead of an `HttpDaemonClient` method: this shim is
 // intentionally short-lived. Per `MB-F-T11-T13-RESOLVER-CALL-SITE-REWRITE`,
-// the orchestrator-action-handler call site rewrites in v3.1 to fetch the
-// policy upstream once per dispatch cycle and pass it directly to the real
-// (sync) resolver — at which point this shim is deleted entirely. Adding a
-// reusable client method now would be premature investment.
+// the action-marker-router call site rewrites in a follow-on ticket to
+// fetch the policy upstream once per dispatch cycle and pass it directly
+// to the real (sync) resolver — at which point this shim is deleted
+// entirely. Adding a reusable client method now would be premature
+// investment.
 
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -126,8 +128,8 @@ export async function fetchSessionApprovalPolicy(
  * its result. Async because of the daemon HTTP fetch — the underlying
  * `resolveApproval` is pure and synchronous.
  *
- * Predicates intentionally unset at this seam: the orchestrator-action-handler
- * does not yet compute willCommit / willTouchContract / isMultiStep predicates
+ * Predicates intentionally unset at this seam: the v3.5 dispatchActionVariant
+ * call path does not yet compute willCommit / willTouchContract / isMultiStep predicates
  * from action payloads. Per the real resolver's R3 graceful-degradation
  * contract (approval-policy-resolver.ts L46–50), missing predicates yield the
  * most-permissive correct answer under medium — matching the §3.2 "low-friction

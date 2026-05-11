@@ -2,8 +2,9 @@
  * MB-T13 — Approval-policy resolver (pure fn).
  *
  * Per Q-MBT13-6=b (operator-arbitrated 2026-05-06): resolver is a pure
- * function. Caller (sess-mbt11's orchestrator-action-handler) fetches
- * the per-session policy via daemon HTTP (GET
+ * function. The v3.5 caller (action-marker-router via dispatchActionVariant's
+ * resolveApproval dep, wired at WB9 through approval-policy-resolver-shim)
+ * fetches the per-session policy via daemon HTTP (GET
  * /v3/sessions/:name/approval-policy), builds predicates from the
  * orchestrator's structured action output, and passes both into this
  * resolver. Resolver applies CONDUCTOR_V3_RESCOPE.md §3.2 semantic
@@ -31,20 +32,20 @@
  *
  * Predicate semantics (Q-MBT13-6 + R3 graceful-degradation):
  *
- *   willCommit:        sess-mbt11 sets to true when the orchestrator
+ *   willCommit:        caller sets to true when the orchestrator
  *                      predicts a `git commit` will result from the
  *                      action. Not applicable to spawn/kill/pull.
  *
- *   willTouchContract: sess-mbt11 sets to true when the orchestrator
+ *   willTouchContract: caller sets to true when the orchestrator
  *                      predicts a frozen-contract file modification.
  *
- *   isMultiStep:       sess-mbt11 sets to true when the action is
+ *   isMultiStep:       caller sets to true when the action is
  *                      part of a chained plan (>1 send-prompt under
  *                      one intent_id).
  *
  *   All predicates default to `false` when omitted — graceful
- *   degradation per R3 (sess-mbt11 may ship action-handler before
- *   prediction-population logic). Resolver therefore yields the
+ *   degradation per R3 (caller may ship dispatchActionVariant deps
+ *   before prediction-population logic). Resolver therefore yields the
  *   most-permissive correct answer ("auto-fire") when predicates
  *   are unknown — matches the "low-friction default" framing of
  *   medium policy.

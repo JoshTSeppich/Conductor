@@ -13,7 +13,7 @@
 // with DI-injectable options.
 //
 // Different from `src/main/approval-policy-resolver-shim.ts` (which
-// graceful-degrades to 'tight' for the orchestrator-action-handler
+// graceful-degrades to 'tight' for the v3.5 dispatchActionVariant
 // resolver use case). The picker UI needs explicit error states so
 // the operator sees "policy unavailable" rather than a misleading
 // "tight" — these helpers throw on any error path; caller (renderer

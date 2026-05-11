@@ -473,8 +473,9 @@ app.whenReady().then(async () => {
   // === end MB-T09 session-send-prompt IPC ===
   // === MB-T11 WB3 session-kill IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.6 + Q-MBT11-3=a — orchestrator-callable
-  // kill (orchestrator-action-handler in WB5 fires this; no renderer-direct
-  // tile-header kill in v3.0). Two-step: tmux kill-session + PATCH
+  // kill (v3.5 dispatchActionVariant's fireKill dep fires this via the
+  // action-marker-router path; the v3.0 orchestrator-action-handler was
+  // removed in MB-T-HSO-WIRE WB14a). Two-step: tmux kill-session + PATCH
   // /v2/sessions/:name/state.
   registerSessionKillIpcHandlers();
   // === end MB-T11 WB3 session-kill IPC ===
@@ -884,8 +885,13 @@ app.whenReady().then(async () => {
   // Default factory wires `new AutopilotLoop()` (default deps reading/
   // writing autopilot-state-store at <userData>/autopilot-state.json).
   // Q-MBT17-9=a: parallel AutopilotLoop instance is explicitly safe per
-  // autopilot-loop.ts:102 file header — coexists with the AutopilotLoop
-  // instance in coarchitect-ipc.ts:84 (used by orchestrator-action-handler).
+  // autopilot-loop.ts file header — pre-WB14 the singleton was shared
+  // with the v3.0 orchestrator-action-handler caller in coarchitect-ipc.ts
+  // (both removed at MB-T-HSO-WIRE WB14a/b). Post-WB14 the v3.5 caller
+  // (action-marker-router → dispatchActionVariant) does not currently
+  // hold an AutopilotLoop instance; this controller's instance is the
+  // sole live one. Parallel-safe contract still holds for any future
+  // v3.5 instance that may be wired downstream.
   //
   // Closes MB-F-T12-AUTOPILOT-TILE-TOGGLE-INTEGRATION (FOLLOWUPS.md:173)
   // — the tile-header autopilot toggle that MB-T11 deferred to a follow-

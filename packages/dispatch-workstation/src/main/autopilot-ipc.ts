@@ -25,8 +25,8 @@
 // store deps so multiple instances ... see the same persisted state".
 //
 // Per Q-MBT17-12=a: toggle is a pure flag mutation. Toggle ON sets
-// enabled=true; orchestrator-action-handler reads isEnabled() on next
-// call. NO background loop, NO resources to allocate, NO side effects
+// enabled=true; the v3.5 dispatchActionVariant call path reads isEnabled()
+// on next call. NO background loop, NO resources to allocate, NO side effects
 // beyond the JSON write.
 
 import { AutopilotLoop } from './autopilot-loop.js';

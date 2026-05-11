@@ -80,7 +80,9 @@ export function uuidv7(): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// AutopilotLoop — the operations the orchestrator-action-handler consumes
+// AutopilotLoop — per-session state machine consumed by the v3.5 caller
+// (dispatchActionVariant via action-marker-router) and the renderer-side
+// AutopilotIpcController.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface AutopilotLoopDeps {
@@ -101,8 +103,8 @@ export interface StartIntentResult {
 /**
  * Per-session autopilot state machine. Stateless class — every method
  * reads + writes through the injected store deps so multiple instances
- * (e.g., across orchestrator-action-handler dispatch + Tier4 fan-out
- * merge) see the same persisted state.
+ * (e.g., across renderer-side IPC and main-process consumers) see the
+ * same persisted state.
  */
 export class AutopilotLoop {
   private readonly now: () => string;
