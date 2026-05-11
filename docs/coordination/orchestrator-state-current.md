@@ -4,8 +4,8 @@ schema_contract: docs/coordination/ORCHESTRATOR_STATE_CONTRACT.md
 session_id: orchestrator-2026-05-10-21:07
 predecessor_session_id: null
 session_started_at: 2026-05-10T21:07:06-06:00
-session_ended_at: null
-status: active
+session_ended_at: 2026-05-11T12:41:27-06:00
+status: deprecated
 context_token_count_at_snapshot: ~920000-940000
 context_window_max: 1000000
 origin_main_head_at_snapshot: 6217ea0
