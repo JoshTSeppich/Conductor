@@ -189,6 +189,18 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   // Q-MBT17-3=a on rejection.
   setSessionAutopilotEnabled: (sessionName: string, enabled: boolean) =>
     ipcRenderer.invoke('workstation:autopilot-put', { sessionName, enabled }),
+  // §C.5: subscribe to 'workstation:tile-token-update' events emitted by
+  // tile-token-scraper after per-session 500ms debounce. Payload shape:
+  // { sessionName: string; tokensUsed: number }. Returns cleanup-fn matching
+  // the onTileDetachClosed / onSpawnResult pattern.
+  onTileTokenUpdate: (
+    cb: (payload: { sessionName: string; tokensUsed: number }) => void,
+  ) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (_: unknown, payload: { sessionName: string; tokensUsed: number }) => cb(payload);
+    ipcRenderer.on('workstation:tile-token-update', h as any);
+    return () => ipcRenderer.removeListener('workstation:tile-token-update', h as any);
+  },
   // === BEGIN: MB-T24 dispatch-mode gate IPC ===
   // Q-MBT24-5=c (hard gate at spawn-ipc.ts) operator-confirmed at HALT 0
   // 2026-05-08. spawn-ipc.ts emits 'workstation:spawn-confirm-required'

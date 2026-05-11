@@ -76,6 +76,13 @@ export interface WorkstationBridgeShape {
     sessionName: string,
     enabled: boolean,
   ) => Promise<{ enabled: boolean }>;
+  /** §C.5: subscribes to 'workstation:tile-token-update' main-process events
+   *  emitted by tile-token-scraper after per-session 500ms debounce.
+   *  Optional — when undefined, token meter stays at stub default (0 tokens).
+   *  Returns cleanup. */
+  onTileTokenUpdate?: (
+    cb: (payload: { sessionName: string; tokensUsed: number }) => void,
+  ) => () => void;
 }
 
 export interface TileGridAppProps {
@@ -192,6 +199,19 @@ export function TileGridApp({
             s.name === sessionName ? { ...s, status: 'open' as const } : s,
           ),
         ),
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workstationBridge]);
+
+  // §C.5: subscribe to per-tile PTY token-count updates from tile-token-scraper.
+  // Updates only tokensUsed on the matching session; does not trigger persistence
+  // (token count is transient display state, not layout state).
+  useEffect(() => {
+    if (!workstationBridge.onTileTokenUpdate) return undefined;
+    return workstationBridge.onTileTokenUpdate(({ sessionName, tokensUsed }) => {
+      setSessions((current) =>
+        current.map((s) => (s.name === sessionName ? { ...s, tokensUsed } : s)),
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

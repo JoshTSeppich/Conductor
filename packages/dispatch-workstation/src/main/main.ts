@@ -60,6 +60,9 @@ import { createDefaultApprovalPolicyIpcController } from './approval-policy-ipc.
 // AutopilotLoop instances).
 import { createDefaultAutopilotIpcController } from './autopilot-ipc.js';
 // === END: MB-T17 autopilot IPC imports ===
+// === BEGIN: §C.5 tile token scraper imports (do not modify outside this block) ===
+import { registerTileTokenScraper } from './tile-token-scraper.js';
+// === END: §C.5 tile token scraper imports ===
 // === BEGIN: MB-T24 dispatch-mode IPC imports (do not modify outside this block) ===
 // WB3 — DispatchModeIpcController + production factory for the workstation-
 // wide Auto/Ask dispatch-mode toggle consumed by DispatchModeToggle (chat-
@@ -443,6 +446,21 @@ app.whenReady().then(async () => {
   // createWindow() below. Dispatch authoring drift caught at HALT-WB2.
   wirePtyRelay(consoleController);
   // === END: MB-T40 ===
+  // === BEGIN: §C.5 tile token scraper ===
+  // Taps PTY stdout via consoleController.addStdoutObserver, strips ANSI,
+  // extracts "[0-9]+ tokens" with 500ms per-session debounce, then emits
+  // workstation:tile-token-update to the renderer. preload.mts subscribes
+  // via ipcRenderer.on and surfaces as workstationBridge.onTileTokenUpdate.
+  registerTileTokenScraper({
+    broadcaster: consoleController,
+    onTokenUpdate: (sessionName, tokensUsed) => {
+      mainWindow?.webContents.send('workstation:tile-token-update', {
+        sessionName,
+        tokensUsed,
+      });
+    },
+  });
+  // === END: §C.5 tile token scraper ===
   // === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
   wireCardIpc({ ipcOn: (channel, listener) => ipcMain.on(channel, listener) });
   // === end MB-T07 card wiring ===
