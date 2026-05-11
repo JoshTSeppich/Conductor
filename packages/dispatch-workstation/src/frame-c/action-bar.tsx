@@ -25,6 +25,18 @@
 //     (Wave B `525c502`) per per-IPC-family convention.
 
 import { createElement } from 'react';
+import type { FrameCActionError } from '../main/frame-c-ipc.js';
+
+/** Sub-Q-MBTWBDPFA-C=(α) inline-banner failure-UX shape per coord note
+ *  `9fe6358` §4. Host (Frame C detail-pane) catches non-ok results from
+ *  any `frameCBridge.*` call + plumbs the tagged failure down via this
+ *  prop. ActionBar renders a `role="alert"` banner inline with action
+ *  name + error_type + message + Dismiss button + optional conflict-
+ *  files `<ul>` for `MergeConflict` results. */
+export interface ActionBarFailureState {
+  readonly action: 'diff' | 'merge' | 'focus';
+  readonly result: FrameCActionError;
+}
 
 export interface ActionBarProps {
   /** Currently-selected session in the Frame C detail-pane, or `null`
@@ -46,6 +58,13 @@ export interface ActionBarProps {
    *  Full Frame A render-coherence pending
    *  `MB-F-TILEGRIDAPP-FRAMEMODE-SUBSCRIPTION-GAP-2026-05-11`. */
   readonly onFocus: (sessionName: string) => void;
+  /** Sub-Q-MBTWBDPFA-C=(α) inline-banner state. When non-null, ActionBar
+   *  renders the failure banner per coord note `9fe6358` §4. Host clears
+   *  to null on next successful action (auto-dismiss-on-recovery). */
+  readonly failureState?: ActionBarFailureState | null;
+  /** Fired when operator clicks the Dismiss button inside the failure
+   *  banner. Host sets `failureState` to null in response. */
+  readonly onDismissFailure?: () => void;
 }
 
 export function ActionBar({
@@ -53,6 +72,8 @@ export function ActionBar({
   onDiff,
   onMerge,
   onFocus,
+  failureState,
+  onDismissFailure,
 }: ActionBarProps): JSX.Element {
   const disabled = sessionName === null;
   // Wrap each callback so it only fires when a session IS selected. The
@@ -101,6 +122,65 @@ export function ActionBar({
         onClick: fireFocus,
       },
       'Focus',
+    ),
+    // WB6 GREEN — inline failure banner (Sub-Q-MBTWBDPFA-C=α per coord
+    // note `9fe6358` §4 render expectations). React renders nothing
+    // for null/undefined children, so the null/undefined-default case
+    // is a no-op (probe-05a baseline).
+    failureState !== null && failureState !== undefined
+      ? renderFailureBanner(failureState, onDismissFailure)
+      : null,
+  );
+}
+
+// MergeConflict-specific narrowing helper. The `result` discriminated
+// union (DiffResult|MergeResult|FocusResult) carries `conflictFiles?:
+// readonly string[]` only on the `MergeConflict` error_type branch.
+// `failureState.result` is typed as the base `FrameCActionError`; we
+// runtime-narrow to surface conflictFiles when present.
+function extractConflictFiles(
+  result: FrameCActionError,
+): readonly string[] | undefined {
+  if (result.error_type !== 'MergeConflict') return undefined;
+  const maybe = (result as unknown as { conflictFiles?: unknown }).conflictFiles;
+  if (!Array.isArray(maybe)) return undefined;
+  return maybe.filter((x): x is string => typeof x === 'string');
+}
+
+function renderFailureBanner(
+  failureState: ActionBarFailureState,
+  onDismissFailure: (() => void) | undefined,
+): JSX.Element {
+  const conflictFiles = extractConflictFiles(failureState.result);
+  return createElement(
+    'div',
+    {
+      role: 'alert',
+      'data-testid': 'action-bar-failure-banner',
+    },
+    createElement(
+      'strong',
+      null,
+      `${failureState.action} failed:`,
+    ),
+    ` ${failureState.result.error_type} — ${failureState.result.message}`,
+    conflictFiles !== undefined && conflictFiles.length > 0
+      ? createElement(
+          'ul',
+          null,
+          ...conflictFiles.map((f) => createElement('li', { key: f }, f)),
+        )
+      : null,
+    createElement(
+      'button',
+      {
+        type: 'button',
+        'data-testid': 'action-bar-failure-dismiss',
+        onClick: () => {
+          if (onDismissFailure !== undefined) onDismissFailure();
+        },
+      },
+      'Dismiss',
     ),
   );
 }
