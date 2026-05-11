@@ -21,6 +21,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
 import { SessionList } from './session-list.js';
+import { DetailPane } from './detail-pane.js';
 
 const ROOT_STYLE: CSSProperties = {
   display: 'flex',
@@ -109,7 +110,7 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
         />
       </div>
       <div data-testid="frame-c-detail-col" style={DETAIL_COL_STYLE}>
-        {/* WB8 DetailPane renders here, gated on `selected` */}
+        {selected !== null && <DetailPane selectedSessionName={selected} />}
       </div>
     </div>
   );

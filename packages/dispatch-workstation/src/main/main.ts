@@ -166,6 +166,14 @@ import { dispatchActionVariant } from './action-variant-ipc.js';
 import { resolveApprovalShim } from './approval-policy-resolver-shim.js';
 import type { MBT11ActionType } from './orchestrator-action-types.js';
 // === END: MB-T-HSO-WIRE shared-emitter-and-writer imports ===
+// === BEGIN: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read imports (do not modify outside this block) ===
+// WB8 — DetailPane (renderer) reads docs/swarm-state.md content via the
+// `workstation:read-swarm-state` IPC handler below. Path resolution
+// mirrors the SwarmStateWriter init at the MB-T-HSO-WIRE zone
+// (swarmStatePath at line ~557). Aliased to swarmStateReadFileSync to
+// avoid collision with the Fix-C alias at line 99.
+import { readFileSync as swarmStateReadFileSync } from 'node:fs';
+// === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
@@ -466,6 +474,38 @@ app.whenReady().then(async () => {
     return readFrameMode();
   });
   // === END: §C.1′ frame-mode IPC ===
+  // === BEGIN: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read IPC ===
+  // WB8 — Renderer-side DetailPane queries docs/swarm-state.md via this
+  // narrow IPC channel. Per ticket body a1f7a03 §4 WB8 + Sub-Q-MBTWBFCS-B=i
+  // operator-pre-arbitrated 2026-05-11. swarmStatePath mirrors the
+  // MB-T-HSO-WIRE SwarmStateWriter resolution below (line ~557):
+  // `resolve(app.getAppPath(), '..', '..', 'docs/swarm-state.md')`.
+  //
+  // Resilience: ENOENT (HSO has not yet emitted any action, so the
+  // writer has not created the file) returns empty string. DetailPane
+  // surfaces "no swarm-state section found" placeholder copy honestly.
+  // Other errors propagate to the renderer caller as an ipcRenderer
+  // rejection — DetailPane catch-block surfaces error text.
+  //
+  // WORKSTATION_CONTRACT.md §6 amendment territory per CLAUDE.md §2.4:
+  // this commit ADDS a new IPC channel name; HALT-WB8-PRE-COMMIT
+  // surfaces the diff for operator review BEFORE landing per dispatch
+  // §C conditional-HALT clause.
+  ipcMain.handle('workstation:read-swarm-state', () => {
+    const swarmStatePath = resolve(
+      app.getAppPath(),
+      '..',
+      '..',
+      'docs/swarm-state.md',
+    );
+    try {
+      return swarmStateReadFileSync(swarmStatePath, 'utf8');
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return '';
+      throw e;
+    }
+  });
+  // === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read IPC ===
   // === MB-T09 session-send-prompt IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
   // tile footer (MB-T12) consume this surface. Default deps wire to

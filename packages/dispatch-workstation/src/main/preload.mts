@@ -239,6 +239,24 @@ contextBridge.exposeInMainWorld('workstationBridge', {
       decision,
     }),
   // === END: MB-T24 ===
+  // === BEGIN: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read bridge ===
+  // WB8 — Frame C DetailPane reads docs/swarm-state.md via this method.
+  // Per ticket body a1f7a03 §4 WB8 + Sub-Q-MBTWBFCS-B=i operator-pre-
+  // arbitrated 2026-05-11. Invokes `workstation:read-swarm-state` main-
+  // process IPC handler (registered in main.ts MB-T-WIREFRAME-C1P2-
+  // FRAME-C-SURFACE swarm-state-read IPC sentinel zone after §C.1′
+  // frame-mode IPC). Returns full file content as string; empty string
+  // when swarm-state.md does not yet exist (HSO has not emitted any
+  // action yet, so SwarmStateWriter has not created the file).
+  //
+  // Renderer-side parser at src/frame-c/detail-pane.tsx
+  // `extractSwarmStateSection()` extracts the section for the
+  // currently-selected session.
+  //
+  // WORKSTATION_CONTRACT.md §6 amendment territory per CLAUDE.md §2.4 —
+  // HALT-WB8-PRE-COMMIT surfaces this diff for operator review.
+  readSwarmState: () => ipcRenderer.invoke('workstation:read-swarm-state'),
+  // === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read bridge ===
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
