@@ -137,6 +137,11 @@ import {
   SessionSendPromptIpcController,
   defaultSessionSendPromptDeps,
 } from './session-send-prompt-ipc.js';
+// WB7 — action-marker-router (3c9629b WB1 spike binding §V: Pattern B
+// accumulator + strip-and-re-parse). Independent observer subscription
+// from MB-T40 pty-stream-relay; same broadcaster fan-out per MB-T37.
+import { registerActionMarkerRouter } from './action-marker-router.js';
+import { dispatchActionVariant } from './action-variant-ipc.js';
 // === END: MB-T-HSO-WIRE shared-emitter-and-writer imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -558,6 +563,56 @@ app.whenReady().then(async () => {
   // by consoleController's observer-fn ref (via addStdoutObserver) for
   // process lifetime.
   void peerSummaryHarvester;
+  // WB7 — action-marker-router: independent __orchestrator_active observer
+  // + Pattern B accumulator + dispatchActionVariant caller. Per WB1 spike
+  // binding (3c9629b ADR §V): per-session string buffer + strip-and-re-parse
+  // loop addresses Concern (i) multi-marker-in-buffer. Independent observer
+  // from MB-T40 pty-stream-relay (multiple subscribers supported per
+  // MB-T37 broadcaster fan-out contract); pty-stream-relay's whole-buffer-
+  // clear semantics remain untouched.
+  //
+  // Sub-Y-1 stub-fires (Q-WB7-2 ack): dispatchDeps.fire-* deps are no-op
+  // resolvers at WB7. ACTION_VARIANT_FIRED_EVENT still emits from
+  // dispatchActionVariant (action-variant-ipc.ts:271 etc.) on each
+  // successful dispatch — caught by swarm-state-writer's constructor
+  // subscription above for honest dogfood signal (mechanism shipped,
+  // fires stubbed). dispatchDeps.resolveApproval is the WB7 placeholder;
+  // WB9 GREEN swaps to the real MB-T13 approval-policy-resolver-shim.
+  // Real fire-* wiring is a dedicated downstream ticket per the v3.5
+  // plan's MB-T-HSO-WIRE → real-actions sequencing.
+  //
+  // onError sink (Q-WB7-4 ack): `coarchitect:streamError` IPC channel —
+  // matches existing chat error surface for malformed-marker user-visible
+  // feedback.
+  const actionMarkerRouterDispose = registerActionMarkerRouter({
+    broadcaster: consoleController,
+    dispatch: dispatchActionVariant,
+    dispatchDeps: {
+      resolveApproval: async () => ({
+        approvalRequired: false,
+        reason: 'wb7-placeholder',
+      }),
+      fireSendPrompt: async () => undefined,
+      fireSpawn: async (sessionName) => ({ sessionName }),
+      fireKill: async () => undefined,
+      firePullHandoff: async () => ({
+        content: '',
+        written_at: new Date().toISOString(),
+        archived_to: '',
+      }),
+      fireAssignTask: async () => ({
+        intent_id: `stub-${Date.now()}`,
+      }),
+    },
+    onError: (message) => {
+      mainWindow?.webContents.send('coarchitect:streamError', { message });
+    },
+  });
+  // Keep the dispose handle live for any future app-shutdown wiring and to
+  // satisfy noUnusedLocals. Router is also retained transitively by
+  // consoleController's observer-fn ref (via addStdoutObserver) for the
+  // process lifetime.
+  void actionMarkerRouterDispose;
   // === END: MB-T-HSO-WIRE shared-emitter-and-writer ===
   // === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
   wireCardIpc({ ipcOn: (channel, listener) => ipcMain.on(channel, listener) });
