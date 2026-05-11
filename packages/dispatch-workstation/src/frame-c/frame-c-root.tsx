@@ -97,6 +97,13 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
     externalOnSelect?.(name);
   };
 
+  // MB-T-WIREFRAME-C5-TOKEN-WIRING-SURFACE WB4 — look up the selected
+  // session's tokens for DetailPane's ctx N% rendering. Lookup
+  // returns undefined if not found (e.g., stale selection), which
+  // DetailPane handles as the "ctx 0%" fallback.
+  const selectedEntry =
+    selected !== null ? sessions.find((s) => s.name === selected) : undefined;
+
   return (
     <div data-testid="frame-c-root" style={ROOT_STYLE}>
       <div
@@ -110,7 +117,13 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
         />
       </div>
       <div data-testid="frame-c-detail-col" style={DETAIL_COL_STYLE}>
-        {selected !== null && <DetailPane selectedSessionName={selected} />}
+        {selected !== null && (
+          <DetailPane
+            selectedSessionName={selected}
+            tokensUsed={selectedEntry?.tokensUsed}
+            tokenBudget={selectedEntry?.tokenBudget}
+          />
+        )}
       </div>
     </div>
   );

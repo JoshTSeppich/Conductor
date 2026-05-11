@@ -41,12 +41,31 @@ const DETAIL_PANE_STYLE: CSSProperties = {
   color: '#dddddd',
 };
 
+const META_ROW_STYLE: CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: '8px',
+  marginBottom: '8px',
+};
+
 const HEADER_STYLE: CSSProperties = {
   fontSize: '12px',
   color: '#888888',
-  marginBottom: '8px',
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
+};
+
+// MB-T-WIREFRAME-C5-TOKEN-WIRING-SURFACE WB4 — ctx N% inline label.
+// marginLeft:auto right-aligns within the meta-row flex container,
+// placing ctx-text alongside (not below) the session-name header per
+// Sub-Q-MBTWTWS-B=(a) inline-not-stacked format.
+const CTX_TEXT_STYLE: CSSProperties = {
+  fontSize: '11px',
+  color: '#9ca3af',
+  marginLeft: 'auto',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+  fontVariantNumeric: 'tabular-nums',
 };
 
 const PRE_STYLE: CSSProperties = {
@@ -66,6 +85,18 @@ export interface DetailPaneProps {
    * on `selected !== null`; this component assumes a valid session name.
    */
   readonly selectedSessionName: string;
+  /**
+   * Tokens consumed in the selected session's current window. Sourced
+   * from the corresponding TileGridSessionEntry via FrameCRoot's
+   * sessions[] lookup. Optional — undefined/missing renders ctx 0%
+   * (honest "no data yet" surface for sessions pre-first-scrape).
+   */
+  readonly tokensUsed?: number;
+  /**
+   * Token budget (model context window). Optional — undefined or 0
+   * renders ctx 0% fallback (avoids divide-by-zero).
+   */
+  readonly tokenBudget?: number;
 }
 
 interface WorkstationBridgeShape {
@@ -138,9 +169,16 @@ export function extractSwarmStateSection(text: string, sessionName: string): str
 }
 
 export function DetailPane(props: DetailPaneProps): JSX.Element {
-  const { selectedSessionName } = props;
+  const { selectedSessionName, tokensUsed, tokenBudget } = props;
   const [content, setContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+
+  // Guard tokenBudget undefined/0 to avoid NaN (0/0) or Infinity (n/0).
+  // Fallback ctxPct=0 → "ctx 0%" surface (honest "no data yet").
+  const ctxPct =
+    tokenBudget !== undefined && tokenBudget > 0
+      ? Math.round(((tokensUsed ?? 0) / tokenBudget) * 100)
+      : 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -177,7 +215,15 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
 
   return (
     <div data-testid="frame-c-detail-pane" style={DETAIL_PANE_STYLE}>
-      <div style={HEADER_STYLE}>{selectedSessionName}</div>
+      <div style={META_ROW_STYLE}>
+        <div style={HEADER_STYLE}>{selectedSessionName}</div>
+        <span
+          data-testid="frame-c-detail-pane-ctx-text"
+          style={CTX_TEXT_STYLE}
+        >
+          ctx {ctxPct}%
+        </span>
+      </div>
       <pre style={error ? { ...PRE_STYLE, ...ERROR_STYLE } : PRE_STYLE}>
         {body}
       </pre>
