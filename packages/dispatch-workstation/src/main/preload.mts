@@ -331,3 +331,28 @@ contextBridge.exposeInMainWorld('frameModeBridge', {
   setFrameMode: (mode: unknown) => ipcRenderer.invoke('frame-mode:set', { mode }),
 });
 // === END: §C.1′ frame-mode bridge ===
+// === BEGIN: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS frameCBridge ===
+// Sub-Q-MBTWBDPFA-D=(α) operator-arbitrated 2026-05-11: NEW frameCBridge
+// (per-IPC-family convention; coexists with workstationBridge.read-
+// SwarmState landed at Wave B `525c502`). Three action methods
+// (diff/merge/focus) routed to FrameCIpcController handlers per
+// consolidated `WORKSTATION_CONTRACT.md §6` amendment `0f0e762`.
+//
+// Main-process handlers registered via `createDefaultFrameCIpcController(
+// deps).registerHandlers(ipcMain)` from `main.ts` (call site DEFERRED to
+// WB4-followup per dispatch serialization rule — Wave B WB10 GREEN must
+// land first; T4-successor's main.ts edit precedes mine). Until that
+// wiring lands, renderer-side `window.frameCBridge.{diff,merge,focus}`
+// calls invoke channels with NO main-process handler → `ipcRenderer.
+// invoke` rejects with "No handler registered" Error. ActionBar host
+// must surface this as a failure-state inline banner (Sub-Q-C=α; WB6
+// scope).
+contextBridge.exposeInMainWorld('frameCBridge', {
+  diff: (sessionName: string) =>
+    ipcRenderer.invoke('frame-c:diff', { sessionName }),
+  merge: (sessionName: string) =>
+    ipcRenderer.invoke('frame-c:merge', { sessionName }),
+  focus: (sessionName: string) =>
+    ipcRenderer.invoke('frame-c:focus', { sessionName }),
+});
+// === END: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS frameCBridge ===
