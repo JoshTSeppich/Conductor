@@ -723,6 +723,43 @@ app.whenReady().then(async () => {
   // for process lifetime.
   void orchestratorPool;
   // === END: MB-T-HSO-WIRE shared-emitter-and-writer ===
+  // === BEGIN: MB-T-POOL-SHUTDOWN-HOOK-FIX shutdown-hook (do not modify outside this block) ===
+  // Wires `orchestratorPool.stop()` (hso-pool.ts:266-286 shipped at
+  // deca210 path-E) to electron's `before-quit` event so the pool's
+  // teardown PATCH calls (reserved-name rows → state='held') complete
+  // before app exits. Closes MB-F-POOL-SHUTDOWN-HOOK-DAEMON-RECONCILIATION
+  // (Tier 3 at FOLLOWUPS.md:286) — pre-fix, clean SIGTERM left 2 daemon
+  // orphans per launch (state='armed' for __orchestrator_active +
+  // __orchestrator_standby); post-fix, rows survive at state='held' and
+  // subsequent launch's path-E start() GET-then-PATCH-to-'armed' handles
+  // them cleanly. Also closes the pool-driven manifestation of
+  // MB-F-DOGFOOD-TEARDOWN-PROTOCOL-LEAVES-ORPHAN-REGISTRATIONS (Tier 2).
+  //
+  // Sub-Q-B=b operator-acked 2026-05-11: bounded 5000ms timeout via
+  // Promise.race so a hung daemon does not block app exit indefinitely.
+  // pool.stop() is best-effort per its shipped implementation (try/catch
+  // silently swallows daemon errors at hso-pool.ts:282-284); the race
+  // is defense-in-depth for the rare "daemon hangs without erroring"
+  // case.
+  //
+  // event.preventDefault() + app.exit(0): preventDefault() defers the
+  // real quit so the async teardown can complete; app.exit(0) bypasses
+  // electron's normal quit-flow (app.quit() would re-fire before-quit
+  // and loop). Per electron 41 before-quit docs.
+  app.on('before-quit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      try {
+        await Promise.race([
+          orchestratorPool.stop(),
+          new Promise<void>((resolve) => setTimeout(resolve, 5_000)),
+        ]);
+      } finally {
+        app.exit(0);
+      }
+    })();
+  });
+  // === END: MB-T-POOL-SHUTDOWN-HOOK-FIX shutdown-hook ===
   // MB-T07 card-IPC wiring removed at MB-T-HSO-WIRE WB14b (v3.0 path
   // removal); card-wiring.ts + card-ipc.ts deleted in this commit.
   registerOnboardingIpc();
