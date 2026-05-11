@@ -126,6 +126,18 @@ const METER_OUTER_STYLE: React.CSSProperties = {
   overflow: 'hidden',
 };
 
+// MB-T-WIREFRAME-C5-TOKEN-WIRING-SURFACE WB6 — ctx N% inline label
+// rendered as a sibling of the token-meter (Sub-Q-MBTWTWS-A=(iv) +
+// Sub-Q-MBTWTWS-B=(a) inline-not-stacked). Sits adjacent to the bar,
+// preserving the existing color-coded tint signal.
+const CTX_TEXT_STYLE: React.CSSProperties = {
+  color: '#9ca3af',
+  fontSize: '10px',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+  fontVariantNumeric: 'tabular-nums',
+};
+
 // ── Component ────────────────────────────────────────────────────────
 
 export function TileHeader(props: TileHeaderProps): JSX.Element {
@@ -199,6 +211,12 @@ export function TileHeader(props: TileHeaderProps): JSX.Element {
           {chipShortcode}
         </span>
       )}
+      <span
+        data-testid="tile-header-ctx-text"
+        style={CTX_TEXT_STYLE}
+      >
+        ctx {Math.round(tokenRatio * 100)}%
+      </span>
       <div
         data-testid="tile-header-token-meter"
         data-tint={tint}
