@@ -112,6 +112,17 @@ function makeManager(deps: MockDeps): OrchestratorPoolManager {
     runTmuxHasSession: deps.runTmuxHasSession,
     dispatchModeReader: () => 'auto' as const,
     halt: deps.halt,
+    // Path (E) fix01e: pre-existing MB-T37 WB1 probes pre-date the
+    // daemonSessionsClient dep; default to "first-launch" semantics
+    // (GET returns null/404) so probe-01..09 retain their pre-fix01e
+    // behavioral assertions (start() calls spawnController on 404).
+    // Probes that exercise the Path (E) state-machine branches live in
+    // probe-mbthsowire-fix01e-path-e-pool-state-machine.spec.ts and
+    // inject explicit GET-return shapes there.
+    daemonSessionsClient: {
+      getSession: vi.fn().mockResolvedValue(null),
+      patchSessionState: vi.fn().mockResolvedValue(undefined),
+    },
   });
 }
 

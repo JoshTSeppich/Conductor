@@ -145,6 +145,7 @@ import {
 } from './session-send-prompt-ipc.js';
 import {
   OrchestratorPoolManager,
+  DefaultDaemonSessionsClient,
   TileGridRegistryAdapter,
 } from '../coarchitect/hso-pool.js';
 import { SpawnIpcController, defaultSpawnHandlerDeps } from './spawn-ipc.js';
@@ -705,6 +706,14 @@ app.whenReady().then(async () => {
       console.error('[MB-T-HSO-WIRE OrchestratorPoolManager halt]', reason);
       mainWindow?.webContents.send('coarchitect:streamError', { message: reason });
     },
+    // Path (E) fix01e: production daemon-sessions client. Pool uses this to
+    // GET reserved-name state at start() and PATCH-to-'held' at stop() —
+    // avoids Blocker 3 (sessions.ts:155) collision on stale killed rows
+    // from previous workstation lifecycles. Default-arg ctor reads token
+    // from ~/.foxworks-dispatch/token + uses FOXWORKS_DAEMON_URL env var
+    // (default http://localhost:7878). Auth header: 'x-conductor-token'
+    // per MB-F-DAEMON-AUTH-HEADER-CONTRACT-DOC (NOT Authorization: Bearer).
+    daemonSessionsClient: new DefaultDaemonSessionsClient(),
   });
   void orchestratorPool.start();
   // Keep the binding live for any future stop()/dispose() wiring at app
