@@ -18,7 +18,7 @@
 //     by that attribute (workstation-shell.html DOM region; WB10
 //     adds the region per HALT-WB10-PRE-COMMIT operator review).
 
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
 import { SessionList } from './session-list.js';
 
@@ -72,7 +72,30 @@ export interface FrameCRootProps {
  * into the right column (deferred).
  */
 export function FrameCRoot(props: FrameCRootProps): JSX.Element {
-  const { sessions = [], onSelectSession, selectedSessionName } = props;
+  const {
+    sessions = [],
+    onSelectSession: externalOnSelect,
+    selectedSessionName: externalSelected,
+  } = props;
+
+  // WB6 — Sub-Q-MBTWBFCS-A=α renderer-only selection state (operator-
+  // acked 2026-05-11 via orchestrator-mediated paste). Internal useState
+  // is the default selection source; an external `selectedSessionName`
+  // prop takes precedence (controlled-component pattern) so the parent
+  // can pin a selection from above when needed. Both paths invoke
+  // `externalOnSelect` if provided so the parent can observe selection
+  // changes without driving them.
+  const [internalSelected, setInternalSelected] = useState<string | null>(null);
+  const selected =
+    externalSelected !== undefined ? externalSelected : internalSelected;
+
+  const handleSelect = (name: string): void => {
+    if (externalSelected === undefined) {
+      setInternalSelected(name);
+    }
+    externalOnSelect?.(name);
+  };
+
   return (
     <div data-testid="frame-c-root" style={ROOT_STYLE}>
       <div
@@ -81,12 +104,12 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
       >
         <SessionList
           sessions={sessions}
-          onSelect={onSelectSession}
-          selectedSessionName={selectedSessionName ?? null}
+          onSelect={handleSelect}
+          selectedSessionName={selected}
         />
       </div>
       <div data-testid="frame-c-detail-col" style={DETAIL_COL_STYLE}>
-        {/* WB8 DetailPane renders here */}
+        {/* WB8 DetailPane renders here, gated on `selected` */}
       </div>
     </div>
   );

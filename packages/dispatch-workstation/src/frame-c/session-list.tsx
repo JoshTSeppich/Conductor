@@ -102,7 +102,7 @@ export interface SessionListProps {
 }
 
 export function SessionList(props: SessionListProps): JSX.Element {
-  const { sessions, onSelect } = props;
+  const { sessions, onSelect, selectedSessionName } = props;
 
   return (
     <div data-testid="frame-c-session-list" style={LIST_ROOT_STYLE}>
@@ -126,13 +126,23 @@ export function SessionList(props: SessionListProps): JSX.Element {
         const metaText = metaParts.join(' · ');
 
         const handleClick = onSelect ? () => onSelect(s.name) : undefined;
+        const isSelected = selectedSessionName === s.name;
+        // WB6 — Sub-Q-A=α selection-state visual. aria-selected emitted
+        // as "true"/"false" string per ARIA spec for listbox-pattern
+        // selection. Background tint added when selected for visual
+        // affordance (subtle highlight; details polished at WB11 smoke
+        // operator review).
+        const rowStyle: CSSProperties = isSelected
+          ? { ...ROW_STYLE, backgroundColor: '#1f2a3f' }
+          : ROW_STYLE;
 
         return (
           <div
             key={s.name}
             data-testid={`frame-c-session-row-${s.name}`}
             data-session-name={s.name}
-            style={ROW_STYLE}
+            aria-selected={isSelected ? 'true' : 'false'}
+            style={rowStyle}
             onClick={handleClick}
             role={handleClick ? 'button' : undefined}
             tabIndex={handleClick ? 0 : undefined}
