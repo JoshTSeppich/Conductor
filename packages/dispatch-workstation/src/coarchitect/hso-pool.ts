@@ -163,9 +163,26 @@ export class OrchestratorPoolManager {
         permissionMode: 'auto',
       });
       if (result.type === 'error') {
-        this._deps.halt(
-          `OrchestratorPoolManager: spawn failed for ${sessionName}: ${result.error.message}`,
-        );
+        // MB-T-HSO-WIRE WB13 Path β (Q-WB12-1 ack 2026-05-11): tighten the
+        // user-visible surface for the SessionAlreadyRegistered collision
+        // case. Daemon 409 (operator manual `tmux new-session -s
+        // <reserved>` predates pool start) surfaces as error_type
+        // 'SessionAlreadyRegistered' per spawn-handler.ts:33-38; spawn-
+        // handler:270 confirms the partial tmux session is already cleaned
+        // up by the spawn-side. Pool emits an operator-actionable message
+        // so the renderer chat error surface tells the operator exactly
+        // what to do; non-collision errors keep the existing generic
+        // halt-message format (no regression for SpawnFailed / Daemon-
+        // Unreachable / SessionNameExists / SessionCapExceeded).
+        if (result.error.error_type === 'SessionAlreadyRegistered') {
+          this._deps.halt(
+            `Manual ${sessionName} session exists; pool cannot auto-spawn. Kill the manual session OR disable pool auto-spawn.`,
+          );
+        } else {
+          this._deps.halt(
+            `OrchestratorPoolManager: spawn failed for ${sessionName}: ${result.error.message}`,
+          );
+        }
         return;
       }
       this._deps.tileRegistry.addSession(sessionName, defaultTileLayoutState(orderIndex));
