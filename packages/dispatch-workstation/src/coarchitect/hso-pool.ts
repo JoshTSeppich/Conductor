@@ -508,7 +508,14 @@ export class OrchestratorPoolManager {
     this._parseFailCount = 0;
     this._midAction = false;
     this._activeCrashHandled = false;
-    void this._spawnAndRegister(RESERVED_STANDBY);
+    // MB-T-POOL-CRASH-RECOVERY-PATH-E-FIX: route new-standby spawn through
+    // the Path (E) GET-first state machine instead of direct spawnController
+    // POST. Same 5-branch behavior as fix01e _prepareReservedName (deca210):
+    // 404 → spawnController; armed → reuse; held → PATCH armed + reuse;
+    // paused/killed → halt-and-surface. Avoids daemon Blocker 3 409 cascade
+    // when a previous lifecycle left the standby row in state=armed but
+    // tmux died out-of-band (Phase D-2 LAUNCH-2 scenario at 4986b69).
+    void this._prepareReservedName(RESERVED_STANDBY);
   }
 
   private _onSessionClose(sessionName: string): void {
@@ -527,6 +534,9 @@ export class OrchestratorPoolManager {
     this._standbyCrashHandled = true;
     this._deps.tileRegistry.removeSession(RESERVED_STANDBY);
     this._standbySessionName = null;
-    void this._spawnAndRegister(RESERVED_STANDBY);
+    // MB-T-POOL-CRASH-RECOVERY-PATH-E-FIX: route standby-respawn through
+    // the Path (E) GET-first state machine. Same rationale as the
+    // _promote callsite above (Phase D-2 LAUNCH-2 cascade-halt closure).
+    void this._prepareReservedName(RESERVED_STANDBY);
   }
 }

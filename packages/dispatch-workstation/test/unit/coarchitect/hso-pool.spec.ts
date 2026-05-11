@@ -225,7 +225,13 @@ describe('MB-T37 WB1 — OrchestratorPoolManager pool lifecycle', () => {
     vi.mocked(deps.tileRegistry.addSession).mockClear();
 
     deps.registeredStdoutObs?.(RESERVED_ACTIVE, HANDOFF_EMITTED_MARKER);
-    await Promise.resolve();
+    // MB-T-POOL-CRASH-RECOVERY-PATH-E-FIX adjacent fix: deeper microtask
+    // drain so _prepareReservedName's getSession await + spawnAndRegister's
+    // spawnController await both resolve before assertions. Pre-fix01e
+    // _spawnAndRegister had spawnController as its first await; post-fix01e
+    // _prepareReservedName has getSession first → one extra microtask cycle.
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
 
     expect(deps.spawnController.handleSpawnRequest).toHaveBeenCalledWith(
       expect.objectContaining({ sessionName: RESERVED_STANDBY }),
@@ -243,6 +249,11 @@ describe('MB-T37 WB1 — OrchestratorPoolManager pool lifecycle', () => {
 
     // Path A: PTY stream-close without preceding [HANDOFF-EMITTED]
     deps.registeredStreamCloseObs?.(RESERVED_ACTIVE);
+    // MB-T-POOL-CRASH-RECOVERY-PATH-E-FIX adjacent fix: microtask drain
+    // for fix01e _prepareReservedName getSession-then-spawnAndRegister
+    // async chain (see probe-06 comment).
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
 
     expect(deps.tileRegistry.removeSession).toHaveBeenCalledWith(RESERVED_STANDBY);
     expect(deps.tileRegistry.addSession).toHaveBeenCalledWith(
