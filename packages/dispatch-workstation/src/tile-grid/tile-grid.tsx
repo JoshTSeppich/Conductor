@@ -341,6 +341,7 @@ export function TileGrid({
     height: '100%',
     width: '100%',
     position: 'relative',
+    gap: '4px',
   };
   if (layout.overflow) {
     gridStyle.gridAutoRows = '1fr';
@@ -374,8 +375,16 @@ export function TileGrid({
       style={gridStyle}
     >
       {sessions.map((s, idx) => {
+        const cellChrome: React.CSSProperties = {
+          border: '1px solid #303030',
+          borderRadius: '4px',
+          background: '#111111',
+          overflow: 'hidden',
+        };
         const cellStyle: React.CSSProperties =
-          idx < explicitCellCount ? { gridArea: `t${idx}` } : {};
+          idx < explicitCellCount
+            ? { gridArea: `t${idx}`, ...cellChrome }
+            : { ...cellChrome };
         return (
           <div
             key={s.name}
