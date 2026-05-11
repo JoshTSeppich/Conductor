@@ -18,8 +18,11 @@
 //     wiring. WB4 scope ships the prop signature + click handler
 //     plumbing; WB6 GREEN connects it to FrameCRoot's
 //     useState<string | null>(selectedSessionName).
-//   - Token meter rendering DEFERRED to MB-T-WIREFRAME-C5-TOKEN-
-//     WIRING-SURFACE (separate ticket; body authored at `8ff40a8`).
+//   - Per-row `ctx N%` text rendering shipped by
+//     MB-T-WIREFRAME-C5-TOKEN-WIRING-SURFACE WB2 (Sub-Q-MBTWTWS-B=(a)
+//     inline format): span as direct child of the row, right-aligned
+//     via flex marginLeft:auto. tokenBudget undefined/0 falls back to
+//     `ctx 0%` (no NaN/Infinity per probe-mbtwtws-01 Condition 4).
 //   - Selection-state visual (aria-selected, highlight) DEFERRED to
 //     WB6 GREEN; WB4 ships rows without selection awareness.
 
@@ -82,6 +85,16 @@ const META_STYLE: CSSProperties = {
   textOverflow: 'ellipsis',
 };
 
+// MB-T-WIREFRAME-C5-TOKEN-WIRING-SURFACE WB2 — ctx N% inline label.
+// marginLeft:auto right-aligns within the flex row (Sub-Q-MBTWTWS-B=a).
+const CTX_TEXT_STYLE: CSSProperties = {
+  fontSize: '11px',
+  color: '#9ca3af',
+  marginLeft: 'auto',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+};
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export interface SessionListProps {
@@ -127,6 +140,13 @@ export function SessionList(props: SessionListProps): JSX.Element {
 
         const handleClick = onSelect ? () => onSelect(s.name) : undefined;
         const isSelected = selectedSessionName === s.name;
+        // ctx N% percent — guard tokenBudget undefined/0 to avoid
+        // NaN (0/0) or Infinity (n/0). Fallback "ctx 0%" is the honest
+        // "no data yet" surface (sessions pre-first-scrape).
+        const ctxPct =
+          s.tokenBudget !== undefined && s.tokenBudget > 0
+            ? Math.round(((s.tokensUsed ?? 0) / s.tokenBudget) * 100)
+            : 0;
         // WB6 — Sub-Q-A=α selection-state visual. aria-selected emitted
         // as "true"/"false" string per ARIA spec for listbox-pattern
         // selection. Background tint added when selected for visual
@@ -169,6 +189,12 @@ export function SessionList(props: SessionListProps): JSX.Element {
                 {metaText}
               </span>
             )}
+            <span
+              data-testid={`frame-c-session-row-ctx-text-${s.name}`}
+              style={CTX_TEXT_STYLE}
+            >
+              ctx {ctxPct}%
+            </span>
           </div>
         );
       })}
