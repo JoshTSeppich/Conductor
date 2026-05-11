@@ -19,9 +19,18 @@
 import type { SpawnSessionActionPayload } from 'dispatch-core/dist/v3/schema.js';
 import type { DispatchMode } from './dispatch-mode-store.js';
 import type { SpawnSessionRequest } from './spawn-handler.js';
-import type { SpawnIpcResult } from './orchestrator-action-handler.js';
 import type { SpawnConfirmGate } from './spawn-confirm-gate.js';
 import type { SpawnIpcController } from './spawn-ipc.js';
+
+// MB-T-HSO-WIRE WB14b: SpawnIpcResult type was imported from
+// orchestrator-action-handler.ts (deleted WB14a). Inlined here per the
+// original definition: an orchestrator-fired spawn surfaces success as
+// the sessionName for the audit/dispatch downstream chain. Keep this
+// module for forward-compat — action-variant-ipc.ts's fireSpawn dep
+// (currently Sub-Y-1 stub per WB7) is the natural future consumer.
+interface SpawnIpcResult {
+  readonly sessionName: string;
+}
 
 export interface OrchestratorFireSpawnDeps {
   /** Read current dispatch mode (fresh per call — honors live toggling). */

@@ -27,7 +27,6 @@ import {
   markOnboardingComplete,
 } from '../onboarding/first-launch-detector.js';
 import { saveApiKey } from '../onboarding/api-key-storage.js';
-import { wireCardIpc } from './card-wiring.js';
 // === Onboarding mount imports (Session C / Batch 6 / wiring-mounts) ===
 import {
   checkFirstLaunch,
@@ -714,9 +713,8 @@ app.whenReady().then(async () => {
   // for process lifetime.
   void orchestratorPool;
   // === END: MB-T-HSO-WIRE shared-emitter-and-writer ===
-  // === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
-  wireCardIpc({ ipcOn: (channel, listener) => ipcMain.on(channel, listener) });
-  // === end MB-T07 card wiring ===
+  // MB-T07 card-IPC wiring removed at MB-T-HSO-WIRE WB14b (v3.0 path
+  // removal); card-wiring.ts + card-ipc.ts deleted in this commit.
   registerOnboardingIpc();
 
   // === Onboarding mount (Session C / Batch 6 / wiring-mounts) ===

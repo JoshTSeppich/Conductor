@@ -2,18 +2,18 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { makeConsoleBridge, type ConsoleBridgeIpc } from './console-bridge.js';
 import { attachSpawnResultListener } from './spawn-result-listener.js';
 
-// COARCH-T03: streaming bridge methods added (sendAndStream, onStreamChunk/Done/Error).
-// COARCH-T04: build-doc config bridge methods added (getBuildDocConfig/setBuildDocConfig/clearBuildDocConfig).
+// COARCH-T04: build-doc config bridge methods added.
+// MB-T40 WB2: channel rebindings per A3 ratification.
+//   sendAndStream → workstation:session-send-prompt invoke
+//   onStreamChunk → coarchitect:ptyChunk
+//   onStreamDone  → coarchitect:ptyTurnDone
+//   onStreamError → no-op stub (A3: PTY model has no stream error semantics)
+// MB-T-HSO-WIRE WB14b: AnthropicChatClient + coarchitect:sendAndStream
+// handler removed entirely (v3.0 path). The sendAndStream bridge method
+// still resolves via the workstation:session-send-prompt IPC path.
 contextBridge.exposeInMainWorld('coarchitectBridge', {
   fetchHistory: () => ipcRenderer.invoke('coarchitect:fetchHistory'),
   postMessage: (msg: unknown) => ipcRenderer.invoke('coarchitect:postMessage', msg),
-  // MB-T40 WB2: channel rebindings per A3 ratification.
-  // sendAndStream → workstation:session-send-prompt invoke (was: coarchitect:sendAndStream send)
-  // onStreamChunk → coarchitect:ptyChunk (was: coarchitect:streamChunk)
-  // onStreamDone  → coarchitect:ptyTurnDone (was: coarchitect:streamDone)
-  // onStreamError → no-op stub (A3: PTY model has no stream error semantics)
-  // AnthropicChatClient class preserved; chat-panel no longer reaches it via this path.
-  // coarchitect:sendAndStream handler in coarchitect-ipc.ts retained for non-chat-panel callers.
   sendAndStream: (content: string) =>
     ipcRenderer.invoke('workstation:session-send-prompt', {
       sessionName: '__orchestrator_active',

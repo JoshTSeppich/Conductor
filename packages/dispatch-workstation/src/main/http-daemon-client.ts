@@ -1,5 +1,4 @@
 import type { DaemonClient, ChatMessage, ChatMessageInput } from '../coarchitect/daemon-client.js';
-import type { DaemonAuditClient } from './card-ipc.js';
 import type { OrchestratorAuditWriteRequest } from 'dispatch-core/dist/v3/schema.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -54,15 +53,20 @@ export async function postAuditViaFetch(
 
 /**
  * Real DaemonClient implementation that persists messages via POST /v3/orchestrator/messages
- * and fetches history via GET /v3/orchestrator/history. Also implements
- * DaemonAuditClient for the MB-T07 card-ipc audit-write path.
+ * and fetches history via GET /v3/orchestrator/history.
  *
  * Fails gracefully when daemon is unreachable: fetchHistory returns empty array,
- * postMessage returns a synthetic local-only ChatMessage, postAudit returns null.
- * This allows the workstation to function even when the daemon isn't running
- * (e.g. in tests or offline scenarios).
+ * postMessage returns a synthetic local-only ChatMessage. This allows the
+ * workstation to function even when the daemon isn't running (e.g. in tests
+ * or offline scenarios).
+ *
+ * MB-T-HSO-WIRE WB14b: DaemonAuditClient interface + postAudit method removed
+ * (v3.0 path; card-ipc.ts deleted). postAuditViaFetch helper retained for
+ * its existing unit tests (test/unit/http-daemon-client/test_post_audit_via_fetch.spec.ts);
+ * orphaned production consumer surface noted at MB-F-T07-AUDIT-WRITE-PATH-ORPHAN
+ * if remediation needed post-WB14c test cleanup.
  */
-export class HttpDaemonClient implements DaemonClient, DaemonAuditClient {
+export class HttpDaemonClient implements DaemonClient {
   private readonly token: string | null;
 
   constructor() {
@@ -110,7 +114,4 @@ export class HttpDaemonClient implements DaemonClient, DaemonAuditClient {
     }
   }
 
-  async postAudit(req: OrchestratorAuditWriteRequest): Promise<unknown> {
-    return postAuditViaFetch(DAEMON_URL, this.token, req);
-  }
 }
