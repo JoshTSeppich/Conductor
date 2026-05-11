@@ -240,10 +240,23 @@ function buildTmuxArgs(
     '-c', req.repoPath,
     claudeBinPath,
   ];
+  const args: string[] = [...base];
   if (req.permissionMode === 'auto') {
-    return [...base, '--dangerously-skip-permissions'];
+    args.push('--dangerously-skip-permissions');
   }
-  return base;
+  // MB-T-HSO-WIRE WB11 Sub-Q-A=b env-var argv injection. When set by
+  // OrchestratorPoolManager._spawnAndRegister before this call (hso-pool.ts),
+  // append `--append-system-prompt <path>` so the spawned claude session
+  // loads the MB-T41 orchestrator system prompt. Operator-driven spawns
+  // (renderer modal at workstation:spawn-requested) observe an unset env
+  // var and leave args unchanged — pool-driven spawns are the only path
+  // that sets this. Confines argv-shape coupling to this module without
+  // modifying SpawnSessionRequest (schema.ts §1-§13 frozen surface).
+  const appendSysPrompt = process.env.CLAUDE_APPEND_SYSTEM_PROMPT;
+  if (appendSysPrompt !== undefined && appendSysPrompt.length > 0) {
+    args.push('--append-system-prompt', appendSysPrompt);
+  }
+  return args;
 }
 
 /**

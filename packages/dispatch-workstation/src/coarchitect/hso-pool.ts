@@ -53,6 +53,12 @@ export class TileGridRegistryAdapter implements ITileGridRegistry {
 
   renameSession(fromName: string, toName: string): void {
     const existing = readTileLayoutState(fromName);
+    // WB11 incidental fix: readTileLayoutState returns TileLayoutState | null
+    // (tile-grid-state.ts:147); writeTileLayoutState requires TileLayoutState.
+    // Pre-existing null-guard gap surfaced by tsc when WB11 main.ts wired
+    // the first external consumer of TileGridRegistryAdapter. Renaming an
+    // unknown session is a no-op (caller must register first).
+    if (existing === null) return;
     writeTileLayoutState(toName, existing);
     const all = readAllTileLayoutStates();
     writeAllTileLayoutStates(
@@ -134,24 +140,48 @@ export class OrchestratorPoolManager {
 
   private async _spawnAndRegister(sessionName: string): Promise<void> {
     const orderIndex = sessionName === RESERVED_ACTIVE ? 0 : 1;
-    const result = await this._deps.spawnController.handleSpawnRequest({
-      repoPath: process.cwd(),
-      sessionName,
-      permissionMode: 'auto',
-    });
-    if (result.type === 'error') {
-      this._deps.halt(
-        `OrchestratorPoolManager: spawn failed for ${sessionName}: ${result.error.message}`,
-      );
-      return;
-    }
-    this._deps.tileRegistry.addSession(sessionName, defaultTileLayoutState(orderIndex));
-    if (sessionName === RESERVED_ACTIVE) {
-      this._activeSessionName = RESERVED_ACTIVE;
-      this._activeCrashHandled = false;
-    } else if (sessionName === RESERVED_STANDBY) {
-      this._standbySessionName = RESERVED_STANDBY;
-      this._standbyCrashHandled = false;
+    // MB-T-HSO-WIRE WB11 Sub-Q-A=b env-var argv injection. Pool sets
+    // CLAUDE_APPEND_SYSTEM_PROMPT to the absolute path of the operator-
+    // authored orchestrator system prompt before invoking the spawn
+    // controller. spawn-handler.ts buildTmuxArgs reads this env var and
+    // appends `--append-system-prompt <path>` to the claude argv when
+    // present. Operator-driven spawns from the renderer modal observe an
+    // unset env var (restored in `finally`) and skip the branch — confines
+    // argv-shape coupling to spawn-handler.ts without touching
+    // SpawnSessionRequest (schema.ts §1-§13 frozen surface).
+    //
+    // Sequential awaits in `start()` (active then standby) guarantee no
+    // overlapping pool spawns; _onStandbyCrash respawns are also sequential
+    // (single setInterval poll handler). No mutex needed.
+    const previousEnv = process.env.CLAUDE_APPEND_SYSTEM_PROMPT;
+    process.env.CLAUDE_APPEND_SYSTEM_PROMPT = this._deps.orchestratorSystemPromptPath;
+    let result;
+    try {
+      result = await this._deps.spawnController.handleSpawnRequest({
+        repoPath: process.cwd(),
+        sessionName,
+        permissionMode: 'auto',
+      });
+      if (result.type === 'error') {
+        this._deps.halt(
+          `OrchestratorPoolManager: spawn failed for ${sessionName}: ${result.error.message}`,
+        );
+        return;
+      }
+      this._deps.tileRegistry.addSession(sessionName, defaultTileLayoutState(orderIndex));
+      if (sessionName === RESERVED_ACTIVE) {
+        this._activeSessionName = RESERVED_ACTIVE;
+        this._activeCrashHandled = false;
+      } else if (sessionName === RESERVED_STANDBY) {
+        this._standbySessionName = RESERVED_STANDBY;
+        this._standbyCrashHandled = false;
+      }
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.CLAUDE_APPEND_SYSTEM_PROMPT;
+      } else {
+        process.env.CLAUDE_APPEND_SYSTEM_PROMPT = previousEnv;
+      }
     }
   }
 

@@ -130,6 +130,13 @@ import {
 // SessionSendPromptIpcController (MB-T09; class at session-send-prompt-
 // ipc.ts:35) wraps the IPromptInjector dep so the harvester can fire the
 // §7 summary prompt via the same tmux send-keys path the renderer uses.
+// WB11 — OrchestratorPoolManager (MB-T37 ship 38b1a03; class at src/
+// coarchitect/hso-pool.ts:100) + TileGridRegistryAdapter (same file) +
+// dedicated SpawnIpcController for pool-driven spawns (separate instance
+// from the renderer-IPC-handler's controller; both reuse the same
+// defaultSpawnHandlerDeps factory). readDispatchMode supplies the pool's
+// dispatchModeReader dep; hasSession from dispatch-core wraps the pool's
+// runTmuxHasSession crash-detection dep.
 import { EventEmitter } from 'node:events';
 import { SwarmStateWriter } from '../coarchitect/swarm-state-writer.js';
 import { PeerSummaryHarvester } from '../coarchitect/peer-summary-harvester.js';
@@ -137,6 +144,13 @@ import {
   SessionSendPromptIpcController,
   defaultSessionSendPromptDeps,
 } from './session-send-prompt-ipc.js';
+import {
+  OrchestratorPoolManager,
+  TileGridRegistryAdapter,
+} from '../coarchitect/hso-pool.js';
+import { SpawnIpcController, defaultSpawnHandlerDeps } from './spawn-ipc.js';
+import { readDispatchMode } from './dispatch-mode-store.js';
+import { hasSession as coreHasSession } from 'dispatch-core/dist/transport/tmux.js';
 // WB7 — action-marker-router (3c9629b WB1 spike binding §V: Pattern B
 // accumulator + strip-and-re-parse). Independent observer subscription
 // from MB-T40 pty-stream-relay; same broadcaster fan-out per MB-T37.
@@ -630,6 +644,75 @@ app.whenReady().then(async () => {
   // consoleController's observer-fn ref (via addStdoutObserver) for the
   // process lifetime.
   void actionMarkerRouterDispose;
+  // WB11 — OrchestratorPoolManager auto-spawn. Constructed LAST in this
+  // sentinel zone after writer/harvester/observer/policy per plan §1.3
+  // Obs-3 construction-order chain. Pool's .start() fires
+  // _spawnAndRegister(__orchestrator_active) + _spawnAndRegister(
+  // __orchestrator_standby) sequentially (hso-pool.ts:121-122), then
+  // begins POLL_INTERVAL_MS tmux-poll crash detection.
+  //
+  // Dedicated SpawnIpcController instance for pool-driven spawns (mirrors
+  // the WB5 dedicated SessionSendPromptIpcController pattern). Reuses the
+  // same defaultSpawnHandlerDeps factory as the renderer-IPC controller
+  // at registerSpawnIpcHandlers above — both produce a SpawnHandlerDeps
+  // wired to the production tmux/daemon/cap-check helpers. Two stateless
+  // controllers; no coherence issue.
+  //
+  // orchestratorSystemPromptPath resolves to the operator-authored MB-T41
+  // prompt at packages/dispatch-workstation/src/main/hso-system-prompts/
+  // orchestrator.md. app.getAppPath() returns the unpackaged Electron app
+  // dir (packages/dispatch-workstation in dev). hso-pool.ts:
+  // _spawnAndRegister sets process.env.CLAUDE_APPEND_SYSTEM_PROMPT to this
+  // path before spawnController.handleSpawnRequest; spawn-handler.ts:
+  // buildTmuxArgs reads the env var and appends `--append-system-prompt
+  // <path>` to the claude argv (Sub-Q-A=b env-var injection).
+  //
+  // runTmuxHasSession wraps coreHasSession (dispatch-core/dist/transport/
+  // tmux.js) — boolean → throw-on-absent contract conversion for the pool's
+  // tmux-poll crash detection at hso-pool.ts:158-177.
+  //
+  // halt: log + surface to renderer as a chat error (mirrors actionMarker-
+  // Router's onError pattern above). Pool halt paths: _spawnAndRegister
+  // spawn failure (any SpawnErrorType — includes SessionAlreadyRegistered
+  // daemon 409 per spawn-handler.ts:38, which is the placeholder collision
+  // detection per dispatch §WB11(d); WB12/WB13 author the dedicated probe
+  // + tighter user-visible surface).
+  const orchestratorSpawnHandlerDeps = await defaultSpawnHandlerDeps();
+  const orchestratorSpawnController = new SpawnIpcController(
+    orchestratorSpawnHandlerDeps,
+  );
+  const orchestratorSystemPromptPath = resolve(
+    app.getAppPath(),
+    'src',
+    'main',
+    'hso-system-prompts',
+    'orchestrator.md',
+  );
+  const orchestratorPool = new OrchestratorPoolManager({
+    spawnController: orchestratorSpawnController,
+    tileRegistry: new TileGridRegistryAdapter(),
+    consoleIpc: consoleController,
+    stateWriter: swarmStateWriter,
+    orchestratorSystemPromptPath,
+    runTmuxHasSession: async (sessionName: string) => {
+      const exists = await coreHasSession(sessionName);
+      if (!exists) {
+        throw new Error(`tmux session "${sessionName}" not found`);
+      }
+    },
+    dispatchModeReader: readDispatchMode,
+    halt: (reason: string) => {
+      console.error('[MB-T-HSO-WIRE OrchestratorPoolManager halt]', reason);
+      mainWindow?.webContents.send('coarchitect:streamError', { message: reason });
+    },
+  });
+  void orchestratorPool.start();
+  // Keep the binding live for any future stop()/dispose() wiring at app
+  // shutdown and to satisfy noUnusedLocals. Pool is also retained
+  // transitively by consoleController's observer-fn ref (via
+  // addStdoutObserver / addStreamCloseObserver) + setInterval poll timer
+  // for process lifetime.
+  void orchestratorPool;
   // === END: MB-T-HSO-WIRE shared-emitter-and-writer ===
   // === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
   wireCardIpc({ ipcOn: (channel, listener) => ipcMain.on(channel, listener) });
