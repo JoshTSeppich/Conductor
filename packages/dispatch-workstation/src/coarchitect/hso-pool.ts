@@ -364,7 +364,7 @@ export class OrchestratorPoolManager {
    *   GET 200 state='killed'  → TERMINAL state per transitions.ts:101 (no
    *                             outbound transitions). Halt with
    *                             operator-actionable remediation message
-   *                             (registry-v2.json edit OR daemon restart).
+   *                             (sessions.json edit OR daemon restart).
    */
   private async _prepareReservedName(sessionName: string): Promise<void> {
     let existing: DaemonSessionInfo | null;
@@ -414,7 +414,7 @@ export class OrchestratorPoolManager {
         return;
       case 'killed':
         this._deps.halt(
-          `OrchestratorPoolManager: ${sessionName} is in terminal 'killed' state — the daemon registry row is permanently retired per contract §6.1 (killed has no outbound transitions per transitions.ts:101). To resume pool auto-spawn, remove the row from ~/.foxworks-dispatch/registry-v2.json or restart the daemon.`,
+          `OrchestratorPoolManager: ${sessionName} is in terminal 'killed' state — the daemon registry row is permanently retired per contract §6.1 (killed has no outbound transitions per transitions.ts:101). To resume pool auto-spawn, remove the row from ~/.foxworks-dispatch/sessions.json or restart the daemon.`,
         );
         return;
     }

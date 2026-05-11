@@ -60,7 +60,7 @@ NEW private methods:
   | 200 state='armed' | `_registerExistingSession(sessionName)` (no daemon mutation) |
   | 200 state='held' | `patchSessionState(name, 'armed')` + `_registerExistingSession(name)` |
   | 200 state='paused' | `halt` with operator-pause-intent message |
-  | 200 state='killed' | `halt` with operator-actionable remediation message (registry-v2.json edit OR daemon restart) |
+  | 200 state='killed' | `halt` with operator-actionable remediation message (sessions.json edit OR daemon restart) |
 - `_registerExistingSession(sessionName)`: bookkeeping for existing rows (mirrors success branch of original `_spawnAndRegister` lines 188-195).
 
 #### 2. `packages/dispatch-workstation/src/main/main.ts` (+9 lines)
@@ -116,7 +116,7 @@ __orchestrator_standby: state='killed'
 On any workstation launch with these rows present:
 1. Pool calls `daemonSessionsClient.getSession('__orchestrator_active')` → returns `{state: 'killed'}`.
 2. `_prepareReservedName` enters the 'killed' branch.
-3. `halt()` fires with the actionable message: "...is in terminal 'killed' state — the daemon registry row is permanently retired per contract §6.1. To resume pool auto-spawn, remove the row from `~/.foxworks-dispatch/registry-v2.json` or restart the daemon."
+3. `halt()` fires with the actionable message: "...is in terminal 'killed' state — the daemon registry row is permanently retired per contract §6.1. To resume pool auto-spawn, remove the row from `~/.foxworks-dispatch/sessions.json` or restart the daemon."
 4. Same for `__orchestrator_standby`.
 
 This is BETTER than the pre-fix01e behavior (false-positive halt-loop with misleading "Manual session exists; kill the manual session" message) but the pool still does not auto-spawn. The actionable message correctly points the operator to the remediation, but the remediation itself (registry edit) is what HALT-FIX01E-STALE-ROW-CLEANUP-PRE-ACTION surfaces.
@@ -128,7 +128,7 @@ This is BETTER than the pre-fix01e behavior (false-positive halt-loop with misle
 Per dispatch 2026-05-11 closing instructions, after this commit pushes:
 
 1. **Surface HALT-FIX01E-STALE-ROW-CLEANUP-PRE-ACTION** to orchestrator with:
-   - 2 specific stale rows + their current state in `~/.foxworks-dispatch/registry-v2.json`
+   - 2 specific stale rows + their current state in `~/.foxworks-dispatch/sessions.json`
    - Proposed cleanup mechanism (jq edit OR daemon restart OR direct file edit)
    - Confirmation that Path (E) code is now ready to receive the cleanup
    - Reminder that ONLY orchestrator → operator ack authorizes the destructive registry edit (operator-data-destructive per dispatch)

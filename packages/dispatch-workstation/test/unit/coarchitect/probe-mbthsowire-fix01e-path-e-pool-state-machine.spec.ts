@@ -22,7 +22,7 @@
 //       PROCEED with tmux spawn (no POST collision).
 //   (4) Pool start() on SUBSEQUENT launch (rows in TERMINAL 'killed'):
 //       HALT-and-surface with operator-actionable message specifying
-//       remediation (registry-v2.json edit OR daemon restart).
+//       remediation (sessions.json edit OR daemon restart).
 //   (5) Pool MUST NOT call POST /v2/sessions (i.e., spawnController.
 //       handleSpawnRequest) when GET returns an existing row regardless
 //       of state — avoids the daemon's Blocker 3 contradiction.
@@ -258,11 +258,11 @@ describe('MB-T-HSO-WIRE fix01e — Path (E) pool state machine', () => {
         (m) =>
           m.includes(RESERVED_ACTIVE) &&
           m.toLowerCase().includes('killed') &&
-          (m.includes('registry-v2.json') || m.includes('daemon restart')),
+          (m.includes('sessions.json') || m.includes('daemon restart')),
       );
       expect(
         actionableActive,
-        `halt for ${RESERVED_ACTIVE} killed-row must include operator-actionable remediation (registry-v2.json edit OR daemon restart). Got: ${JSON.stringify(haltMessages)}`,
+        `halt for ${RESERVED_ACTIVE} killed-row must include operator-actionable remediation (sessions.json edit OR daemon restart). Got: ${JSON.stringify(haltMessages)}`,
       ).toBeDefined();
       expect(
         spawnController.handleSpawnRequest,
