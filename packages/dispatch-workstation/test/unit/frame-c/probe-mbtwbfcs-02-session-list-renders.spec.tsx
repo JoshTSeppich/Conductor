@@ -128,9 +128,14 @@ describe('MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE WB3 — SessionList rendering cont
           '[data-testid="frame-c-session-list-col"]',
         );
         expect(col).not.toBeNull();
-        const rows = col!.querySelectorAll(
-          '[data-testid^="frame-c-session-row-"]',
-        );
+        // Use `data-session-name` attribute (row-unique) rather than
+        // a `[data-testid^="frame-c-session-row-"]` prefix selector —
+        // the prefix selector would match nested status/name/meta
+        // spans that share the same testid prefix per the
+        // frame-c-session-row-status-{name} + -name-{name} + -meta-{name}
+        // naming scheme required by Conditions 2/3/4. `data-session-name`
+        // is set ONLY on the row element so this counts rows exactly.
+        const rows = col!.querySelectorAll('[data-session-name]');
         expect(
           rows.length,
           'session-list-col must contain exactly N row elements (one per session)',
@@ -242,9 +247,14 @@ describe('MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE WB3 — SessionList rendering cont
           '[data-testid="frame-c-session-list-col"]',
         );
         expect(col).not.toBeNull();
-        const rows = col!.querySelectorAll(
-          '[data-testid^="frame-c-session-row-"]',
-        );
+        // Use `data-session-name` attribute (row-unique) rather than
+        // a `[data-testid^="frame-c-session-row-"]` prefix selector —
+        // the prefix selector would match nested status/name/meta
+        // spans that share the same testid prefix per the
+        // frame-c-session-row-status-{name} + -name-{name} + -meta-{name}
+        // naming scheme required by Conditions 2/3/4. `data-session-name`
+        // is set ONLY on the row element so this counts rows exactly.
+        const rows = col!.querySelectorAll('[data-session-name]');
         expect(
           rows.length,
           'empty sessions array must render 0 rows (honest empty state)',

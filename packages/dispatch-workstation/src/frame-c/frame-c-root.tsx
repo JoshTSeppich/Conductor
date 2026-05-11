@@ -19,6 +19,8 @@
 //     adds the region per HALT-WB10-PRE-COMMIT operator review).
 
 import type { CSSProperties } from 'react';
+import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
+import { SessionList } from './session-list.js';
 
 const ROOT_STYLE: CSSProperties = {
   display: 'flex',
@@ -49,22 +51,39 @@ const DETAIL_COL_STYLE: CSSProperties = {
 };
 
 export interface FrameCRootProps {
-  // initialSessions + selection-related props deferred to WB4/WB6 per
-  // §C.1′ #2 ladder. WB2 ships placeholder shell; WB4 + WB8 wire content.
+  /**
+   * Sessions to render in the SessionList column (WB4). Defaults to []
+   * (empty list) when omitted — matches WB3 probe Condition (5) empty-
+   * state contract.
+   */
+  readonly sessions?: readonly TileGridSessionEntry[];
+  /**
+   * WB6 GREEN wires this through to SessionList.onSelect + DetailPane
+   * selectedSessionName per Sub-Q-MBTWBFCS-A=α renderer-only selection
+   * state. WB4 leaves selection logic to WB6.
+   */
+  readonly onSelectSession?: (sessionName: string) => void;
+  readonly selectedSessionName?: string | null;
 }
 
 /**
- * Frame C top-level two-column shell. WB2 renders empty slot divs;
- * WB4 (SessionList) + WB8 (DetailPane) populate them.
+ * Frame C top-level two-column shell. WB2 rendered empty slot divs;
+ * WB4 wires SessionList into the left column. WB8 wires DetailPane
+ * into the right column (deferred).
  */
-export function FrameCRoot(_props: FrameCRootProps): JSX.Element {
+export function FrameCRoot(props: FrameCRootProps): JSX.Element {
+  const { sessions = [], onSelectSession, selectedSessionName } = props;
   return (
     <div data-testid="frame-c-root" style={ROOT_STYLE}>
       <div
         data-testid="frame-c-session-list-col"
         style={SESSION_LIST_COL_STYLE}
       >
-        {/* WB4 SessionList renders here */}
+        <SessionList
+          sessions={sessions}
+          onSelect={onSelectSession}
+          selectedSessionName={selectedSessionName ?? null}
+        />
       </div>
       <div data-testid="frame-c-detail-col" style={DETAIL_COL_STYLE}>
         {/* WB8 DetailPane renders here */}
