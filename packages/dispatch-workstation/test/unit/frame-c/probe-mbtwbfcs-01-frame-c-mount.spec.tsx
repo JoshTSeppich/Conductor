@@ -28,6 +28,7 @@
 // + `frame-c/index.ts` barrel; all 4 conditions flip RED → GREEN.
 
 import { describe, it, expect, beforeAll } from 'vitest';
+import { act } from '@testing-library/react';
 
 // Structural types the factory consumes. Mirrors ticket body §4 WB2
 // FrameCMountProps sketch; refined at WB2 GREEN scaffold time.
@@ -83,7 +84,9 @@ describe('MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE WB1 — frame-c mount factory cont
       const container = document.createElement('div');
       document.body.appendChild(container);
       try {
-        mountFrameC!(container, {});
+        act(() => {
+          mountFrameC!(container, {});
+        });
         const root = container.querySelector('[data-testid="frame-c-root"]');
         expect(
           root,
@@ -101,7 +104,9 @@ describe('MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE WB1 — frame-c mount factory cont
       const container = document.createElement('div');
       document.body.appendChild(container);
       try {
-        mountFrameC!(container, {});
+        act(() => {
+          mountFrameC!(container, {});
+        });
         const sessionListCol = container.querySelector(
           '[data-testid="frame-c-session-list-col"]',
         );
