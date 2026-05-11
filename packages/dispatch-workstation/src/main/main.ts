@@ -119,6 +119,15 @@ import {
   getUserDataDirOverride,
 } from './test-hooks-env.js';
 // === END: Probe-92 obs-infra ===
+// === BEGIN: MB-T-HSO-WIRE shared-emitter-and-writer imports ===
+// WB3 — EventEmitter (shared dispatch-event bus) + SwarmStateWriter
+// (MB-T38 ship fc15a26; class at src/coarchitect/swarm-state-writer.ts:125).
+// Writer subscribes 7 listeners to the emitter via its constructor
+// (swarm-state-writer.ts:205-211). Future WBs (WB5 harvester, WB7 parser
+// observer) consume the same shared emitter from the same lexical scope.
+import { EventEmitter } from 'node:events';
+import { SwarmStateWriter } from '../coarchitect/swarm-state-writer.js';
+// === END: MB-T-HSO-WIRE shared-emitter-and-writer imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
@@ -356,6 +365,34 @@ app.whenReady().then(async () => {
   // CC Console subscription kicks in via refreshConsoleMenu) already
   // has the View > Show recent orchestrator actions item.
   registerApplicationMenu({ onShowAuditModal: openAuditModalWindow });
+  // === BEGIN: MB-T-HSO-WIRE shared-emitter-and-writer ===
+  // Construction order per ticket §4 WB ladder intro:
+  //   shared EventEmitter → writer → harvester (WB5) → parser observer (WB7)
+  //   → approval-policy (WB9) → pool auto-spawn (WB11; lands AFTER this zone).
+  // Writer subscribes 7 listeners via its constructor (swarm-state-writer.ts:
+  // 205-211: tile-grid:session-add/remove, action-variant:fired, halt:emitted,
+  // error:recorded, peer:turn-complete, handoff:triggered). The emitter
+  // retains the writer through those listener references for the lifetime
+  // of the main process; no dispose() call is wired (writer lives until
+  // process exit, matching MB-T38 intended lifecycle).
+  //
+  // swarmStatePath resolves to the repo's docs/swarm-state.md per plan §5.1
+  // Q-V35-2. app.getAppPath() returns the unpackaged Electron app dir
+  // (packages/dispatch-workstation in dev); two parent-segments reach the
+  // repo root. SwarmStateWriter requires an ABSOLUTE path per its config
+  // doc (swarm-state-writer.ts:71). swarm-state.md does not currently
+  // exist on disk; writer creates it on the first event emission via the
+  // atomic-write helper (writeFileSync + renameSync at line 410-414).
+  const sharedDispatchEmitter = new EventEmitter();
+  const swarmStateWriter = new SwarmStateWriter(sharedDispatchEmitter, {
+    swarmStatePath: resolve(app.getAppPath(), '..', '..', 'docs/swarm-state.md'),
+    handoffDir: resolve(app.getAppPath(), '..', '..', 'docs/coordination'),
+  });
+  // Keep the binding live for any future dispose() wiring at app shutdown
+  // and to satisfy noUnusedLocals. The writer is also retained transitively
+  // by the emitter's listener refs (see constructor subscriptions above).
+  void swarmStateWriter;
+  // === END: MB-T-HSO-WIRE shared-emitter-and-writer ===
   // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
   // Cairn #84 Defect A: load safeStorage-persisted ANTHROPIC_API_KEY into
   // process.env so the chat client (anthropic-client.ts createAnthropicClient,
