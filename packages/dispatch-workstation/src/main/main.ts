@@ -125,8 +125,18 @@ import {
 // Writer subscribes 7 listeners to the emitter via its constructor
 // (swarm-state-writer.ts:205-211). Future WBs (WB5 harvester, WB7 parser
 // observer) consume the same shared emitter from the same lexical scope.
+// WB5 — PeerSummaryHarvester (MB-T39 ship bb2698f + multi-chunk fix
+// bb4c47c; class at src/coarchitect/peer-summary-harvester.ts:117) +
+// SessionSendPromptIpcController (MB-T09; class at session-send-prompt-
+// ipc.ts:35) wraps the IPromptInjector dep so the harvester can fire the
+// §7 summary prompt via the same tmux send-keys path the renderer uses.
 import { EventEmitter } from 'node:events';
 import { SwarmStateWriter } from '../coarchitect/swarm-state-writer.js';
+import { PeerSummaryHarvester } from '../coarchitect/peer-summary-harvester.js';
+import {
+  SessionSendPromptIpcController,
+  defaultSessionSendPromptDeps,
+} from './session-send-prompt-ipc.js';
 // === END: MB-T-HSO-WIRE shared-emitter-and-writer imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -365,34 +375,6 @@ app.whenReady().then(async () => {
   // CC Console subscription kicks in via refreshConsoleMenu) already
   // has the View > Show recent orchestrator actions item.
   registerApplicationMenu({ onShowAuditModal: openAuditModalWindow });
-  // === BEGIN: MB-T-HSO-WIRE shared-emitter-and-writer ===
-  // Construction order per ticket §4 WB ladder intro:
-  //   shared EventEmitter → writer → harvester (WB5) → parser observer (WB7)
-  //   → approval-policy (WB9) → pool auto-spawn (WB11; lands AFTER this zone).
-  // Writer subscribes 7 listeners via its constructor (swarm-state-writer.ts:
-  // 205-211: tile-grid:session-add/remove, action-variant:fired, halt:emitted,
-  // error:recorded, peer:turn-complete, handoff:triggered). The emitter
-  // retains the writer through those listener references for the lifetime
-  // of the main process; no dispose() call is wired (writer lives until
-  // process exit, matching MB-T38 intended lifecycle).
-  //
-  // swarmStatePath resolves to the repo's docs/swarm-state.md per plan §5.1
-  // Q-V35-2. app.getAppPath() returns the unpackaged Electron app dir
-  // (packages/dispatch-workstation in dev); two parent-segments reach the
-  // repo root. SwarmStateWriter requires an ABSOLUTE path per its config
-  // doc (swarm-state-writer.ts:71). swarm-state.md does not currently
-  // exist on disk; writer creates it on the first event emission via the
-  // atomic-write helper (writeFileSync + renameSync at line 410-414).
-  const sharedDispatchEmitter = new EventEmitter();
-  const swarmStateWriter = new SwarmStateWriter(sharedDispatchEmitter, {
-    swarmStatePath: resolve(app.getAppPath(), '..', '..', 'docs/swarm-state.md'),
-    handoffDir: resolve(app.getAppPath(), '..', '..', 'docs/coordination'),
-  });
-  // Keep the binding live for any future dispose() wiring at app shutdown
-  // and to satisfy noUnusedLocals. The writer is also retained transitively
-  // by the emitter's listener refs (see constructor subscriptions above).
-  void swarmStateWriter;
-  // === END: MB-T-HSO-WIRE shared-emitter-and-writer ===
   // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
   // Cairn #84 Defect A: load safeStorage-persisted ANTHROPIC_API_KEY into
   // process.env so the chat client (anthropic-client.ts createAnthropicClient,
@@ -510,6 +492,73 @@ app.whenReady().then(async () => {
     },
   });
   // === END: §C.5 tile token scraper ===
+  // === BEGIN: MB-T-HSO-WIRE shared-emitter-and-writer ===
+  // Construction order per ticket §4 WB ladder intro:
+  //   shared EventEmitter → writer → harvester (WB5) → parser observer (WB7)
+  //   → approval-policy (WB9) → pool auto-spawn (WB11; lands AFTER this zone).
+  //
+  // Zone relocated from its WB3-original position (above Fix-A api-key) to
+  // here (after §C.5 tile-token-scraper) at WB5 GREEN: harvester needs
+  // consoleController (set at registerConsoleIpcHandlers above) for its
+  // IConsoleBroadcaster.addStdoutObserver dep; that reference is not in
+  // scope until after line ~489. Same construction-order chain holds —
+  // emitter still precedes writer still precedes harvester within this
+  // zone. Probe-mbthsowire-02 (T2's WB2 RED) asserts zone presence + zone
+  // content + zone position relative to app.whenReady() only; all pass
+  // post-relocation. Probe-mbthsowire-04 (this commit's WB4 RED at
+  // cd135e4) asserts both writer and harvester construction in the same
+  // zone — only satisfiable with the harvester in this relocated zone.
+  //
+  // Writer subscribes 7 listeners via its constructor (swarm-state-writer.ts:
+  // 205-211: tile-grid:session-add/remove, action-variant:fired, halt:emitted,
+  // error:recorded, peer:turn-complete, handoff:triggered). The emitter
+  // retains the writer through those listener references for the lifetime
+  // of the main process; no dispose() call is wired (writer lives until
+  // process exit, matching MB-T38 intended lifecycle).
+  //
+  // swarmStatePath resolves to the repo's docs/swarm-state.md per plan §5.1
+  // Q-V35-2. app.getAppPath() returns the unpackaged Electron app dir
+  // (packages/dispatch-workstation in dev); two parent-segments reach the
+  // repo root. SwarmStateWriter requires an ABSOLUTE path per its config
+  // doc (swarm-state-writer.ts:71). swarm-state.md does not currently
+  // exist on disk; writer creates it on the first event emission via the
+  // atomic-write helper (writeFileSync + renameSync at line 410-414).
+  const sharedDispatchEmitter = new EventEmitter();
+  const swarmStateWriter = new SwarmStateWriter(sharedDispatchEmitter, {
+    swarmStatePath: resolve(app.getAppPath(), '..', '..', 'docs/swarm-state.md'),
+    handoffDir: resolve(app.getAppPath(), '..', '..', 'docs/coordination'),
+  });
+  // Keep the binding live for any future dispose() wiring at app shutdown
+  // and to satisfy noUnusedLocals. The writer is also retained transitively
+  // by the emitter's listener refs (see constructor subscriptions above).
+  void swarmStateWriter;
+  // WB5 — PeerSummaryHarvester. Dedicated SessionSendPromptIpcController
+  // instance constructed here (not the one inside registerSessionSend-
+  // PromptIpcHandlers) because the renderer-IPC controller's lifecycle is
+  // bound to the ipcMain handler; the harvester's injector is a separate
+  // logical consumer that fires §7 summary prompts via the same tmux send-
+  // keys path. Two stateless controllers (each just routes to coreHas-
+  // Session/coreSendKeys) are equivalent — no state coherence concern.
+  // Harvester subscribes to consoleController.addStdoutObserver via .start()
+  // (peer-summary-harvester.ts:141-145); inner-quiescence + responseBuffer
+  // pattern from MB-T39 multi-chunk fix bb4c47c is honored by the existing
+  // class (no wiring-side action required — default responseQuiescenceMs
+  // 500ms per peer-summary-harvester.ts:138 matches Q-MCFIX-1(d)).
+  const peerSummarySendPromptInjector = new SessionSendPromptIpcController(
+    defaultSessionSendPromptDeps(),
+  );
+  const peerSummaryHarvester = new PeerSummaryHarvester({
+    ptyBroadcaster: consoleController,
+    promptInjector: peerSummarySendPromptInjector,
+    stateEmitter: sharedDispatchEmitter,
+  });
+  peerSummaryHarvester.start();
+  // Keep the binding live for any future dispose() wiring at app shutdown
+  // and to satisfy noUnusedLocals. Harvester is also retained transitively
+  // by consoleController's observer-fn ref (via addStdoutObserver) for
+  // process lifetime.
+  void peerSummaryHarvester;
+  // === END: MB-T-HSO-WIRE shared-emitter-and-writer ===
   // === MB-T07 card wiring (Session B / Batch 6 / wiring-cards) ===
   wireCardIpc({ ipcOn: (channel, listener) => ipcMain.on(channel, listener) });
   // === end MB-T07 card wiring ===
