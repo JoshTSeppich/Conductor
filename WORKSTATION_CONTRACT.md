@@ -392,6 +392,23 @@ Existing channels in this category predate this contract subsection (`workstatio
 | **Authoring ticket** | `MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH` WB4 GREEN |
 | **Signature choice rationale** | `Promise<BuildMdLoadResult>` rather than `Promise<TaskDAG>` — discriminated-union surfaces NotFound + ParseError honestly to renderer; matches Wave C #3 Result-type pattern (`DiffResult`, `MergeResult`, `FocusResult`). Renderer can render empty-state placeholder ("No BUILD.md at <path>") or parse-error breakdown without crashing. |
 
+#### Channel #6 — `workstation:build-md-dispatch-trigger` (T5, MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `workstation:build-md-dispatch-trigger` |
+| **Direction** | renderer → main (invoke/handle) |
+| **Payload** | none |
+| **Response** | `Promise<BuildMdDispatchTriggerResult>` (discriminated union — see Result Types appendix below) |
+| **Bridge surface** | `window.workstationBridge.triggerBuildMdDispatch(): Promise<BuildMdDispatchTriggerResult>` |
+| **Bridge style** | action (no payload) — extends EXISTING `workstationBridge` (co-tenant with Channel #1 `readSwarmState` + Channel #5 `readBuildMd`) |
+| **Action** | (1) `loadBuildMd(defaultBuildMdPath())` — fresh re-parse each invocation per Sub-Q-MBTWFT5-A=(i) repo-root default. (2) If load failed: return error result; no dispatch. (3) Construct `DispatchLoop` with `{getDag, getCompletedTaskIds, maxParallel, fireSpawn}` deps. (4) `tick()` once → fires up to `maxParallel` ready tasks via `fireSpawn` per Sub-Q-MBTWFT5-C=(i) orchestrator-fire-spawn DI. (5) Return tick result. |
+| **Failure modes** | `NotFound` (BUILD.md not at default path); `NotAFile`; `IoError`; `ParseError` (parser ok=false; carries `parseErrors: ParseError[]` indirectly through prior `workstation:read-build-md` invocation — trigger handler returns `{error_type: 'ParseError', message}` without parseErrors[] for compactness) |
+| **Success shape** | `{ ok: true, spawned: number, declined: number, queued: number, done: boolean, idle: boolean }` — mirrors `DispatchLoopTickResult` shape with `ok: true` discriminator. `done=true` when all DAG tasks completed; `idle=true` when `maxParallel===0` |
+| **Consumer** | `src/frame-c/build-md-status-line.tsx` (button onClick → bridge call → tick result for UI feedback) |
+| **Authoring ticket** | `MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH` WB10 GREEN |
+| **Signature choice rationale** | No payload — trigger is intentionally parameter-free per Sub-Q-MBTWFT5-B=(ii) operator-click semantics (button click → trigger → result). Future variants (auto-on-load per Sub-Q-B=(i); fs-watch per Sub-Q-B=(iii)) compose by main-process internally invoking the same controller method without renderer involvement. Stub deps posture per WB10 commit body: `getCompletedTaskIds` returns empty, `getMaxParallel` returns 4, `fireSpawn` returns `{declined: true}` — production wiring deferred to follow-on tickets (MB-F-T5-COMPLETED-TASK-IDS-PRODUCTION-WIRING + MB-F-T5-FIRESPAWN-ORCHESTRATOR-FIRE-SPAWN-WIRING + MB-F-T5-MAX-PARALLEL-T4-DEPENDENCY). |
+
 #### Result-type discriminated unions (Wave C #3 contract per coord note §4)
 
 Inline-banner UX (Sub-Q-MBTWBDPFA-C=(α)): when host (Frame C detail-pane) catches a non-`ok` result from any `frameCBridge.*` call, it passes the result down to `ActionBar` via `failureState` prop. `ActionBar` renders a `<div role="alert" data-testid="action-bar-failure-banner">` element with `error_type` + `message` + Dismiss button. Auto-dismiss on next successful action (persistent-on-error semantics).
@@ -473,6 +490,29 @@ export interface BuildMdLoadError {
 }
 
 export type BuildMdLoadResult = BuildMdLoadSuccess | BuildMdLoadError;
+```
+
+```typescript
+// packages/dispatch-workstation/src/main/build-md-dispatch-trigger-ipc.ts (T5 WB10 exported types)
+
+export interface BuildMdDispatchTriggerSuccess {
+  readonly ok: true;
+  readonly spawned: number;
+  readonly declined: number;
+  readonly queued: number;
+  readonly done: boolean;
+  readonly idle: boolean;
+}
+
+export interface BuildMdDispatchTriggerError {
+  readonly ok: false;
+  readonly error_type: 'NotFound' | 'NotAFile' | 'IoError' | 'ParseError';
+  readonly message: string;
+}
+
+export type BuildMdDispatchTriggerResult =
+  | BuildMdDispatchTriggerSuccess
+  | BuildMdDispatchTriggerError;
 ```
 
 #### Bridge naming + style notes (consolidation observations)

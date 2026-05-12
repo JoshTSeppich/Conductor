@@ -197,6 +197,10 @@ import {
   BuildMdIpcController,
   registerBuildMdIpcHandlers,
 } from './build-md-ipc.js';
+import {
+  BuildMdDispatchTriggerController,
+  registerBuildMdDispatchTriggerHandlers,
+} from './build-md-dispatch-trigger-ipc.js';
 // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH imports ===
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -611,6 +615,50 @@ app.whenReady().then(async () => {
     new BuildMdIpcController({
       defaultBuildMdPath: () =>
         resolve(app.getAppPath(), '..', '..', 'BUILD.md'),
+    }),
+  );
+  // WB10 — register `workstation:build-md-dispatch-trigger` per ticket
+  // body c92f750 §4 WB10 + Sub-Q-MBTWFT5-B=(ii) operator-click +
+  // Sub-Q-MBTWFT5-C=(i) orchestrator-fire-spawn DI.
+  //
+  // DEP WIRING POSTURE (current ship — same shape as Wave C #3 frame-c-
+  // ipc stub posture per `MB-F-FRAME-C-IPC-LOOKUP-SESSION-STUB-2026-05-11`):
+  // - getCompletedTaskIds: STUB returning empty set (production wiring
+  //   requires spawn-result-listener completion tracking that is its
+  //   own follow-on cycle; Tier 2 followup MB-F-T5-COMPLETED-TASK-IDS-
+  //   PRODUCTION-WIRING filed at WB12). Operator-visible behavior pre-
+  //   closure: every trigger fires ALL ready tasks regardless of prior
+  //   completion (idempotent against the source DAG; each tick re-reads
+  //   BUILD.md). Acceptable for v1 ship since operator can clear by
+  //   re-launching workstation.
+  // - getMaxParallel: STUB returning 4 (conservative default; T4 max-
+  //   parallel-store integration filed as MB-F-T5-MAX-PARALLEL-T4-
+  //   DEPENDENCY Tier 3 at WB12 — Sub-Q-MBTWFT5-D=(ii) source TBD).
+  // - fireSpawn: STUB returning `{declined: true}` for every request
+  //   (operator-visible behavior pre-closure: clicking Spawn renders 0
+  //   spawned + N declined; UI verifies the IPC roundtrip without
+  //   actually firing spawns). Production wiring wraps
+  //   orchestratorFireSpawn from orchestrator-fire-spawn.ts (Sub-Q-C=(i));
+  //   needs OrchestratorFireSpawnDeps composition + dispatch-mode reader;
+  //   filed as MB-F-T5-FIRESPAWN-ORCHESTRATOR-FIRE-SPAWN-WIRING Tier 2
+  //   at WB12.
+  registerBuildMdDispatchTriggerHandlers(
+    ipcMain,
+    new BuildMdDispatchTriggerController({
+      defaultBuildMdPath: () =>
+        resolve(app.getAppPath(), '..', '..', 'BUILD.md'),
+      // STUB completed-set — Tier 2 followup MB-F-T5-COMPLETED-TASK-IDS-
+      // PRODUCTION-WIRING at WB12 docs.
+      getCompletedTaskIds: () => new Set<string>(),
+      // STUB max-parallel — Tier 3 followup MB-F-T5-MAX-PARALLEL-T4-
+      // DEPENDENCY at WB12 docs.
+      getMaxParallel: () => 4,
+      // STUB fireSpawn — Tier 2 followup MB-F-T5-FIRESPAWN-ORCHESTRATOR-
+      // FIRE-SPAWN-WIRING at WB12 docs (production wraps
+      // orchestrator-fire-spawn.ts orchestratorFireSpawn per Sub-Q-C=(i)).
+      // Returns declined for every task pre-closure; operator can verify
+      // IPC roundtrip + UI without firing real spawns.
+      fireSpawn: async () => ({ declined: true }),
     }),
   );
   // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH wiring ===

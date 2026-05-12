@@ -275,6 +275,19 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   readBuildMd: (opts?: { path?: string }) =>
     ipcRenderer.invoke('workstation:read-build-md', opts),
   // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH read-build-md bridge ===
+  // === BEGIN: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH dispatch-trigger bridge ===
+  // WB10 — Renderer button click → main-process DispatchLoop.tick().
+  // Invokes `workstation:build-md-dispatch-trigger` IPC. Returns
+  // BuildMdDispatchTriggerResult discriminated union (ok=true with
+  // spawned/declined/queued counts OR ok=false with error_type for
+  // load failures). Per Sub-Q-MBTWFT5-B=(ii) operator-arbitrated
+  // 2026-05-12 operator-click trigger.
+  //
+  // WORKSTATION_CONTRACT.md §6.6 amendment territory per CLAUDE.md
+  // §2.4 — HALT-WB10-PRE-COMMIT surfaces this diff for operator review.
+  triggerBuildMdDispatch: () =>
+    ipcRenderer.invoke('workstation:build-md-dispatch-trigger'),
+  // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH dispatch-trigger bridge ===
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
