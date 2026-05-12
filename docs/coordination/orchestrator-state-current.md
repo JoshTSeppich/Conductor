@@ -380,3 +380,53 @@ Gen-3 orchestrator estimated ~48% (~480k) as of this annotation. Round 9 paralle
 ---
 
 **Phase 0 closed at `e543494`. Phase 1 entered at this commit. Round 9 begins.**
+
+---
+
+## §12 — Gen-3 handoff to gen-4 (context threshold 750k)
+
+Authored at 2026-05-12T09:54:34-06:00 per ORCHESTRATOR_STATE_CONTRACT INVARIANT-4 + protocol §1 trigger threshold ~750k.
+
+### §12.1 — Handoff state
+
+- **session_id (gen-3)**: `orchestrator-2026-05-11-1257`
+- **status (gen-3)**: `handing-off`
+- **successor_session_id (gen-4)**: `orchestrator-2026-05-12-0953`
+- **handoff_reason**: `context-threshold-750k` (operator-reported 749350 tokens at 2026-05-12T09:54)
+- **session_ended_at (gen-3)**: 2026-05-12T09:54:34-06:00
+- **origin_main_head_at_handoff**: 63581e9 (or later if Phase 1 cascade commits land before gen-4 boot)
+
+### §12.2 — Phase 1 in-flight state (gen-4 inherits)
+
+All 4 ticket bodies LANDED + WB ladders in active execution under §C auto-ack envelope:
+- T1 (`t1-ticket-body-0905`): ticket body ec60622; WB1 RED 1644e5e + WB2 RED b641eac; continuing
+- T2 (`t2-ticket-body-0905`): ticket body 30ab109; WB1 RED fcf0c65 + WB2 GREEN d627096 (4-file with spike ADR); WB3+ continuing per HALT-WB3-PRE-COMMIT (header text screenshot operator-review)
+- T3 (`t3-ticket-body-0905`): ticket body via contamination at 0d71590 (operator-acked A; Tier 1 filed 8d178a4); WB1 RED 5565a60 + WB2 GREEN 7009b72 + WB3 RED ff09a13 + WB4 GREEN e05add2; continuing
+- T6 (`t6-ticket-body-0905`): ticket body 10d5238; WB1-WB5 LANDED (144ca56 + e271329 + a4f067d + 54d5b58 + 0d71590); WB6 final in flight (findings + FOLLOWUPS closure + γ Tier 2 filing)
+
+### §12.3 — Operator delegations operative (gen-4 inherits)
+
+- **Auto-ack by all recmd** per operator 2026-05-12: subsequent HALTs in WB ladders auto-acked with [MODELED] defaults if §C envelope passes
+- **180s heartbeat** monitor cadence
+- **HALT preserved at**: contract amendments / anti-fabrication concerns / test failures outside §4.5 baseline / cross-session conflicts / NEW arbitration questions / operator-review gates (e.g., T2 HALT-WB3 header text screenshot)
+- **Round 9 stress regime** per dispatch §5.4: methodology incidents file as Tier 1 by default
+
+### §12.4 — Active monitor (gen-4 may relaunch)
+
+Background monitor `b6p8xf6md` running with 180s heartbeat + case-insensitive HALT regex. Gen-4 may inherit or relaunch as needed.
+
+### §12.5 — Phase 1 second batch queued
+
+Per full-build-mode dispatch §4 Phase 1: T4 (Bottom rail) + T5 (BUILD.md) + T7 (Visual polish) queued for second batch after first batch lands. T2-successor + T3-existing + T4-successor (Wave B/C ladders complete) available for next dispatch.
+
+### §12.6 — Tier 1 followups filed by gen-3 (post-§11 supplement)
+
+- `MB-F-FRAME-C-SESSIONS-STREAM-INTEGRATION` (e2688fa Tier 2)
+- `MB-F-WIREFRAME-PARITY-SCOPE-UNDERESTIMATED` (c2abb28)
+- `MB-F-CROSS-SESSION-STAGING-AREA-COMMIT-CONTAMINATION-2026-05-12` (8d178a4 + recurrence update 63581e9)
+
+### §12.7 — Gen-4 boot prompt
+
+Gen-4 spawn dispatched separately; first-message paste includes lineage (gen-1 → gen-2 unexpected-exit → gen-3 handoff at 750k → gen-4), Phase 1 in-flight state, operator delegations, monitor inheritance, and ORCHESTRATOR_STATE_CONTRACT INVARIANT-5 boot checklist.
+
+**Gen-3 entering deep-halt per INV-RP-3 after handoff verification.**
