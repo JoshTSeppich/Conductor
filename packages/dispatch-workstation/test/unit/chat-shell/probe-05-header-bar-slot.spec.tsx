@@ -70,10 +70,19 @@ describe('MB-T26 WB3 — ChatShell renderCostMeter slot', () => {
     expect(header.contains(marker)).toBe(true);
   });
 
-  it('renders empty header-bar when renderCostMeter is undefined', () => {
+  it('renders no cost-meter slot content when renderCostMeter is undefined', () => {
+    // Post MB-T-WIREFRAME-T4 WB2 (`bbf4a86`+): header-bar always
+    // contains the ConductorBrand element as its leftmost child per
+    // Sub-Q-T4-A=(α) "extend chat-shell-header-bar" host-extension
+    // operator arbitration 2026-05-12 ("accept all defaults"). The
+    // original WB3 assertion (`children.length === 0`) was implicitly
+    // testing "no cost-meter slot content"; updated here to be
+    // semantic about the cost-meter slot rather than absolute
+    // emptiness. The cost-meter slot uses the
+    // `probe-05-cost-meter-marker` testid in the sibling test above
+    // when supplied; assert that marker is absent here.
     render(<ChatShell tabs={[chatTab]} />);
-    const header = screen.getByTestId('chat-shell-header-bar');
-    expect(header.children.length).toBe(0);
+    expect(screen.queryByTestId('probe-05-cost-meter-marker')).toBeNull();
   });
 
   it('calls renderCostMeter exactly once per render', () => {

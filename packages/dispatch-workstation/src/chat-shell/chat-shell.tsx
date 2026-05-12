@@ -33,6 +33,7 @@
 //   - Click on the already-active chip is a no-op (does not invoke
 //     onTabChange).
 import { useState, type ReactNode } from 'react';
+import { ConductorBrand } from './conductor-brand.js';
 
 export interface TabConfig {
   /** Stable identifier — used for `chat-shell-tab-{id}` data-testid + activeTabId matching. */
@@ -179,9 +180,31 @@ export function ChatShell({
           padding: '4px 8px',
         }}
       >
+        {/* === BEGIN: MB-T-WIREFRAME-T4 conductor-brand leftmost slot ===
+            Per Sub-Q-T4-A=(α) operator-acked 2026-05-12 "accept all
+            defaults": Conductor brand is the new LEFTMOST element in
+            the bottom-rail per wireframe (precedes MB-T24 Auto/Ask
+            toggle). Always-present (no slot prop conditional); the
+            brand label is unconditional per wireframe target
+            2026-05-11. Updated slot ordering left-to-right:
+              [Conductor brand MB-T-WIREFRAME-T4 — this] | [Auto/Ask MB-T24] | [plan-usage MB-T25] | [cost-meter MB-T26] | [model-mix MB-T27]
+            MB-T24's "FAR-LEFT" arbitration (Q-MBT24-4=a 2026-05-08)
+            applied when only T24+T25+T26+T27 existed; T4 adds the
+            Conductor brand label which sits LEFT of operator-control
+            slots per wireframe per dispatch §1 "Bottom rail — Conductor
+            controls" bullet 1.
+            === */}
+        <ConductorBrand />
+        {/* === END: MB-T-WIREFRAME-T4 === */}
         {/* === BEGIN: MB-T24 dispatch-mode-toggle slot ===
             FAR-LEFT slot per Q-MBT24-4=a (operator-confirmed 2026-05-08
             HALT 0): operator-control surface gets prime position.
+            (Note: T4's conductor-brand zone above now sits LEFT of
+            this slot per Sub-Q-T4-A=α 2026-05-12 — MB-T24 retains
+            "FAR-LEFT of operator-controls" semantic per its original
+            arbitration; brand label is brand-identification surface,
+            not operator-control surface, so the arbitration is not
+            in conflict.)
             Slot ordering left-to-right:
               [Auto/Ask MB-T24 — this] | [plan-usage MB-T25] | [cost-meter MB-T26] | [model-mix MB-T27]
             Sibling to MB-T26 + MB-T27 zones inside MB-T22 reserved zone.
