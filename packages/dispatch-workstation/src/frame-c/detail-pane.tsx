@@ -29,8 +29,14 @@
 //     written by HSO) returns empty string from IPC → parser surfaces
 //     "no swarm-state section found" placeholder honestly.
 
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { ActionBar, type ActionBarFailureState } from './action-bar.js';
+import { TerminalHeaderBar } from './terminal-header-bar.js';
+import { TerminalStream } from './terminal-stream.js';
+import { ToolIndicatorStrip } from './tool-indicator-strip.js';
+import { parseToolIndicators } from './tool-indicator-parser.js';
+import type { ConsoleBridge } from '../main/console-bridge.js';
+import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
 
 // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — flex column layout
 // places swarm-state body on top (flex:1, overflow:auto) and ActionBar
@@ -136,6 +142,29 @@ export interface DetailPaneProps {
    * from spawn-result into this prop.
    */
   readonly spawnMode?: 'auto' | 'ask';
+  /**
+   * MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB11 — branch name
+   * threaded into TerminalHeaderBar's left slot
+   * (`<sessionName> @ <branchName>`). Optional; absent renders
+   * em-dash placeholder per HALT-WB3 operator-acked convention.
+   */
+  readonly branchName?: string;
+  /**
+   * MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB11 + WB2 — CONSOLE-
+   * T02 bridge for the embedded TerminalStream Live-tab PTY
+   * subscription. Optional: when present, DetailPane renders the
+   * HYBRID tab strip (Sub-Q-MBTWFT2-A=ii operator-acked) with "Live"
+   * (default) and "Summary" tabs. When absent, DetailPane falls back
+   * to the Summary-only render (existing Wave B behavior). FrameCRoot
+   * threads this via mount.tsx propagation (WB12 wiring point).
+   */
+  readonly consoleBridge?: ConsoleBridge;
+  /**
+   * MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB11 + WB2 — terminal
+   * adapter factory for the embedded TerminalStream xterm renderer.
+   * Same optionality semantics as `consoleBridge`.
+   */
+  readonly createTerminal?: () => TerminalAdapter;
 }
 
 interface WorkstationBridgeShape {
@@ -327,10 +356,71 @@ export function extractSwarmStateSection(text: string, sessionName: string): str
   return sections.join('\n\n---\n\n');
 }
 
+// MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB11 — chunk-buffer cap
+// for per-session PTY chunk accumulation used by ToolIndicatorStrip
+// parsing. 16KB is well above the typical CC indicator block size
+// (Cooking + tool-event lines from a single round) while bounding
+// memory growth across long-running sessions. Buffer truncates from
+// the front when over cap.
+const CHUNK_BUFFER_CAP = 16_384;
+
+const TAB_STRIP_STYLE: CSSProperties = {
+  display: 'flex',
+  gap: '4px',
+  padding: '4px 12px',
+  borderBottom: '1px solid #303030',
+  background: '#0a0a0a',
+};
+
+const TAB_BUTTON_STYLE_BASE: CSSProperties = {
+  padding: '4px 10px',
+  fontFamily: 'inherit',
+  fontSize: '11px',
+  background: 'transparent',
+  color: '#888888',
+  border: '1px solid transparent',
+  cursor: 'pointer',
+};
+
+const TAB_BUTTON_STYLE_ACTIVE: CSSProperties = {
+  ...TAB_BUTTON_STYLE_BASE,
+  color: '#dddddd',
+  borderColor: '#444444',
+};
+
+const TAB_PANEL_STYLE: CSSProperties = {
+  flex: '1 1 auto',
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0,
+  overflow: 'hidden',
+};
+
 export function DetailPane(props: DetailPaneProps): JSX.Element {
-  const { selectedSessionName, tokensUsed, tokenBudget, spawnMode } = props;
+  const {
+    selectedSessionName,
+    tokensUsed,
+    tokenBudget,
+    spawnMode,
+    branchName,
+    consoleBridge,
+    createTerminal,
+  } = props;
   const [content, setContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  // MB-T-WIREFRAME-T2 WB11 — per-session PTY chunk-buffer for
+  // ToolIndicatorStrip parsing. Reset on selection-change so the
+  // previous session's tool events do not leak into the new
+  // session's indicator strip.
+  const [chunkBuffer, setChunkBuffer] = useState<string>('');
+  // HYBRID tab state per Sub-Q-MBTWFT2-A=(ii) operator-acked default.
+  // 'live' is the default active tab so the wireframe-primary view
+  // shows immediately on selection. Summary tab is rendered with CSS
+  // visibility toggle (display:none) — NOT React unmount — so the
+  // xterm scrollback in the Live tab is preserved across tab toggles
+  // (ticket §8 risk register: Sub-Q-A=(ii) tab-switch xterm-loss
+  // mitigation).
+  const [activeTab, setActiveTab] = useState<'live' | 'summary'>('live');
   // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — failureState now
   // stateful (WB4 ship was read-only placeholder). Handlers await
   // bridge calls + set on failure; Dismiss callback clears to null.
@@ -506,28 +596,123 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
     };
   }, [selectedSessionName]);
 
+  // MB-T-WIREFRAME-T2 WB11 — PTY chunk accumulator for the
+  // ToolIndicatorStrip parser. Listener-only (NO openPanel here —
+  // TerminalStream owns that lifecycle per spike ADR §3.1). Reset
+  // buffer on selection-change. Cap at CHUNK_BUFFER_CAP bytes.
+  useEffect(() => {
+    if (!consoleBridge) return undefined;
+    setChunkBuffer('');
+    const cleanup = consoleBridge.onStdoutChunk((p) => {
+      if (p.sessionName !== selectedSessionName) return;
+      const text =
+        p.encoding === 'base64' ? decodeBase64ForIndicators(p.bytes) : p.bytes;
+      setChunkBuffer((prev) => {
+        const next = prev + text;
+        if (next.length <= CHUNK_BUFFER_CAP) return next;
+        return next.slice(-CHUNK_BUFFER_CAP);
+      });
+    });
+    return cleanup;
+  }, [consoleBridge, selectedSessionName]);
+
+  const toolState = useMemo(
+    () => parseToolIndicators(chunkBuffer),
+    [chunkBuffer],
+  );
+
   const body = error
     ? `Error reading swarm-state: ${error}`
     : content.length > 0
       ? content
       : `No swarm-state section found for session "${selectedSessionName}".`;
 
+  const hybridMode = consoleBridge !== undefined && createTerminal !== undefined;
+
+  const summaryBody = (
+    <pre style={error ? { ...PRE_STYLE, ...ERROR_STYLE } : PRE_STYLE}>
+      {body}
+    </pre>
+  );
+
   return (
     <div data-testid="frame-c-detail-pane" style={DETAIL_PANE_STYLE}>
-      <div style={DETAIL_PANE_BODY_STYLE}>
-        <div style={META_ROW_STYLE}>
-          <div style={HEADER_STYLE}>{selectedSessionName}</div>
-          <span
-            data-testid="frame-c-detail-pane-ctx-text"
-            style={CTX_TEXT_STYLE}
+      {/* MB-T-WIREFRAME-T2 WB11 — TerminalHeaderBar replaces the
+          legacy meta-row + ctx pill. The `frame-c-detail-pane-ctx-
+          text` testid moves into TerminalHeaderBar (backward-compat
+          for Wave C #5 probe-mbtwtws-02 — see terminal-header-bar.tsx
+          ctx span). */}
+      <TerminalHeaderBar
+        sessionName={selectedSessionName}
+        branchName={branchName}
+        tokensUsed={tokensUsed}
+        tokenBudget={tokenBudget}
+      />
+      {hybridMode && (
+        <div style={TAB_STRIP_STYLE} data-testid="frame-c-detail-tabs">
+          <button
+            type="button"
+            data-testid="frame-c-detail-tab-live"
+            onClick={() => setActiveTab('live')}
+            style={
+              activeTab === 'live'
+                ? TAB_BUTTON_STYLE_ACTIVE
+                : TAB_BUTTON_STYLE_BASE
+            }
           >
-            ctx {ctxPct}%
-          </span>
+            Live
+          </button>
+          <button
+            type="button"
+            data-testid="frame-c-detail-tab-summary"
+            onClick={() => setActiveTab('summary')}
+            style={
+              activeTab === 'summary'
+                ? TAB_BUTTON_STYLE_ACTIVE
+                : TAB_BUTTON_STYLE_BASE
+            }
+          >
+            Summary
+          </button>
         </div>
-        <pre style={error ? { ...PRE_STYLE, ...ERROR_STYLE } : PRE_STYLE}>
-          {body}
-        </pre>
-      </div>
+      )}
+      {hybridMode ? (
+        <>
+          {/* Live tab — kept mounted always (CSS visibility toggle)
+              so xterm scrollback survives tab switches. */}
+          <div
+            data-testid="frame-c-detail-live-panel"
+            style={{
+              ...TAB_PANEL_STYLE,
+              display: activeTab === 'live' ? 'flex' : 'none',
+            }}
+          >
+            <ToolIndicatorStrip state={toolState} />
+            <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}>
+              <TerminalStream
+                targetSessionName={selectedSessionName}
+                consoleBridge={consoleBridge}
+                createTerminal={createTerminal}
+              />
+            </div>
+          </div>
+          {/* Summary tab — preserves Wave B WB8 swarm-state body.
+              `display:none` (not unmount) keeps `<pre>` textContent
+              available to existing probes (probe-mbtwbfcs-04
+              consumer non-regression). */}
+          <div
+            data-testid="frame-c-detail-summary-panel"
+            style={{
+              ...DETAIL_PANE_BODY_STYLE,
+              display: activeTab === 'summary' ? 'block' : 'none',
+            }}
+          >
+            {summaryBody}
+          </div>
+        </>
+      ) : (
+        <div style={DETAIL_PANE_BODY_STYLE}>{summaryBody}</div>
+      )}
       {diffOutput !== null ? (
         <pre
           data-testid="frame-c-diff-output"
@@ -558,4 +743,17 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
       </div>
     </div>
   );
+}
+
+/** Base64 → UTF-8 decoder usable in browser + Node — used for the
+ *  WB11 chunk-buffer accumulator feeding parseToolIndicators. Mirrors
+ *  console-panel.tsx:189-205 + terminal-stream.tsx pattern. */
+function decodeBase64ForIndicators(b64: string): string {
+  if (typeof atob === 'function') {
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new TextDecoder('utf-8', { fatal: false }).decode(arr);
+  }
+  return Buffer.from(b64, 'base64').toString('utf8');
 }

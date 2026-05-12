@@ -98,7 +98,18 @@ export function TerminalHeaderBar({
         {sessionName} @ {branchSlot}
       </span>
       <span style={RIGHT_CLUSTER_STYLE}>
-        <span style={META_PILL_STYLE}>ctx {ctxPct}%</span>
+        {/* `frame-c-detail-pane-ctx-text` testid preserved for
+            backward-compat with Wave C #5 (MB-T-WIREFRAME-C5-TOKEN-
+            WIRING-SURFACE) probe-mbtwtws-02-detail-pane-ctx-text.
+            When TerminalHeaderBar replaces the legacy meta-row inside
+            DetailPane (WB11 integration), the same testid moves to
+            the header — no Wave-C consumer-probe regression. */}
+        <span
+          data-testid="frame-c-detail-pane-ctx-text"
+          style={META_PILL_STYLE}
+        >
+          ctx {ctxPct}%
+        </span>
         <span style={META_PILL_STYLE}>uptime —</span>
         <span style={META_PILL_STYLE}>plan —</span>
       </span>
