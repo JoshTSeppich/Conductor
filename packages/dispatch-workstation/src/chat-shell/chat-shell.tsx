@@ -120,6 +120,18 @@ export interface ChatShellProps {
   // this slot at production runtime; tests inject their own sessions.
   readonly renderMaxParallelCounter?: () => ReactNode;
   // === END: MB-T-WIREFRAME-T4 ===
+  // === BEGIN: MB-T-WIREFRAME-T4 WB12 bypass-perms + plan-timer slot props ===
+  // Per Sub-Q-T4-F=(i) + Sub-Q-T4-D=(i) operator-acked 2026-05-12:
+  // additive slot props for bypass-perms indicator + plan-timer text.
+  // mount.ts wires bypass-perms via dispatchModeBridge.getDispatchMode
+  // observation; plan-timer via coarchitectBridge.onRateLimitUpdate
+  // subscription. Per-wireframe slot ordering left-to-right (WB12
+  // layout consolidation): brand → Auto/Ask → bypass-perms → max-
+  // parallel → [cost-meter slot] → plan-timer-text → plan-usage-ring
+  // → model-mix.
+  readonly renderBypassPerms?: () => ReactNode;
+  readonly renderPlanTimerText?: () => ReactNode;
+  // === END: MB-T-WIREFRAME-T4 WB12 ===
 }
 
 export function ChatShell({
@@ -141,6 +153,10 @@ export function ChatShell({
   // === BEGIN: MB-T-WIREFRAME-T4 max-parallel-counter slot destructure ===
   renderMaxParallelCounter,
   // === END: MB-T-WIREFRAME-T4 ===
+  // === BEGIN: MB-T-WIREFRAME-T4 WB12 bypass-perms + plan-timer slot destructure ===
+  renderBypassPerms,
+  renderPlanTimerText,
+  // === END: MB-T-WIREFRAME-T4 WB12 ===
 }: ChatShellProps) {
   // === BEGIN: MB-T22 multi-tab core ===
   // Hybrid controlled/uncontrolled state. When `activeTabId` is
@@ -224,6 +240,13 @@ export function ChatShell({
             === */}
         {renderDispatchModeToggle ? renderDispatchModeToggle() : null}
         {/* === END: MB-T24 === */}
+        {/* === BEGIN: MB-T-WIREFRAME-T4 WB12 bypass-perms slot ===
+            Per Sub-Q-T4-F=(i): visible when dispatchMode='auto'.
+            Slot ordering position per wireframe: between Auto/Ask
+            and max-parallel.
+            === */}
+        {renderBypassPerms ? renderBypassPerms() : null}
+        {/* === END: MB-T-WIREFRAME-T4 WB12 bypass-perms === */}
         {/* === BEGIN: MB-T-WIREFRAME-T4 max-parallel-counter slot ===
             Per Sub-Q-T4-A=(α) + Sub-Q-T4-E=(i) 2026-05-12: sibling
             slot inside chat-shell-header-bar, after MB-T24 Auto/Ask
@@ -255,6 +278,13 @@ export function ChatShell({
         {renderPlanUsageRing ? renderPlanUsageRing() : null}
         {/* === END: MB-T25 === */}
         {renderCostMeter ? renderCostMeter() : null}
+        {/* === BEGIN: MB-T-WIREFRAME-T4 WB12 plan-timer-text slot ===
+            Per Sub-Q-T4-D=(i): countdown derived from RateLimitState.
+            Slot ordering position per wireframe: after cost-meter,
+            before plan-usage-ring.
+            === */}
+        {renderPlanTimerText ? renderPlanTimerText() : null}
+        {/* === END: MB-T-WIREFRAME-T4 WB12 plan-timer-text === */}
         {/* === BEGIN: MB-T27 model-mix slot ===
             Sibling slot inside the chat-shell-header-bar element per
             t26-t27-coord.md slot ordering left-to-right:
