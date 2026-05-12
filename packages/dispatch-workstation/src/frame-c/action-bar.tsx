@@ -34,7 +34,13 @@ import type { FrameCActionError } from '../main/frame-c-ipc.js';
  *  name + error_type + message + Dismiss button + optional conflict-
  *  files `<ul>` for `MergeConflict` results. */
 export interface ActionBarFailureState {
-  readonly action: 'diff' | 'merge' | 'focus';
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB2 GREEN — union extended to
+  // include 'kill'. DetailPane host (WB4) catches SessionKillReply from
+  // `window.workstationBridge.killSession` and adapts via WB6
+  // `adaptSessionKillFailure` into this shape so the existing failure-
+  // banner UX (renderFailureBanner below) renders kill failures without
+  // component-layer changes beyond the union widening.
+  readonly action: 'diff' | 'merge' | 'focus' | 'kill';
   readonly result: FrameCActionError;
 }
 
@@ -58,6 +64,15 @@ export interface ActionBarProps {
    *  Full Frame A render-coherence pending
    *  `MB-F-TILEGRIDAPP-FRAMEMODE-SUBSCRIPTION-GAP-2026-05-11`. */
   readonly onFocus: (sessionName: string) => void;
+  /** MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB2 GREEN — fired with
+   *  `sessionName` on [Kill] click. Host routes to existing
+   *  `window.workstationBridge.killSession({sessionName})` (MB-T11 WB3
+   *  channel; Sub-Q-MBTWFT3-A=(α) reuse — no new IPC channel). Two-step
+   *  kill: tmux kill-session, then PATCH /v2/sessions/:name/state with
+   *  state='killed'. SessionKillReply discriminated union returned;
+   *  DetailPane host adapts SessionKillError → ActionBarFailureState
+   *  via WB6 `adaptSessionKillFailure`. */
+  readonly onKill: (sessionName: string) => void;
   /** Sub-Q-MBTWBDPFA-C=(α) inline-banner state. When non-null, ActionBar
    *  renders the failure banner per coord note `9fe6358` §4. Host clears
    *  to null on next successful action (auto-dismiss-on-recovery). */
@@ -72,6 +87,7 @@ export function ActionBar({
   onDiff,
   onMerge,
   onFocus,
+  onKill,
   failureState,
   onDismissFailure,
 }: ActionBarProps): JSX.Element {
@@ -89,6 +105,9 @@ export function ActionBar({
   };
   const fireFocus = (): void => {
     if (sessionName !== null) onFocus(sessionName);
+  };
+  const fireKill = (): void => {
+    if (sessionName !== null) onKill(sessionName);
   };
   return createElement(
     'div',
@@ -122,6 +141,20 @@ export function ActionBar({
         onClick: fireFocus,
       },
       'Focus',
+    ),
+    // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB2 GREEN — kill button.
+    // Routes via DetailPane host (WB4) to existing
+    // `window.workstationBridge.killSession({sessionName})` per
+    // Sub-Q-MBTWFT3-A=(α) reuse default — no new IPC channel.
+    createElement(
+      'button',
+      {
+        type: 'button',
+        'data-testid': 'action-bar-kill-btn',
+        disabled,
+        onClick: fireKill,
+      },
+      'Kill',
     ),
     // WB6 GREEN — inline failure banner (Sub-Q-MBTWBDPFA-C=α per coord
     // note `9fe6358` §4 render expectations). React renders nothing

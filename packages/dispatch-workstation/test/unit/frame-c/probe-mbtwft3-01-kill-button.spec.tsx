@@ -78,9 +78,6 @@ function renderActionBar(props: {
         onDiff: props.onDiff ?? vi.fn(),
         onMerge: props.onMerge ?? vi.fn(),
         onFocus: props.onFocus ?? vi.fn(),
-        // @ts-expect-error WB1 RED: `onKill` not yet on ActionBarProps at
-        // HEAD `0d71590`. WB2 GREEN adds the prop; removing this comment
-        // is part of the GREEN ladder step.
         onKill: props.onKill ?? vi.fn(),
         failureState: props.failureState ?? null,
         onDismissFailure: props.onDismissFailure ?? vi.fn(),
@@ -177,13 +174,6 @@ describe('MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB1 — ActionBar kill-button + fa
     const { container, cleanup } = renderActionBar({
       sessionName: 'session-foo',
       failureState: {
-        // @ts-expect-error WB1 RED: ActionBarFailureState.action union at
-        // action-bar.tsx:37 is `'diff' | 'merge' | 'focus'` and does NOT
-        // include 'kill' at HEAD `0d71590`. WB2 GREEN extends the union;
-        // removing this comment is part of the GREEN ladder step. Runtime
-        // assertion below passes at HEAD due to template-literal lenience
-        // in renderFailureBanner — the load-bearing RED signal is the
-        // typecheck failure from unused @ts-expect-error at WB2.
         action: 'kill',
         result: {
           ok: false,
