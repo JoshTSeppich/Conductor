@@ -258,6 +258,24 @@ This pattern is an architectural discipline that should be preserved in any chro
 
 **Strategic finding (Dim 4):** Frame shell is the most divergent dimension. Shell chrome is empty by construction. PlanRing and MixIndicator placement in Conductor header-bar vs FrameShell toolbar is a deliberate consolidation decision, not an oversight — both landed with explicit slot-ordering operator arbitrations. Restoring them to a global toolbar would require the Dim 1 frame-switching rearchitecture first.
 
+### §6.F — Frame C Detail-Pane Chrome (post-audit surface; SHIPPED-BEYOND-WIREFRAME)
+
+`[KNOWN — appended 2026-05-11 post-MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS WB7 docs]`
+
+Frame C (shipped at §C.1′ Frame Router `44764fd` + Wave C #2 `frame-c/` scaffold) introduces a renderer surface that did not exist at the 2026-05-09 audit anchor. The detail-pane subsection of Frame C has no wireframe equivalent (wireframe `wireframes.jsx:223-248` shows tile chrome only). New SHIPPED elements catalogued here:
+
+| Element | Classification | Evidence |
+|---|---|---|
+| Frame C detail-pane host | SHIPPED-BEYOND-WIREFRAME | Wave B WB8 `525c502` shipped `frame-c/detail-pane.tsx` rendering selected session's swarm-state.md content + (Wave C #5 `bd31b94`) `ctx N%` inline text. [KNOWN — `frame-c/detail-pane.tsx`] |
+| Detail-pane footer ActionBar (3 buttons: Diff / Merge / Focus) | SHIPPED-BEYOND-WIREFRAME | MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS WB2 `cde9308` shipped `frame-c/action-bar.tsx` RENDERER-INTEGRATED component (bridge-free; callback-prop driven). Three buttons gated on `sessionName !== null` (disabled when no selection). No wireframe equivalent. [KNOWN — `frame-c/action-bar.tsx`] |
+| Inline failure-banner (role="alert") | SHIPPED-BEYOND-WIREFRAME | MB-T-WIREFRAME-C1P3 WB6 `cdf05db` extended ActionBar with conditional `failureState` prop + banner DOM (action + error_type + message + optional MergeConflict `<ul><li>` + Dismiss button). Sub-Q-MBTWBDPFA-C=(α) operator-arbitrated 2026-05-11. [KNOWN — `frame-c/action-bar.tsx:renderFailureBanner`] |
+| `frame-c:diff` IPC channel | SHIPPED-BEYOND-WIREFRAME | Consolidated §6 amendment `0f0e762`. Renderer: `window.frameCBridge.diff(sessionName)`. Main: `FrameCIpcController.handleDiff` → `git diff main...<branch>` via `child_process`. Discriminated-union result (`DiffResult`). Sub-Q-MBTWBDPFA-B-diff=(i). [KNOWN — `main/frame-c-ipc.ts:handleDiff`, `main/preload.mts:frameCBridge`] |
+| `frame-c:merge` IPC channel | SHIPPED-BEYOND-WIREFRAME | Same amendment. `git merge --no-commit --no-ff <branch>` via `child_process`. `MergeResult` discriminated union with `conflictFiles[]` parsed from stdout/stderr. Sub-Q-MBTWBDPFA-B-merge=(i). [KNOWN — `main/frame-c-ipc.ts:handleMerge`] |
+| `frame-c:focus` IPC channel | SHIPPED-BEYOND-WIREFRAME | Same amendment. `writeFrameMode('A')` + `webContents.send('frame-c:scroll-to-session', payload)`. Sub-Q-MBTWBDPFA-B-focus=(i). End-to-end Frame A render-coherence pending `MB-F-TILEGRIDAPP-FRAMEMODE-SUBSCRIPTION-GAP-2026-05-11` (Tier 2). [KNOWN — `main/frame-c-ipc.ts:handleFocus`] |
+| `frameCBridge` (contextBridge surface) | SHIPPED-BEYOND-WIREFRAME | New top-level `window.frameCBridge` exposing `diff/merge/focus` methods. Per-IPC-family convention (Sub-Q-MBTWBDPFA-D=α); coexists with `workstationBridge.readSwarmState` (Wave B `525c502`). [KNOWN — `main/preload.mts:exposeInMainWorld('frameCBridge')`] |
+
+**Strategic finding (§6.F):** Frame C detail-pane is the cleanest post-audit-anchor surface — its entire chrome ships beyond wireframe vision (wireframe shows only tile chrome at `wireframes.jsx:223-248`; Frame C's two-column session-list + detail-pane structure is post-2026-05-09 design). All shipped elements follow audit §4.1 three-tier integration discipline: component layer is RENDERER-INTEGRATED + bridge-free; bridge access lives at the detail-pane host (production wiring deferred per `MB-F-FRAME-C-IPC-LOOKUP-SESSION-STUB-2026-05-11` Tier 2). The discriminated-union result-type pattern (`DiffResult` / `MergeResult` / `FocusResult` on `ok: boolean` tag) extends the prior `WORKSTATION_CONTRACT.md §6.5` typed-error envelope convention with action-specific success-shape fields + error-taxonomy enums.
+
 ---
 
 ## §7 — Dimension 5: Data Model
