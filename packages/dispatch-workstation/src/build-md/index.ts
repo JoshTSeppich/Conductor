@@ -7,6 +7,8 @@ export {
   computeBuildMdStatus,
 } from './service.js';
 
+export { createDispatchLoop } from './dispatch-loop.js';
+
 export type {
   BuildMdLoadResult,
   BuildMdLoadSuccess,
@@ -14,3 +16,11 @@ export type {
   BuildMdStatus,
   SerializableTaskDAG,
 } from './types.js';
+
+export type {
+  DispatchLoop,
+  DispatchLoopDeps,
+  DispatchLoopTickResult,
+  DispatchSpawnRequest,
+  DispatchSpawnResult,
+} from './dispatch-loop.js';
