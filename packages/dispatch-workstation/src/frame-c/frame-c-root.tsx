@@ -41,6 +41,12 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
 import { SessionList } from './session-list.js';
 import { DetailPane } from './detail-pane.js';
+import {
+  SessionFilterBar,
+  applyFilter,
+  DEFAULT_FILTER_STATE,
+  type FilterState,
+} from './session-filter-bar.js';
 
 // Narrow subset of WorkstationBridgeShape (tile-grid-app.tsx:41-86)
 // — only the onSpawnResult method is load-bearing for T1 WB3 sessions-
@@ -226,14 +232,30 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
   const selectedEntry =
     selected !== null ? sessions.find((s) => s.name === selected) : undefined;
 
+  // MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB11 — renderer-only filter
+  // state (Sub-Q-T1-E=(α) operator-acked: useState; lost on reload).
+  // Applied via applyFilter() before passing sessions to SessionList.
+  // SessionFilterBar renders above SessionList in the left column.
+  // Tier 3 followup MB-F-FRAME-C-FILTER-STATE-NOT-PERSISTED filed at
+  // WB-final.
+  const [filterState, setFilterState] = useState<FilterState>(
+    DEFAULT_FILTER_STATE,
+  );
+  const filteredSessions = applyFilter(sessions, filterState);
+
   return (
     <div data-testid="frame-c-root" style={ROOT_STYLE}>
       <div
         data-testid="frame-c-session-list-col"
         style={SESSION_LIST_COL_STYLE}
       >
-        <SessionList
+        <SessionFilterBar
           sessions={sessions}
+          filterState={filterState}
+          onFilterStateChange={setFilterState}
+        />
+        <SessionList
+          sessions={filteredSessions}
           onSelect={handleSelect}
           selectedSessionName={selected}
         />
