@@ -64,6 +64,43 @@ Confidence labels per CLAUDE.md §2.2: `[KNOWN]` observed in this session via di
 
 8. **Audit reclassification + FOLLOWUPS closure stamps**: WB-final docs update audit §10.6 row + close `MB-F-COST-METER-AGGREGATION-BACKEND-STUBBED` Tier 3 row + advance `MB-F-A2C-PTY-SCRAPE-COST-METER-MIGRATION` per Sub-Q-A path-taken.
 
+### §1.5 — (β) reshape amendment (2026-05-12; operator-arbitrated)
+
+`[KNOWN-OPERATOR-ARBITRATED]` 2026-05-12 turn-2 — operator selected
+candidate-(β) reshape after t8 surfaced HALT-TERRITORY-MISMATCH between
+ticket body §2.4 paths and `phase4-t8-exec` manifest scope. Recorded
+verbatim in `docs/coordination/mb-t-wireframe-t8-decisions-2026-05-12.md` §1.
+
+**Under (β):** ticket scope narrows to *daemon-side aggregator + bottom-
+rail consumer test only*. Workstation `src/main/coarchitect-ipc.ts:89`
+STUB replacement + workstation aggregator + broadcast emitter (original
+§1.1 items 1, 2, 4, 5) are SIBLING-SESSION deliverables — not t8 ship-scope.
+
+**(β) ship envelope (t8 only):**
+- Daemon-side `aggregateDailyCost` pure-fn at `packages/dispatch-daemon/
+  src/cost-aggregator.ts` + unit probe.
+- Cross-package consumer-integration probe binding daemon output → bottom-
+  rail render at `packages/dispatch-workstation/test/unit/chat-shell/
+  probe-mbtwft8-02-aggregator-driven-render.spec.tsx`.
+- This amendment + decisions doc + coord doc + findings doc.
+
+**Out of (β) t8 scope (sibling-session-flippable):**
+- WB1 RED `31709e0` conditions (1)+(2) (workstation src/main paths).
+- WB5-equivalent workstation aggregator wiring (was original §4 WB5).
+- §1.1 item 2 (`coarchitect:cost-update` broadcast emitter reauthor).
+- §1.1 item 5 (cadence + lifecycle).
+- §1.1 item 8 audit reclassification + FOLLOWUPS closure stamps (operator-
+  driven; t8 manifest FORBIDS these paths).
+
+**Sub-Q resolutions under (β)** (see decisions doc §2 for full mapping):
+- A=(b) daemon-side aggregator pure-fn (not (c) default).
+- B,D = DEFERRED to sibling.
+- C=(i), E=(α) — same as defaults.
+
+**Original §1.1, §1.2, §3 Sub-Q gates, §4 WB ladder remain BELOW for
+historical context.** Operative cairn ladder for t8 ship at §4.0 (forward
+to §4 below).
+
 ### §1.2 — What this ticket DOES NOT
 
 `[KNOWN-OPERATOR-ARBITRATED]` constraints:
@@ -211,6 +248,29 @@ Required before **WB-final** (closure-scope decision). Default if unresolved: **
 `[MODELED]` Recommend **(α)** for scope discipline + clean ticket boundaries. Daemon mock-to-real is sibling concern; bundling violates §2.11 "no scope creep" + §2.12 followups-over-absorption.
 
 Operator decision pending.
+
+---
+
+## §4.0 — Cairn ladder under (β) reshape (OPERATIVE; supersedes §4)
+
+`[KNOWN]` Shipped at HEAD post-WB-final per `docs/coordination/mb-t-
+wireframe-t8-findings-2026-05-12.md` §I.
+
+| WB | Verb | Commit | Scope |
+|---|---|---|---|
+| WB1 | red | `31709e0` (P5, pre-(β)) | source-text sentinel for sibling-flippable workstation src/main wiring (2 conditions; in t8 territory per `6d7dff3` manifest correction, but flip-targets out of t8 territory) |
+| WB2 | red | `1ca2e15` | daemon `cost-aggregator.test.ts` (4 conditions; pure-fn behavior contract) |
+| WB3 | green | `39c514b` | daemon `src/cost-aggregator.ts` (pure-fn `aggregateDailyCost`; flips WB2 4/4 GREEN) |
+| WB4 | red (inverted) | `1238193` | workstation `chat-shell/probe-mbtwft8-02-aggregator-driven-render.spec.tsx` (3 conditions; cross-package consumer-integration probe; GREEN at HEAD with documented cairn inversion + regression-shield semantic) |
+| WB-final | green (docs) | this commit | decisions + findings + coord + (β) amendment |
+
+**WB5 SKIPPED under (β):** all WB5 targets are `packages/dispatch-
+workstation/src/main/*` — outside t8 manifest. Sibling-session deliverable.
+Outcome classification per CLAUDE.md §2.11: *Capability enabled with
+known limitations*. See findings §VIII for full rationale.
+
+**Original §4 WB ladder retained below for historical context; superseded
+by §4.0 for t8 ship.**
 
 ---
 
