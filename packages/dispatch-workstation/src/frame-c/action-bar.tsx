@@ -80,6 +80,16 @@ export interface ActionBarProps {
   /** Fired when operator clicks the Dismiss button inside the failure
    *  banner. Host sets `failureState` to null in response. */
   readonly onDismissFailure?: () => void;
+  /** MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB8 GREEN — Sub-Q-MBTWFT3-E=(ii)
+   *  per-session spawn-mode data source for the bypass-perms indicator.
+   *  `'auto'` ↔ session spawned with `--dangerously-skip-permissions`
+   *  flag (spawn-handler.ts:225-245); indicator renders. `'ask'` OR
+   *  undefined → indicator hidden (operator-supervised OR no-data
+   *  ship-shy default per Sub-Q-E=(ii) fallback (b)). DetailPane host
+   *  passes undefined at HEAD `e56f63c` because
+   *  TileGridSessionEntry.spawnMode field is absent — tracked at
+   *  `MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING` Tier 2 (WB9 docs). */
+  readonly spawnMode?: 'auto' | 'ask';
 }
 
 export function ActionBar({
@@ -90,6 +100,7 @@ export function ActionBar({
   onKill,
   failureState,
   onDismissFailure,
+  spawnMode,
 }: ActionBarProps): JSX.Element {
   const disabled = sessionName === null;
   // Wrap each callback so it only fires when a session IS selected. The
@@ -109,9 +120,44 @@ export function ActionBar({
   const fireKill = (): void => {
     if (sessionName !== null) onKill(sessionName);
   };
-  return createElement(
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB8 GREEN — bypass-perms
+  // indicator (Sub-Q-E=ii spawn-mode-per-session) + dispatch-workstation
+  // source label. Left-anchored per wireframe target; buttons stay
+  // right-anchored via flex space-between in the row container below.
+  const bypassPermsIndicator =
+    spawnMode === 'auto'
+      ? createElement(
+          'span',
+          {
+            'data-testid': 'action-bar-bypass-perms-indicator',
+            role: 'img',
+            'aria-label': 'bypass-perms warning',
+            style: {
+              color: '#ff8888',
+              fontSize: '14px',
+              lineHeight: 1,
+            },
+          },
+          '⚠',
+        )
+      : null;
+  const sourceLabel = createElement(
+    'span',
+    {
+      'data-testid': 'action-bar-source-label',
+      style: { fontSize: '11px', color: '#9ca3af' },
+    },
+    'dispatch-workstation',
+  );
+  const leftSection = createElement(
     'div',
-    { 'data-testid': 'frame-c-action-bar' },
+    { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+    bypassPermsIndicator,
+    sourceLabel,
+  );
+  const rightSection = createElement(
+    'div',
+    { style: { display: 'flex', gap: '4px' } },
     createElement(
       'button',
       {
@@ -156,6 +202,33 @@ export function ActionBar({
       },
       'Kill',
     ),
+  );
+  const row = createElement(
+    'div',
+    {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '8px',
+        width: '100%',
+      },
+    },
+    leftSection,
+    rightSection,
+  );
+  return createElement(
+    'div',
+    {
+      'data-testid': 'frame-c-action-bar',
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        width: '100%',
+      },
+    },
+    row,
     // WB6 GREEN — inline failure banner (Sub-Q-MBTWBDPFA-C=α per coord
     // note `9fe6358` §4 render expectations). React renders nothing
     // for null/undefined children, so the null/undefined-default case

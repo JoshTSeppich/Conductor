@@ -56,13 +56,14 @@ const DETAIL_PANE_BODY_STYLE: CSSProperties = {
 };
 
 // ActionBar host: flex-shrink:0 anchors it to the bottom; border-top
-// separates from scrollable body region above.
+// separates from scrollable body region above. WB8 GREEN — removed
+// `justifyContent: 'flex-end'` so ActionBar fills width (ActionBar's
+// internal flex space-between distributes bypass-perms indicator +
+// source-label LEFT and 4 buttons RIGHT per wireframe).
 const DETAIL_PANE_FOOTER_STYLE: CSSProperties = {
   flexShrink: 0,
   borderTop: '1px solid #303030',
   padding: '8px 12px',
-  display: 'flex',
-  justifyContent: 'flex-end',
 };
 
 const META_ROW_STYLE: CSSProperties = {
@@ -121,6 +122,20 @@ export interface DetailPaneProps {
    * renders ctx 0% fallback (avoids divide-by-zero).
    */
   readonly tokenBudget?: number;
+  /**
+   * MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB8 GREEN — Sub-Q-E=(ii)
+   * per-session spawn-mode for the bypass-perms indicator. 'auto' →
+   * indicator renders (session spawned with
+   * `--dangerously-skip-permissions`). 'ask' OR undefined → hidden.
+   * Threaded down to ActionBar's `spawnMode` prop verbatim.
+   *
+   * FrameCRoot currently passes undefined ship-shy because
+   * `TileGridSessionEntry.spawnMode` field is absent at HEAD —
+   * tracked at `MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING` Tier 2.
+   * Future T1-territory work threads `TileGridSessionEntry.spawnMode`
+   * from spawn-result into this prop.
+   */
+  readonly spawnMode?: 'auto' | 'ask';
 }
 
 interface WorkstationBridgeShape {
@@ -313,7 +328,7 @@ export function extractSwarmStateSection(text: string, sessionName: string): str
 }
 
 export function DetailPane(props: DetailPaneProps): JSX.Element {
-  const { selectedSessionName, tokensUsed, tokenBudget } = props;
+  const { selectedSessionName, tokensUsed, tokenBudget, spawnMode } = props;
   const [content, setContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — failureState now
@@ -538,6 +553,7 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
           onKill={handleKill}
           failureState={failureState}
           onDismissFailure={handleDismissFailure}
+          spawnMode={spawnMode}
         />
       </div>
     </div>

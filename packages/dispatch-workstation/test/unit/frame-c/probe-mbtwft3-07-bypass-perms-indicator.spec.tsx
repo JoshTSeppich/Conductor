@@ -87,9 +87,6 @@ function renderActionBar(props: {
         onKill: vi.fn(),
         failureState: null,
         onDismissFailure: vi.fn(),
-        // @ts-expect-error WB7 RED: `spawnMode` not yet on ActionBarProps
-        // at HEAD `a587336`. WB8 GREEN adds the prop; removing this
-        // comment is part of the GREEN ladder step.
         spawnMode: props.spawnMode,
       }),
     );
