@@ -701,9 +701,108 @@ Consolidated from §1 closure paths + §3 propagation patterns + §4 validation 
 
 (Subsections §5.B+ reserved for t2-archive-coauthor session per Wave 3 dispatch operator-INTENT subsection partition.)
 
+### §5.B — t2-archive-coauthor Wave-3 complementary contribution
+
+<!-- COORD-COMMENT (Wave 3 territorial-disjoint sub-section authored by t2-ticket-body-0905-archive-coauthor):
+     This §5.B is COMPLEMENTARY (not duplicative) to §5.A. Where §5.A enumerates cumulative incidents + closure-path roadmap + Round-9-comparison table, §5.B contributes:
+       1. Merge-checklist crosswalk back to the original §5 placeholder 4-bullet outline
+       2. Round-9→Round-11 methodology-trajectory NARRATIVE (complement to §5.A.4 tabular comparison)
+       3. Hardest-open-question framing for the operator-arbitrated round-close gate
+       4. Co-authoring-event-as-methodology-evidence (live propagation captured in real-time during this session's writes)
+       5. Scope-gap from this session's vantage (items §5.A does not cover)
+     Anchor per r11-archive-writer's `§5.B+` reservation at round-11.md line 702 in `d06f8c7`.
+     Coordination contract + merge plan: `docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md`.
+     This draft is content-draft only; merge into a canonical consolidated §5 happens at operator-arbitrated round-close gate.
+-->
+
+[KNOWN, confidence labels per CLAUDE.md §2.2 throughout; cross-references to §1.5-§1.RC3 + §2.A-§2.H + §3.1-§3.6 + §4.1-§4.6 + §5.A.1-§5.A.6 as cited]:
+
+#### §5.B.1 — Merge-checklist crosswalk back to the original §5 4-bullet outline
+
+The original §5 placeholder enumerates 5 bullets the canonical round-close synthesis will populate. Both Wave 3 contributions (`§5.A` + this `§5.B`) cover them. Crosswalk table for merge-pass:
+
+| Original §5 bullet | §5.A coverage | §5.B coverage (this section) |
+|---|---|---|
+| Cumulative incident count by tier + emergent-class enumeration | §5.A.1 inventory table (4 Tier 1 + 5 Tier 2 + 2 Tier 3 at Wave 3 close per §5.A.1 counts) | §5.B.4 adds 1 live-observed Wave-3 event: co-authoring-event-as-methodology-evidence (Edit-call rejection on stale read; not yet promoted to §1.x by either sub-author at this commit time — surfaced here for merge-pass classification) |
+| Methodology-amendment recommendations to CLAUDE.md (consolidated) | §5.A.5 roadmap items 1-4 (CLAUDE.md text additions, substrate-shift execution, tooling artifacts, methodology-discipline propagation) | §5.B.3 hardest-open-question framing (per-session worktrees adoption vs §3.9 evolution-continuation) elevates the §5.A.5 item-2 "substrate-shift execution" item to operator-arbitration framing |
+| Round 11 vs Round 9 comparison | §5.A.4 5-row table (race-elimination question + ceiling + 16-concurrent attempt + capture-cadence + methodology-improvement-trajectory) | §5.B.2 NARRATIVE complement (methodology trajectory framed as cross-round evolution sequence rather than dimension-by-dimension table; readable end-to-end at round-close) |
+| §3.9 SPECULATIVE adoption disposition | §5.A.3 SPECULATIVE→SPECULATIVE-with-three-targeted-ratifications-and-four-refinements-required framing | §5.B.3 reframes as binary fork at the operator-arbitration level (Path A continue §3.9 evolution; Path B substrate-shift via worktrees) — operator may choose both/either; framing is operator-arbitration aid, not duplicate disposition recommendation |
+| Roadmap input for §3.9 evolution | §5.A.5 four-row roadmap (CLAUDE.md text additions, substrate-shift, tooling, discipline-propagation) | §5.B.5 honest-gap surface — items NOT covered by §5.A that the merge-pass may want to add |
+
+#### §5.B.2 — Round-9-to-Round-11 methodology-trajectory NARRATIVE
+
+[MODELED, draws on §5.A.4 table data + Round 9 §3 propagation-pattern precedent (round-9.md §2.A-§2.6) + §3.1-§3.6 Round 11 patterns]:
+
+Round 9 surfaced shared-`.git/index` contamination as a Tier 1 class through three incidents (Round 9 §1.1-§1.3); the closure paths enumerated commit-pathspec discipline (α), pre-commit hook (β), and per-session worktrees (γ) as candidates. Round 9's archive corpus captured the discipline patterns mid-cascade — gap-closure propagation across sub-sessions via FOLLOWUPS rows + commit body cross-references (Round 9 §2.1+§2.5). Closure-path α (commit-pathspec) became the operative carry-forward into Round 11.
+
+Round 11 adopted §3.9 territorial-manifest partitioning as the operator-arbitrated structural response (Round 9 closure-path-γ remained roadmap-class). Wave 1 evidence (§1.5-§1.7 + §2.C-§2.D) validated commit-pathspec discipline in the manifest substrate while surfacing the first fabrication-class incident (§1.5 — a category Round 9 did not encounter in its corpus). Wave 2 expanded the cohort from 5→12 concurrent (§2.H scale-mark) and surfaced manifest-authoring-quality classes (§1.8/§1.9/§1.A1) — failure modes that exist only WITHIN the §3.9 substrate, not in shared-tree parallel-cairn. The first contamination-LANDED event of Round 11 surfaced in Wave 2 via §1.RC1 (c5/63eba0f); the operator-arbitrated revert chain (`9b8a4e9` through `6120dfd`) shipped recovery successfully — recovery primitive introduced for round 11 that Round 9 lacked formally.
+
+Wave 3 evidence (§1.RC2 envelope-creep + §1.RC3 sub-section-grammar gap + §4.5-§4.6 race-window/envelope-creep + §5.A round-close prep + this §5.B) extends the corpus. The trajectory is asymmetric: outcome-elimination has been concrete (1 contamination-landed in Round 9 → 1 contamination-landed in Round 11 across 2.4x concurrency growth + recovery primitive ratification); race-elimination remains structural-pending (per §4.4 + §5.A.4 row 1). Methodology improvement at the recovery-loop layer outpaces methodology improvement at the prevention layer. This is a workable methodology — most contamination outcomes don't land — but the structural fix (per-session worktrees) remains the only intervention that would shift the prevention-layer balance.
+
+Across Round 9 and Round 11, four primitives have been operator-arbitrated into stable use: (a) per-path `git add` (Round 9 era), (b) per-path commit-pathspec (Round 9→Round 11 propagation), (c) §3.9 territorial manifests (Round 11 adoption), (d) manifest-self-correction via `spike(§3.9):` commits (Round 11 §2.G emergent). Three more are at SPECULATIVE-ratification candidacy per §5.A.3: §3.9.A commit-pathspec mandate codified into CLAUDE.md text, manifest-self-correction as §3.9.E, cross-session findings cross-verification as §2.1-extension. Two structural-fix candidates remain operator-CRITICAL-escalated per `6120dfd`: per-session worktrees + pre-commit hook generator.
+
+The cross-round methodology trajectory is converging on a richer schema (§5.A.3 framing). This is healthy methodology evolution: each round's failure modes surface new schema requirements; each round's recovery primitives become next-round prevention candidates. The cost of this evolution is operator-arbitration cycle per primitive; the value is empirical-validation of every primitive's load-bearing dimensions before codification.
+
+#### §5.B.3 — Hardest-open-question framing for operator-arbitrated round-close gate
+
+[MODELED]: The hardest operator-arbitration question for round-close is NOT whether to ratify §3.9 (§5.A.3 already provides three-ratifications-and-four-refinements framing; round-close converts to operator-arbitrated final). The hardest question is whether to commit to a **substrate-shift** to per-session worktrees alongside §3.9 ratification, OR continue **§3.9-substrate evolution** without worktree migration.
+
+The fork:
+
+| Path | Description | Cost | Risk-reduction | Recommendation |
+|---|---|---|---|---|
+| Path A — §3.9 evolution-continuation | Ratify §3.9 + apply §5.A.3 refinements (§3.9.A-§3.9.G + §3.9.F sub-section grammar + §3.9.G envelope governance); per-session worktrees deferred to Round 12+ candidate | Lower per-round amendment cost; preserves established mid-cascade primitives | Reduces outcome-class incidence at current scale (12-concurrent); does NOT eliminate race CLASS | Default if Wave 3+ 16-concurrent attempt produces no contamination-landed event |
+| Path B — substrate-shift to per-session worktrees + §3.9 ratification | Migrate parallel-cairn to `~/Desktop/Automata/foxworks-worktrees/<session-name>/` per CLAUDE.md §4.3 + ratify §3.9 as territorial-discipline layer atop worktrees | Higher migration cost (operator tooling, branch-coordination, merge-back protocol); preserves §3.9 territorial discipline | Eliminates shared-`.git/index` race CLASS entirely; outcome AND race-class fix | Default if Wave 3+ 16-concurrent attempt produces contamination-landed event(s) OR per `6120dfd` operator-CRITICAL escalation already standing |
+
+The question requires operator arbitration because:
+- Cost vs risk-reduction is a value judgment over future cascade scale (will rounds 12+ push past 20-concurrent? if so, race-class probability scales O(n²) per §2.H).
+- Existing investment in §3.9 substrate (manifests, dispatch-queue, claim atomicity, manifest-self-correction primitive) is preserved under both paths, but Path B requires worktree-aware sub-session boot logic + cross-worktree coord-doc routing.
+- `6120dfd` operator-CRITICAL escalation may already commit Path B; round-close should re-verify operator's intent given Wave 3 evidence.
+
+This §5.B.3 framing is the operator-arbitration aid, not a duplicate disposition recommendation; §5.A.3 retains the SPECULATIVE→ratification-with-refinements framing as this session's forward-position concordant view.
+
+#### §5.B.4 — Co-authoring-event-as-methodology-evidence (live Wave-3 capture)
+
+[KNOWN per this session's tool-invocation log + r11-archive-writer's `d06f8c7` commit]:
+
+This §5.B is co-authored in real-time alongside §5.A. The co-authoring event itself surfaces methodology evidence not yet promoted into a numbered §1.x incident in either sub-author's contribution:
+
+1. **First-Edit-call rejection on stale read.** This session's first `Edit` invocation against round-11.md was rejected with "File has been modified since read, either by the user or by a linter" because r11-archive-writer's `d06f8c7` had landed between this session's pre-edit `Read` and the `Edit` call. Recovery: re-read; re-anchor to post-`d06f8c7` state (changing `§5.T2-DRAFT` planned-anchor to `§5.B` actual-anchor per their reservation at line 702); re-author. NO contamination produced; tool-level read-staleness detection caught the would-be-overwrite at edit-time.
+
+2. **Sub-section anchor naming convergence.** This session's first-draft coord-notes proposed `§5.T2-DRAFT` and reserved `§5.RW-DRAFT-or-numbered-§5.1` for the sibling. r11-archive-writer landed `§5.A` + reserved `§5.B+`. This session adopted their convention rather than introduce a third anchor, updating coord-notes §2 to reflect actual state. Convergence is via the sibling-session-commit-as-coordination-signal pattern — neither session needed explicit pre-coordination message; the disjointness-via-distinct-numerical-prefixes contract held.
+
+3. **Coord-notes file as cross-session contract anchor.** r11-archive-writer's `§5.A.6` honest-gap explicitly cites this coord-notes file: "t2-archive-coauthor session is also writing §5 of this same file under operator-INTENT subsection partition" — even though this coord-notes file was UNTRACKED at `d06f8c7` time (this session has not yet committed it). The reference is to the manifest path which r11-archive-writer read via the t2-archive-coauthor manifest's TERRITORY clause. The coord-notes contract held without the contract file being committed yet — the manifest references suffice.
+
+These three events suggest closure-path-class candidates for a future numbered incident (`§1.RC4` or similar):
+- (α) Tool-level read-staleness detection as a working safety primitive (validates Round 11 §1.6 analysis: commit-pathspec + tool-staleness-detection together prevent contamination).
+- (β) Sub-section anchor convergence via commit-as-coordination-signal (no explicit messaging needed for disjoint anchors; pattern works at 2-session scale; scale-up question for 3+ co-author sessions remains open).
+- (γ) Manifest-path-as-contract-anchor (manifests + TERRITORY clauses provide contract reachability even before the referenced file is committed; useful design pattern for §3.9.F sub-section-granular TERRITORY syntax per §5.A.3 refinement-2).
+
+Round-close synthesis pass may choose to promote these to a numbered §1.x incident or absorb into §3 propagation patterns.
+
+#### §5.B.5 — Scope-gap from this session's vantage (items §5.A does not cover; merge-pass attention)
+
+[KNOWN per direct comparison of §5.A subsections against the original §5 4-bullet outline + Wave 3 evidence corpus]:
+
+Items round-close merge-pass should address that are NOT covered by §5.A:
+
+1. **Wave-by-wave incident-density growth analysis.** §5.A.1 counts incidents but does not analyze the WAVE-OVER-WAVE growth rate. Round 11 corpus has: Wave 1 captured 4 incidents (§1.5-§1.8); Wave 2 added 4 (§1.9-§1.A1 + §1.RC1/§1.RC2 spanning Wave-2-late/Wave-3-early); Wave 3 adds 3+ (§1.RC3 + §4.5 + §4.6 + live §5.B.4 captures). The incidence-density GROWTH RATE is methodology-evidence-relevant: is §3.9 substrate producing more incidents over time (substrate-pressure increasing) or fewer (substrate-stabilization)? At Wave 3, the growth rate appears flat (~4 per wave), suggesting substrate-stabilization, but the sample is small. Worth tracking in Round 12 archive.
+
+2. **Cross-archive corpus comparison method (Round 7/Round 2 anchors).** Round 11 archive does not yet pull explicit comparison evidence from Round 2 + Round 7 corpus formats. Round 7's §2 chat-Claude-dispatch-authoring-failure classification + §3 substrate-positive-findings framing offer cross-archive evidence dimensions that Round 11 does not yet exercise. Round-close synthesis may want a separate §7 "cross-archive synthesis" section consolidating across rounds 2/7/9/11.
+
+3. **Per-session-worktree migration concrete cost estimate.** §5.A.5 item 2 + §5.B.3 Path B both name per-session-worktree migration as load-bearing decision; neither concretizes the migration cost (operator tooling effort, branch-coordination protocol, merge-back risk, sub-session boot-time delta). A round-close decision benefits from a 1-2 paragraph concrete estimate (operator-arbitrated; sub-sessions can scope the tooling work).
+
+4. **Cascade-completion definition.** "Round 11 closed" is not defined — operator-declared, or evidence-driven (e.g., 16-concurrent attempt completes with N incidents), or time-windowed? §5.A does not surface this and the original §5 placeholder uses "When operator declares Round 11 closed" — operator-arbitrated. Worth surfacing as explicit operator-decision-needed at round-close gate.
+
+5. **Cross-reference completeness audit.** §6 cross-references should be re-audited at round-close for completeness against all §1.x incidents + §2.x propagation events + §3.x patterns + §4.x verdicts + §5.A/B contributions. Mechanical task; operator or merge-pass.
+
+These scope-gaps are not failures of §5.A — they are items beyond §5.A's stated scope ("r11-archive-writer Wave-3 round-close prep contribution"). The merge-pass should decide which to incorporate into the canonical consolidated §5 vs which to defer to Round 12 corpus.
+
 ---
 
-## §6 — Cross-references
+<!-- END §5.B — merge candidate for canonical §5 round-close synthesis. See docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md for merge plan + sibling §5.A coordination context. -->
+
+---
 
 ### §6.1 — Round 11 infrastructure anchors (at adoption time `d41bacb` and Wave 2 update `f61c14b`)
 
