@@ -193,6 +193,8 @@ Best-effort list; successor SHOULD `grep 'Tier 1' docs/FOLLOWUPS.md` + filter to
 | Push commits after §2.6 verification | YES | per CLAUDE.md §4.2 separate ack cycle BUT operator delegated under autonomous mode |
 | docs/FOLLOWUPS.md row appends | YES | mechanical content; row body per operator-acked template |
 | Pathspec-restricted commits | YES | discipline-only |
+| GREEN impl with build-freshness gate (α) PASS (`pnpm --filter <pkg> verify:build-freshness` returns FRESH; rebuild invoked autonomously when STALE) | YES | runtime-reach verified pre-commit per MB-T-METHODOLOGY-RUNTIME-VERIFICATION-CLOSURE-α-β |
+| GREEN impl with bundle-inclusion verification (β) PASS (`pnpm --filter <pkg> verify:bundle-fingerprint --fingerprint <s1> [--fingerprint <s2> ...]` returns PASS for all declared fingerprints) | YES | esbuild integration gap caught pre-merge per MB-T-METHODOLOGY-RUNTIME-VERIFICATION-CLOSURE-α-β |
 
 - **hard_escalation_triggers** (operator chat-ack required):
 
@@ -205,6 +207,29 @@ Best-effort list; successor SHOULD `grep 'Tier 1' docs/FOLLOWUPS.md` + filter to
   7. Sub-Q-A/B/C entry points (WB11 argv injection / WB14 v3.0 removal / WB15 token-injection)
   8. Force-push / amend-published / git config / no-verify hooks
   9. Operator-only-territory work (MB-T41 content revision, schema/contract authoring)
+  10. `HALT-PRE-COMMIT-MISSING-MODULE` — β bundle-inclusion verification returns FAIL (count=0 for ≥1 declared fingerprint) after fresh rebuild. Implies build-pipeline integration gap (new renderer surface accidentally tsconfig-excluded; esbuild entry-point missing from `package.json` build chain; transitive bundling assumption violated). Operator arbitration required to diagnose root cause before proceeding.
+
+### §8.α — Build-freshness gate (α) invocation discipline
+
+Sub-sessions invoking `green:wiring` auto-ack MUST run build-freshness verification before the commit:
+
+1. `pnpm --filter <pkg> verify:build-freshness --dist-path dist/<entry>.js`
+2. If exit=1 (STALE): run `pnpm --filter <pkg> build` autonomously
+3. Re-run verification (step 1); proceed to commit on exit=0 (FRESH)
+4. If repeated STALE after rebuild with delta within ~10s of HEAD time: investigate for concurrent sibling-session push to dist-irrelevant paths (test/probe, docs/) — refer to MB-F-METHODOLOGY-α-OVER-CONSERVATIVE-CONCURRENT-PUSH (Tier 3) before treating as blocker
+
+Implementation: `packages/dispatch-workstation/scripts/methodology-runtime-verify.mjs` (Sub-Q-MBTMRVCAB-A=ii per-package script).
+
+### §8.β — Bundle-inclusion verification (β) invocation discipline
+
+Sub-sessions invoking `green:wiring` auto-ack MUST declare a non-empty fingerprint set in the commit body §F-Fingerprints section (Sub-Q-MBTMRVCAB-C=i sub-session-per-WB enumeration) and run β verification before the commit:
+
+1. Identify fingerprints from current WB scope: new component `data-testid` values, new factory function names, new IPC channel names, new exported symbols
+2. `pnpm --filter <pkg> verify:bundle-fingerprint --dist-path dist/<entry>.js --fingerprint <s1> [--fingerprint <s2> ...]`
+3. On exit=0 (PASS): include the fingerprint set + counts in commit body §F-Fingerprints
+4. On exit=1 (FAIL with count=0 for ≥1 fingerprint): HALT-PRE-COMMIT-MISSING-MODULE (per #10 above) — diagnose build-pipeline integration gap
+
+Empty fingerprint set is an ERROR exit by design — vacuous PASS is methodology-incident-class.
 
 ## §9 — next_actions
 
