@@ -273,3 +273,85 @@ This is mechanical commit work; no operator arbitration required for the commit 
 ---
 
 **End of state snapshot.**
+
+---
+
+## §11 — Phase 0 close + Phase 1 entry annotation (gen-3 supplement 2026-05-11T22:02)
+
+Authored by orchestrator-2026-05-11-1257 (gen-3 PRIMARY) per full-build-mode dispatch (`docs/coordination/full-build-mode-dispatch.md` `4f0bbde`) §8 state-instance update requirement. Multi-generation lineage NOT yet schema-encoded; this section supplements §1-§10 above with Phase 0 close + Phase 1 entry deltas.
+
+### §11.1 — Lineage update (orchestrator gen-1 → gen-2 → gen-3)
+
+- **Gen-1**: `orchestrator-2026-05-10-21:07` — deprecated (per §header above)
+- **Gen-2**: `orchestrator-2026-05-11-1234` — UNEXPECTED-EXIT (Ctrl-U-on-CC-CLI hypothesized cause); commits `6ae8ce7` + `b65a1ee` + `744f450` attribute to gen-2
+- **Gen-3 (current)**: `orchestrator-2026-05-11-1257` — boot 2026-05-11T18:57:30Z; this annotation is gen-3 work
+
+### §11.2 — §1 strategic_frame update (Phase 0 close → Phase 1 entry)
+
+- **active_workstream**: "Full build mode toward wireframe parity (T1-T7 workstreams) — Phase 1 ticket-body authoring with parallel sub-session dispatch (4-6 concurrent per scope-expansion §D)"
+- **ship_gate_status**: `alpha-partial` unchanged; v3.5 architectural-readiness = SCAFFOLD complete (Wave A.2 + Wave B + Wave C #3 + Wave C #5 = 4 Tier 1 tickets shipped today); visual-completeness = SCOPE UNDER-ESTIMATED per `MB-F-WIREFRAME-PARITY-SCOPE-UNDERESTIMATED` (`c2abb28`); 2-4 weeks calendar estimate at parallel-intensity cadence per dispatch §6
+- **pending_tier1_arbitrations**: superseded by §11.3 below
+
+### §11.3 — §6 open_tier1 update (additions since gen-1 snapshot)
+
+| id | filed | closure_paths | blocks |
+|---|---|---|---|
+| `MB-F-ORCHESTRATOR-UNEXPECTED-EXIT-DETECTION` | `bb36f26` | α heartbeat+watchdog / β supervisor / γ accept-as-manual | gen-2 unexpected-exit recovery |
+| `MB-F-COORD-ARCHITECTURE-ROLE-DECOMPOSITION` | `bb36f26` | α defer / β RECORDER-only contract / γ full role-decomp doc | scalability of multi-session coord |
+| `MB-F-ORCHESTRATOR-SCOPE-EXPANSION-2026-05-11` | `bb36f26` | row IS closure (archival) | scope-expansion archive |
+| `MB-F-SUBSESSION-90PCT-IDLE-STANDBY-CASE` | `5a0ceba` | (b)-refined operator-acked; α §B amendment / β lazy-replace primitive | §B language clarification |
+| `MB-F-WIREFRAME-VISUAL-VERIFICATION-GAP` | `64d9249` | α second-order audit / β proactive enumeration / γ post-dogfood deferral | wireframe-parity ship-gate |
+| `MB-F-RUNTIME-BUILD-STALENESS-INVISIBLE-PROGRESS` | `11f6f29` | α CLAUDE.md gate / β build-pipeline investigation / γ runtime-staleness primitive | source-vs-runtime gap |
+| `MB-F-METHODOLOGY-RUNTIME-VERIFICATION-GAP` | `230cb6c` | α build-freshness gate / β bundle-inclusion / γ headless screenshot / δ DOM probes / ε visual-diff | methodology-primitives-don't-verify-runtime |
+| `MB-F-WIREFRAME-PARITY-SCOPE-UNDERESTIMATED` | `c2abb28` | α second-order Tier 1 roadmap from wireframe-image / β audit doc update / γ visual-comparison gate | full-build-mode Phase 1+ scope |
+
+### §11.4 — §7 W-gates update (Phase 0 close + Phase 1 entry + new W6-W9)
+
+| id | status | commit_references | notes |
+|---|---|---|---|
+| W3 PHASE 2 Wave A.2 #4 compact tile | `complete` (gen-1 + this session) | `a5febe6 + 30e362c + 6217ea0` | shipped pre-gen-3 |
+| W3 PHASE 2 Wave B #2 Frame C surface | `complete` | `c5f98d5 → 2174f3a → 42c0f48 → 92eb23c → 8f88f7a → 2c55804 → 2bc5cda → 0f0e762 → 525c502 → aa18302 → ea11bc7` (WB1-WB10 + contract amendment) | WB11 (T4-successor smoke + findings + audit reclass) post-Phase-0 |
+| W3 PHASE 2 Wave C #3 detail-pane footer actions | `complete` | `9fe6358 → 07a7d93 → cde9308 → c631d74 → 48032cf → 9524372 → cdf05db → 3347f48 → e543494` (WB1-WB7 + WB4-followup + coord note) | T3 ladder COMPLETE |
+| W3 PHASE 2 Wave C #5 token-wiring | `complete` | `f7b2e70 → d5ba210 → e18a5a3 → 8205b01 → 8b3f356 → bd31b94 → 6f1f53a` (WB1-WB7) | T2-successor ladder COMPLETE |
+| W4 (execution dispatch loop) | `complete` (Phase 0) | various | Phase 0 closed |
+| **W6 (Phase 1 ticket-bodies acked)** | `not-entered` | — | full-build-mode dispatch §4 Phase 1 |
+| **W7 (Phase 2 first-batch land)** | `not-entered` | — | dispatch §4 Phase 2 |
+| **W8 (Phase 3 integration verify)** | `not-entered` | — | dispatch §4 Phase 3 |
+| **W9 (wireframe-parity achieved)** | `not-entered` | — | terminal gate; canonical wireframe image as truth |
+
+### §11.5 — §5 sub-session table (alive at Phase 1 entry)
+
+| name | role | tokens | status | territory |
+|---|---|---|---|---|
+| `commit-plan-doc-1334` (T4-successor) | Wave B WB10 author + WB11 in flight | 333941 (33.4%) | active WB11 (smoke + findings + audit reclass) | src/main + src/frame-c + src/tile-grid + workstation-shell.html + audit doc + findings doc |
+| `c5-ticket-wb1` (T3) | Wave C #3 ladder COMPLETE | ~870k (post-WB7) | idle-standby — available for Phase 1 sub-session OR rotation candidate (close to 90%) | docs/coordination + docs/FOLLOWUPS |
+| `verify-chat-mount-1319` (T2-successor) | Wave C #5 ladder COMPLETE | 248602 (24.9%) | idle-standby — available for Phase 1 sub-session | docs/coordination + docs/FOLLOWUPS + (expandable per dispatch) |
+| `__orchestrator_active` + `__orchestrator_standby` | HSO peer infrastructure | N/A | idle-armed (pool-managed) | tmux + sessions.json |
+| `orchestrator-2026-05-11-1257` (gen-3) | PRIMARY orchestrator | self-est ~480k (48%) | active (this annotation) | docs/coordination orchestrator-state + dispatch coordination |
+
+T2 rotation entry (gen-3) at 13:20: `verify-chat-mount` (predecessor T2 938k) → `verify-chat-mount-1319` (successor) per `subsession-rotation-log.md` entry 1
+T4 rotation entry (gen-3) at 13:34: `commit-plan-doc` (predecessor T4 898k) → `commit-plan-doc-1334` (successor) per `subsession-rotation-log.md` entry 2
+
+### §11.6 — §9 next_actions (Phase 1+ priorities)
+
+| priority | description | target | blockers |
+|---|---|---|---|
+| 1 | Phase 1 spawn 4 sub-sessions for T1/T2/T3/T6 ticket-body authoring | NEW (4 sub-sessions per dispatch §4) | none — Phase 0 closed |
+| 2 | Each ticket-body HALT-TICKET-BODY-PRE-COMMIT for operator review | operator-arbitration | depends on #1 |
+| 3 | Post operator ack: WB ladder execution per §C envelope per workstream | each sub-session | #2 |
+| 4 | Phase 1 second batch: T4 + T5 + T7 ticket-body sub-sessions when capacity available | NEW sub-sessions | first batch landed-or-rotated |
+| 5 | T4-successor WB11 (smoke + findings + audit reclass) — Wave B closure | T4-successor (poked) | none — already in flight |
+| 6 | T3 rotation candidate at WB7-landing post-cycle (~870k) | T3-successor spawn if T3 receives Phase 1 dispatch | depends on Phase 1 dispatch decision |
+| 7 | Operator manual rebuild + relaunch + screenshot post-WB10-and-Phase-1-tickets | operator-side | depends on #3 |
+
+### §11.7 — Round 9 of cairn-under-stress begins
+
+Per dispatch §5.4: Round 9 starts at this filing. Methodology incidents file as Tier 1 in current cycle. Cross-session methodology propagation via coord notes.
+
+### §11.8 — Orchestrator self-context monitoring
+
+Gen-3 orchestrator estimated ~48% (~480k) as of this annotation. Round 9 parallel-intensity will accelerate context burn. Per scope-expansion §E + protocol §1 trigger threshold ~750k, gen-3 likely needs to author §header.successor_session_id + spawn gen-4 within Phase 1 cycle. Predecessor-writes-final-state per INVARIANT-4 will activate.
+
+---
+
+**Phase 0 closed at `e543494`. Phase 1 entered at this commit. Round 9 begins.**
