@@ -55,6 +55,10 @@ import {
   type BuildDocConfig,
 } from '../coarchitect/build-doc-state.js';
 import { registerPtyRelay, type IConsoleBroadcaster } from './pty-stream-relay.js';
+import {
+  createRateLimitAggregator,
+  createNullRateLimitSource,
+} from './rate-limit-aggregator.js';
 
 /**
  * Singleton HttpDaemonClient instance. Load-bearing for v3.5 — used by
@@ -63,6 +67,33 @@ import { registerPtyRelay, type IConsoleBroadcaster } from './pty-stream-relay.j
 export const daemonClient = new HttpDaemonClient();
 
 import { webContents as allWebContents } from 'electron';
+
+/**
+ * MB-T-WIREFRAME-T9-PLAN-TIMER-DATA-FLOW WB6 — rate-limit aggregator
+ * singleton. Reauthors the post-MB-T-HSO-WIRE WB14a-removed
+ * `latestRateLimitState` + `broadcastRateLimitUpdate` plumbing as a
+ * pluggable architectural seam per ADR-MBTWFT9-A (Sub-Q-T9-A=(f)
+ * skeleton-with-deferred-source).
+ *
+ * Production default source is `createNullRateLimitSource()` —
+ * aggregator stays in `getLatestState() === null` until a real
+ * source is plugged via follow-on ticket (workstation-direct
+ * Anthropic ping behind key-provisioning, OR daemon-side ping behind
+ * future WORKSTATION_CONTRACT.md §6.6 amendment). The handler at
+ * `coarchitect:getRateLimitState` returns aggregator.getLatestState();
+ * the renderer-side `coarchitect:rate-limit-update` broadcast fires
+ * via aggregator.onUpdate.
+ *
+ * Why CC CLI PTY-scrape was NOT viable: docs/spike-evidence/HSO-01/
+ * scenario-5-results.md (2026-05-08) — CC CLI does not emit
+ * X-RateLimit-* equivalents continuously.
+ *
+ * Exported for test injection (probe-mbtwft9-* + future
+ * follow-on tickets that need to swap source).
+ */
+export const rateLimitAggregator = createRateLimitAggregator({
+  source: createNullRateLimitSource(),
+});
 
 /**
  * MB-T40 WB2: wirePtyRelay — called from main.ts after consoleController is
@@ -88,10 +119,35 @@ export function registerIpcHandlers(): void {
   // tracks the PTY-scrape-based replacement; until migrated, returns 0.
   ipcMain.handle('coarchitect:getDailyCost', () => 0);
 
-  // PlanUsageRing renderer ring data source is currently UN-WIRED post-
-  // WB14 v3.0 removal. MB-F-A3-PLAN-RING-DATA-PATH-POST-HSO (Tier 2)
-  // tracks the PTY-scrape-based replacement; until migrated, returns null.
-  ipcMain.handle('coarchitect:getRateLimitState', () => null);
+  // MB-T-WIREFRAME-T9-PLAN-TIMER-DATA-FLOW WB6 — getRateLimitState
+  // handler returns the rate-limit aggregator's latest cached state.
+  // Aggregator default source is createNullRateLimitSource (returns
+  // null indefinitely until a real source is plugged via follow-on
+  // ticket — see ADR-MBTWFT9-A in mb-t-wireframe-t9-decisions-2026-
+  // 05-12.md). MB-F-A3-PLAN-RING-DATA-PATH-POST-HSO (Tier 2)
+  // infrastructure ARM closed; source-of-truth ARM open.
+  ipcMain.handle('coarchitect:getRateLimitState', () =>
+    rateLimitAggregator.getLatestState(),
+  );
+
+  // MB-T-WIREFRAME-T9-PLAN-TIMER-DATA-FLOW WB6 — rate-limit-update
+  // broadcast emitter. Mirrors the removed MB-T-HSO-WIRE WB14a
+  // `broadcastRateLimitUpdate` shape: each aggregator emission fans
+  // out to every live renderer webContents via the
+  // `coarchitect:rate-limit-update` channel (Sub-Q-T9-D=(i) reuse-
+  // existing-channel per ADR-MBTWFT9-D). Both PlanTimerText (WB7
+  // mount auto-wire) and PlanUsageRing (existing chat-shell/mount.ts
+  // subscription) consume from this channel.
+  //
+  // Idempotent under null-source default: aggregator never emits, so
+  // this callback never fires. Pure architectural seam.
+  rateLimitAggregator.onUpdate((state) => {
+    for (const wc of allWebContents.getAllWebContents()) {
+      if (!wc.isDestroyed()) {
+        wc.send('coarchitect:rate-limit-update', state);
+      }
+    }
+  });
 
   ipcMain.handle('coarchitect:postMessage', async (_event, msg: unknown) => {
     return daemonClient.postMessage(msg as ChatMessageInput);
