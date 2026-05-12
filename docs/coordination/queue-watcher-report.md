@@ -294,3 +294,213 @@ Both sessions target the **same FOLLOWUPS row** (`MB-F-CHATSHELL-POLISH-REMAININ
 [SPECULATIVE] If this overlap had not been surfaced pre-execution, the most likely failure trajectory would be: t1 commits first (broader scope, faster start), verify-chat-mount hits conflict on `styles.css`, surfaces HALT-MERGE-CONFLICT, operator arbitrates. The §3.9 primitive would still recover gracefully — but at the cost of one session's wasted edit cycle. Pre-spawn intersection-check (§3.9.E candidate) avoids the wasted cycle.
 
 This extension report will be re-extended if Wave 2 commit log advances materially (new claim-race surface, manifest amendment, COMPLETED transitions). No further action by `r11-queue-watcher` until next observation pass.
+
+---
+
+# Round 11 Continuation Wave 3 — Extension Section
+
+**Watch pass**: 2026-05-12 ~17:26–17:30
+**Watcher commit reference (prior pass)**: `8d35c93`
+**Queue head at this pass**: `afa3f4d` (`spike(§3.9): Round 11 Wave 3 — 5 new manifests + 8 QUEUED entries for PHASE 2 max-parallel forge forward`)
+**Manifest inventory delta**: +5 new (`phase4-t8-cluster-a-exec`, `phase4-t9-t10-exec`, `orch-active-cluster-a-exec`, `orch-standby-p3-roadmap-rev`, `t2-archive-coauthor`). Total manifests on disk: 20.
+**Concurrency surface**: 8 Wave-3 QUEUED + 11 Wave-2 IN-FLIGHT carry-over rows (with 3 observer-session names reused across waves); operator-described as "12+ concurrent".
+**MANDATORY discipline this pass**: per-path `git commit -- <pathspec>` (operator Round 11 PHASE 2 invariant; cited verbatim in `afa3f4d` body).
+
+## §17 — c5-incident at `63eba0f` — Wave 1 watcher prediction empirically validated
+
+[KNOWN] Between watcher reports `8d35c93` (Wave 2) and this pass, commit `63eba0f` (`red(MB-F-FRAME-C-IPC-LOOKUP-SESSION-anchor): WB1 — session-registry helper probe`) **bundled c5-ticket-wb1's intended probe with commit-plan-doc-1334's unstaged-but-then-staged WB2 GREEN changes** (`tile-grid.tsx` +16 lines spawnMode field; `probe-spawnmode-01-entry-type-shape.spec.ts` -8/+5 `@ts-expect-error` removals).
+
+[KNOWN] Quoting `9b8a4e9` (`chore(c5-incident): partial-revert of cross-session contamination in 63eba0f`):
+
+> Root cause: `git commit -m` without pathspec; race window between `git diff --staged --name-only` verification and `git commit` allowed another session's `git add` to inject content. Per-path `git add` discipline (§2.7) was followed but per-path `git commit -- <pathspec>` was NOT — that is the corrected discipline going forward (operator Phase 1 reinforcement (d) 2026-05-12).
+
+[KNOWN] **This is the exact failure mode this watcher's Wave 1 report (`262cc44`) §9 predicted**, quoting the prior surface:
+
+> "Per-path `git add` does not prevent index-level contamination by peer sessions... The shared git index is the racy resource. Mitigation actually load-bearing here: `git commit <pathspec> -m '...'` — pathspec restricts commit scope to the specified path regardless of what else is staged."
+
+[KNOWN] **Outcome**: surfaced § 2.7 amendment candidate became §3.9.A reinforcement after the incident; operator codified per-path `git commit -- <pathspec>` as Round 11 PHASE 2 discipline invariant. The Wave 3 setup commit (`afa3f4d`) body cites this invariant verbatim.
+
+[MODELED] **§3.9 SPECULATIVE primitive status update**: the c5-incident is **the strongest single piece of validation evidence** in Round 11 to date because:
+1. The Wave 1 watcher report predicted the exact mechanism in modeled-evidence form.
+2. The incident occurred in real execution before predictive mitigation was codified.
+3. The recovery (partial-revert + operator arbitration + discipline reinforcement) was bounded by the §3.9 mechanism — no work permanently lost, registry contract preserved at `63eba0f`-still-canonical for the probe portion.
+4. The §3.9 primitive's "honest gaps" surfacing produced a forward fix.
+
+Outcome classification (CLAUDE.md §2.11): **Capability enabled with known limitations** — §3.9.A's per-`git add` enforcement is necessary-but-insufficient; per-commit-pathspec enforcement closes the residual gap.
+
+## §18 — Race-window proximity observation (this watch pass)
+
+[KNOWN] **Race-window proximity definition** (operator dispatch this round): 2-session-stage-within-2s in `git status --short` snapshots.
+
+[KNOWN] **Snapshot timeline this pass**:
+
+| t (local) | snapshot summary | delta from previous |
+|---|---|---|
+| 17:26:29.945 | ` M spawn-handler.ts`, ` M probe-spawn-handler-mode-01`, `?? coord-c5-tilegrid-wiring`, `?? mb-f-tilegrid-wiring-trinity` | baseline |
+| 17:26:43.311 | same `M` pair; **`?? → A ` transition on both coord docs** (peer c5 ran `git add`) | +13.4s |
+| 17:26:55.211 | same `M` pair; **`A → committed-and-cleared` on coord docs** (peer c5 ran `git commit`; new HEAD = `ff290c2`) | +11.9s |
+| 17:26:56.253 / 57.314 / 58.349 / 59.387 | stable: only the `M` pair (commit-plan-doc unstaged remains untouched) | 1s intervals each |
+
+[KNOWN] **`ff290c2` is c5-ticket-wb1's commit** (`docs(c5-ticket-wb1): WB-final — coord doc + trinity findings doc`) — committed during this watch pass between probes 17:26:43.311 and 17:26:55.211.
+
+[KNOWN] **Strict 2-second proximity event was NOT captured** at this sampling cadence:
+- Peer staging transition window: ≤13.4s (the actual `git add` could have happened at any sub-13.4s sub-interval; we observed only the integration over the gap)
+- Peer commit transition window: ≤11.9s
+- Sub-2s snapshots after the commit-completed state were stable (no further transitions captured)
+
+[MODELED] **Strict 2s-proximity is a stochastic event** — depends on instantaneous coincidence of two sessions' `git add` invocations. Producing one in observation requires either (a) much higher snapshot frequency continuously (Hz-rate sampling), (b) git event-hooks instead of polling, or (c) longer observation windows under sustained Wave-N parallelism. This watcher's polling cadence (1s intervals during burst) is **necessary but insufficient** for routine 2s-proximity detection.
+
+[KNOWN] **What WAS captured this pass** (looser-than-strict-2s but still race-window-relevant):
+1. ≤13.4s peer-stage event (c5-ticket-wb1: `git add` on 2 coord docs)
+2. ≤11.9s peer-commit event (c5-ticket-wb1: `git commit` of `ff290c2`)
+3. Sustained ` M` peer-modification state on `spawn-handler.ts` + spawn-handler-mode probe over the full 30+ s observation window (commit-plan-doc-1334 is mid-WB; unstaged changes persist)
+
+[MODELED] **Coexistence-risk profile during this watch pass**: at 17:26:43.311, the shared index briefly contained 2 c5-staged files. If during that ≤11.9s window any OTHER session (including this watcher) had run `git commit -m` without pathspec, c5's 2 coord docs would have been swept into the wrong author's commit — a recapitulation of the `63eba0f` incident. **The MANDATORY per-path `git commit -- <pathspec>` discipline mitigates this; no peer-session commit landed during the index-contaminated window other than c5's own.**
+
+[KNOWN] **commit-plan-doc-1334 unstaged-modification persistence**: throughout this entire watch pass (30+ s), `spawn-handler.ts` and `probe-spawn-handler-mode-01-result-emits-spawnmode.spec.ts` remained in ` M` (modified, not staged) state. Unstaged modifications cannot be swept into a peer commit by `git commit -m` (only staged content goes into commits) — but they CAN be swept by `git commit -a` (auto-stage modified) or `git add <matching-glob>` then non-pathspec commit. **The unstaged-but-modified state is a different risk category than the staged-pending state**: lower-severity (requires explicit aggressive-stage to contaminate) but longer-duration (persists across many peer events).
+
+## §19 — Wave 3 referential integrity
+
+[KNOWN] **8/8 Wave-3 QUEUED rows resolve to existing manifest files**:
+
+| QUEUED session | manifest | exists |
+|---|---|---|
+| phase4-t8-exec | phase4-t8-cluster-a-exec.txt | ✓ |
+| phase4-t9-exec | phase4-t9-t10-exec.txt | ✓ |
+| r11-archive-writer | r11-archive-writer.txt | ✓ |
+| r11-queue-watcher | r11-queue-watcher.txt | ✓ (this session) |
+| r11-manifest-validator | r11-manifest-validator.txt | ✓ |
+| __orchestrator_active | orch-active-cluster-a-exec.txt | ✓ |
+| __orchestrator_standby | orch-standby-p3-roadmap-rev.txt | ✓ |
+| t2-ticket-body-0905 | t2-archive-coauthor.txt | ✓ |
+
+[KNOWN] **Wave 2 IN-FLIGHT carry-over (11 rows)**: all 11 manifest refs continue to resolve. Note: rows 36 (`c5-tilegrid-wiring.txt`) and 37 (`commit-plan-doc-spawnmode.txt`) remain listed as IN-FLIGHT despite having visible commit-log activity (e.g. `ff290c2` for c5; `228a2da`+`227bd2e` for commit-plan-doc) — queue COMPLETED transitions lag behind actual session progress. Not a manifest-ref staleness; a queue-state-staleness. Outside this watcher's TERRITORY to amend; surfaced for operator.
+
+[KNOWN] **Manifest-naming convention shift in Wave 3**: phase4-t8-exec session NAME reused from Wave 1 → Wave 3 with NEW manifest path (`phase4-t8-cluster-a-exec.txt`). The Wave 1 manifest (`phase4-t8-exec.txt`) persists on disk and is referenced under "Phase4-t8-exec + phase4-t9-exec — reserved as overflow capacity" (queue row 69). Same pattern for phase4-t9-exec. **Session-name ≠ manifest-file is a new state**; manifest-ref-by-row is the authoritative binding. Potential surface for future bookkeeping; not a current-state race.
+
+## §20 — Wave 3 dep-cycle verification
+
+[KNOWN] **Dep edges across all 19 concurrent rows** (8 Wave-3 + 11 Wave-2):
+
+| edge | source | declared in |
+|---|---|---|
+| `__orchestrator_active → phase4-t8-exec` | "depends-on phase4-t8-exec coord for path-disjoint scope" | Wave 3 queue row 28 |
+| `t2-ticket-body-0905 ↔ r11-archive-writer` | "coordinate-with r11-archive-writer (territorial-disjoint sub-sections)" | Wave 3 queue row 30 (semantic, not hard-blocking) |
+| `t3-ticket-body-0905 → c5-ticket-wb1` | Wave 2 carry-over | row 39 |
+
+[KNOWN] **No cycles.** The "coordinate-with" notation for t2 ↔ r11-archive-writer is non-blocking by intent (queue row 30 says "co-author... parallel write"); if modeled as a soft semantic edge, it forms a single edge with no return path because r11-archive-writer's manifest does not reciprocate t2 as a blocker. Treating as zero-edge → trivially acyclic. Treating as one-directed-edge → still acyclic.
+
+[MODELED] **Strongest dep-chain depth = 1**: `orch-active → phase4-t8` and `t3 → c5` are both length-1. No transitive chains. No deadlock-prone topology.
+
+## §21 — Wave 3 write-path overlap analysis
+
+[KNOWN] Pairwise intersection across 5 new Wave-3 manifests + relevant Wave-2 carryovers:
+
+### §21.1 — `phase4-t8-cluster-a-exec` ∩ `orch-active-cluster-a-exec` — MEDIUM-CONFIDENCE overlap
+
+[KNOWN] Both manifests authorize writes to:
+- `packages/dispatch-workstation/src/main/spawn-handler.ts` — **DUAL AUTHORIZED**
+- `packages/dispatch-workstation/src/main/spawn-session-result*.ts` — **DUAL AUTHORIZED**
+
+Probes are filename-prefix disjoint: `probe-mbtphase4-spawn-result-*` (phase4-t8) vs `probe-mbtphase4-clustera-*` (orch-active). Probe race blocked at the file granularity.
+
+[KNOWN] Queue row 28 declares `__orchestrator_active depends-on phase4-t8-exec coord for path-disjoint scope`. This is **operator-acknowledged at queue-authoring time** — the dep edge is the coordination mechanism, intended to sequence orch-active's WB1 RED (probe authoring) before phase4-t8's WB2+ (GREEN implementation).
+
+[MODELED] **Risk profile** (lower than Wave 2's t1↔verify-chat-mount):
+1. Temporal sequencing reduces actual overlap window (orch-active should commit RED probes before phase4-t8 starts GREEN edits to source).
+2. BUT both manifests' TERRITORYs include the source files; nothing in the manifests prevents orch-active from writing to spawn-handler.ts directly.
+3. The dep edge is a queue-level convention, not a per-add glob check at runtime.
+
+[KNOWN] **Surfacing context**: as of this watch pass, **`spawn-handler.ts` is in ` M` state** (commit-plan-doc-1334's Wave 2 unstaged edit). When orch-active or phase4-t8 begins Wave 3 work, they will inherit/conflict with commit-plan-doc-1334's edit. **Three-session write-authority on `spawn-handler.ts`** at this moment:
+1. commit-plan-doc-1334 (Wave 2 IN-FLIGHT; manifest `commit-plan-doc-spawnmode.txt`)
+2. phase4-t8-exec (Wave 3 QUEUED; manifest `phase4-t8-cluster-a-exec.txt`)
+3. __orchestrator_active (Wave 3 QUEUED; manifest `orch-active-cluster-a-exec.txt`)
+
+This is the **highest-density write-authority concentration** observed across all 3 watch passes. Operator awareness needed before Wave 3 sessions start writing.
+
+### §21.2 — `r11-archive-writer` ∩ `t2-archive-coauthor` — HIGH-CONFIDENCE overlap
+
+[KNOWN] Both manifests authorize writes to `docs/cairn-under-stress-round-11.md`:
+- r11-archive-writer TERRITORY: `docs/cairn-under-stress-round-11.md docs/cairn-under-stress-round-9.md docs/cairn-arc-synthesis-round-11-DRAFT.md`
+- t2-archive-coauthor TERRITORY: `docs/cairn-under-stress-round-11.md docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md`
+
+[KNOWN] Queue row 30 (t2) annotation: "co-author with r11-archive-writer (round-11.md §5 prep parallel write; territorial-disjoint sub-sections)". The phrase **"territorial-disjoint sub-sections"** is a SEMANTIC claim about sub-section ownership WITHIN a single file, not a manifest-level partition. Manifest-level write-authority is co-extensive.
+
+[MODELED] **Risk profile**: HIGHER than §21.1 because:
+1. Both sessions explicitly co-author the same file by intent (not by oversight).
+2. Conflict-on-merge is mediated by sub-section discipline (a coordination convention) rather than path-level partition.
+3. If both sessions stage and commit concurrently, git merge will only auto-resolve if sub-sections are textually distant; adjacent sub-section edits will conflict at line granularity.
+
+[MODELED] **Mitigation options** (manifest-authoring outside this session's TERRITORY; surface-only):
+- Option A: Strict alternation — only one session writes round-11.md at a time; sessions hand off via commit-stable revisions.
+- Option B: Pre-allocate sub-section ranges in manifest as line-range globs (would require §3.9.A extension to support line-granular authorization).
+- Option C: Split round-11.md into per-section files temporarily; merge at round-close. Defeats single-document narrative cohesion.
+- Option D: Sequential dispatch — finish r11-archive-writer's §5 prep before t2 begins; t2 then appends archive-coauthor sub-sections from commit-stable baseline.
+
+### §21.3 — `phase4-t9-t10-exec` ∩ Wave-2 carryover write-paths
+
+[KNOWN] phase4-t9-t10-exec writes `packages/dispatch-workstation/src/chat-shell/max-parallel-counter.tsx`. Wave-2 t1-chatshell-polish manifest has chat-shell/*.tsx glob and does NOT FORBID `max-parallel-counter.tsx`. Wave-2 verify-chat-mount-t7polish DOES explicitly FORBID `max-parallel-counter.tsx`.
+
+[MODELED] If t1-chatshell-polish is still actively writing chat-shell (per commit log `71b5e00` "WB-final + cross-session-wiring" + `b57ebca` aria-label work + `67de2f8` tab-switcher etc., t1 ladder appears to be in WB-final/wrap-up posture), phase4-t9-t10-exec and t1-chatshell-polish would dual-authorize `max-parallel-counter.tsx`. **Risk-mitigated by t1's apparent late-ladder posture** but not eliminated by manifest.
+
+### §21.4 — Other Wave-3 pairs
+
+[KNOWN] All other Wave-3 manifest pairs have ∅ intersection at file granularity:
+- `orch-standby-p3-roadmap-rev` writes `docs/coordination/phase-4-tier-1-roadmap-*` — disjoint from all peers.
+- `r11-archive-writer` ∩ `r11-queue-watcher` ∩ `r11-manifest-validator` — all three observer sessions write distinct single-file reports.
+- `phase4-t9-t10-exec` ∩ `phase4-t8-cluster-a-exec` — daemon files disjoint (max-parallel-aggregator vs spawn-session-result; cost-aggregator + plan-timer-aggregator explicitly forbidden in t9-t10 manifest).
+- `t2-archive-coauthor` ∩ `r11-queue-watcher` / `r11-manifest-validator` — distinct coord-doc paths.
+
+## §22 — Updated §3.9.D placeholder status (post-Wave-3 watch pass)
+
+| placeholder | status |
+|---|---|
+| Queue claim races | Wave 1: shared-index race observed (`262cc44`). Wave 2: predicted but unfalsified. **Wave 3: PREDICTED FAILURE OBSERVED at `63eba0f` — c5-incident; operator-arbitrated revert + discipline reinforcement.** |
+| Stale manifest references | 8/8 Wave-3 + 11/11 Wave-2 carry-over: all resolve. NONE caught across 3 watch passes. |
+| Manifest-violation false positives | Still NONE. KNOWN real-positives = 3 across waves: 2 manifest amendments (`e5c7c96`, `6d7dff3`) + c5-incident overlap precursor catch. |
+| Queue authoring bottleneck | Wave 2 prep observed; Wave 3 prep at `afa3f4d` smoother. Not a watcher-territory finding. |
+| Dep graph deadlock | NONE across all 3 waves. Max chain depth = 1. |
+| **Manifest write-path overlap** (Wave 2 candidate addition; promote to KNOWN-recurrence) | **Wave 2: t1 ∩ verify-chat-mount (chat-shell/*.tsx). Wave 3: §21.1 phase4-t8 ∩ orch-active (spawn-handler.ts + spawn-session-result*); §21.2 r11-archive-writer ∩ t2 (round-11.md). Pattern: shared FOLLOWUPS/ticket targets produce manifest authoring with overlapping write-authority.** |
+| **Race-window proximity (new placeholder candidate)** | Strict 2s-proximity catch requires higher sampling rate than this watcher implements. Looser stage/commit transitions observed at ≤13.4s and ≤11.9s during this pass (peer c5 commit `ff290c2` landed mid-watch-pass). |
+| **Cross-session contamination (formerly "shared-index cross-session contamination")** | **PROMOTED from MODELED to KNOWN by `63eba0f`. Recovery validated; discipline reinforced (per-path commit pathspec MANDATORY).** |
+
+## §23 — Summary (Wave 3 watch pass)
+
+[KNOWN] Wave 3 watch state at queue head `afa3f4d`:
+- 8/8 Wave-3 manifest refs resolve; no stale refs.
+- 11/11 Wave-2 IN-FLIGHT carry-over refs still resolve.
+- Dep graph: 2 hard edges + 1 soft coord edge. Acyclic. Max depth=1.
+- No strict 2s-proximity event captured at 1Hz polling; looser ≤13s peer-stage + ≤12s peer-commit events captured (c5 `ff290c2` mid-watch).
+- 3 write-path overlap findings: §21.1 `spawn-handler.ts` triple-authority (commit-plan-doc + phase4-t8 + orch-active); §21.2 `round-11.md` dual-authority (r11-archive-writer + t2 by-design); §21.3 `max-parallel-counter.tsx` t1↔phase4-t9-t10 mitigated.
+- 1 KNOWN cross-session-contamination incident since prior pass: `63eba0f` → operator-arbitrated revert `9b8a4e9` → discipline codified at `afa3f4d` (per-path commit pathspec MANDATORY).
+
+[KNOWN] **Strongest finding this pass**: the c5-incident `63eba0f` is a **direct empirical validation** of the failure mode predicted in this watcher's Wave 1 report (`262cc44` §9). The §3.9 SPECULATIVE primitive's "honest gaps" mechanism produced a forward-fix; the territorial-partition primitive is now meaningfully strengthened by the per-path commit-pathspec MANDATORY discipline.
+
+[MODELED] **Highest-leverage operator action from this pass**: arbitrate the **triple-write-authority on `spawn-handler.ts`** (commit-plan-doc-1334 + phase4-t8-exec Wave 3 + __orchestrator_active Wave 3) before Wave 3 sessions begin source-file writes. Currently mediated by:
+- commit-plan-doc-1334 still mid-WB (` M` unstaged edits as of 17:26:59)
+- orch-active dep on phase4-t8 (sequencing convention)
+- shared probe-prefix discipline
+
+But no manifest-level partition. A repeat of the `63eba0f` failure mode here would contaminate spawn-handler.ts across THREE sessions instead of two.
+
+[SPECULATIVE] If §3.9.E ("pre-spawn manifest-pair intersection check", first proposed in Wave 2 §13.1) had been authored before Wave 3 dispatch, the §21.1 and §21.2 overlaps would have surfaced at queue-authoring time rather than this watch pass. Round 11 Phase 3 sequencing decision belongs to operator.
+
+**Outcome classification per CLAUDE.md §2.11** (this pass): **Capability enabled with known limitations** — §3.9 primitive validated by real incident; residual gaps (manifest write-path overlap detection, sub-2s race-window proximity sampling) surfaced and tractable; recovery mechanism proven under live failure.
+
+This Wave-3 extension will be re-extended if Wave 4 dispatches or if any Wave 3 session produces a new claim-race, stage-proximity, or contamination event. No further action by `r11-queue-watcher` until next observation pass.
+
+## §24 — Pre-commit observation: orch-active Wave-3 WB1 RED in-territory
+
+[KNOWN] At pre-commit `git status --short` (17:28:56.301), 3 new `??` files appeared in the working tree since the 17:26:59 probe-burst end (Δ=~117s):
+
+| path | matches manifest TERRITORY |
+|---|---|
+| `docs/coordination/coord-cluster-a-orch-active-2026-05-12.md` | orch-active-cluster-a-exec ✓ |
+| `docs/coordination/mb-t-phase-4-spawn-result-field-extensions-decisions-2026-05-12.md` | orch-active-cluster-a-exec ✓ |
+| `packages/dispatch-workstation/test/unit/main/probe-mbtphase4-clustera-01-spawn-result-fields.spec.ts` | orch-active-cluster-a-exec ✓ (`probe-mbtphase4-clustera-*` prefix) |
+
+[KNOWN] **orch-active is honoring its manifest TERRITORY scope** — all 3 untracked files match its declared write-paths, and the probe uses the orch-active-specific prefix (`probe-mbtphase4-clustera-*`) that is filename-prefix-disjoint from phase4-t8's expected `probe-mbtphase4-spawn-result-*` prefix.
+
+[MODELED] **Partial falsification of §21.1 risk model**: orch-active has begun Wave 3 WB1 RED work and is **probe-only authoring**, exactly as queue row 28's "depends-on phase4-t8-exec coord for path-disjoint scope" implies. **No spawn-handler.ts or spawn-session-result*.ts edits observed from orch-active at this snapshot.** The triple-write-authority risk on `spawn-handler.ts` is reduced from "structural-possible" to "behaviorally-not-occurring (orch-active observes path-disjoint convention)."
+
+[MODELED] **Residual risk preserved**: phase4-t8-exec Wave-3 has not yet begun (no `??` or `M ` files matching its TERRITORY observed). When it begins, it will encounter commit-plan-doc-1334's persistent ` M spawn-handler.ts` unstaged-modification state. Manifest amendment by operator or sequenced dispatch remains the cleanest mitigation for the spawn-handler.ts handoff.
