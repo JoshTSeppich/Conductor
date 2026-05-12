@@ -44,18 +44,15 @@ import type { SessionRegistrySource } from '../../../src/main/frame-c-ipc-deps.j
 
 describe('MB-F-FRAME-C-IPC-LOOKUP-SESSION (anchor) — WB1/WB2 session-registry helper', () => {
   it('exports createSessionRegistry factory', () => {
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported until WB3 GREEN
     expect(typeof frameCIpc.createSessionRegistry).toBe('function');
   });
 
   it('getSession returns null for an unregistered session', () => {
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     expect(registry.getSession('does-not-exist')).toBeNull();
   });
 
   it('register + getSession returns the registered entry', () => {
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     registry.register('sess-a', { cwd: '/tmp/repo', branchName: 'feat/x' });
     const entry = registry.getSession('sess-a');
@@ -63,7 +60,6 @@ describe('MB-F-FRAME-C-IPC-LOOKUP-SESSION (anchor) — WB1/WB2 session-registry 
   });
 
   it('unregister removes the entry; subsequent getSession returns null', () => {
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     registry.register('sess-a', { cwd: '/tmp/repo', branchName: 'feat/x' });
     registry.unregister('sess-a');
@@ -75,7 +71,6 @@ describe('MB-F-FRAME-C-IPC-LOOKUP-SESSION (anchor) — WB1/WB2 session-registry 
     // checkout on the same session's cwd). Re-register replaces the
     // entry rather than appending. The registry has no per-session
     // history — last-write wins.
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     registry.register('sess-a', { cwd: '/tmp/repo', branchName: 'main' });
     registry.register('sess-a', { cwd: '/tmp/repo', branchName: 'feat/y' });
@@ -86,7 +81,6 @@ describe('MB-F-FRAME-C-IPC-LOOKUP-SESSION (anchor) — WB1/WB2 session-registry 
   });
 
   it('multiple sessions are stored independently', () => {
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     registry.register('sess-a', { cwd: '/tmp/a', branchName: 'feat/a' });
     registry.register('sess-b', { cwd: '/tmp/b', branchName: 'feat/b' });
@@ -95,7 +89,6 @@ describe('MB-F-FRAME-C-IPC-LOOKUP-SESSION (anchor) — WB1/WB2 session-registry 
   });
 
   it('unregister on an unknown sessionName is a no-op (no throw)', () => {
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     expect(() => registry.unregister('never-registered')).not.toThrow();
   });
@@ -108,7 +101,6 @@ describe('MB-F-FRAME-C-IPC-LOOKUP-SESSION (anchor) — WB1/WB2 session-registry 
     // call site is:
     //   const lookupSession = createProductionLookupSession(registry);
     //
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     const source: SessionRegistrySource = registry;
     expect(typeof source.getSession).toBe('function');
@@ -121,7 +113,6 @@ describe('MB-F-FRAME-C-IPC-LOOKUP-SESSION (anchor) — WB1/WB2 session-registry 
     // frame-c-ipc.ts). Direct assignment works without an adapter — this
     // is the legacy path if any consumer needs SessionLookupFn directly
     // rather than going through createProductionLookupSession.
-    // @ts-expect-error WB2 RED: createSessionRegistry not yet exported
     const registry = frameCIpc.createSessionRegistry();
     const lookupFn: frameCIpc.SessionLookupFn = registry.getSession.bind(registry);
     expect(typeof lookupFn).toBe('function');

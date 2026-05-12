@@ -358,6 +358,49 @@ export function createDefaultFrameCIpcController(
   return new FrameCIpcController(deps);
 }
 
+// ─── Session registry helper (c5 integration anchor for t3 d18353b) ────
+//
+// Renderer-side session lifecycle (TileGridApp's spawn-result + kill +
+// detach handlers) drives `register` / `unregister` via a future bridge
+// extension out of c5 territory. Production wiring composes:
+//
+//   import { createSessionRegistry } from './frame-c-ipc.js';
+//   import { createProductionLookupSession } from './frame-c-ipc-deps-production.js';
+//   const registry = createSessionRegistry();
+//   const lookupSession = createProductionLookupSession(registry);
+//   createDefaultFrameCIpcController({ lookupSession, emitScroll, writeFrameMode })
+//     .registerHandlers(ipcMain);
+//
+// The registry's `getSession` method satisfies t3's `SessionRegistrySource`
+// interface (`frame-c-ipc-deps.ts:42-44` at d18353b) structurally — no
+// adapter needed.
+
+export interface SessionRegistryEntry {
+  readonly cwd: string;
+  readonly branchName: string;
+}
+
+export interface SessionRegistry {
+  register(sessionName: string, entry: SessionRegistryEntry): void;
+  unregister(sessionName: string): void;
+  getSession(sessionName: string): SessionRegistryEntry | null;
+}
+
+export function createSessionRegistry(): SessionRegistry {
+  const entries = new Map<string, SessionRegistryEntry>();
+  return {
+    register(sessionName, entry) {
+      entries.set(sessionName, entry);
+    },
+    unregister(sessionName) {
+      entries.delete(sessionName);
+    },
+    getSession(sessionName) {
+      return entries.get(sessionName) ?? null;
+    },
+  };
+}
+
 // Re-export writeFrameMode signature type for the deps shape so callers
 // can declare deps without importing frame-mode-state directly.
 export type { writeFrameMode };
