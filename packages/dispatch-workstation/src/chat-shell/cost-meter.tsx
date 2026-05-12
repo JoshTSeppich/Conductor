@@ -45,6 +45,20 @@ const SLOT_STYLE: React.CSSProperties = {
   display: 'inline-block',
 };
 
+// MB-T-WIREFRAME-T7-VISUAL-POLISH WB10 GREEN — wireframe-target format
+// "conductor api · $0.42 today" wraps the value with muted prefix +
+// suffix spans. Prefix/suffix color tints below the slot's default
+// emphasize the value as the primary content.
+const PREFIX_STYLE: React.CSSProperties = {
+  color: '#888888',
+  marginRight: '4px',
+};
+
+const SUFFIX_STYLE: React.CSSProperties = {
+  color: '#888888',
+  marginLeft: '4px',
+};
+
 export function CostMeter({ bridge }: CostMeterProps = {}): JSX.Element {
   const [totalUsd, setTotalUsd] = useState<number | null>(null);
 
@@ -62,8 +76,20 @@ export function CostMeter({ bridge }: CostMeterProps = {}): JSX.Element {
       style={SLOT_STYLE}
       title="Conductor API cost today (USD) — resets at local midnight"
     >
+      <span
+        data-testid="chat-shell-cost-meter-prefix"
+        style={PREFIX_STYLE}
+      >
+        conductor api ·
+      </span>
       <span data-testid="chat-shell-cost-meter-value">
         {formatCost(totalUsd)}
+      </span>
+      <span
+        data-testid="chat-shell-cost-meter-suffix"
+        style={SUFFIX_STYLE}
+      >
+        today
       </span>
     </div>
   );
