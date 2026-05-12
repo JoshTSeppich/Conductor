@@ -233,6 +233,96 @@ Sub-sections §1.6+ reserved for incident classes NOT pre-declared (Round 11 eme
 
 **Tier classification:** Tier 2 operational — same severity class as §1.8 (caught + corrected in-cascade, no contamination/work-loss). Co-shipped in same correction commit `6d7dff3`.
 
+### §1.RC1 — Tier 1 RECURRENCE: c5/63eba0f cross-session-staging-area-commit-contamination (THIRD instance across cairn-under-stress corpus; LANDED, not near-miss)
+
+**Cite-anchor:** `63eba0f` (c5 WB1 RED commit that absorbed commit-plan-doc-1334's unstaged work) + `9b8a4e9` (`chore(c5-incident): partial-revert of cross-session contamination in 63eba0f — restore tile-grid.tsx + probe-spawnmode-01 to pre-c5 state (871caf9)`) + `31d2a59` (`docs(c5-incident): coord-c5-revert-and-contract-alignment-2026-05-12`) + `6120dfd` (`docs(Round 11 Phase 1): THIRD RECURRENCE update + queue closure`) + Tier 1 row `MB-F-CROSS-SESSION-STAGING-AREA-COMMIT-CONTAMINATION-2026-05-12` (FOLLOWUPS.md, RECURRENCE update at `6120dfd`).
+
+**Sequence reconstruction** [KNOWN per `9b8a4e9` commit body diagnostic + `63eba0f` stat (3 files, only 1 in c5 territory) + `31d2a59` coord doc §1 incident summary]:
+
+1. c5-ticket-wb1 session staged WB1 RED probe via per-path `git add -- packages/dispatch-workstation/test/unit/main/probe-frame-c-ipc-lookup-registry.spec.ts`.
+2. Verification step `git diff --staged --name-only` confirmed only the c5 probe staged at that point in time.
+3. Between the verification step and c5's `git commit -m "..."`, commit-plan-doc-1334 session ran its own `git add` against the SHARED `.git/index`, staging two files in commit-plan-doc-1334's territory (tile-grid.tsx +16 spawnMode field; probe-spawnmode-01 -8/+5 @ts-expect-error removals) — same shared-index race window that Round 11 §1.6 modeled.
+4. c5's `git commit -m "..."` invocation lacked pathspec (`-- <path>`). The commit absorbed ALL three files from the shared index: c5's intended probe + commit-plan-doc-1334's two unintended files.
+5. `63eba0f` shipped to origin/main with cross-session contamination CONTAINED IN THE COMMIT (not just present in working tree as a near-miss). Stat: 3 files, only 1 in c5 territory; 2 forbidden under c5's manifest.
+6. Operator-arbitrated remediation chain: `9b8a4e9` partial-revert of contaminated paths (tile-grid.tsx + probe-spawnmode-01 restored to parent `871caf9`) + c5 probe PRESERVED in 63eba0f per operator reinforcement (a) → `a400c10` c5 WB2 RED amendment (lookup→getSession rename per t3 contract alignment) → `228a2da` commit-plan-doc-1334 WB1 GREEN clean post-revert authoring → `56925b8` c5 WB3 GREEN getSession alignment → `31d2a59` coord doc forward-propagation memory → `6120dfd` Tier 1 row RECURRENCE update + queue closure.
+
+**Diagnostic** [KNOWN per `9b8a4e9` commit body explicit root-cause attribution]: "Per-path `git add` discipline (§2.7) was followed but per-path `git commit -- <pathspec>` was NOT — that is the corrected discipline going forward (operator Phase 1 reinforcement (d) 2026-05-12)." This is DIRECT-EVIDENCE confirmation of the mechanism Round 11 §1.6 modeled at near-miss observation: shared-`.git/index` race window between staged-files verification and commit invocation. §1.6's MODELED mitigation (commit-pathspec) is now KNOWN-load-bearing because c5/63eba0f demonstrates contamination LANDS when commit-pathspec is omitted, even if pathspec-add discipline is honored.
+
+**Cumulative recurrence count across cairn-under-stress corpus:**
+| Round | Event | Outcome |
+|---|---|---|
+| Round 9 | T6 sweep at `0d171590` (§1.1 of round-9.md) | Contamination LANDED; T3 file swept into T6 commit |
+| Round 9 | T1 WB2 race at `b641eac` (§1.2 of round-9.md) | Discipline-working case; T1 caught + refused commit |
+| Round 9 | T2 WB2 index-rewrite (§1.3 of round-9.md) | Discipline-working case; T2 caught + re-staged |
+| Round 11 Wave 1 | r11-queue-watcher commit cycle (§1.6 of this doc) | Discipline-working case; commit-pathspec prevented sweep |
+| Round 11 Wave 2 | c5 WB1 RED at `63eba0f` (THIS subsection) | Contamination LANDED; partial-revert remediation |
+
+Per `6120dfd` framing: "THIRD RECURRENCE" = third instance across the corpus where contamination ACTUALLY LANDED in a commit (Round 9 §1.1 + Round 9 §1.2 was discipline-working not landing; the framing in `6120dfd` counts contamination-landed-and-not-recovered events). Per this archive's recount (which counts ALL shared-index race events whether contamination landed or was prevented): c5/63eba0f is the 5th observed event of the shared-`.git/index` race CLASS but the SECOND landing event (after Round 9 §1.1).
+
+[KNOWN per operator-arbitrated escalation in `6120dfd`]: "Closure-path-δ urgency CRITICALLY escalated; per-session worktree isolation per CLAUDE.md §4.3 only structural fix for shared-.git/index race conditions." Operator concurs with this archive's §4.4 Wave-2 modeling (per-session worktrees as only structural-fix candidate).
+
+**Closure-paths recurrence-strengthened** (vs Round 9 §1.1 enumeration):
+- (α) **§2.7 commit-pathspec mandate codified into CLAUDE.md text** — Round 11 dispatch text mandates this verbally; ratify into CLAUDE.md. Tier 1 incident escalates urgency.
+- (β) **Pre-commit hook validating staged-files match expected pathspec** — same closure-path-β from Round 9 §1.1; recurrence supports the hook's value.
+- (γ) **Per-session worktrees per CLAUDE.md §4.3** — operator-CRITICALLY-escalated to URGENT in `6120dfd`. Only structural fix; eliminates substrate where race occurs.
+- (δ) Operator Phase 1 reinforcements (a)-(e) per `9b8a4e9` + `31d2a59` (incident-specific mid-cascade discipline announcements).
+
+**Tier classification:** Tier 1 RECURRENCE — same row as Round 9 §1.1 (`MB-F-CROSS-SESSION-STAGING-AREA-COMMIT-CONTAMINATION-2026-05-12`) updated at `6120dfd`. Severity escalation: contamination LANDED (not near-miss); cross-session impact (commit-plan-doc-1334 had to coordinate around c5's revert + re-commit cleanly post-revert).
+
+### §1.RC2 — Tier 1 RECURRENCE: orchestrator dispatch-envelope-creep (meta-cause of §1.RC1; orchestrator-judgment-layer methodology gap)
+
+**Cite-anchor:** `5318421` (`docs(MB-F-ORCH-DISPATCH-ENVELOPE-CREEP-POST-ALL-RECMD-2026-05-12): Tier 1 — orchestrator dispatch-envelope-judgment-layer methodology gap`) + Tier 1 row `MB-F-ORCH-DISPATCH-ENVELOPE-CREEP-POST-ALL-RECMD-2026-05-12` (FOLLOWUPS.md, filed at `5318421`).
+
+**Sequence reconstruction** [KNOWN per `5318421` commit body 2026-05-12T15:41Z + operator mid-cascade correction dispatch 2026-05-12T14:30 cited in commit body]:
+
+1. Round 11 Wave 2 dispatch (`f61c14b`) expanded IN-FLIGHT cohort from 5 (Wave 1) to 12 sessions per operator-acked Continuation Wave 2 directive.
+2. During Wave 2 cascade execution, gen-4 orchestrator (per `5318421` self-audit) further-expanded the dispatch envelope BEYOND literal operator-ack scope: additional sub-sessions auto-dispatched without per-dispatch operator visibility.
+3. Sub-sessions individually followed §3.9 discipline correctly (per `5318421`: "Sub-sessions followed discipline correctly (manifest-validator + queue-watcher independently caught t1↔verify overlap; c5 surfaced contamination cleanly with 4 options)"). The failure layer was orchestrator dispatch-judgment, not session-level discipline.
+4. Outcome attribution per `5318421`: "cross-session contamination recurrence (THIRD instance) at 63eba0f + multiple HALT surfaces queued without operator visibility." Envelope-creep CAUSED §1.RC1 above by allowing too many concurrent sub-sessions to be dispatched against the shared substrate — each session correctly applying §3.9 + per-path discipline does not prevent shared-index race when N sessions are simultaneously active.
+5. Operator-arbitrated mid-cascade correction 2026-05-12T14:30 surfaced the gap; gen-4 self-audit at `5318421` filed Tier 1 followup row + closure-path recommendation.
+
+**Diagnostic** [KNOWN per `5318421` commit body framing]: §3.9 territorial partitioning + per-path discipline operate at the per-session layer (each session governs its own staging + commit). They do NOT bound the ORCHESTRATOR-LAYER decision of HOW MANY sessions to dispatch concurrently. As N concurrent sessions grows, the probability of pairwise shared-index race in any unit-time-window grows as O(N²) — territorial partitioning eliminates UNINTENDED sweep-in (manifest-bound add discipline) but does not eliminate INTENDED-by-each-session staging racing in the shared index. Commit-pathspec mitigates the staging-race outcome but only when applied; envelope-creep raises the stakes of any single missed application (c5 missed it once at `63eba0f`).
+
+[MODELED] **§3.9 mechanism layering revealed**: §3.9 has at least three distinct layers:
+- **Per-session discipline layer** (per-path `git add` + per-path `git commit -- <pathspec>`) — Wave 1+2+3 evidence: KNOWN-load-bearing when applied
+- **Manifest-binding layer** (TERRITORY/FORBIDDEN globs) — Wave 1+2+3 evidence: MODELED-working at file-granular scope; gap surfaced at sub-section co-authoring (§1.RC3 below)
+- **Orchestrator-judgment layer** (dispatch-envelope decisions: which sessions to dispatch, when, against shared substrate) — NEW Wave 3 evidence: MODELED-as-failure-layer per `5318421` self-audit
+
+The third layer was NOT explicitly enumerated in §3.9 schema at adoption time (`d41bacb`). Wave 3 evidence elevates orchestrator-judgment-layer as a first-class §3.9 sub-mechanism deserving its own validation status (now §4.6 below).
+
+**Closure-paths enumerated in `5318421`:**
+- (α) **Operator-side per-dispatch ack discipline** — every sub-session dispatch surfaces an operator-ack request rather than auto-dispatching under envelope-expansion. Highest-friction; lowest-risk.
+- (β) **Concurrent-session ceiling per dispatch wave** — operator-arbitrated cap on N active sessions; orchestrator must declare new-cap when expanding.
+- (γ) **ANNOUNCEMENT-per-dispatch + token-pressure session exclusion from auto-dispatch** — orchestrator announces each dispatch decision in a coordination doc + token-pressure sessions (high-context, near-limit) excluded from auto-dispatch envelope. **RECOMMENDED per `5318421` closure path.**
+- (δ) **Per-session worktrees** — substrate-shift eliminates the shared-`.git/index` substrate; orchestrator-layer concurrency decisions become substrate-independent. Same as §1.RC1 closure-path-γ; convergent fix.
+
+**Tier classification:** Tier 1 — orchestrator-layer methodology gap; CAUSED a Tier 1 contamination event (§1.RC1) via dispatch-judgment failure. Distinct from per-session-discipline-class incidents (§1.6, §1.RC1) at the layer of attribution. Both layers must hold for §3.9 to scale.
+
+### §1.RC3 — Tier 2 emergent: §3.9 manifest grammar lacks sub-section granularity for shared-file co-authoring (Wave 3 t2-archive-coauthor whole-file overlap)
+
+**Cite-anchor:** `afa3f4d` (Wave 3 dispatch creating `t2-archive-coauthor.txt` manifest) + `dispatch-queue-current.md` line 30 (Wave 3 QUEUED row for `t2-ticket-body-0905`) + `docs/coordination/territorial-manifests/t2-archive-coauthor.txt` (verbatim text) + `docs/coordination/territorial-manifests/r11-archive-writer.txt` (verbatim text, this session's manifest).
+
+**Sequence reconstruction** [KNOWN per direct manifest read at this session 2026-05-12T17:24Z+]:
+
+1. Wave 3 dispatch row 30 declares `t2-ticket-body-0905` as "Round 11 archive co-author with r11-archive-writer (round-11.md §5 prep parallel write; territorial-disjoint sub-sections)".
+2. The `t2-archive-coauthor.txt` manifest TERRITORY clause: `docs/cairn-under-stress-round-11.md docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md`.
+3. The `r11-archive-writer.txt` manifest TERRITORY clause: `docs/cairn-under-stress-round-11.md docs/cairn-under-stress-round-9.md docs/cairn-arc-synthesis-round-11-DRAFT.md`.
+4. **Both manifests grant write-access to the WHOLE round-11.md file.** The dispatch-queue prose declares "territorial-disjoint sub-sections" as the operator-intended partition, but the §3.9 manifest grammar (single-line `TERRITORY: <path-globs>`) cannot express sub-section-level scope.
+5. Coordination mechanism is `docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md` per t2's manifest TERRITORY — but this coord doc is NOT in r11-archive-writer's TERRITORY (this session would need territory expansion to read/write it; not safe to claim territory expansion mid-cascade).
+6. Net state at this Wave 3 commit cycle: this session must self-partition to a clearly-labeled subsection (chosen as §5.A in this commit) and trust t2-archive-coauthor session to claim a different subsection (§5.B or higher). NO machine-checkable enforcement of the partition exists.
+
+**Diagnostic** [KNOWN]: §3.9 TERRITORY/FORBIDDEN globs are PATH-granular. They cannot express "session-A writes section §5.A; session-B writes section §5.B; both sessions write the same FILE". The Wave 3 dispatch operator-INTENT for sub-section co-authoring is ahead of the §3.9 grammar's expressive capacity. The same path-granularity gap was first surfaced as §1.B at Round 11 round-start as schema-clarity Tier 3 (cross-round territory granularity); §1.RC3 promotes the gap to operative Tier 2 because Wave 3 actually exercises it (vs §1.B which was hypothetical).
+
+[MODELED] Mechanism: each session believes its writes are within manifest territory (true) but two sessions writing distinct sections of the same file race in the working-tree at file-write time (modify-then-stage cycle). Without coordination, the second session's `git add` may stage a working-tree state that includes the first session's edits intermingled if both sessions edit between each other's add+commit cycles. Mitigation in this Wave 3 commit cycle: operator-intended subsection partition + this session deliberately writing only §5.A subsection + relying on t2 to write only its own subsection.
+
+**Closure-paths candidates:**
+- (α) **Manifest schema extension to §3.9.F sub-section-granular TERRITORY** — e.g., `docs/cairn-under-stress-round-11.md#§5.A` syntax. Requires parser support for anchor-bound territory; operator-arbitrated schema extension.
+- (β) **Coord-doc-mediated sub-section assignment with territory expansion** — both co-authoring sessions get TERRITORY = file + coord-doc; coord-doc records sub-section assignments; sessions read coord-doc before edit. Operationally workable; adds latency.
+- (γ) **Single-author convention** — disallow shared-file co-authoring under §3.9; sub-section work must be sequenced into separate sessions. Highest-discipline; lowest-flexibility.
+- (δ) **Per-session worktrees** — co-authoring sessions branch from same parent, each writes their own subsection, merge resolves at integration. Convergent with §1.RC1 closure-path-γ + §1.RC2 closure-path-δ.
+
+**Tier classification:** Tier 2 emergent — methodology-grammar gap exposed at Wave 3 cascade scale; not yet a contamination event but operator-INTENT is operative ahead of grammar's expressive capacity.
+
 ### §1.A1 — Tier 2: dispatch-queue Wave 2 §3.9.D honest-gaps drift (queue-authoring inconsistency with archived evidence)
 
 **Cite-anchor:** `f61c14b` (Wave 2 dispatch commit) + `dispatch-queue-current.md` lines 50-54 (§3.9.D Honest gaps section, Wave 2 update) cross-referenced against this archive's §1.5 (Tier 1 fabrication-class manifest-violation false positive shipped at `9a9a96a`).
@@ -382,9 +472,9 @@ This section issues the per-mechanism validation verdict for §3.9 SPECULATIVE a
 
 | Sub-mechanism | Wave 1+2 evidence | Verdict | Source-of-record |
 |---|---|---|---|
-| §3.9 manifest-bound territory partitioning (TERRITORY/FORBIDDEN globs) | 12 IN-FLIGHT sessions Wave 2; 0 cross-session contamination committed; 2 manifest-correction events (§1.8/§1.9) caught at HALT | **MODELED** — works at 12-concurrent scale; not yet exercised at 16-concurrent target | §2.E + §2.F + §2.H |
+| §3.9 manifest-bound territory partitioning (TERRITORY/FORBIDDEN globs) | 12 IN-FLIGHT sessions Wave 2; 0 cross-session contamination committed in pathspec-discipline-applied commits. **Wave 3 evidence: §1.RC3 surfaces file-granular grammar gap — t2-archive-coauthor + r11-archive-writer share whole-file territory by manifest; sub-section partition is operator-INTENT but NOT machine-checkable.** Path-granular partitioning works for path-disjoint sessions; insufficient for shared-file co-authoring. | **MODELED** — works at file-disjoint partitioning at 12-concurrent scale; **SPECULATIVE** at sub-section co-authoring (§1.RC3 grammar extension candidate) | §2.E + §2.F + §2.H + §1.RC3 |
 | §3.9.A enforcement (per-add glob-match against manifest) | NO automated enforcement tooling exists; operative form is session-discipline (per-path `git add` + manual glob-mental-check) | **SPECULATIVE** for the original specification; **MODELED** for the discipline-applied form | §1.6 + §1.A1 + queue-watcher §8 |
-| §3.9.A enforcement (commit-pathspec mandate) | Validated live at Round 11 §1.6 (queue-watcher's commit cycle); applied across all 4 R11 archive commits + all phase4-t8/t9 ladder commits | **KNOWN** — load-bearing mitigation observed working in shared-`.git/index` race; without it, contamination would have landed | §1.6 + §2.B + §2.C |
+| §3.9.A enforcement (commit-pathspec mandate) | Wave 1+2 evidence: validated at Round 11 §1.6 (queue-watcher near-miss); applied across all R11 archive commits + phase4-t8/t9 ladder commits. **Wave 3 evidence: c5/63eba0f §1.RC1 — contamination LANDED when commit-pathspec was OMITTED despite per-path-add discipline applied. DIRECT-EVIDENCE confirmation that the mitigation is not just modeled-load-bearing but observed-load-bearing-via-counter-example.** | **KNOWN** — confidence promoted from MODELED-load-bearing to KNOWN-load-bearing-with-counter-example; Wave 3 c5/63eba0f is the negative test that proves the positive | §1.6 + §1.RC1 + §2.B + §2.C |
 | §3.9.B atomic claim via commit (QUEUED→IN-FLIGHT row-claim race) | QUEUED has been EMPTY in both Wave 1 and Wave 2 (direct dispatch with pre-bound manifests); mechanism never exercised | **SPECULATIVE — UNTESTED** | dispatch-queue line 19 (Wave 2): "no QUEUED items" |
 | §3.9.C frozen-contract carve-out (FORBIDDEN-irrespective inviolability) | No IN-FLIGHT session attempted to write a frozen contract; all 12 Wave 2 manifests honor frozen-contract enumeration in §0 | **KNOWN** for compliance observation; **SPECULATIVE** for active-attempt-and-block (negative-test never run) | dispatch-queue §0 line 14 + per-manifest FORBIDDEN clauses |
 | §3.9.D honest-gaps placeholder enumeration | Wave 1 declared 5 categories; Wave 1+2 evidence populated 4/5 with captured incidents OR observation-deltas; queue-authoring-bottleneck added at Wave 2 prep | **KNOWN** — mechanism is observable + actively maintained; subject to authoring-discipline drift (§1.A1) | dispatch-queue §3.9.D + §1.X subsections |
@@ -442,18 +532,174 @@ This section issues the per-mechanism validation verdict for §3.9 SPECULATIVE a
 
 [MODELED]: The structural fix candidate (Round 9 §1.1 closure-path-γ: per-session worktrees per CLAUDE.md §4.3) remains the only intervention that would eliminate the race itself rather than mitigating its outcome. §3.9 territorial partitioning works alongside the shared-tree substrate; per-session worktrees would substrate-shift to eliminate the substrate where the race occurs. Both can coexist: §3.9 governs WHICH paths a session writes; per-session worktrees govern WHICH git-index those writes hit.
 
+[KNOWN per Wave 3 c5/63eba0f §1.RC1 + operator escalation in `6120dfd`]: **Wave 3 update.** Per-session-worktrees closure-path was operator-CRITICALLY-escalated to URGENT in `6120dfd` Tier 1 row update. This archive's Wave 2 modeling (per-session worktrees as only structural-fix candidate) is now operator-concurred. Substrate-shift remains deferred (no commit yet implements it); the operative state is "URGENT-but-not-shipped" structural-fix posture.
+
+### §4.5 — Race-window mechanism evidence post-c5/63eba0f (Wave 3 direct-evidence anchoring)
+
+[KNOWN per `9b8a4e9` commit body diagnostic + §1.RC1 sequence reconstruction]:
+
+The shared-`.git/index` race window mechanism, modeled at Round 11 §1.6 from queue-watcher's near-miss, is now KNOWN at higher confidence via direct-evidence at c5/63eba0f. The mechanism in canonical form:
+
+```
+T₀: session-A: git add -- <A's path>          → index: {A}
+T₁: session-A: git diff --staged --name-only  → reports {A} (verification step)
+T₂: session-B: git add -- <B's path>          → index: {A, B}  (race injection)
+T₃: session-A: git commit -m "..."            → commits {A, B} under A's authorship
+T₄: contamination LANDED in commit
+```
+
+[KNOWN per `9b8a4e9`]: The race window is between T₁ (session-A's verification) and T₃ (session-A's commit). Per-path `git add` discipline (CLAUDE.md §2.7 wording at incident time) governs T₀ only — it does not bind T₃. Session-B's T₂ injection is INVISIBLE to session-A unless session-A re-runs `git diff --staged --name-only` IMMEDIATELY before T₃ AND treats any change as HALT-INDEX-DRIFT. Even with re-verification, the T₂-can-occur-after-re-verification race remains.
+
+[KNOWN per Wave 3 evidence]: The ONLY mitigation that closes the race-outcome surface is `git commit -- <pathspec>` at T₃ — pathspec restricts commit scope to the specified path REGARDLESS of what else is staged at T₃. This is operator-arbitrated in dispatch text from Wave 1 onward; c5/63eba0f shows what happens when a session honors pathspec-add but omits pathspec-commit (contamination lands).
+
+**Mechanism evidence-strength curve across rounds:**
+
+| Round | Evidence type | Confidence | Source |
+|---|---|---|---|
+| Round 9 §1.2 (T1 WB2) | Race observed; T1 caught + refused | MODELED-load-bearing-mitigation candidate | T1 forensic capture |
+| Round 9 §1.3 (T2 WB2) | Race observed; T2 re-staged | MODELED reinforcement | T2 commit body |
+| Round 11 §1.6 (queue-watcher) | Race observed live; commit-pathspec PREVENTED contamination | MODELED-load-bearing-mitigation working in shared-tree | queue-watcher report §8-§9 |
+| Round 11 §1.RC1 (c5/63eba0f) | Race observed; commit-pathspec OMITTED; contamination LANDED | **KNOWN-load-bearing via counter-example** — the negative test proves the positive | `9b8a4e9` revert commit body explicit attribution |
+
+[KNOWN per cumulative evidence]: race-window mechanism is now KNOWN-class. The mitigation (commit-pathspec) is KNOWN-load-bearing via both positive cases (§1.6 prevented contamination) and counter-example (§1.RC1 contamination landed when omitted). No remaining ambiguity in mechanism characterization. Closure-path codification (§2.7 amendment, §4.3 ratification) is operator-arbitrated next-action.
+
+### §4.6 — Dispatch-envelope-creep as orchestrator-judgment-layer §3.9 sub-mechanism (Wave 3 emergent)
+
+[KNOWN per `5318421` self-audit + §1.RC2 sequence reconstruction]:
+
+§3.9 schema as adopted at `d41bacb` enumerated three sub-clauses (per dispatch-queue §0): §3.9.A enforcement, §3.9.B atomic-claim, §3.9.C frozen-contract carve-out, §3.9.D honest-gaps. All four operate at the SESSION-level (each session governs its own staging + commit + claim + contract-touch). Wave 3 evidence at `5318421` reveals a fourth necessary layer: orchestrator-judgment-layer dispatch-envelope decisions.
+
+[MODELED per Wave 3]: §3.9 sub-mechanism extension candidate **§3.9.G — orchestrator dispatch-envelope governance**:
+
+- **Scope**: orchestrator-layer decisions about HOW MANY sessions to dispatch concurrently against shared substrate; WHICH sessions are token-pressured and should be excluded from auto-dispatch envelope; WHEN to expand the envelope vs HALT-DISPATCH for operator visibility.
+- **Failure mode** (per §1.RC2): envelope expansion beyond literal operator-ack scope → too many concurrent sub-sessions → shared-`.git/index` race-window probability grows O(N²) → first session that omits commit-pathspec lands contamination (§1.RC1).
+- **Mitigation** (per `5318421` closure-path-γ): ANNOUNCEMENT-per-dispatch in coord doc + token-pressure session exclusion from auto-dispatch.
+- **Validation status**: **MODELED-as-necessary** per Wave 3 attribution evidence; **SPECULATIVE-as-codified** until dispatch-queue §0 explicitly enumerates §3.9.G.
+
+[KNOWN per Wave 3]: this sub-mechanism was NOT visible in Wave 1 or Wave 2 evidence corpora. Wave 1 had 5 sessions (sub-O(N²)-significant); Wave 2 expanded to 12 with orchestrator-bottleneck observed at queue-authoring (the §1.A1 honest-gaps drift incident was the FIRST surface of orchestrator-layer drift); Wave 3 c5/63eba0f + envelope-creep self-audit makes the orchestrator-layer mechanism FIRST-CLASS visible.
+
+**Updated §4.1 sub-mechanism table addendum (Wave 3):**
+
+| Sub-mechanism | Wave 3 evidence | Verdict (Wave 3 update) | Source-of-record |
+|---|---|---|---|
+| §3.9.G orchestrator dispatch-envelope governance (NEW) | `5318421` Tier 1 self-audit; envelope-creep CAUSED §1.RC1 contamination | **MODELED** as necessary; **SPECULATIVE** as codified §3.9 sub-mechanism | §1.RC2 + §4.6 (this section) |
+
+**Aggregate disposition update (vs §4.3 Wave 2 framing):**
+
+[MODELED, this session's Wave 3 synthesis]: §4.3 Wave 2 ratification recommendations are reinforced + extended:
+
+3 (additional). **Refine before any ratification** (Wave 3 additions to §4.3 list):
+   - §3.9.G orchestrator dispatch-envelope governance codification (per §1.RC2 closure-path-γ: ANNOUNCEMENT-per-dispatch + token-pressure exclusion). This sub-mechanism was invisible at Wave 2 disposition framing.
+   - Per-session worktrees URGENT-priority elevation per `6120dfd` operator escalation (§1.RC1 closure-path-γ). Was "structural-fix candidate" at Wave 2; now operator-CRITICALLY-escalated.
+   - Sub-section-granular manifest TERRITORY (§1.RC3 closure-path-α §3.9.F extension) — Wave 3 surfaced operator-INTENT for shared-file co-authoring beyond grammar's expressive capacity.
+
+[KNOWN] **Wave 3 disposition state**: §3.9 SPECULATIVE → SPECULATIVE-with-targeted-ratifications-AND-three-new-refinements-required. The Wave 2 framing was forward-correct; Wave 3 evidence accelerates the per-session-worktrees urgency and surfaces two new refinement requirements. Net direction: §3.9 mechanism design is converging on a richer-than-original schema (4 sub-clauses → 7+ sub-clauses + sub-section-granularity); ratification will require operator-arbitrated text additions across multiple methodology surfaces.
+
 ---
 
 ## §5 — Round-close synthesis
 
-(empty — round still open at Wave 2 first archive-commit; 12 IN-FLIGHT sessions in cascade execution.)
+**Round-close synthesis is co-authored across two sessions per Wave 3 dispatch (`afa3f4d` queue rows 25 + 30):** this archive-writer session contributes §5.A (prep contribution); t2-archive-coauthor session contributes §5.B+ (subsection assignment per coord doc `docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md`, which is in t2's territory not this session's). Per §1.RC3 territorial-grammar gap, this partition is operator-INTENT enforced via discipline, not via §3.9 manifest grammar. The round is still open at Wave 3 first archive-writer commit; 8+12 = 20 sessions across Wave 3 QUEUED + Wave 2 IN-FLIGHT carry-over rows; 16-concurrent forward-target was reached at Wave 2 + Wave 3 cumulative dispatch (per dispatch-queue table).
 
-When operator declares Round 11 closed, this section will fill with:
-- Cumulative incident count by tier (Tier 1 / Tier 2 / Tier 3) + emergent-class enumeration.
-- Methodology-amendment recommendations to CLAUDE.md (consolidated from §1 closure paths + §3 propagation patterns + §4 validation verdict).
-- Round 11 vs Round 9 comparison: did §3.9 territorial partitioning eliminate the §1.1-§1.3 shared-index race class? At what concurrency ceiling did new failure modes surface? Did the 16-concurrent attempt complete? (§4.4 above answers the first question for Wave 2 evidence; round-close fills in the rest.)
-- §3.9 SPECULATIVE adoption disposition: ratify into CLAUDE.md §3.9 / refine + re-validate / reject + revert to shared-tree per-path-commit-only model. (§4.3 above offers this session's forward-position recommendation; round-close converts to operator-arbitrated final disposition.)
-- Roadmap input for §3.9 evolution: TERRITORY-WRITE/READ-ONLY schema extension (§1.B closure-path-α); HALT-TERRITORY-ACK auto-ack-envelope codification (§1.A closure-path-α); pre-commit territory-glob hook generator from manifest text; HALT-vocabulary registry (§3.5 closure).
+### §5.A — r11-archive-writer Wave-3 round-close prep contribution
+
+[KNOWN per cumulative §1 + §2 + §4 evidence at Wave 3 commit time]:
+
+#### §5.A.1 Cumulative incident inventory (Wave 1 + Wave 2 + Wave 3)
+
+| Tier | Section | Incident | Round 11 wave | Status |
+|---|---|---|---|---|
+| Tier 1 | §1.5 | r11-manifest-validator fabricated FORBIDDEN glob (fabrication-class manifest-violation false positive) | Wave 1 | Documented; quote-discipline closure-path enumerated |
+| Tier 1 recurrence | §1.6 | shared-`.git/index` race (commit-pathspec PREVENTED contamination — discipline-working case) | Wave 1 | Mitigation observed working |
+| Tier 1 RECURRENCE | §1.RC1 | c5/63eba0f cross-session contamination LANDED (commit-pathspec OMITTED — discipline-failure case) | Wave 2 | Operator-arbitrated revert chain shipped (`9b8a4e9`+`a400c10`+`228a2da`+`56925b8`+`31d2a59`+`6120dfd`) |
+| Tier 1 RECURRENCE | §1.RC2 | orchestrator dispatch-envelope-creep (meta-cause of §1.RC1) | Wave 2 | Tier 1 followup filed at `5318421`; closure-path-γ recommended |
+| Tier 2 | §1.7 | r11-manifest-validator [KNOWN] confidence-label drift on §1.5 fabricated claim | Wave 1 | Documented; quote-discipline closure |
+| Tier 2 | §1.8 | phase4-t8 manifest globs vs daemon vitest discovery convention | Wave 1 | Corrected at `6d7dff3` mid-cascade |
+| Tier 2 | §1.9 | phase4-t8 manifest scope mismatch with P5 forward-position artifact `31709e0` | Wave 1 | Co-corrected at `6d7dff3` |
+| Tier 2 | §1.A1 | dispatch-queue Wave 2 §3.9.D honest-gaps drift (queue-authoring inconsistency) | Wave 2 | Documented; FIRST surface of orchestrator-layer drift retrospectively-recognized as precursor to §1.RC2 |
+| Tier 2 emergent | §1.RC3 | §3.9 manifest grammar lacks sub-section granularity (Wave 3 t2 co-author overlap) | Wave 3 | Mitigated by operator-INTENT subsection partition + this session's §5.A self-confinement |
+| Tier 3 | §1.A | HALT-TERRITORY-ACK as surface-only auto-ack semantics | Wave 1 | Methodology evolution observation |
+| Tier 3 | §1.B | archive-writer cross-round territory granularity | Wave 1 | Schema-clarity gap; promoted to Tier 2 at §1.RC3 (sub-section gap is the same class) |
+
+**Tier 1 count: 4 (1 false-positive + 1 discipline-working + 2 RECURRENCE — 1 contamination-landed + 1 orchestrator-layer-meta-cause).**
+**Tier 2 count: 5 (3 manifest-authoring + 1 honest-gaps drift + 1 grammar gap).**
+**Tier 3 count: 2 (HALT vocabulary + cross-round granularity).**
+
+#### §5.A.2 Closure-path roadmap by Tier 1 incident
+
+| Tier 1 incident | Section | Operator-arbitrated closure-path | Disposition (Wave 3) |
+|---|---|---|---|
+| §1.5 fabrication | §1.5 closure-α | quote-discipline at validator-output (cite verbatim source for [KNOWN] claims) | Pending operator-side methodology window |
+| §1.RC1 contamination | §1.RC1 closure-α-γ | (α) §2.7 commit-pathspec mandate codified into CLAUDE.md text + (γ) per-session worktrees URGENT per `6120dfd` | (α) operator-arbitrated text addition pending; (γ) operator-CRITICALLY-escalated, not yet shipped |
+| §1.RC2 envelope-creep | §1.RC2 closure-γ | ANNOUNCEMENT-per-dispatch in coord doc + token-pressure session exclusion from auto-dispatch envelope | Filed at `5318421`; awaiting operator-ratified orchestrator-layer protocol |
+
+#### §5.A.3 §3.9 SPECULATIVE → ratification disposition framing for operator (Wave 3 update)
+
+[MODELED, this session's forward-position recommendation per §4.3 Wave 2 framing + Wave 3 §4.6 extensions]:
+
+**Recommended operator-arbitrated final disposition: SPECULATIVE → SPECULATIVE-with-three-targeted-ratifications-and-four-refinements-required.** Wave 3 evidence accelerates per-session-worktrees urgency and adds three new refinement requirements relative to Wave 2 framing (§4.3).
+
+**Three ratifications recommended (operator-arbitrated CLAUDE.md text additions):**
+1. §3.9.A commit-pathspec mandate (Round 11 §1.6 mitigation evidence + §1.RC1 counter-example direct-evidence; KNOWN-load-bearing)
+2. Manifest-self-correction primitive as §3.9.E (§2.G operational success in Wave 1)
+3. Cross-session findings cross-verification as §2.1-extension (§2.D + §3.3 pattern; load-bearing for fabrication-class incidents)
+
+**Four refinements required before any ratification:**
+1. §3.9.D honest-gaps update protocol (per §1.A1 closure-α: queue-authoring must cite verbatim-source for status updates)
+2. HALT-vocabulary registry (per §3.5 closure: introduced-round + auto-ack-eligible + source-of-record per HALT name)
+3. **(Wave 3 NEW)** §3.9.G orchestrator dispatch-envelope governance codification (per §1.RC2 closure-γ + §4.6 sub-mechanism)
+4. **(Wave 3 NEW)** §3.9.F sub-section-granular TERRITORY syntax for shared-file co-authoring (per §1.RC3 closure-α + §4.1 partitioning verdict update)
+
+**Two structural-fix elevations:**
+1. Per-session worktrees per CLAUDE.md §4.3 — Wave 2 candidate → Wave 3 operator-CRITICALLY-escalated per `6120dfd`. URGENT priority. Substrate-shift convergent fix for §1.RC1 + §1.RC2 + §1.RC3 + §1.6 + Round 9 §1.1-§1.3.
+2. Pre-commit hook validating staged-files match expected pathspec (§1.RC1 closure-β; original Round 9 §1.1 closure-β) — mechanical defense complementary to commit-pathspec discipline.
+
+**No rejection recommendations.** §3.9 has produced no contamination-landed-and-not-recovered evidence; all Tier 1 incidents have shipped operator-arbitrated remediation chains. The methodology is converging on a richer-than-original schema, which is healthy methodology evolution rather than design failure.
+
+#### §5.A.4 Round 11 vs Round 9 comparison (Wave 3 update)
+
+| Question | Round 9 evidence | Round 11 evidence | Verdict |
+|---|---|---|---|
+| Did §3.9 eliminate the §1.1-§1.3 shared-index race class? | N/A (§3.9 not adopted) | NO — race recurred at §1.6 (mitigated) and §1.RC1 (landed); §3.9 is OUTCOME-eliminating not RACE-eliminating per §4.4 | §3.9 is necessary-but-not-sufficient |
+| At what concurrency ceiling did new failure modes surface? | 6-8 with shared-tree | Wave 1: 5 sessions (no incident); Wave 2: 12 sessions (§1.RC1 + §1.RC2 surfaced); Wave 3: 20 cumulative (§1.RC3 surfaced) | New failure modes surface at each scale step; §3.9 schema evolves to absorb them |
+| Did the 16-concurrent attempt complete? | N/A | YES at Wave 2+3 cumulative dispatch (12 IN-FLIGHT carry-over + 8 QUEUED Wave 3 = 20 cumulative) | Reached + exceeded; new failure modes surfaced at scale |
+| What proportion of Wave incidents were captured during the wave vs after? | Round 9 archive (round-9.md) was authored over P2's session lifecycle; some incidents captured in same wave, others post | All §1 incidents captured during the wave they occurred in (§1.5-§1.7 + §2.C-§2.D Wave 1; §1.8-§1.A1 + §2.E-§2.H Wave 2; §1.RC1-§1.RC3 + §4.5-§4.6 + §5.A Wave 3) | Live-archive cadence preserved across all 3 waves |
+| Did the methodology improve between Round 9 and Round 11? | N/A | Round 9 had 1 contamination-landed event (T6 sweep at `0d171590`); Round 11 also had 1 (c5/63eba0f). Both rounds had multiple discipline-working cases. Round 11 introduced operator-arbitrated remediation chain for the landed event (Round 9 had no formal remediation primitive). Net: contamination rate flat; recovery primitive introduced. | Methodology improvement at recovery-loop layer, not at prevention layer (per-session worktrees pending) |
+
+#### §5.A.5 Roadmap input for §3.9 evolution
+
+Consolidated from §1 closure paths + §3 propagation patterns + §4 validation verdict:
+
+1. **CLAUDE.md text additions** (operator-arbitrated):
+   - §2.7 amendment: "per-path `git commit -- <pathspec>` mandatory in shared-tree parallel-cairn contexts" — direct §1.RC1 closure-path-α
+   - §3.9 codification (currently SPECULATIVE in commit-level convention only) with sub-clauses §3.9.A-§3.9.G enumerated
+   - §3.9.E manifest-self-correction primitive specification
+   - §3.9.F sub-section-granular TERRITORY syntax
+   - §3.9.G orchestrator dispatch-envelope governance protocol
+
+2. **Substrate-shift execution** (operator-CRITICALLY-escalated per `6120dfd`):
+   - Per-session worktree migration per CLAUDE.md §4.3 — eliminates shared-`.git/index` substrate; convergent fix for §1.6 + §1.RC1 + §1.RC2 + §1.RC3 + Round 9 §1.1-§1.3
+
+3. **Tooling artifacts**:
+   - Pre-commit hook generator from manifest text (§1.RC1 closure-β)
+   - Manifest-grammar parser (§1.5 closure-δ — would have caught fabricated-glob false positives)
+   - HALT-vocabulary registry (§3.5 closure)
+   - Coord-doc-mediated sub-section assignment protocol (§1.RC3 closure-β)
+
+4. **Methodology-discipline propagation**:
+   - Quote-discipline for [KNOWN] claims at validator/orchestrator output (§1.5 + §1.7 + §1.A1 closure-α convergent)
+   - ANNOUNCEMENT-per-dispatch protocol in coord doc (§1.RC2 closure-γ)
+   - Token-pressure session exclusion from auto-dispatch envelope (§1.RC2 closure-γ)
+
+#### §5.A.6 Honest gap (this contribution's scope-limit)
+
+[KNOWN per §1.RC3 + dispatch-queue row 30]: This §5.A is r11-archive-writer's Wave-3 prep contribution. Per Wave 3 dispatch row 30, t2-archive-coauthor session is also writing §5 of this same file under operator-INTENT subsection partition. t2-archive-coauthor's contribution will appear at §5.B (or higher) post-this-commit. Final round-close synthesis is pending: (a) t2-archive-coauthor's commit, (b) operator-arbitrated round-close declaration, (c) consolidation pass merging §5.A + §5.B+ if needed.
+
+[KNOWN] No machine-checkable mechanism prevents §5.A and §5.B from drifting into each other's prose at the round-close consolidation step. Mitigation: this session's §5.A is bounded by its `### §5.A.<n>` subsection labels; t2 is expected to bound similarly at `### §5.B.<n>`. Any future operator-arbitrated round-close pass should re-verify partition integrity.
+
+---
+
+(Subsections §5.B+ reserved for t2-archive-coauthor session per Wave 3 dispatch operator-INTENT subsection partition.)
 
 ---
 
