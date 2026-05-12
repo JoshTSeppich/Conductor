@@ -1,0 +1,1 @@
+SESSION-r11-queue-watcher TERRITORY: docs/coordination/queue-watcher-report.md | READ-ONLY: docs/coordination/dispatch-queue-current.md docs/coordination/territorial-manifests/** | FORBIDDEN: packages/** docs/build-docs/** docs/FOLLOWUPS.md docs/cairn-*.md docs/coordination/orchestrator-state-current.md CLAUDE.md packages/dispatch-core/src/v3/schema.ts

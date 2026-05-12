@@ -1,0 +1,1 @@
+SESSION-r11-manifest-validator TERRITORY: docs/coordination/manifest-validator-report.md | READ-ONLY: docs/coordination/territorial-manifests/** docs/coordination/dispatch-queue-current.md | FORBIDDEN: packages/** docs/build-docs/** docs/FOLLOWUPS.md docs/cairn-*.md docs/coordination/orchestrator-state-current.md CLAUDE.md packages/dispatch-core/src/v3/schema.ts
