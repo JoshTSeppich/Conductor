@@ -13,7 +13,7 @@
 //   - `nowMs` prop is test-injectable for deterministic countdown
 //     testing; production passes `Date.now()` via mount.ts wiring.
 
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { RateLimitState } from './ring-helpers.js';
 
 export interface PlanTimerTextProps {
@@ -69,4 +69,52 @@ export function PlanTimerText(props: PlanTimerTextProps): JSX.Element {
       Max plan resets in {text}
     </span>
   );
+}
+
+// MB-T-WIREFRAME-T9-PLAN-TIMER-DATA-FLOW WB7 — production container.
+//
+// Sibling to MB-T25 PlanUsageRing's bridge-subscription pattern: takes
+// an `onRateLimitUpdate` bridge, subscribes at mount, renders the
+// pure-prop-driven PlanTimerText with the latest state, and ticks
+// `nowMs` once per `tickMs` (60s production default per ADR-MBTWFT9-C
+// — minute-granularity countdown display).
+//
+// Under Sub-Q-T9-A=(f) skeleton-with-deferred-source, the bridge
+// fires zero state updates in production (aggregator wired to
+// createNullRateLimitSource), so the container renders the honest
+// "Max plan resets in —" placeholder until a real source is plugged
+// via follow-on. The tick interval still runs — minimal overhead
+// (one Date.now() per minute) and zero behavioral effect under null
+// state.
+
+export interface PlanTimerTextContainerBridge {
+  readonly onRateLimitUpdate: (
+    cb: (state: RateLimitState) => void,
+  ) => () => void;
+}
+
+export interface PlanTimerTextContainerProps {
+  readonly bridge: PlanTimerTextContainerBridge;
+  /** Tick interval in ms; production = 60_000 per ADR-MBTWFT9-C; test seam. */
+  readonly tickMs?: number;
+}
+
+export function PlanTimerTextContainer(
+  props: PlanTimerTextContainerProps,
+): JSX.Element {
+  const { bridge, tickMs = 60_000 } = props;
+  const [state, setState] = useState<RateLimitState | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const dispose = bridge.onRateLimitUpdate((next) => setState(next));
+    return dispose;
+  }, [bridge]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), tickMs);
+    return () => clearInterval(id);
+  }, [tickMs]);
+
+  return <PlanTimerText state={state} nowMs={nowMs} />;
 }

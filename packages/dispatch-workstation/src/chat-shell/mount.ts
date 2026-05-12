@@ -39,6 +39,13 @@ import type {
 import { PlanUsageRing } from './plan-usage-ring.js';
 import type { RateLimitState } from './ring-helpers.js';
 // === END: MB-T25 ===
+// === BEGIN: MB-T-WIREFRAME-T9 plan-timer-text container import ===
+// Production container for the bottom-rail plan-timer slot.
+// Subscribes to coarchitectBridge.onRateLimitUpdate + ticks nowMs once
+// per minute per ADR-MBTWFT9-C. Renders PlanTimerText (T4 WB10
+// pure-prop component) with the latest state.
+import { PlanTimerTextContainer } from './plan-timer-text.js';
+// === END: MB-T-WIREFRAME-T9 ===
 // === BEGIN: MB-T26 cost-meter import ===
 import { CostMeter } from './cost-meter.js';
 // === END: MB-T26 ===
@@ -177,6 +184,15 @@ export interface MountChatShellOptions {
   // GREEN).
   readonly renderPlanUsageRing?: () => ReactNode;
   // === END: MB-T25 ===
+  // === BEGIN: MB-T-WIREFRAME-T9 plan-timer-text slot option ===
+  // Sub-Q-T9-D=(i) reuse coarchitectBridge.onRateLimitUpdate per
+  // ADR-MBTWFT9-D. When supplied, used verbatim (test override).
+  // When omitted, mountChatShell builds a closure from
+  // bridge.onRateLimitUpdate via PlanTimerTextContainer (subscription
+  // + 60s nowMs tick per ADR-MBTWFT9-C). Closes the PlanTimerText
+  // arm of MB-F-T4-BOTTOM-RAIL-MOUNT-WIRING (Tier 2).
+  readonly renderPlanTimerText?: () => ReactNode;
+  // === END: MB-T-WIREFRAME-T9 ===
   // === BEGIN: MB-T24 dispatch-mode-toggle slot option ===
   // Q-MBT24-3=a (two-button segmented control) + Q-MBT24-4=a (FAR-LEFT
   // slot) + Q-MBT24-6=c (NEW dispatchModeBridge — additive surface
@@ -422,6 +438,37 @@ function resolveRenderPlanUsageRing(
 }
 // === END: MB-T25 ===
 
+// === BEGIN: MB-T-WIREFRAME-T9 plan-timer-text slot resolution ===
+// Resolution order mirrors resolveRenderPlanUsageRing (sibling
+// consumer of the same coarchitectBridge.onRateLimitUpdate channel):
+//   1. Explicit `opts.renderPlanTimerText` — used verbatim (test
+//      override path).
+//   2. `opts.bridge?.onRateLimitUpdate` — build closure that wraps
+//      <PlanTimerTextContainer bridge={{ onRateLimitUpdate }} />.
+//      Container handles subscription + nowMs interval internally.
+//   3. Neither — return undefined (chat-shell.tsx MB-T-WIREFRAME-T4
+//      WB12 plan-timer-text slot renders nothing).
+//
+// Closes the PlanTimerText arm of MB-F-T4-BOTTOM-RAIL-MOUNT-WIRING
+// (Tier 2). Under Sub-Q-T9-A=(f) skeleton-with-deferred-source the
+// container subscribes successfully but the bridge fires zero updates
+// in production (aggregator wired to createNullRateLimitSource at
+// coarchitect-ipc.ts), so the rendered text stays at the honest
+// "Max plan resets in —" placeholder until a real source is plugged
+// via follow-on ticket.
+function resolveRenderPlanTimerText(
+  opts: MountChatShellOptions,
+): (() => ReactNode) | undefined {
+  if (opts.renderPlanTimerText) return opts.renderPlanTimerText;
+  const onRateLimitUpdate = opts.bridge?.onRateLimitUpdate;
+  if (!onRateLimitUpdate) return undefined;
+  return () =>
+    createElement(PlanTimerTextContainer, {
+      bridge: { onRateLimitUpdate },
+    });
+}
+// === END: MB-T-WIREFRAME-T9 ===
+
 export function mountChatShell(opts: MountChatShellOptions): () => void {
   const rootEl = document.getElementById(opts.rootElementId);
   if (!rootEl) throw new Error(`#${opts.rootElementId} not found`);
@@ -446,6 +493,12 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
   // additively.
   const renderPlanUsageRing = resolveRenderPlanUsageRing(opts);
   // === END: MB-T25 ===
+  // === BEGIN: MB-T-WIREFRAME-T9 plan-timer-text slot passthrough ===
+  // Sibling resolution + render-prop pass-through to ChatShell.
+  // ChatShell already accepts `renderPlanTimerText` per the
+  // MB-T-WIREFRAME-T4 WB12 sentinel zone at chat-shell.tsx:133.
+  const renderPlanTimerText = resolveRenderPlanTimerText(opts);
+  // === END: MB-T-WIREFRAME-T9 ===
   // === BEGIN: MB-T24 dispatch-mode-toggle slot passthrough ===
   // Sibling resolution + render-prop pass-through. Slot ordering inside
   // chat-shell-header-bar is FAR-LEFT per Q-MBT24-4=a — the JSX render
@@ -461,6 +514,7 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
       renderModelMix,
       renderPlanUsageRing,
       renderDispatchModeToggle,
+      renderPlanTimerText,
     }),
   );
   // === END: MB-T26 ===
