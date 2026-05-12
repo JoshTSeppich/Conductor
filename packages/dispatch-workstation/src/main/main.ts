@@ -186,6 +186,19 @@ import { readFileSync as swarmStateReadFileSync } from 'node:fs';
 import { createDefaultFrameCIpcController } from './frame-c-ipc.js';
 // === END: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS-ipc imports ===
 
+// === BEGIN: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH imports (do not modify outside this block) ===
+// WB4 — workstation BUILD.md driver imports. Controller class +
+// registerBuildMdIpcHandlers factory at src/main/build-md-ipc.ts. Service
+// module at src/build-md/service.ts (WB2 GREEN `0e86966`). Default path
+// resolves to repo-root BUILD.md per Sub-Q-MBTWFT5-A=(i) operator
+// arbitration 2026-05-12; mirrors SwarmStateWriter path pattern at
+// main.ts:557.
+import {
+  BuildMdIpcController,
+  registerBuildMdIpcHandlers,
+} from './build-md-ipc.js';
+// === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH imports ===
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
 const SHELL_PATH = resolve(__dirname, 'workstation-shell.html');
@@ -579,6 +592,28 @@ app.whenReady().then(async () => {
     writeFrameMode,
   }).registerHandlers(ipcMain);
   // === END: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS-ipc ===
+  // === BEGIN: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH wiring ===
+  // WB4 — register `workstation:read-build-md` IPC handler per ticket
+  // body c92f750 §1.1 + Sub-Q-MBTWFT5-A=(i) operator arbitration
+  // 2026-05-12 (default path = repo-root BUILD.md).
+  //
+  // Default path resolves to repo-root: `app.getAppPath()` returns
+  // `<repo>/packages/dispatch-workstation`; `../..` walks to
+  // `<repo>/`; `BUILD.md` is the file. Same pattern as SwarmStateWriter
+  // init at main.ts:557 (`docs/swarm-state.md`).
+  //
+  // BUILD.md may not exist at repo root in v1 (verified
+  // `ls BUILD.md` 2026-05-12: NotFound). Handler returns
+  // `{ok: false, error_type: 'NotFound', message}` honestly; renderer-
+  // side BuildMdStatusLine (WB6) renders empty-state placeholder.
+  registerBuildMdIpcHandlers(
+    ipcMain,
+    new BuildMdIpcController({
+      defaultBuildMdPath: () =>
+        resolve(app.getAppPath(), '..', '..', 'BUILD.md'),
+    }),
+  );
+  // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH wiring ===
   // === MB-T09 session-send-prompt IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
   // tile footer (MB-T12) consume this surface. Default deps wire to

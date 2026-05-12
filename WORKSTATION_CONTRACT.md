@@ -374,6 +374,24 @@ Existing channels in this category predate this contract subsection (`workstatio
 | **Consumer** | `src/frame-c/action-bar.tsx` callback |
 | **Authoring ticket** | `MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS` Sub-Q-B-focus=(i) |
 
+#### Channel #5 — `workstation:read-build-md` (T5, MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `workstation:read-build-md` |
+| **Direction** | renderer → main (invoke/handle) |
+| **Payload** | `{ path?: string }` (optional; absent → main resolves default per Sub-Q-MBTWFT5-A=(i)) |
+| **Response** | `Promise<BuildMdLoadResult>` (discriminated union — see Result Types appendix below) |
+| **Bridge surface** | `window.workstationBridge.readBuildMd(opts?): Promise<BuildMdLoadResult>` |
+| **Bridge style** | getter-with-optional-payload — extends EXISTING `workstationBridge` (matches Channel #1 `readSwarmState` precedent; same `workstation:*` prefix) |
+| **Path resolution** | `resolve(app.getAppPath(), '..', '..', 'BUILD.md')` per Sub-Q-MBTWFT5-A=(i) operator arbitration 2026-05-12 — mirrors SwarmStateWriter init path pattern at `main.ts:557` |
+| **Read mechanism** | `fs.promises.stat` → `isFile()` → `fs.promises.readFile(path, 'utf8')` → `parseBuildDoc(text)` (MB-T28 library; frozen at `7ce34b4`) → `{path, dag, status: {taskCount, blockedCount, readyCount, errorCount}}` |
+| **Failure modes** | `NotFound` (ENOENT on stat); `NotAFile` (stat succeeds but path is not a regular file); `IoError` (other stat/read err OR payload validation err); `ParseError` (parser returns ok=false; carries `parseErrors: ParseError[]` from MB-T28) |
+| **Success shape** | `{ ok: true, path, revSha?, dag, status }` — `revSha` optional best-effort git HEAD sha; omitted if not in git or git unavailable |
+| **Consumer** | `src/build-md/dispatch-loop.ts` (main-process dispatch loop, WB8) + `src/frame-c/build-md-status-line.tsx` (renderer status-line component, WB6) |
+| **Authoring ticket** | `MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH` WB4 GREEN |
+| **Signature choice rationale** | `Promise<BuildMdLoadResult>` rather than `Promise<TaskDAG>` — discriminated-union surfaces NotFound + ParseError honestly to renderer; matches Wave C #3 Result-type pattern (`DiffResult`, `MergeResult`, `FocusResult`). Renderer can render empty-state placeholder ("No BUILD.md at <path>") or parse-error breakdown without crashing. |
+
 #### Result-type discriminated unions (Wave C #3 contract per coord note §4)
 
 Inline-banner UX (Sub-Q-MBTWBDPFA-C=(α)): when host (Frame C detail-pane) catches a non-`ok` result from any `frameCBridge.*` call, it passes the result down to `ActionBar` via `failureState` prop. `ActionBar` renders a `<div role="alert" data-testid="action-bar-failure-banner">` element with `error_type` + `message` + Dismiss button. Auto-dismiss on next successful action (persistent-on-error semantics).
@@ -426,6 +444,35 @@ export type FocusResult =
   | (FrameCActionError & {
       readonly error_type: 'SessionNotFound' | 'FrameModeWriteFailed';
     });
+```
+
+```typescript
+// packages/dispatch-workstation/src/build-md/types.ts (T5 WB4 exported types)
+// MB-T28 ParseError + TaskDAG types re-exported via dispatch-core (frozen at `7ce34b4`).
+
+export interface BuildMdStatus {
+  readonly taskCount: number;
+  readonly blockedCount: number;
+  readonly readyCount: number;
+  readonly errorCount: number;
+}
+
+export interface BuildMdLoadSuccess {
+  readonly ok: true;
+  readonly path: string;
+  readonly revSha?: string;
+  readonly dag: TaskDAG;  // MB-T28 parser output
+  readonly status: BuildMdStatus;
+}
+
+export interface BuildMdLoadError {
+  readonly ok: false;
+  readonly error_type: 'NotFound' | 'NotAFile' | 'IoError' | 'ParseError';
+  readonly message: string;
+  readonly parseErrors?: readonly ParseError[];  // MB-T28 ParseError; present only when error_type === 'ParseError'
+}
+
+export type BuildMdLoadResult = BuildMdLoadSuccess | BuildMdLoadError;
 ```
 
 #### Bridge naming + style notes (consolidation observations)

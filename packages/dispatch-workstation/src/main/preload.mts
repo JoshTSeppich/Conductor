@@ -257,6 +257,24 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   // HALT-WB8-PRE-COMMIT surfaces this diff for operator review.
   readSwarmState: () => ipcRenderer.invoke('workstation:read-swarm-state'),
   // === END: MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE swarm-state-read bridge ===
+  // === BEGIN: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH read-build-md bridge ===
+  // WB4 — Workstation BUILD.md driver reads repo-root BUILD.md via this
+  // method. Per ticket body c92f750 §1.1 + Sub-Q-MBTWFT5-A=(i) operator-
+  // arbitrated 2026-05-12 (default path = repo-root). Invokes
+  // `workstation:read-build-md` main-process IPC handler (registered in
+  // main.ts MB-T-WIREFRAME-T5-BUILD-MD wiring sentinel zone). Returns
+  // BuildMdLoadResult discriminated union (ok=true with dag+status OR
+  // ok=false with error_type per parser/IO classification).
+  //
+  // Renderer-side consumer at src/frame-c/build-md-status-line.tsx
+  // (WB6) renders wireframe §1 bottom-status-line: "Loaded BUILD.md
+  // (rev <sha>) — parsed N tasks, M blocked, K ready."
+  //
+  // WORKSTATION_CONTRACT.md §6 amendment territory per CLAUDE.md §2.4 —
+  // HALT-WB4-PRE-COMMIT surfaces this diff for operator review.
+  readBuildMd: (opts?: { path?: string }) =>
+    ipcRenderer.invoke('workstation:read-build-md', opts),
+  // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH read-build-md bridge ===
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
