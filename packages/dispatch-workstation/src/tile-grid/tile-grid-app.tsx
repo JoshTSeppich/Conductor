@@ -34,6 +34,10 @@ import {
   subscribeToFrameMode,
   type FrameModeBridge,
 } from './frame-mode-subscription.js';
+import {
+  subscribeToScrollToSession,
+  type ScrollToSessionBridge,
+} from './scroll-to-session-consumer.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
@@ -43,7 +47,9 @@ import type {
   ApprovalPolicyGetResponse,
 } from 'dispatch-core/dist/v3/schema.js';
 
-export interface WorkstationBridgeShape extends FrameModeBridge {
+export interface WorkstationBridgeShape
+  extends FrameModeBridge,
+    ScrollToSessionBridge {
   /** Subscribes to 'workstation:spawn-result' replies. Returns cleanup. */
   onSpawnResult: (cb: (reply: unknown) => void) => () => void;
   /** WB11: invokes 'tile:detach' IPC to open a separate BrowserWindow for
@@ -172,6 +178,21 @@ export function TileGridApp({
 
   useEffect(() => {
     return subscribeToFrameMode(workstationBridge, setFrameMode);
+  }, [workstationBridge]);
+
+  // MB-F-FRAME-C-FOCUS-EVENT-CONSUMER-MISSING anchor (c5 ticket): hold
+  // the most-recent `frame-c:scroll-to-session` payload's sessionName
+  // in renderer state. Visual scroll/highlight in tile-grid.tsx is OUT
+  // of c5 territory; this state is anchor-only until the downstream
+  // implementation reads from it. See coord-c5-tilegrid-wiring-
+  // 2026-05-12.md (forthcoming at WB-final).
+  const [_lastScrollTargetSessionName, setLastScrollTargetSessionName] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    return subscribeToScrollToSession(workstationBridge, (payload) => {
+      setLastScrollTargetSessionName(payload.sessionName);
+    });
   }, [workstationBridge]);
 
   useEffect(() => {
