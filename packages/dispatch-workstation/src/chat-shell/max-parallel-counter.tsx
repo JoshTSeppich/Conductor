@@ -34,6 +34,21 @@ interface SessionEntryShape {
 export interface MaxParallelCounterProps {
   readonly sessions: readonly SessionEntryShape[];
   readonly maxParallel: number;
+  /**
+   * MB-T-WIREFRAME-T10 WB4 — optional pre-computed active count.
+   *
+   * When supplied, OVERRIDES the inline
+   * `sessions.filter(s => s.status === 'open').length` computation.
+   * Lets cross-package consumers (e.g. daemon-side
+   * `aggregateActiveSessionCount` shipped at MB-T-WIREFRAME-T10 WB2
+   * `8ea83a0`) pass authoritative N without re-constructing a
+   * synthetic sessions array.
+   *
+   * When OMITTED, T4 WB4 inline-filter behavior is preserved
+   * verbatim (backward-compat). Existing chat-shell slot supplier
+   * needs NO changes.
+   */
+  readonly activeCount?: number;
 }
 
 const COUNTER_STYLE: CSSProperties = {
@@ -45,8 +60,9 @@ const COUNTER_STYLE: CSSProperties = {
 };
 
 export function MaxParallelCounter(props: MaxParallelCounterProps): JSX.Element {
-  const { sessions, maxParallel } = props;
-  const activeCount = sessions.filter((s) => s.status === 'open').length;
+  const { sessions, maxParallel, activeCount: activeCountProp } = props;
+  const activeCount =
+    activeCountProp ?? sessions.filter((s) => s.status === 'open').length;
   return (
     <span data-testid="max-parallel-counter" style={COUNTER_STYLE}>
       max-parallel · {activeCount}/{maxParallel}
