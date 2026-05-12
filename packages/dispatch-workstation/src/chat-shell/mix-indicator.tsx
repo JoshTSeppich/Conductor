@@ -90,9 +90,13 @@ const ROOT_STYLE: CSSProperties = {
   fontSize: '0.85em',
 };
 
+// MB-F-CHATSHELL-POLISH-REMAINING WB3 — chip border-radius softened
+// from `3px` → `4px` per T7 row 357 polish target. Subtle aesthetic
+// refinement; matches the visual softness of the broader T7 chat-shell
+// polish set.
 const CHIP_STYLE: CSSProperties = {
   padding: '1px 4px',
-  borderRadius: '3px',
+  borderRadius: '4px',
   display: 'inline-flex',
   alignItems: 'baseline',
   gap: '2px',
