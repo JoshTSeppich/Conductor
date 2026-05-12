@@ -149,6 +149,108 @@ interface WindowWithBridge {
   frameCBridge?: FrameCBridgeShape;
 }
 
+// MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — SessionKillError shape.
+// Matches `session-kill-ipc.ts:61-86` (MB-T11 WB3) verbatim. Renderer-
+// local mirror (not imported from main process per audit §4.1 main-
+// process module-boundary discipline).
+type SessionKillError =
+  | { error_type: 'SchemaValidationError'; field_path: string; reason: string }
+  | { error_type: 'SessionNotFoundError'; sessionName: string }
+  | { error_type: 'TmuxKillError'; sessionName: string; reason: string }
+  | {
+      error_type: 'DaemonUnreachable';
+      sessionName: string;
+      reason: string;
+      tmuxKillSucceeded: boolean;
+    };
+
+type SessionKillReply = { ok: true } | { ok: false; error: SessionKillError };
+
+// MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — adapter mapping nested
+// `SessionKillReply` (workstationBridge.killSession return shape) into
+// the flat `ActionBarFailureState` consumed by the existing failure-
+// banner UX (Wave C #3 WB6 `cdf05db`). Top-level pure function for
+// unit-testability + isolation from React lifecycle. Returns null on
+// success → caller clears failureState; non-null on failure → caller
+// sets failureState.
+export function adaptSessionKillFailure(
+  reply: SessionKillReply,
+): ActionBarFailureState | null {
+  if (reply.ok) return null;
+  const e = reply.error;
+  let message: string;
+  switch (e.error_type) {
+    case 'SchemaValidationError':
+      message = `${e.field_path}: ${e.reason}`;
+      break;
+    case 'SessionNotFoundError':
+      message = `session "${e.sessionName}" not found`;
+      break;
+    case 'TmuxKillError':
+      message = e.reason;
+      break;
+    case 'DaemonUnreachable':
+      message = `daemon unreachable (tmux kill ${
+        e.tmuxKillSucceeded ? 'succeeded' : 'failed'
+      }): ${e.reason}`;
+      break;
+  }
+  return {
+    action: 'kill',
+    result: { ok: false, error_type: e.error_type, message },
+  };
+}
+
+// MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — FrameCActionError flat
+// shape used by frameCBridge.{diff,merge,focus} return values (mirrors
+// frame-c-ipc.ts:67-104). Discriminator `ok:false` + `error_type` +
+// `message` + optional `conflictFiles` (MergeConflict variant).
+interface FrameCActionFailure {
+  ok: false;
+  error_type: string;
+  message: string;
+  conflictFiles?: readonly string[];
+}
+
+interface FrameCDiffSuccess {
+  ok: true;
+  diffText: string;
+}
+
+interface FrameCActionGenericSuccess {
+  ok: true;
+}
+
+type FrameCBridgeResult =
+  | FrameCDiffSuccess
+  | FrameCActionGenericSuccess
+  | FrameCActionFailure;
+
+function isFrameCFailure(r: unknown): r is FrameCActionFailure {
+  return (
+    typeof r === 'object' &&
+    r !== null &&
+    (r as { ok?: unknown }).ok === false &&
+    typeof (r as { error_type?: unknown }).error_type === 'string' &&
+    typeof (r as { message?: unknown }).message === 'string'
+  );
+}
+
+function isFrameCDiffSuccess(r: unknown): r is FrameCDiffSuccess {
+  return (
+    typeof r === 'object' &&
+    r !== null &&
+    (r as { ok?: unknown }).ok === true &&
+    typeof (r as { diffText?: unknown }).diffText === 'string'
+  );
+}
+
+function isSessionKillReply(r: unknown): r is SessionKillReply {
+  if (typeof r !== 'object' || r === null) return false;
+  const ok = (r as { ok?: unknown }).ok;
+  return ok === true || ok === false;
+}
+
 /**
  * Extracts the section of swarm-state.md text corresponding to the
  * given session name. A "section" starts at a line whose trimmed form
@@ -214,13 +316,18 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
   const { selectedSessionName, tokensUsed, tokenBudget } = props;
   const [content, setContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — placeholder for
-  // failure-banner UX. WB6 wires the SessionKillError adapter +
-  // FrameCActionError plumb-through; WB4 ships bare bridge invocation
-  // only (call-shape correctness per WB3 probe). Setter retained for
-  // WB6 wiring; reads only flow through to ActionBar's failureState
-  // prop today (which is null → no banner per Wave C #3 probe-05a).
-  const [failureState] = useState<ActionBarFailureState | null>(null);
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — failureState now
+  // stateful (WB4 ship was read-only placeholder). Handlers await
+  // bridge calls + set on failure; Dismiss callback clears to null.
+  const [failureState, setFailureState] = useState<ActionBarFailureState | null>(
+    null,
+  );
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — diff result text for
+  // Sub-Q-MBTWFT3-C=(i) inline-expansion-below-ActionBar rendering.
+  // Cleared on any new action click (operator may re-click Diff to
+  // refresh OR click Merge/Focus/Kill which implicitly clears prior
+  // diff). null → no diff `<pre>` rendered.
+  const [diffOutput, setDiffOutput] = useState<string | null>(null);
 
   // Guard tokenBudget undefined/0 to avoid NaN (0/0) or Infinity (n/0).
   // Fallback ctxPct=0 → "ctx 0%" surface (honest "no data yet").
@@ -229,37 +336,132 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
       ? Math.round(((tokensUsed ?? 0) / tokenBudget) * 100)
       : 0;
 
-  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — bridge plumb
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB6 GREEN — bridge plumb
   // useCallbacks. Resolves bridges via `globalThis.window` lookup
-  // mirroring existing `WindowWithBridge` pattern. WB4 fires-and-
-  // forgets the bridge call; WB6 will await + plumb result through
-  // `failureState` setter for the failure-banner UX.
+  // mirroring existing `WindowWithBridge` pattern. Awaits bridge call
+  // + on `{ok:false}` sets failureState; on diff `{ok:true}` populates
+  // diffOutput state for inline rendering (Sub-Q-C=(i)).
   const handleDiff = useCallback((sessionName: string): void => {
     const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
     const bridge = win?.frameCBridge;
     if (!bridge?.diff) return;
-    void bridge.diff(sessionName);
+    setDiffOutput(null); // clear prior diff before new action
+    void (async () => {
+      try {
+        const result = (await bridge.diff(sessionName)) as FrameCBridgeResult;
+        if (isFrameCFailure(result)) {
+          setFailureState({
+            action: 'diff',
+            result: {
+              ok: false,
+              error_type: result.error_type,
+              message: result.message,
+              // conflictFiles is a MergeConflict-only field; diff never
+              // populates it. Pass through if (defensively) present.
+              ...(result.conflictFiles !== undefined
+                ? { conflictFiles: result.conflictFiles }
+                : {}),
+            },
+          });
+        } else if (isFrameCDiffSuccess(result)) {
+          setFailureState(null);
+          setDiffOutput(result.diffText);
+        }
+      } catch {
+        // Bridge invocation threw (rejection beyond discriminated union).
+        // Surface as a generic failure banner; absent a specific
+        // error_type from the IPC layer, label it as a bridge-level
+        // exception per honest-surface discipline.
+        setFailureState({
+          action: 'diff',
+          result: { ok: false, error_type: 'BridgeError', message: 'frameCBridge.diff threw' },
+        });
+      }
+    })();
   }, []);
   const handleMerge = useCallback((sessionName: string): void => {
     const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
     const bridge = win?.frameCBridge;
     if (!bridge?.merge) return;
-    void bridge.merge(sessionName);
+    setDiffOutput(null);
+    void (async () => {
+      try {
+        const result = (await bridge.merge(sessionName)) as FrameCBridgeResult;
+        if (isFrameCFailure(result)) {
+          setFailureState({
+            action: 'merge',
+            result: {
+              ok: false,
+              error_type: result.error_type,
+              message: result.message,
+              ...(result.conflictFiles !== undefined
+                ? { conflictFiles: result.conflictFiles }
+                : {}),
+            },
+          });
+        } else {
+          setFailureState(null);
+        }
+      } catch {
+        setFailureState({
+          action: 'merge',
+          result: { ok: false, error_type: 'BridgeError', message: 'frameCBridge.merge threw' },
+        });
+      }
+    })();
   }, []);
   const handleFocus = useCallback((sessionName: string): void => {
     const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
     const bridge = win?.frameCBridge;
     if (!bridge?.focus) return;
-    void bridge.focus(sessionName);
+    setDiffOutput(null);
+    void (async () => {
+      try {
+        const result = (await bridge.focus(sessionName)) as FrameCBridgeResult;
+        if (isFrameCFailure(result)) {
+          setFailureState({
+            action: 'focus',
+            result: {
+              ok: false,
+              error_type: result.error_type,
+              message: result.message,
+            },
+          });
+        } else {
+          setFailureState(null);
+        }
+      } catch {
+        setFailureState({
+          action: 'focus',
+          result: { ok: false, error_type: 'BridgeError', message: 'frameCBridge.focus threw' },
+        });
+      }
+    })();
   }, []);
   const handleKill = useCallback((sessionName: string): void => {
     const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
     const bridge = win?.workstationBridge;
     if (!bridge?.killSession) return;
-    // PAYLOAD-OBJECT shape per WorkstationSessionKillRequestSchema at
-    // dispatch-core/src/v3/schema.ts:1030 (distinct from frameCBridge
-    // bare-sessionName signature).
-    void bridge.killSession({ sessionName });
+    setDiffOutput(null);
+    void (async () => {
+      try {
+        // PAYLOAD-OBJECT shape per WorkstationSessionKillRequestSchema
+        // (distinct from frameCBridge bare-sessionName).
+        const result = await bridge.killSession({ sessionName });
+        if (isSessionKillReply(result)) {
+          const adapted = adaptSessionKillFailure(result);
+          setFailureState(adapted);
+        }
+      } catch {
+        setFailureState({
+          action: 'kill',
+          result: { ok: false, error_type: 'BridgeError', message: 'workstationBridge.killSession threw' },
+        });
+      }
+    })();
+  }, []);
+  const handleDismissFailure = useCallback((): void => {
+    setFailureState(null);
   }, []);
 
   useEffect(() => {
@@ -311,6 +513,22 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
           {body}
         </pre>
       </div>
+      {diffOutput !== null ? (
+        <pre
+          data-testid="frame-c-diff-output"
+          style={{
+            ...PRE_STYLE,
+            maxHeight: '40%',
+            overflowY: 'auto',
+            padding: '8px 12px',
+            borderTop: '1px solid #303030',
+            fontSize: '12px',
+            flexShrink: 0,
+          }}
+        >
+          {diffOutput}
+        </pre>
+      ) : null}
       <div style={DETAIL_PANE_FOOTER_STYLE}>
         <ActionBar
           sessionName={selectedSessionName}
@@ -319,6 +537,7 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
           onFocus={handleFocus}
           onKill={handleKill}
           failureState={failureState}
+          onDismissFailure={handleDismissFailure}
         />
       </div>
     </div>
