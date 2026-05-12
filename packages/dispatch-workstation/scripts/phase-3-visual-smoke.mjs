@@ -29,9 +29,11 @@
 // resolution requires per-package dir).
 
 import { _electron as electron } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PNG } from 'pngjs';
+import pixelmatch from 'pixelmatch';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // `scripts/phase-3-visual-smoke.mjs` → package dir → `dist/main/main.js`.
@@ -218,6 +220,102 @@ export async function captureScreenshot(opts) {
   mkdirSync(dirname(outPath), { recursive: true });
   await page.screenshot({ path: outPath, type: 'png' });
   return outPath;
+}
+
+/**
+ * Diff two PNG images. Returns structured result; gracefully degrades
+ * when paths are absent / unreadable (anti-fabrication §2.3 contract —
+ * wireframe target image may not yet exist; diff must NOT throw).
+ *
+ * Result shape:
+ *   { mismatchedPixels: number, totalPixels: number, ratio: number,
+ *     error?: 'READ-FAILED' | 'TARGET-ABSENT' | 'DIM-MISMATCH' }
+ *
+ * Semantics:
+ *   - leftPath absent / unreadable → error='READ-FAILED'; mismatchedPixels=-1
+ *     (screenshot capture failed upstream; unusual case)
+ *   - rightPath absent → error='TARGET-ABSENT'; mismatchedPixels=-1
+ *     (operator hasn't supplied wireframe target yet; smoke degrades
+ *     gracefully per anti-fabrication §2.3)
+ *   - dimension mismatch → error='DIM-MISMATCH'; mismatchedPixels=-1
+ *     (target image and screenshot must share resolution)
+ *   - otherwise → mismatchedPixels = pixelmatch count; ratio =
+ *     mismatchedPixels/totalPixels in [0..1]
+ *
+ * Writes diff PNG to outDiffPath when comparison runs (mismatch>=0);
+ * outDiffPath unwritten when error set.
+ *
+ * @param {Object} opts
+ * @param {string} opts.leftPath
+ * @param {string} opts.rightPath
+ * @param {string} opts.outDiffPath
+ * @returns {Promise<{
+ *   mismatchedPixels: number,
+ *   totalPixels: number,
+ *   ratio: number,
+ *   error?: 'READ-FAILED' | 'TARGET-ABSENT' | 'DIM-MISMATCH'
+ * }>}
+ */
+export async function diffImages(opts) {
+  const { leftPath, rightPath, outDiffPath } = opts;
+
+  if (!existsSync(leftPath)) {
+    return {
+      mismatchedPixels: -1,
+      totalPixels: 0,
+      ratio: NaN,
+      error: 'READ-FAILED',
+    };
+  }
+  if (!existsSync(rightPath)) {
+    return {
+      mismatchedPixels: -1,
+      totalPixels: 0,
+      ratio: NaN,
+      error: 'TARGET-ABSENT',
+    };
+  }
+
+  let leftPng;
+  let rightPng;
+  try {
+    leftPng = PNG.sync.read(readFileSync(leftPath));
+    rightPng = PNG.sync.read(readFileSync(rightPath));
+  } catch {
+    return {
+      mismatchedPixels: -1,
+      totalPixels: 0,
+      ratio: NaN,
+      error: 'READ-FAILED',
+    };
+  }
+
+  if (leftPng.width !== rightPng.width || leftPng.height !== rightPng.height) {
+    return {
+      mismatchedPixels: -1,
+      totalPixels: 0,
+      ratio: NaN,
+      error: 'DIM-MISMATCH',
+    };
+  }
+
+  const { width, height } = leftPng;
+  const diffPng = new PNG({ width, height });
+  const mismatchedPixels = pixelmatch(
+    leftPng.data,
+    rightPng.data,
+    diffPng.data,
+    width,
+    height,
+    { threshold: 0.1 },
+  );
+  const totalPixels = width * height;
+  const ratio = totalPixels > 0 ? mismatchedPixels / totalPixels : 0;
+
+  mkdirSync(dirname(outDiffPath), { recursive: true });
+  writeFileSync(outDiffPath, PNG.sync.write(diffPng));
+
+  return { mismatchedPixels, totalPixels, ratio };
 }
 
 /**
