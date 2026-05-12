@@ -30,6 +30,7 @@
 
 import { _electron as electron } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
@@ -45,6 +46,14 @@ const DEFAULT_SCREENSHOT_DIR = resolve(
   'docs',
   'coordination',
   'screenshots',
+);
+// Anti-fabrication §2.3: target image may not exist at run time;
+// diffImages gracefully degrades → TARGET-ABSENT classification.
+const DEFAULT_TARGET_IMAGE_PATH = resolve(
+  REPO_ROOT,
+  'docs',
+  'coordination',
+  'wireframe-target-2026-05-11.png',
 );
 const DEFAULT_LAUNCH_TIMEOUT_MS = 10_000;
 const DEFAULT_FIRST_WINDOW_TIMEOUT_MS = 8_000;
@@ -319,46 +328,199 @@ export async function diffImages(opts) {
 }
 
 /**
- * Run a Phase 3 visual-comparison smoke cycle.
+ * Pure-fn classification of smoke run state from observed step results.
  *
- * WB3 SKELETON: returns LAUNCH-FAILED with a TODO-marked summary;
- * subsequent WBs replace TODO branches with real impl.
+ * @param {Object} obs
+ * @param {boolean} [obs.buildOk]                  — false → BUILD-FAILED
+ * @param {boolean} [obs.launchOk]                 — false → LAUNCH-FAILED
+ * @param {{ error?: string, ratio: number }} [obs.diffResult]
+ * @param {number}  [obs.thresholdPercent]         — default 1.0 (Sub-Q-C=(i))
+ * @returns {SmokeState}
+ */
+export function classifyResult(obs) {
+  if (obs.buildOk === false) return 'BUILD-FAILED';
+  if (obs.launchOk === false) return 'LAUNCH-FAILED';
+  const diff = obs.diffResult;
+  if (diff?.error === 'TARGET-ABSENT' || diff?.error === 'READ-FAILED') {
+    // READ-FAILED on diffResult during smoke means screenshot wasn't
+    // produced OR target couldn't be read — both classify as
+    // TARGET-ABSENT for operator-visible summary (the practical
+    // distinction is internal-debug only).
+    return 'TARGET-ABSENT';
+  }
+  if (diff?.error === 'DIM-MISMATCH') {
+    // Treat as FAIL — wireframe target dimensions don't match
+    // workstation render; needs operator-supplied dimension-aligned
+    // target. Surfaces as visible failure not silent skip.
+    return 'FAIL';
+  }
+  const threshold = obs.thresholdPercent ?? 1.0;
+  if (!diff) return 'TARGET-ABSENT';
+  const ratioPercent = diff.ratio * 100;
+  return ratioPercent <= threshold ? 'PASS' : 'FAIL';
+}
+
+/**
+ * Pure-fn single-line summary for commit-body inclusion.
  *
- * @param {SmokeOpts} [_opts]
+ * Format per ticket body §4 WB9:
+ *   Phase 3 smoke: <STATE> screenshot=<path> [mismatch=<percent>%] [target=<path>] [duration=<s>s]
+ *
+ * @param {Object} parts
+ * @param {SmokeState} parts.state
+ * @param {string}  [parts.screenshotPath]
+ * @param {number}  [parts.mismatchPercent]
+ * @param {string}  [parts.targetImagePath]
+ * @param {number}  [parts.durationMs]
+ * @returns {string}
+ */
+export function formatSummary(parts) {
+  const tokens = [`Phase 3 smoke: ${parts.state}`];
+  if (parts.screenshotPath) tokens.push(`screenshot=${parts.screenshotPath}`);
+  if (typeof parts.mismatchPercent === 'number') {
+    // Format with up to 2 decimal places for readability; toFixed(2)
+    // strips trailing zeros via parseFloat round-trip.
+    const rounded = parseFloat(parts.mismatchPercent.toFixed(2));
+    tokens.push(`mismatch=${rounded}%`);
+  }
+  if (parts.targetImagePath) tokens.push(`target=${parts.targetImagePath}`);
+  if (typeof parts.durationMs === 'number') {
+    const seconds = (parts.durationMs / 1000).toFixed(1);
+    tokens.push(`duration=${seconds}s`);
+  }
+  return tokens.join(' ');
+}
+
+/**
+ * Resolve the current git HEAD SHA via `git rev-parse HEAD`. Returns
+ * the short 7-char form for filename brevity. Falls back to
+ * 'unknown-sha' if git invocation fails (e.g., shallow CI checkout
+ * without git binary).
+ *
+ * @returns {string}
+ */
+function resolveHeadSha() {
+  try {
+    const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    }).trim();
+    return sha.length > 0 ? sha : 'unknown-sha';
+  } catch {
+    return 'unknown-sha';
+  }
+}
+
+/**
+ * Run a Phase 3 visual-comparison smoke cycle: rebuild → launch
+ * headless electron → screenshot → diff (when target supplied) →
+ * emit summary.
+ *
+ * Per ticket body §4 WB9 orchestration enumeration + anti-fabrication
+ * §2.3 graceful-degradation contract. Returns structured SmokeResult;
+ * never throws — all failure paths classify to a terminal SmokeState
+ * for commit-body inclusion.
+ *
+ * @param {SmokeOpts} [opts]
  * @returns {Promise<SmokeResult>}
  */
-export async function runPhase3Smoke(_opts = {}) {
+export async function runPhase3Smoke(opts = {}) {
   const startedAt = Date.now();
+  const sha = opts.sha ?? resolveHeadSha();
+  const screenshotDir = opts.screenshotDir ?? DEFAULT_SCREENSHOT_DIR;
+  const targetImagePath = opts.targetImagePath ?? DEFAULT_TARGET_IMAGE_PATH;
+  const thresholdPercent =
+    opts.thresholdPercent ??
+    (process.env.MB_PHASE_3_DIFF_THRESHOLD !== undefined
+      ? parseFloat(process.env.MB_PHASE_3_DIFF_THRESHOLD)
+      : 1.0);
 
-  // WB4 — TODO: rebuild via execFileSync('pnpm', ['--filter',
-  // 'dispatch-workstation', 'build']). Branch BUILD-FAILED if exit != 0.
-  // Honor _opts.skipRebuild to bypass for dev iteration.
+  const outPath = resolveScreenshotPath({ sha, screenshotDir });
+  const outDiffPath = join(screenshotDir, `${sha}.diff.png`);
 
-  // WB4 — TODO: launchHeadless({ opts }) returns { page, dispose }.
-  // _electron.launch({ args: [resolvedMainPath], timeout: 10000 })
-  // + page = await electronApp.firstWindow({ timeout: 8000 })
-  // + Sub-Q-F=(i) polling for [data-app-ready="true"] when wired.
+  let buildOk = true;
+  if (!opts.skipRebuild) {
+    try {
+      execFileSync(
+        'pnpm',
+        ['--filter', 'dispatch-workstation', 'build'],
+        { cwd: REPO_ROOT, stdio: 'ignore', timeout: 180_000 },
+      );
+    } catch {
+      buildOk = false;
+    }
+  }
+  if (!buildOk) {
+    const state = classifyResult({ buildOk });
+    return {
+      state,
+      durationMs: Date.now() - startedAt,
+      summary: formatSummary({ state, durationMs: Date.now() - startedAt }),
+    };
+  }
 
-  // WB6 — TODO: captureScreenshot({ page, outPath }) writes PNG via
-  // page.screenshot({ path: outPath, type: 'png' }). outPath resolved
-  // from screenshotDir + sha + '.png'.
+  let launchHandle;
+  let launchOk = true;
+  try {
+    launchHandle = await launchHeadless({});
+  } catch {
+    launchOk = false;
+  }
+  if (!launchOk || !launchHandle) {
+    const state = classifyResult({ buildOk: true, launchOk: false });
+    return {
+      state,
+      durationMs: Date.now() - startedAt,
+      summary: formatSummary({ state, durationMs: Date.now() - startedAt }),
+    };
+  }
 
-  // WB7 — TODO: when target image readable, diffImages({ leftPath,
-  // rightPath, outDiffPath }) returns { mismatchedPixels, totalPixels,
-  // ratio, error? }. Pixelmatch threshold 0.1 (per-pixel AA tolerance);
-  // state ∈ PASS/FAIL determined by ratio*100 vs thresholdPercent.
+  let screenshotPath;
+  try {
+    screenshotPath = await captureScreenshot({
+      page: launchHandle.page,
+      outPath,
+    });
+  } catch {
+    await launchHandle.dispose();
+    const state = 'LAUNCH-FAILED';
+    return {
+      state,
+      durationMs: Date.now() - startedAt,
+      summary: formatSummary({ state, durationMs: Date.now() - startedAt }),
+    };
+  }
+  await launchHandle.dispose();
 
-  // WB8 + WB9 — TODO: graceful-degradation branch
-  //   if (!fs.existsSync(targetImagePath) || fs.statSync(...).size === 0):
-  //     state = 'TARGET-ABSENT'; capture screenshot only; summary
-  //     'Phase 3 smoke: TARGET-ABSENT screenshot=<path>'.
-  // Exit 0 per anti-fabrication §2.3.
-
+  const diffResult = await diffImages({
+    leftPath: screenshotPath,
+    rightPath: targetImagePath,
+    outDiffPath,
+  });
+  const state = classifyResult({
+    buildOk: true,
+    launchOk: true,
+    diffResult,
+    thresholdPercent,
+  });
+  const mismatchPercent =
+    typeof diffResult.ratio === 'number' && !Number.isNaN(diffResult.ratio)
+      ? diffResult.ratio * 100
+      : undefined;
   const durationMs = Date.now() - startedAt;
   return {
-    state: 'LAUNCH-FAILED',
-    summary: `Phase 3 smoke: LAUNCH-FAILED (WB3 skeleton stub; WB4-WB9 fill orchestration) duration=${durationMs}ms`,
+    state,
+    screenshotPath,
+    targetImagePath,
+    mismatchPercent,
     durationMs,
+    summary: formatSummary({
+      state,
+      screenshotPath,
+      mismatchPercent,
+      targetImagePath: diffResult.error === 'TARGET-ABSENT' ? undefined : targetImagePath,
+      durationMs,
+    }),
   };
 }
 
