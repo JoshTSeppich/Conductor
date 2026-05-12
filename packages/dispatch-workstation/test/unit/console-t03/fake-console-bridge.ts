@@ -74,6 +74,17 @@ export function makeFakeConsoleBridge(): FakeConsoleBridge {
       signalCalls.push({ sessionName, signal });
       return signalAck;
     },
+    // MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB2 fixture-maintenance
+    // addition: production ConsoleBridge (console-bridge.ts:67, Fix-C /
+    // cairn finding #82) requires openPanel; this fake predated the
+    // addition and omitted it. T2 TerminalStream invokes openPanel on
+    // mount per spike outcome 2 (ADR docs/coordination/mb-t-wireframe-t2-
+    // console-stream-spike-2026-05-12.md). No-op resolve here; CONSOLE-T03
+    // tests do not assert openPanel behavior so this is non-impacting.
+    openPanel: async () => {
+      /* no-op for tests; CONSOLE-T03 doesn't assert; T2 just needs the
+       * call to not throw */
+    },
     onConsoleOpen: makeOn(openHandlers),
     onConsoleClose: makeOn(closeHandlers),
     onStdoutChunk: makeOn(chunkHandlers),
