@@ -168,7 +168,7 @@ Cross-check evidence: empty validation window. No enforcement event observed. Me
 
 ---
 
-## §10 — Self-check (validator-scoped)
+## §10 — Self-check (validator-scoped, Wave 1)
 
 - Read every manifest file? ✓ (5/5 read)
 - Cross-checked commit log? ✓ (empty window confirmed via independent `git show --stat d41bacb`)
@@ -176,3 +176,194 @@ Cross-check evidence: empty validation window. No enforcement event observed. Me
 - Per-path `git add` planned for commit? ✓ (single pathspec: `docs/coordination/manifest-validator-report.md`)
 - Any unlabeled factual claim? ✓ (all claims carry [KNOWN] / [MODELED] / [SPECULATIVE])
 - Touched files another parallel session might modify? ✓ checked — TERRITORY file is validator-exclusive; no overlap risk.
+
+---
+
+# §11 — Wave 2 extension (2026-05-12)
+
+Round 11 §3.9 SPECULATIVE Wave-2 dispatch (`f61c14b`) added 9 new manifests to `docs/coordination/territorial-manifests/`. This extension audits Wave-2 grammar, overlap, and validates §3.9 enforcement against the now-non-empty post-adoption commit log.
+
+## §11.1 — Wave 2 manifest inventory [KNOWN]
+
+| Manifest | TERRITORY count | READ-ONLY clause | FORBIDDEN count |
+|---|---|---|---|
+| `c5-tilegrid-wiring.txt` | 9 (4 src + 3 test + 2 doc) | absent | 11 |
+| `commit-plan-doc-spawnmode.txt` | 7 (3 src + 2 test + 2 doc) | absent | 11 |
+| `t1-chatshell-polish.txt` | 5 (3 src globs + 1 test + 1 doc) | absent | 12 |
+| `t3-frame-c-lookup-stub.txt` | 4 (2 src + 1 test + 1 doc) | **3** | 12 |
+| `t6-wireframe-t10-body.txt` | 2 docs | **5** | 8 |
+| `verify-chat-mount-t7polish.txt` | 5 (3 src + 1 test + 1 doc) | absent | 13 |
+| `orch-active-phase4-status.txt` | 2 docs | **5** | 8 |
+| `orch-standby-sherpa.txt` | 2 docs | **1 (prose)** | 11 (3 pseudo-paths) |
+| `p7-cortex-deepening.txt` | 1 (`/tmp/**`) | **3** (1 ∩ FORBIDDEN) | 7 (3 pseudo-paths) |
+
+READ-ONLY adoption: 5/9 in Wave 2 (56%) vs 2/5 in Wave 1 (40%) — increasing. This makes the Wave-1 §4.3 "READ-ONLY default unspecified" gap more load-bearing.
+
+## §11.2 — Grammar findings (Wave 2)
+
+### §11.2.1 [Tier 1] — t1↔verify-chat-mount TERRITORY overlap [KNOWN]
+
+`t1-chatshell-polish.txt` TERRITORY contains the broad glob `packages/dispatch-workstation/src/chat-shell/*.tsx` and `…/chat-shell/*.ts` and `…/chat-shell/styles.css`. `verify-chat-mount-t7polish.txt` TERRITORY explicitly enumerates `…/chat-shell/conductor-brand.tsx`, `…/chat-shell/tab-switcher.tsx`, and `…/chat-shell/styles.css`.
+
+**Three files are simultaneously claimed as TERRITORY by both sessions:**
+- `packages/dispatch-workstation/src/chat-shell/conductor-brand.tsx`
+- `packages/dispatch-workstation/src/chat-shell/tab-switcher.tsx`
+- `packages/dispatch-workstation/src/chat-shell/styles.css`
+
+t1's FORBIDDEN carve-outs (`bottom-rail-cost-meter.tsx`, `plan-timer-text.tsx`, `mount.ts`) do NOT include the three verify-chat-mount files. Bidirectional fences (§2.9) are MISSING for this pair. If both sessions commit concurrently, last-writer-wins with no §3.9 detection.
+
+**Independently corroborated** by `8d35c93 spike(§3.9): r11-queue-watcher Wave-2 extension — 12 IN-FLIGHT scan + HIGH-CONFIDENCE t1↔verify-chat-mount overlap surfaced` — the parallel queue-watcher session reached the same conclusion. Two validators converging on the same finding raises confidence from [MODELED] to [KNOWN].
+
+**Recommended remediation:** Operator-arbitrate one of:
+- (a) Add `conductor-brand.tsx`, `tab-switcher.tsx`, `styles.css` to t1 FORBIDDEN (narrow t1 to true polish-pivot scope)
+- (b) Reverse: narrow verify-chat-mount TERRITORY to specific styles-block selectors or specific component sub-trees
+- (c) Tighten t1 TERRITORY glob from `*.tsx` to a probe-prefix-style enumeration similar to phase4-t8/t9 pattern
+
+### §11.2.2 [Tier 1] — t3 READ-ONLY ∩ FORBIDDEN ≠ ∅ [KNOWN]
+
+`t3-frame-c-lookup-stub.txt` lists three files in **both** READ-ONLY and FORBIDDEN clauses:
+- `packages/dispatch-workstation/src/main/frame-c-ipc.ts`
+- `packages/dispatch-workstation/src/tile-grid/tile-grid-app.tsx`
+- `packages/dispatch-workstation/src/tile-grid/tile-grid.tsx`
+
+Semantically incoherent: READ-ONLY conventionally means "may read, may not write" while FORBIDDEN means "may not touch at all." A file cannot simultaneously be both. The §3.9 grammar in dispatch-queue §0 doesn't define resolution. Plausible operator intent: "may read for context, may not write" — i.e., READ-ONLY is the correct clause and FORBIDDEN duplication is an authoring artifact.
+
+**Recommended remediation:** Strip the three files from FORBIDDEN clause. Or encode dispatch-queue §0 rule "READ-ONLY takes precedence over FORBIDDEN when same path appears in both."
+
+### §11.2.3 [Tier 1] — p7 READ-ONLY ∩ FORBIDDEN on CLAUDE.md [KNOWN]
+
+`p7-cortex-deepening.txt` lists `CLAUDE.md` in both READ-ONLY and FORBIDDEN. Same defect class as §11.2.2. Operator intent presumably READ-ONLY (read for context; never write).
+
+### §11.2.4 [Tier 2] — p7 TERRITORY is outside the git repository [KNOWN]
+
+`p7-cortex-deepening.txt` TERRITORY is `/tmp/cortex-minimal-draft/**` — a path the git working tree does not contain and `git add` cannot match. §3.9.A enforcement at `git add` glob-match is structurally inapplicable. The manifest grammar is internally consistent but is **outside the §3.9 enforcement perimeter entirely**.
+
+This raises a meta-question for dispatch-queue §0: should manifests be permitted to declare TERRITORY outside the repository? If yes, §3.9.A enforcement must be acknowledged as "no-op for extra-repo TERRITORY"; if no, the manifest should be rejected at queue-authoring time.
+
+### §11.2.5 [Tier 2] — orch-standby READ-ONLY contains prose, not a glob [KNOWN]
+
+`orch-standby-sherpa.txt` READ-ONLY clause reads `any operator-supplied .sherpa-build/** path if available`. The substring `any operator-supplied … if available` is natural language conditional, not a glob. A strict §3.9.A enforcement engine consuming this clause would fail to parse or would treat the whole string as a literal path (which it isn't).
+
+**Recommended remediation:** Replace with literal glob `.sherpa-build/**` (no qualifier) and let the operator's at-launch decision determine whether the directory exists. Glob-matching against a non-existent path is a no-op, so the conditional is redundant.
+
+### §11.2.6 [Tier 2] — Pseudo-path sentinels in FORBIDDEN [KNOWN]
+
+`orch-standby-sherpa.txt` and `p7-cortex-deepening.txt` use uppercase sentinel strings in FORBIDDEN:
+- `ANY-WRITE-TO-SHERPA-REPO`, `ANY-WRITE-TO-REGISTRY-REPO`, `ANY-WRITE-TO-CORTEX-REPO`, `ANY-WRITE-TO-REPO-OUTSIDE-/tmp`
+
+These are intent-declarative meta-paths, not git path globs. A strict glob-matcher will never match a real file against these strings; they communicate semantic intent to a human reader but have **zero §3.9.A enforcement value**.
+
+**Recommended remediation:** Move these to a separate `INTENT:` clause in dispatch-queue §0, or encode the equivalent literal FORBIDDEN globs (e.g., `.sherpa/**`, `../sherpa-repo/**`, every directory outside the workspace root) — though the latter is operationally fragile.
+
+### §11.2.7 [Tier 3] — Glob-style asymmetry: t1 vs phase4 pattern [KNOWN]
+
+`t1-chatshell-polish.txt` uses broad `chat-shell/*.tsx` glob with explicit FORBIDDEN carve-outs (3 files). The phase4-t8/t9 pattern uses **narrow probe-prefix globs** like `probe-mbtwft8-*.spec.tsx` with bidirectional explicit FORBIDDEN fences. The latter is more robust (additive scoping; new sibling files don't auto-claim) and avoids the t1↔verify-chat-mount overlap class entirely.
+
+**Recommended convention (forward-positioning):** Future manifests in shared-directory contexts should use **narrow probe-prefix globs**, not broad subdirectory globs with carve-outs.
+
+## §11.3 — Cross-manifest overlap matrix (Wave 1 ∪ Wave 2) [KNOWN]
+
+Pairwise TERRITORY-vs-TERRITORY checks across all 14 active manifests (5 Wave 1 + 9 Wave 2):
+
+| Pair | Overlap | Severity |
+|---|---|---|
+| t1-chatshell-polish ↔ verify-chat-mount-t7polish | conductor-brand.tsx, tab-switcher.tsx, styles.css | **Tier 1** (§11.2.1) |
+| c5-tilegrid-wiring ↔ commit-plan-doc-spawnmode | none (bidirectional fences clean) | OK |
+| c5-tilegrid-wiring ↔ t3-frame-c-lookup-stub | none on WRITE (t3 READ-ONLY covers c5's `frame-c-ipc.ts`) | coordination-only |
+| commit-plan-doc-spawnmode ↔ t3-frame-c-lookup-stub | none on WRITE (t3 READ-ONLY covers `tile-grid.tsx`) | coordination-only |
+| t1-chatshell-polish ↔ phase4-t8-exec | none (t1 FORBIDDEN carves out `bottom-rail-cost-meter.tsx`) | OK |
+| t1-chatshell-polish ↔ phase4-t9-exec | none (t1 FORBIDDEN carves out `plan-timer-text.tsx` + `mount.ts`) | OK |
+| verify-chat-mount ↔ phase4-t8-exec | none (verify-chat-mount FORBIDDEN carves out `bottom-rail-cost-meter.tsx`) | OK |
+| verify-chat-mount ↔ phase4-t9-exec | none (verify-chat-mount FORBIDDEN carves out `plan-timer-text.tsx` + `mount.ts`) | OK |
+| t6-wireframe-t10-body ↔ orch-active-phase4-status | none (different doc paths; t6 writes T10 build-doc, orch writes phase-4-status) | OK |
+| orch-active ↔ orch-standby | none (phase-4 docs vs sherpa docs) | OK |
+| p7-cortex-deepening ↔ anything-in-repo | none (TERRITORY is /tmp/**) | OK (out-of-perimeter — §11.2.4) |
+| Wave 1 phase4-t8/t9 ↔ each other | clean (Wave-1 §5 finding preserved) | OK |
+| Wave 1 r11-* ↔ Wave 2 anything | none (Wave-1 docs are validator-exclusive report files) | OK |
+
+**One Tier 1 overlap detected. All other pairs clean.**
+
+## §11.4 — Wave-1 manifest amendment workflow exercised [KNOWN]
+
+Two operator-arbitrated §3.9 manifest amendments shipped between Wave-1 audit (`759b65e`) and Wave-2 dispatch:
+- `6d7dff3 spike(§3.9): correct phase4-t8-exec manifest — daemon .test.ts + chat-shell legacy probe path` — corrected `cost-aggregator*.spec.ts` → `cost-aggregator*.test.ts` (wrong test-file extension) AND added 2 chat-shell probe glob variants (`.spec.ts` + `.spec.tsx`)
+- `e5c7c96 spike(§3.9): expand phase4-t9-exec manifest to workstation-side per operator arbitration` — expanded TERRITORY to include `coarchitect-ipc.ts`, `rate-limit-aggregator*.ts`, `mount.ts` (workstation-side scope discovery)
+
+**Significance:** These amendments empirically validate the manifest-as-living-artifact pattern. Sessions discover scope misspec mid-flight; operator arbitrates an amendment commit; session resumes against corrected manifest. This is the §3.9.D "stale manifest references" honest-gap category being exercised as a *feature* rather than a *failure mode* — the manifest can be amended cleanly via spike-grammar commit.
+
+**Implication for §3.9.A enforcement design:** Any in-process enforcement hook (pre-commit, pre-add wrapper, IDE plugin) must re-read the manifest file fresh at each enforcement event — caching the parsed manifest at session start would silently bypass operator amendments.
+
+## §11.5 — Empirical resolution of Wave-1 §4.1 (archive-writer TERRITORY ⊆ FORBIDDEN glob) [KNOWN]
+
+Wave-1 §4.1 surfaced that `r11-archive-writer.txt` TERRITORY (3 `docs/cairn-*.md` files) is fully shadowed by its own FORBIDDEN glob `docs/cairn-*.md`. The Wave-1 ambiguity: which clause wins?
+
+Post-Wave-1 commits `72c28fc spike(§3.9): SESSION-r11-archive-writer first commit — round-11.md skeleton authored` and `9a9a96a spike(§3.9): SESSION-r11-archive-writer §1.5-§1.7 + §2.C-§2.D — first-cohort live evidence captured` both wrote `docs/cairn-under-stress-round-11.md` successfully without raising HALT-TERRITORY-VIOLATION.
+
+**Empirical conclusion:** Either (a) the de-facto precedence is TERRITORY-beats-FORBIDDEN, or (b) §3.9.A enforcement is unimplemented (Wave-1 §8 honest gap confirmed). The two hypotheses are observationally indistinguishable at this commit cohort. Both resolve to "archive-writer is functioning"; neither resolves to "§3.9.A is actively gating writes."
+
+This **does NOT close** the Wave-1 operator-arbitration request — explicit codification of precedence in dispatch-queue §0 is still needed because the same ambiguity will affect future manifests and any actual §3.9.A enforcement implementation.
+
+## §11.6 — Cross-check commit-log validation (now non-empty) [KNOWN]
+
+18 commits exist between `759b65e` (Wave-1 audit) and HEAD at Wave-2 entry. Sampled four cairn-grammar / spike commits via `git show --stat`:
+
+| Commit | Session inferred | Files touched | Manifest match |
+|---|---|---|---|
+| `afd3778` | phase4-t9-exec (subject MB-T-WIREFRAME-T9) | `docs/coordination/mb-t-wireframe-t9-findings-2026-05-12.md` | ✓ in TERRITORY |
+| `155933f` | phase4-t8-exec (subject MB-T-WIREFRAME-T8) | T8 build-doc + 3 T8 coord docs (4 files) | ✓ all 4 in TERRITORY |
+| `8d35c93` | r11-queue-watcher | `docs/coordination/queue-watcher-report.md` | ✓ exact TERRITORY match |
+| `9a9a96a` | r11-archive-writer | `docs/cairn-under-stress-round-11.md` | ✓ in TERRITORY (per §11.5 resolution) |
+
+**Sample size:** 4 of 18 cairn/spike commits. Sampled-set compliance rate: 100%. Full-set compliance rate: [MODELED, not measured] high — no contradictory evidence observed at commit-subject scan.
+
+**Note:** No HALT-TERRITORY-VIOLATION events were reported by any session. This is consistent with either (a) sessions self-disciplining well + per-path-add convention, or (b) §3.9.A enforcement unimplemented (Wave-1 §8). The two hypotheses cannot be distinguished without observing a session ATTEMPTING an out-of-territory write.
+
+## §11.7 — Outcome classification (Wave 2)
+
+**Capability enabled with known limitations** (unchanged from Wave 1, with two material updates):
+
+1. **Tier 1 t1↔verify-chat-mount overlap (§11.2.1)** is the most concrete operational risk currently in the §3.9 ledger. Two concurrent sessions, three shared TERRITORY files, no fence. Operator must arbitrate one of remediations (a/b/c) before either session commits to those files.
+2. **Empirically, §3.9 is functioning as a discipline framework, not yet as an enforced contract** (§11.5 + §11.6). Manifests are being authored, amended, and respected by sessions, but no enforcement event has been observed. This is consistent with SPECULATIVE primitive status — validation is performative + post-hoc, not preventive.
+
+## §11.8 — Honest gaps update (per §3.9.D)
+
+| Category | Wave-1 status | Wave-2 update |
+|---|---|---|
+| Manifest authoring contradictions | 1 case (archive-writer) | **+3 cases** (t1 broad-glob, t3 dual-clause, p7 dual-clause) |
+| §3.9 grammar — precedence rule | Unspecified | **Empirically resolved as TERRITORY-beats-FORBIDDEN-or-no-enforcement** (§11.5); explicit codification still required |
+| §3.9 grammar — READ-ONLY default | Unspecified | **More load-bearing** as adoption rises 40%→56% |
+| §3.9 grammar — extra-repo TERRITORY | Not exercised | **Now exercised** (p7, §11.2.4); meta-rule needed |
+| §3.9 grammar — non-glob clause content | Not exercised | **Now exercised** (orch-standby prose + 4 pseudo-path sentinels, §11.2.5–6) |
+| §3.9 enforcement | Unimplemented hypothesis | **Consistent with all observations** — no enforcement event, no halt event, no out-of-territory commit observed; status remains [SPECULATIVE] |
+| Manifest amendment workflow | Not exercised | **Exercised cleanly** (§11.4) — manifest-as-living-artifact validated; design implication: enforcement engine must re-read manifest at each event |
+| Validator coverage — grammar | Validated | Re-validated for 9 more manifests |
+| Validator coverage — overlap | Zero overlaps | **1 Tier-1 overlap** found (§11.2.1) — independently corroborated by r11-queue-watcher |
+| Validator coverage — enforcement | Empty window | Non-empty window; 100% sample compliance; no enforcement event observable |
+
+## §11.9 — Recommendations (Wave 2 forward-position)
+
+**Tier 1 — operator-immediate:**
+1. Resolve t1↔verify-chat-mount overlap (§11.2.1) before either session commits to the three shared TERRITORY files. Recommend remediation (a) — add carve-outs to t1 FORBIDDEN — as least-invasive.
+2. Codify §3.9 precedence rule in dispatch-queue §0: "TERRITORY clauses claim files; FORBIDDEN clauses deny files; if a path matches BOTH within a single manifest, FORBIDDEN wins (deny). Operator-amend the manifest to resolve." This is the only interpretation under which authored manifests are unambiguous.
+3. Strip duplicate paths from t3 and p7 READ-ONLY ∩ FORBIDDEN clauses (§11.2.2, §11.2.3).
+
+**Tier 2 — manifest grammar formalization:**
+4. Encode READ-ONLY clause default ("implicit read-all-except-FORBIDDEN") in dispatch-queue §0.
+5. Lift frozen-contract list to dispatch-queue §0 only; deprecate per-manifest replication (carry forward from Wave-1 §4.2).
+6. Define manifest semantics for extra-repo TERRITORY (§11.2.4) — accept-as-out-of-perimeter or reject-at-queue-authoring.
+7. Replace prose READ-ONLY qualifiers and pseudo-path FORBIDDEN sentinels with literal globs or move to a separate INTENT: clause (§11.2.5–6).
+
+**Tier 3 — convention nudges:**
+8. Future manifests should prefer **narrow probe-prefix globs** over **broad subdirectory globs + carve-outs** for shared-dir contexts (§11.2.7).
+9. Schedule §3.9.A enforcement-hook prototype spike. Current evidence shows sessions self-discipline well, but a malicious or distracted session would not be caught.
+
+## §11.10 — Self-check (validator-scoped, Wave 2)
+
+- Read every Wave-2 manifest file? ✓ (9/9 read)
+- Re-read Wave-1 amended manifests (phase4-t8 + phase4-t9)? ✓
+- Cross-checked commit log? ✓ (18 commits 759b65e..HEAD; 4 spot-checks 100% compliant; no contradictory evidence in remaining 14 commit subjects)
+- Stayed within TERRITORY? ✓ (only this file edited; manifest files read-only; commit will be pathspec-scoped)
+- Per-path `git add` planned for commit? ✓ (single pathspec: `docs/coordination/manifest-validator-report.md`)
+- Any unlabeled factual claim? ✓ ([KNOWN] / [MODELED] / [SPECULATIVE] labels applied per §2.2)
+- Touched files another parallel session might modify? ✓ — TERRITORY file is validator-exclusive; pathspec mitigation already proven effective in Wave-1 commit (§6 of this report)
+- Findings cross-corroborated where possible? ✓ — §11.2.1 (t1↔verify-chat-mount) independently observed by `r11-queue-watcher` per `8d35c93`
