@@ -15,7 +15,8 @@
     "package": "pnpm build && electron-packager . dispatch-workstation --out=dist/packaged --overwrite --electron-version=41.3.0 --ignore=^/node_modules --ignore=^/spikes --ignore=^/src --ignore=^/test --ignore=^/scripts --ignore=^/coarchitect --ignore=^/SPIKES\\.md$ --ignore=^/tsconfig\\.json$ --ignore=^/vitest\\.config\\. --ignore=^/dist/packaged",
     "generate:section-10-5": "tsx scripts/generate-section-10-5.ts",
     "verify:build-freshness": "node scripts/methodology-runtime-verify.mjs verify-build-freshness",
-    "verify:bundle-fingerprint": "node scripts/methodology-runtime-verify.mjs verify-bundle-fingerprint"
+    "verify:bundle-fingerprint": "node scripts/methodology-runtime-verify.mjs verify-bundle-fingerprint",
+    "verify:phase-3-smoke": "node scripts/phase-3-visual-smoke-cli.mjs"
   },
   "devDependencies": {
     "@electron/packager": "^18.0.0",
