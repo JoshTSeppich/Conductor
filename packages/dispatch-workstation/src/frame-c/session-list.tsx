@@ -28,6 +28,7 @@
 
 import type { CSSProperties } from 'react';
 import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
+import { statusToColor } from './status-color.js';
 
 // ─── Inline style constants (no external CSS at WB4) ─────────────────────────
 
@@ -61,13 +62,15 @@ const STATUS_DOT_STYLE_BASE: CSSProperties = {
   flexShrink: 0,
 };
 
-// Mirror tile-header.tsx STATUS_DOT_HEX semantics (color-by-status).
-// Subset values per TileStatus enum from tile-grid.tsx:29.
-const STATUS_DOT_HEX: Record<string, string> = {
-  open: '#5b9d6e', // green
-  collapsed: '#888888', // grey
-  detached: '#c97a3a', // amber
-};
+// MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB6 — status-color mapping
+// extracted to frame-c/status-color.ts (Sub-Q-T1-C=(i)). Removes the
+// inline STATUS_DOT_HEX literal (which had dead-code 'collapsed' key
+// and incomplete 'idle'/'error'/'warning' coverage) in favor of the
+// exhaustive switch-based mapping in status-color.ts. Fallback color
+// for unknown / killed status: green (matches prior STATUS_DOT_HEX[x]
+// ?? STATUS_DOT_HEX['open']! pattern; statusToColor returns null for
+// 'killed' so the !! coalesce here yields green).
+const FALLBACK_DOT_HEX = '#5b9d6e';
 
 const NAME_STYLE: CSSProperties = {
   fontWeight: 500,
@@ -121,7 +124,7 @@ export function SessionList(props: SessionListProps): JSX.Element {
     <div data-testid="frame-c-session-list" style={LIST_ROOT_STYLE}>
       {sessions.map((s) => {
         const statusKey = s.status ?? 'open';
-        const dotColor = STATUS_DOT_HEX[statusKey] ?? STATUS_DOT_HEX['open']!;
+        const dotColor = statusToColor(statusKey) ?? FALLBACK_DOT_HEX;
         const dotStyle: CSSProperties = {
           ...STATUS_DOT_STYLE_BASE,
           backgroundColor: dotColor,
