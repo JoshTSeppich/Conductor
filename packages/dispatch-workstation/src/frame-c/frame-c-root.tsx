@@ -47,6 +47,8 @@ import {
   DEFAULT_FILTER_STATE,
   type FilterState,
 } from './session-filter-bar.js';
+import type { ConsoleBridge } from '../main/console-bridge.js';
+import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
 
 // Narrow subset of WorkstationBridgeShape (tile-grid-app.tsx:41-86)
 // — only the onSpawnResult method is load-bearing for T1 WB3 sessions-
@@ -146,6 +148,25 @@ export interface FrameCRootProps {
    * window.workstationBridge through to this prop.
    */
   readonly workstationBridge?: FrameCWorkstationBridge;
+  /**
+   * MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB12 — CONSOLE-T02
+   * bridge for the embedded TerminalStream inside the DetailPane Live
+   * tab. Optional: when present (paired with `createTerminal`),
+   * DetailPane enters HYBRID mode (Sub-Q-MBTWFT2-A=ii) and renders
+   * the tab strip with "Live" (TerminalStream + chrome) and "Summary"
+   * (existing swarm-state body). When undefined, DetailPane falls
+   * back to Summary-only render (Wave B WB8 behavior preserved for
+   * tests + transient pre-wiring states).
+   */
+  readonly consoleBridge?: ConsoleBridge;
+  /**
+   * MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB12 — terminal
+   * adapter factory for the embedded TerminalStream xterm renderer.
+   * Production wires the lazy xterm shim via
+   * frame-c/lazy-xterm-adapter.ts (`createLazyXtermAdapter`); tests
+   * inject a fake adapter via CONSOLE-T03 fixture pattern.
+   */
+  readonly createTerminal?: () => TerminalAdapter;
 }
 
 /**
@@ -167,6 +188,8 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
     onSelectSession: externalOnSelect,
     selectedSessionName: externalSelected,
     workstationBridge,
+    consoleBridge,
+    createTerminal,
   } = props;
 
   // MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB3 — sessions state. When
@@ -264,8 +287,11 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
         {selected !== null && (
           <DetailPane
             selectedSessionName={selected}
+            branchName={selectedEntry?.branchName}
             tokensUsed={selectedEntry?.tokensUsed}
             tokenBudget={selectedEntry?.tokenBudget}
+            consoleBridge={consoleBridge}
+            createTerminal={createTerminal}
           />
         )}
       </div>

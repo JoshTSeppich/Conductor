@@ -25,6 +25,7 @@ import {
 } from './tile-grid-app.js';
 import { FrameShellHeader, type FrameMode } from './frame-shell-header.js';
 import { mountFrameC } from '../frame-c/index.js';
+import { createLazyXtermAdapter } from '../frame-c/lazy-xterm-adapter.js';
 import {
   createXtermAdapter,
   type TerminalAdapter,
@@ -183,14 +184,38 @@ function tryAutoMountFrameC(): void {
   const root = document.getElementById('frame-c-root');
   if (!root) return;
   const workstationBridge = window.workstationBridge;
-  // When workstationBridge is absent (non-Electron envs, smoke harness
-  // pre-preload-attach window), mountFrameC starts with empty internal
-  // sessions and renders honest empty-state. Frame C remains visually
-  // mounted; SessionList shows no rows until the bridge attaches.
-  mountFrameC(
-    root,
-    workstationBridge !== undefined ? { workstationBridge } : {},
-  );
+  // MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB12 — thread
+  // consoleBridge + createTerminal (lazy xterm shim) into the FrameCRoot
+  // mount so DetailPane can render the HYBRID Live tab with the
+  // embedded TerminalStream (Sub-Q-MBTWFT2-A=ii operator-acked 2026-05-
+  // 12). consoleBridge sourced from window.consoleBridge (CONSOLE-T02
+  // preload contextBridge `eac381e`). createTerminal sourced from
+  // frame-c/lazy-xterm-adapter.ts createLazyXtermAdapter (sync shim
+  // wrapping the async createXtermAdapter import; mirrors console-
+  // panel/mount.ts:58-84 pattern). When consoleBridge is absent
+  // (non-Electron preview env), DetailPane falls back to Summary-only
+  // mode (Wave B WB8 behavior preserved).
+  //
+  // ZONE-EXTENSION NOTE: this extension lives in Wave B's
+  // `MB-T-WIREFRAME-C1P2-FRAME-C-SURFACE` auto-mount zone per
+  // operator-acked at HALT-WB12-PRE-COMMIT 2026-05-12 (mirrors T1's
+  // earlier extension of the same zone for `workstationBridge`
+  // propagation at WB4 GREEN `4414ef9`). CLAUDE.md §3.3 zone-scope
+  // discipline preserved: scope of the Wave B zone is "auto-mount
+  // Frame C with the right props"; adding bridge/factory props as
+  // Frame C requirements grow is naturally within zone scope.
+  // When workstationBridge is absent (non-Electron envs, smoke
+  // harness pre-preload-attach window), mountFrameC starts with empty
+  // internal sessions and renders honest empty-state. Frame C remains
+  // visually mounted; SessionList shows no rows until the bridge
+  // attaches.
+  const consoleBridge = window.consoleBridge;
+  mountFrameC(root, {
+    ...(workstationBridge !== undefined ? { workstationBridge } : {}),
+    ...(consoleBridge !== undefined
+      ? { consoleBridge, createTerminal: createLazyXtermAdapter }
+      : {}),
+  });
 }
 
 // Production auto-mount on bundle load. Tests skip this by importing the
