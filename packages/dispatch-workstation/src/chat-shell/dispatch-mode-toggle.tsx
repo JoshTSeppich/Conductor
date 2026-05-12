@@ -86,9 +86,16 @@ const BUTTON_STYLE: CSSProperties = {
   cursor: 'pointer',
 };
 
+// MB-F-CHATSHELL-POLISH-REMAINING WB1 — active-state hex brightened
+// per T7 row 357 polish target. `#4a7fb8` matches T7 WB4 SessionList
+// selected-tile borderLeft accent (session-list.tsx ROW_STYLE_SELECTED)
+// → visual unity across "selected/active" states between Frame C
+// SessionList rows and chat-shell dispatch-mode toggle. Brighter than
+// prior `#374151` slate-grey so "Auto highlighted = autonomous"
+// wireframe intent reads cleanly at glance.
 const BUTTON_ACTIVE_STYLE: CSSProperties = {
   ...BUTTON_STYLE,
-  background: '#374151',
+  background: '#4a7fb8',
   fontWeight: 600,
 };
 
