@@ -15,6 +15,12 @@
 // component and refines per wireframe (typography, weight, color,
 // padding precisely). This component ships the structural element +
 // literal text only.
+//
+// MB-F-CHATSHELL-POLISH-REMAINING WB4 (green) — adds aria-label for
+// brand-marker semantic affordance to assistive technology. Subjective
+// hex / typography refinement deferred per MB-F-T7-CHATSHELL-POLISH-
+// REMAINING-DOGFOOD-DRIVEN Tier 3 closure-path-α (await γ headless
+// screenshot pipeline).
 
 import type { CSSProperties } from 'react';
 
@@ -29,7 +35,11 @@ const BRAND_STYLE: CSSProperties = {
 
 export function ConductorBrand(): JSX.Element {
   return (
-    <span data-testid="bottom-rail-brand" style={BRAND_STYLE}>
+    <span
+      data-testid="bottom-rail-brand"
+      aria-label="Conductor"
+      style={BRAND_STYLE}
+    >
       Conductor
     </span>
   );
