@@ -166,18 +166,31 @@ async function tryAutoMountFrameShellHeader(): Promise<void> {
 // root">`). Per Sub-Q-MBTWBFCS-A=α renderer-only selection state and
 // Sub-Q-MBTWBFCS-B=i swarm-state.md detail source.
 //
-// Initial sessions: empty []. SessionList renders empty-state per
-// the WB4 GREEN contract. Sessions-stream integration with tile-grid-
-// app's state stream is DEFERRED to MB-F-FRAME-C-SESSIONS-STREAM-
-// INTEGRATION (Tier 2 followup, filed in WB11 findings doc). For now,
-// Frame C visibly mounts but lists no sessions until that follower
-// lands; honest empty-state placeholder per ticket §8 risk row.
+// MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB4 (green) — sessions-stream
+// integration: pass `window.workstationBridge` through to mountFrameC's
+// `workstationBridge` prop per Sub-Q-T1-A=(α) operator-acked binding
+// (independent subscription pattern mirroring tile-grid-app.tsx:159-185;
+// implementation landed at WB3 GREEN `4414ef9`). Frame C SessionList
+// now populates from the same live spawn-result stream that TileGridApp
+// consumes — duplicate-name dedup per :173 guard prevents collisions.
+//
+// CLOSES MB-F-FRAME-C-SESSIONS-STREAM-INTEGRATION (Tier 2,
+// FOLLOWUPS.md:327, filed at e2688fa).
+//
+// Tests skip this function by importing the mountFrameC factory
+// directly and supplying their own container + props.
 function tryAutoMountFrameC(): void {
   const root = document.getElementById('frame-c-root');
   if (!root) return;
-  // Tests skip this function by importing the mountFrameC factory
-  // directly and supplying their own container + props.
-  mountFrameC(root, { sessions: [] });
+  const workstationBridge = window.workstationBridge;
+  // When workstationBridge is absent (non-Electron envs, smoke harness
+  // pre-preload-attach window), mountFrameC starts with empty internal
+  // sessions and renders honest empty-state. Frame C remains visually
+  // mounted; SessionList shows no rows until the bridge attaches.
+  mountFrameC(
+    root,
+    workstationBridge !== undefined ? { workstationBridge } : {},
+  );
 }
 
 // Production auto-mount on bundle load. Tests skip this by importing the
