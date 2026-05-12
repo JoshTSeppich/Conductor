@@ -186,6 +186,7 @@ describe('cairn #73 — post-spawn liveness check', () => {
       sessionId: 'foo',
       panelMounted: false,
       cwd: '/r',
+      spawnMode: 'ask',
     });
     expect(deps.state.registerCalls).toBe(1);
   });

@@ -74,7 +74,6 @@ describe('MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING (a) — WB2 spawn-handler 
       { repoPath: '/r', sessionName: 's-auto', permissionMode: 'auto' },
       deps,
     );
-    // @ts-expect-error WB2 RED: spawnMode absent on SpawnSessionResult until WB2 GREEN
     expect(result.spawnMode).toBe('auto');
   });
 
@@ -84,7 +83,6 @@ describe('MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING (a) — WB2 spawn-handler 
       { repoPath: '/r', sessionName: 's-ask', permissionMode: 'ask' },
       deps,
     );
-    // @ts-expect-error WB2 RED: spawnMode absent on SpawnSessionResult until WB2 GREEN
     expect(result.spawnMode).toBe('ask');
   });
 
@@ -94,7 +92,6 @@ describe('MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING (a) — WB2 spawn-handler 
       { repoPath: '/r', sessionName: 's-default' },
       deps,
     );
-    // @ts-expect-error WB2 RED: spawnMode absent on SpawnSessionResult until WB2 GREEN
     expect(result.spawnMode).toBe('ask');
   });
 

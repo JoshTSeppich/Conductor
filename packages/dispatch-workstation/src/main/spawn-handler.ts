@@ -205,6 +205,23 @@ export interface SpawnSessionResult {
    * fetch. Per Q-MBT18-2=a operator-confirmed disposition.
    */
   cwd: string;
+  /**
+   * Per-spawn permission mode for the spawned session — projection of
+   * `req.permissionMode` (lines 91-103) into the result envelope so
+   * downstream renderer surfaces (FrameCRoot bridge subscription →
+   * TileGridSessionEntry.spawnMode → DetailPaneProps.spawnMode →
+   * ActionBarProps.spawnMode bypass-perms indicator) can render mode-
+   * conditional UI without re-reading the request. Population rule:
+   *   spawnMode: req.permissionMode ?? 'ask'
+   * matching the omitted-default semantics stated at lines 88-91
+   * (operator-arbitrated §7.2: 'ask' on first launch; operator opts
+   * INTO 'auto' consciously). Closes MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-
+   * MISSING closure (a) source-of-truth arm at WB2 GREEN. Workstation-
+   * internal field; not exposed by daemon. Optional in the type to
+   * preserve forward compat with future request shapes that may omit
+   * permission-mode semantics entirely.
+   */
+  spawnMode?: 'auto' | 'ask';
 }
 
 /**
@@ -402,5 +419,6 @@ export async function spawnSession(
     sessionId: registered.name,
     panelMounted: false,
     cwd: req.repoPath,
+    spawnMode: req.permissionMode ?? 'ask',
   };
 }
