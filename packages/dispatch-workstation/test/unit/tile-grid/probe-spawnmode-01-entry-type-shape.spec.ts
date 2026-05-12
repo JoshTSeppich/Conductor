@@ -32,28 +32,21 @@ describe('MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING (a) — WB1 entry type-sha
   it('TileGridSessionEntry accepts spawnMode: "auto"', () => {
     const entry: TileGridSessionEntry = {
       name: 'session-a',
-      // @ts-expect-error WB1 RED: spawnMode absent on TileGridSessionEntry until WB1 GREEN
       spawnMode: 'auto',
     };
-    // Object literals preserve unknown-to-TS keys at runtime; the
-    // value is what we actually care about behaviorally.
-    expect((entry as Record<string, unknown>)['spawnMode']).toBe('auto');
+    expect(entry.spawnMode).toBe('auto');
   });
 
   it('TileGridSessionEntry accepts spawnMode: "ask"', () => {
     const entry: TileGridSessionEntry = {
       name: 'session-b',
-      // @ts-expect-error WB1 RED: spawnMode absent on TileGridSessionEntry until WB1 GREEN
       spawnMode: 'ask',
     };
-    expect((entry as Record<string, unknown>)['spawnMode']).toBe('ask');
+    expect(entry.spawnMode).toBe('ask');
   });
 
   it('spawnMode is optional — entries without it remain valid', () => {
-    // No suppression here: omission must already be legal (the field
-    // is optional both at RED and GREEN), so this assertion exercises
-    // the "?" modifier rather than the field's presence.
     const entry: TileGridSessionEntry = { name: 'session-c' };
-    expect((entry as Record<string, unknown>)['spawnMode']).toBeUndefined();
+    expect(entry.spawnMode).toBeUndefined();
   });
 });
