@@ -57,7 +57,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, act } from '@testing-library/react';
-// @ts-expect-error WB4 RED: frame-mode-subscription module not yet authored until WB5 GREEN
 import {
   subscribeToFrameMode,
   type FrameModeBridge,
@@ -84,7 +83,6 @@ function makeFakeBridge(): FakeFrameModeBridge {
       spawnHandlers.add(cb);
       return () => spawnHandlers.delete(cb);
     },
-    // @ts-expect-error WB4 RED: onFrameModeChange not in WorkstationBridgeShape until WB5 GREEN
     onFrameModeChange: (cb: (mode: FrameMode) => void) => {
       frameModeHandlers.add(cb);
       return () => frameModeHandlers.delete(cb);

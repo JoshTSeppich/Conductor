@@ -30,15 +30,20 @@ import {
   type TileAutopilotToggleBridge,
 } from './tile-autopilot-toggle.js';
 import { TileFooter } from './tile-footer.js';
+import {
+  subscribeToFrameMode,
+  type FrameModeBridge,
+} from './frame-mode-subscription.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
+import type { FrameMode } from '../main/frame-mode-state.js';
 import type {
   ApprovalPolicy,
   ApprovalPolicyGetResponse,
 } from 'dispatch-core/dist/v3/schema.js';
 
-export interface WorkstationBridgeShape {
+export interface WorkstationBridgeShape extends FrameModeBridge {
   /** Subscribes to 'workstation:spawn-result' replies. Returns cleanup. */
   onSpawnResult: (cb: (reply: unknown) => void) => () => void;
   /** WB11: invokes 'tile:detach' IPC to open a separate BrowserWindow for
@@ -155,6 +160,19 @@ export function TileGridApp({
   const [sessions, setSessions] = useState<readonly TileGridSessionEntry[]>([
     ...initialSessions,
   ]);
+
+  // MB-F-TILEGRIDAPP-FRAMEMODE-SUBSCRIPTION-GAP anchor (c5 ticket): hold
+  // subscribed FrameMode in renderer state. Initial 'C' matches the
+  // shell-level `[data-frame-mode="C"]` default at
+  // workstation-shell.html:46. End-to-end prop-drill into <Tile> is
+  // OUT of c5 territory (tile-grid.tsx forbidden per manifest) —
+  // _frameMode value is held but not yet visually propagated. See
+  // coord-c5-tilegrid-wiring-2026-05-12.md (forthcoming at WB-final).
+  const [_frameMode, setFrameMode] = useState<FrameMode>('C');
+
+  useEffect(() => {
+    return subscribeToFrameMode(workstationBridge, setFrameMode);
+  }, [workstationBridge]);
 
   useEffect(() => {
     return workstationBridge.onSpawnResult((reply) => {
