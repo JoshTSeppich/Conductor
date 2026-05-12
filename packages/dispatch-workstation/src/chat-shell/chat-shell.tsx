@@ -112,6 +112,14 @@ export interface ChatShellProps {
   readonly renderModelMix?: () => ReactNode;
   // === END: MB-T27 ===
   // === END: MB-T22 header-bar extension point (MB-T26/MB-T27 territory) ===
+  // === BEGIN: MB-T-WIREFRAME-T4 max-parallel-counter slot prop ===
+  // Per Sub-Q-T4-A=(α) + Sub-Q-T4-E=(i) operator-acked 2026-05-12:
+  // additive slot prop mirroring MB-T24/25/26/27 pattern. mount.ts
+  // (renderer-side) subscribes to workstationBridge.onSpawnResult
+  // per T1 `4414ef9` independent-subscription pattern and supplies
+  // this slot at production runtime; tests inject their own sessions.
+  readonly renderMaxParallelCounter?: () => ReactNode;
+  // === END: MB-T-WIREFRAME-T4 ===
 }
 
 export function ChatShell({
@@ -130,6 +138,9 @@ export function ChatShell({
   // === BEGIN: MB-T27 model-mix slot destructure ===
   renderModelMix,
   // === END: MB-T27 ===
+  // === BEGIN: MB-T-WIREFRAME-T4 max-parallel-counter slot destructure ===
+  renderMaxParallelCounter,
+  // === END: MB-T-WIREFRAME-T4 ===
 }: ChatShellProps) {
   // === BEGIN: MB-T22 multi-tab core ===
   // Hybrid controlled/uncontrolled state. When `activeTabId` is
@@ -213,6 +224,19 @@ export function ChatShell({
             === */}
         {renderDispatchModeToggle ? renderDispatchModeToggle() : null}
         {/* === END: MB-T24 === */}
+        {/* === BEGIN: MB-T-WIREFRAME-T4 max-parallel-counter slot ===
+            Per Sub-Q-T4-A=(α) + Sub-Q-T4-E=(i) 2026-05-12: sibling
+            slot inside chat-shell-header-bar, after MB-T24 Auto/Ask
+            toggle. Per-wireframe ordering (Conductor brand → Auto/Ask
+            → bypass-perms → max-parallel → cost-meter → plan-timer)
+            is reconciled at WB12 final layout consolidation; this WB4
+            ship slots the counter at an intermediate-but-correct-DOM-
+            containment position. WB4 RED: renderMaxParallelCounter
+            resolves to undefined → empty slot. mount.ts wires the
+            slot at production runtime via independent subscription.
+            === */}
+        {renderMaxParallelCounter ? renderMaxParallelCounter() : null}
+        {/* === END: MB-T-WIREFRAME-T4 === */}
         {/* === BEGIN: MB-T25 plan-usage slot ===
             Q-MBT25-3 slot ordering operator-arbitrated at A's Q-MBT24-4
             HALT 0 ack 2026-05-08:
