@@ -26,10 +26,11 @@
 //   - Selection-state visual (aria-selected, highlight) DEFERRED to
 //     WB6 GREEN; WB4 ships rows without selection awareness.
 
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
 import { statusToColor } from './status-color.js';
 import { modelToLabel } from './model-badge.js';
+import { formatUptime } from './uptime-format.js';
 
 // ─── Inline style constants (no external CSS at WB4) ─────────────────────────
 
@@ -87,6 +88,21 @@ const MODEL_BADGE_STYLE: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+// MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB10 — uptime inline style.
+// Right-aligned via marginLeft:auto adjacency before the ctx text
+// (which also uses marginLeft:auto — first marginLeft:auto wins the
+// flex space, the other is pushed to the right). Both ctx + uptime
+// render as siblings; the visual order is name · meta · [auto-space]
+// · uptime · ctx.
+const UPTIME_STYLE: CSSProperties = {
+  fontSize: '11px',
+  color: '#9ca3af',
+  marginLeft: 'auto',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+  fontVariantNumeric: 'tabular-nums',
+};
+
 const NAME_STYLE: CSSProperties = {
   fontWeight: 500,
   flexShrink: 0,
@@ -135,11 +151,39 @@ export interface SessionListProps {
 export function SessionList(props: SessionListProps): JSX.Element {
   const { sessions, onSelect, selectedSessionName } = props;
 
+  // MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB10 — renderer-internal
+  // mount-time per Sub-Q-T1-D=(i). Mount-times for each session live
+  // in a useRef<Map> (no re-render on mutation); a 1s setInterval-
+  // driven `now` useState drives re-renders so the uptime label ticks.
+  // Mount-times register in useEffect when new sessions appear in the
+  // prop array; first render of a session reads `now` as the mount-time
+  // (yields formatUptime(0) → '00:00' on initial paint).
+  // Semantics caveat: this is renderer-mount-time, NOT session-spawn-
+  // time. Resets on Frame A↔C toggle. Tier 3 followup MB-F-FRAME-C-
+  // UPTIME-LOST-ON-FRAME-TOGGLE filed at WB-final.
+  const mountTimesRef = useRef<Map<string, number>>(new Map());
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    for (const s of sessions) {
+      if (!mountTimesRef.current.has(s.name)) {
+        mountTimesRef.current.set(s.name, Date.now());
+      }
+    }
+  }, [sessions]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div data-testid="frame-c-session-list" style={LIST_ROOT_STYLE}>
       {sessions.map((s) => {
         const statusKey = s.status ?? 'open';
         const dotColor = statusToColor(statusKey) ?? FALLBACK_DOT_HEX;
+        const mountTime = mountTimesRef.current.get(s.name) ?? now;
+        const uptimeLabel = formatUptime(now - mountTime);
         const dotStyle: CSSProperties = {
           ...STATUS_DOT_STYLE_BASE,
           backgroundColor: dotColor,
@@ -213,6 +257,12 @@ export function SessionList(props: SessionListProps): JSX.Element {
                 {metaText}
               </span>
             )}
+            <span
+              data-testid={`frame-c-session-row-uptime-${s.name}`}
+              style={UPTIME_STYLE}
+            >
+              {uptimeLabel}
+            </span>
             <span
               data-testid={`frame-c-session-row-ctx-text-${s.name}`}
               style={CTX_TEXT_STYLE}
