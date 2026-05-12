@@ -42,6 +42,19 @@ import type { RateLimitState } from './ring-helpers.js';
 // === BEGIN: MB-T26 cost-meter import ===
 import { CostMeter } from './cost-meter.js';
 // === END: MB-T26 ===
+// === BEGIN: MB-T-WIREFRAME-T4 bottom-rail imports ===
+// Per ticket f8fc24d Sub-Q-T4-B=(iii) + Sub-Q-T4-C=(i): mount.ts wires
+// BUILD.md tab (placeholder body) + BottomRailCostMeter (wireframe-
+// formatted variant of MB-T26 cost-meter) into the production chat-
+// shell. Remaining bottom-rail auto-wires (max-parallel-counter,
+// bypass-perms-indicator, plan-timer-text) require sessions-stream /
+// dispatchMode-poll / rate-limit-subscription reactivity that is
+// deferred to Tier 2 followup MB-F-T4-BOTTOM-RAIL-MOUNT-WIRING (filed
+// at WB14 docs); slot props exist (chat-shell.tsx MB-T-WIREFRAME-T4
+// WB12 sentinel zones) but production wiring lands in the follow-on.
+import { BuildMdTab } from './build-md-tab.js';
+import { BottomRailCostMeter } from './bottom-rail-cost-meter.js';
+// === END: MB-T-WIREFRAME-T4 bottom-rail imports ===
 // === BEGIN: MB-T27 mix-indicator import ===
 import { MixIndicatorContainer } from './mix-indicator.js';
 // === END: MB-T27 ===
@@ -254,6 +267,17 @@ function resolveTabs(opts: MountChatShellOptions): readonly TabConfig[] {
         render: makeCommitsTabRender(opts.commitsBridge),
       },
       // === END: MB-T22 WB4 ===
+      // === BEGIN: MB-T-WIREFRAME-T4 WB13 BUILD.md TabConfig ===
+      // Per Sub-Q-T4-B=(iii) operator-acked 2026-05-12: ship BUILD.md
+      // tab with placeholder body. Actual content rendering owned by
+      // T5 ticket (`c92f750` ticket body landed) — T5 will replace
+      // BuildMdTab body OR mount.ts will swap the render fn.
+      {
+        id: 'build-md',
+        label: 'BUILD.md',
+        render: () => createElement(BuildMdTab),
+      },
+      // === END: MB-T-WIREFRAME-T4 WB13 ===
     ];
   }
   return [
@@ -278,8 +302,20 @@ function resolveRenderCostMeter(
   if (opts.renderCostMeter) return opts.renderCostMeter;
   const onCostUpdate = opts.bridge?.onCostUpdate;
   if (!onCostUpdate) return undefined;
+  // === BEGIN: MB-T-WIREFRAME-T4 WB13 wireframe-formatted cost-meter swap ===
+  // Per Sub-Q-T4-C=(i) operator-acked 2026-05-12 + WB7 investigation
+  // finding: production runtime uses BottomRailCostMeter (wireframe
+  // "conductor api · $X.XX today" format) instead of MB-T26 CostMeter
+  // ("$X.XXXX" format). Both consume the SAME `onCostUpdate` bridge
+  // surface; wireframe-format swap is renderer-only. The MB-T26
+  // CostMeter component remains available for other slot uses (e.g.
+  // tests that import it directly); the `if (false)` guard preserves
+  // the import path so the bundle still references MB-T26 (avoids
+  // dead-code elimination of the export).
+  if (false) void CostMeter;
   return () =>
-    createElement(CostMeter, { bridge: { onCostUpdate } });
+    createElement(BottomRailCostMeter, { bridge: { onCostUpdate } });
+  // === END: MB-T-WIREFRAME-T4 WB13 ===
 }
 // === END: MB-T26 ===
 
