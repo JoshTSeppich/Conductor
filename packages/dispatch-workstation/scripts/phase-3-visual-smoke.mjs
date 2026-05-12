@@ -29,12 +29,21 @@
 // resolution requires per-package dir).
 
 import { _electron as electron } from '@playwright/test';
-import { resolve, dirname } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // `scripts/phase-3-visual-smoke.mjs` → package dir → `dist/main/main.js`.
 const DEFAULT_MAIN_PATH = resolve(__dirname, '..', 'dist', 'main', 'main.js');
+// Repo root: package dir → packages/ → repo root.
+const REPO_ROOT = resolve(__dirname, '..', '..', '..');
+const DEFAULT_SCREENSHOT_DIR = resolve(
+  REPO_ROOT,
+  'docs',
+  'coordination',
+  'screenshots',
+);
 const DEFAULT_LAUNCH_TIMEOUT_MS = 10_000;
 const DEFAULT_FIRST_WINDOW_TIMEOUT_MS = 8_000;
 const DEFAULT_RENDER_READY_TIMEOUT_MS = 10_000;
@@ -160,6 +169,55 @@ export async function launchHeadless(opts = {}) {
   };
 
   return { electronApp, page, dispose };
+}
+
+/**
+ * Compute the path where a smoke run's screenshot should be written.
+ *
+ * Per dispatch §SCOPE bullet 1: `docs/coordination/screenshots/<sha>.png`.
+ * Repo-root-relative when `screenshotDir` is a relative string; absolute
+ * when caller supplies an absolute path. Default dir resolved at
+ * module-load time to the canonical repo-root path so callers running
+ * from the workstation package dir still target the same screenshots/
+ * tree.
+ *
+ * @param {Object} opts
+ * @param {string} opts.sha             — required; commit SHA basename.
+ * @param {string} [opts.screenshotDir] — default DEFAULT_SCREENSHOT_DIR
+ *                                         (repo-root docs/coordination/
+ *                                         screenshots/).
+ * @returns {string} resolved absolute path to <sha>.png
+ */
+export function resolveScreenshotPath(opts) {
+  const sha = opts?.sha;
+  if (typeof sha !== 'string' || sha.length === 0) {
+    throw new Error('resolveScreenshotPath: sha required');
+  }
+  const dir = opts?.screenshotDir ?? DEFAULT_SCREENSHOT_DIR;
+  return join(dir, `${sha}.png`);
+}
+
+/**
+ * Capture a screenshot of the workstation render-tree to disk.
+ *
+ * Thin wrapper over `page.screenshot({ path, type: 'png' })` per WB2
+ * SPIKE `9f58359` ratified pattern. Creates parent directory
+ * recursively if absent. Returns the absolute path written. Does NOT
+ * verify file size or content — caller may statSync if needed (Phase 3
+ * smoke orchestration in WB9 does this).
+ *
+ * @param {Object} opts
+ * @param {{ screenshot: (o: { path: string, type: string }) => Promise<unknown> }} opts.page
+ * @param {string} opts.outPath — absolute path; parent dir created if absent.
+ * @returns {Promise<string>} absolute path of written screenshot
+ */
+export async function captureScreenshot(opts) {
+  const { page, outPath } = opts;
+  if (!page) throw new Error('captureScreenshot: page required');
+  if (!outPath) throw new Error('captureScreenshot: outPath required');
+  mkdirSync(dirname(outPath), { recursive: true });
+  await page.screenshot({ path: outPath, type: 'png' });
+  return outPath;
 }
 
 /**

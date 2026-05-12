@@ -7,3 +7,9 @@ coverage/
 .env
 .env.local
 .claude/
+
+# MB-T-METHODOLOGY-PHASE-3-VISUAL-VERIFICATION-TOOLING WB6 — Phase 3
+# smoke screenshot artifacts per Sub-Q-MBTMP3VVT-D=(β) default
+# "gitignore screenshots" (avoid binary-bloat in git history; smoke
+# regenerates on demand; commit body cites <sha>.png path).
+docs/coordination/screenshots/
