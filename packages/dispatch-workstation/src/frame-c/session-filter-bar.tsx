@@ -56,6 +56,13 @@ const STATUS_OPTIONS: ReadonlyArray<{ value: StatusFilter; label: string }> = [
   { value: 'error', label: 'Error' },
 ];
 
+// MB-T-WIREFRAME-T7-VISUAL-POLISH WB8 GREEN — sticky-note backgroundColor
+// tint per Sub-Q-MBTWFT7-F=(i) extended to SessionFilterBar wrapper.
+// `#0a0a0a` matches T7 WB4 GREEN SessionList LIST_ROOT_STYLE wrapper bg
+// (be24ed8) for consistent sticky-note aesthetic across the entire
+// left column. Operator visual-diff at HALT-T7-FINAL-PRE-PUSH may
+// refine the hex if dogfood reveals mismatch against
+// wireframe-target-2026-05-11.png (operator-side image).
 const BAR_STYLE: CSSProperties = {
   display: 'flex',
   flexDirection: 'row',
@@ -65,6 +72,7 @@ const BAR_STYLE: CSSProperties = {
   borderBottom: '1px solid #1a1a1a',
   fontSize: '11px',
   color: '#aaaaaa',
+  backgroundColor: '#0a0a0a',
   boxSizing: 'border-box',
 };
 
