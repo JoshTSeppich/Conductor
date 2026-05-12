@@ -29,16 +29,40 @@
 //     written by HSO) returns empty string from IPC → parser surfaces
 //     "no swarm-state section found" placeholder honestly.
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
+import { ActionBar, type ActionBarFailureState } from './action-bar.js';
 
+// MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — flex column layout
+// places swarm-state body on top (flex:1, overflow:auto) and ActionBar
+// at the bottom (flex-shrink:0) per Sub-Q-MBTWFT3-B=(i) inside-DetailPane-
+// bottom-right operator arbitration 2026-05-12. height:100% inherits
+// from the FrameCRoot detail-col flexbox host (frame-c-root.tsx:48-52
+// DETAIL_COL_STYLE flex:1+overflow:auto).
 const DETAIL_PANE_STYLE: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  boxSizing: 'border-box',
+  color: '#dddddd',
+};
+
+const DETAIL_PANE_BODY_STYLE: CSSProperties = {
+  flex: '1 1 auto',
+  overflowY: 'auto',
   padding: '12px',
   fontFamily: 'monospace',
   fontSize: '13px',
-  height: '100%',
-  overflowY: 'auto',
   boxSizing: 'border-box',
-  color: '#dddddd',
+};
+
+// ActionBar host: flex-shrink:0 anchors it to the bottom; border-top
+// separates from scrollable body region above.
+const DETAIL_PANE_FOOTER_STYLE: CSSProperties = {
+  flexShrink: 0,
+  borderTop: '1px solid #303030',
+  padding: '8px 12px',
+  display: 'flex',
+  justifyContent: 'flex-end',
 };
 
 const META_ROW_STYLE: CSSProperties = {
@@ -101,10 +125,28 @@ export interface DetailPaneProps {
 
 interface WorkstationBridgeShape {
   readSwarmState?: () => Promise<string>;
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — existing kill IPC
+  // bridge per MB-T11 WB3 (preload.mts:137). Sub-Q-MBTWFT3-A=(α) reuse:
+  // payload shape `{sessionName}` per WorkstationSessionKillRequestSchema
+  // (dispatch-core/src/v3/schema.ts:1030). Return shape: SessionKillReply
+  // discriminated union (handled at WB6 via adaptSessionKillFailure).
+  killSession?: (payload: { sessionName: string }) => Promise<unknown>;
+}
+
+// MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — frame-c bridge
+// (separate `contextBridge.exposeInMainWorld('frameCBridge', ...)`
+// binding per Wave C #3 §6.6 Channel #2/#3/#4 signatures). Methods
+// take BARE sessionName arg (distinct from workstationBridge.killSession
+// payload-object shape).
+interface FrameCBridgeShape {
+  diff?: (sessionName: string) => Promise<unknown>;
+  merge?: (sessionName: string) => Promise<unknown>;
+  focus?: (sessionName: string) => Promise<unknown>;
 }
 
 interface WindowWithBridge {
   workstationBridge?: WorkstationBridgeShape;
+  frameCBridge?: FrameCBridgeShape;
 }
 
 /**
@@ -172,6 +214,13 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
   const { selectedSessionName, tokensUsed, tokenBudget } = props;
   const [content, setContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — placeholder for
+  // failure-banner UX. WB6 wires the SessionKillError adapter +
+  // FrameCActionError plumb-through; WB4 ships bare bridge invocation
+  // only (call-shape correctness per WB3 probe). Setter retained for
+  // WB6 wiring; reads only flow through to ActionBar's failureState
+  // prop today (which is null → no banner per Wave C #3 probe-05a).
+  const [failureState] = useState<ActionBarFailureState | null>(null);
 
   // Guard tokenBudget undefined/0 to avoid NaN (0/0) or Infinity (n/0).
   // Fallback ctxPct=0 → "ctx 0%" surface (honest "no data yet").
@@ -179,6 +228,39 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
     tokenBudget !== undefined && tokenBudget > 0
       ? Math.round(((tokensUsed ?? 0) / tokenBudget) * 100)
       : 0;
+
+  // MB-T-WIREFRAME-T3-ACTION-BAR-WIRING WB4 GREEN — bridge plumb
+  // useCallbacks. Resolves bridges via `globalThis.window` lookup
+  // mirroring existing `WindowWithBridge` pattern. WB4 fires-and-
+  // forgets the bridge call; WB6 will await + plumb result through
+  // `failureState` setter for the failure-banner UX.
+  const handleDiff = useCallback((sessionName: string): void => {
+    const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
+    const bridge = win?.frameCBridge;
+    if (!bridge?.diff) return;
+    void bridge.diff(sessionName);
+  }, []);
+  const handleMerge = useCallback((sessionName: string): void => {
+    const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
+    const bridge = win?.frameCBridge;
+    if (!bridge?.merge) return;
+    void bridge.merge(sessionName);
+  }, []);
+  const handleFocus = useCallback((sessionName: string): void => {
+    const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
+    const bridge = win?.frameCBridge;
+    if (!bridge?.focus) return;
+    void bridge.focus(sessionName);
+  }, []);
+  const handleKill = useCallback((sessionName: string): void => {
+    const win = (globalThis as unknown as { window?: WindowWithBridge }).window;
+    const bridge = win?.workstationBridge;
+    if (!bridge?.killSession) return;
+    // PAYLOAD-OBJECT shape per WorkstationSessionKillRequestSchema at
+    // dispatch-core/src/v3/schema.ts:1030 (distinct from frameCBridge
+    // bare-sessionName signature).
+    void bridge.killSession({ sessionName });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,18 +297,30 @@ export function DetailPane(props: DetailPaneProps): JSX.Element {
 
   return (
     <div data-testid="frame-c-detail-pane" style={DETAIL_PANE_STYLE}>
-      <div style={META_ROW_STYLE}>
-        <div style={HEADER_STYLE}>{selectedSessionName}</div>
-        <span
-          data-testid="frame-c-detail-pane-ctx-text"
-          style={CTX_TEXT_STYLE}
-        >
-          ctx {ctxPct}%
-        </span>
+      <div style={DETAIL_PANE_BODY_STYLE}>
+        <div style={META_ROW_STYLE}>
+          <div style={HEADER_STYLE}>{selectedSessionName}</div>
+          <span
+            data-testid="frame-c-detail-pane-ctx-text"
+            style={CTX_TEXT_STYLE}
+          >
+            ctx {ctxPct}%
+          </span>
+        </div>
+        <pre style={error ? { ...PRE_STYLE, ...ERROR_STYLE } : PRE_STYLE}>
+          {body}
+        </pre>
       </div>
-      <pre style={error ? { ...PRE_STYLE, ...ERROR_STYLE } : PRE_STYLE}>
-        {body}
-      </pre>
+      <div style={DETAIL_PANE_FOOTER_STYLE}>
+        <ActionBar
+          sessionName={selectedSessionName}
+          onDiff={handleDiff}
+          onMerge={handleMerge}
+          onFocus={handleFocus}
+          onKill={handleKill}
+          failureState={failureState}
+        />
+      </div>
     </div>
   );
 }
