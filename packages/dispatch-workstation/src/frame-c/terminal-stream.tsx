@@ -1,36 +1,41 @@
-// MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB2 (green) — TerminalStream
-// per-selected-session live PTY scrollback for Frame C DetailPane.
+// MB-T-WIREFRAME-T2-TERMINAL-STREAM-RIGHT-PANE WB2+WB10 — TerminalStream
+// per-selected-session live PTY scrollback for Frame C DetailPane with
+// auto-scroll + operator-pause + resume affordance.
 //
-// Per ticket body 30ab109 §1.1 item 1 + §4 WB2 + WB2 SPIKE outcome 2
-// (ADR at docs/coordination/mb-t-wireframe-t2-console-stream-spike-2026-05-12.md):
+// WB2 (green) — initial mount + subscription per ticket §1.1 item 1 +
+//   §4 WB2 + WB2 SPIKE outcome 2 (ADR docs/coordination/mb-t-wireframe-
+//   t2-console-stream-spike-2026-05-12.md):
 //   - Subscribes to consoleBridge.onStdoutChunk; per-session filter via
-//     p.sessionName === targetSessionName (precedent: console-panel.tsx:92-99).
+//     p.sessionName === targetSessionName (precedent: console-panel.tsx:
+//     92-99).
 //   - Invokes consoleBridge.openPanel(targetSessionName) on mount + on
 //     targetSessionName change. WS subscription is the SOLE source of
-//     stdout-chunk events per spike outcome 2: ConsoleIpcController
-//     console-ipc.ts:200-225 establishes the WebSocket in
-//     openConsolePanel, and that WS is the only emitter of
-//     console:stdout-chunk (console-ipc.ts:350).
+//     stdout-chunk events per spike outcome 2.
 //   - Swallows PanelAlreadyOpen + PanelCapExceeded per main.ts:349-352
-//     precedent. PanelAlreadyOpen is non-fatal (another surface — tile-
-//     grid ConsolePanel or native menu — has already opened the WS;
-//     chunks still flow). PanelCapExceeded is non-fatal here (operator-
-//     facing menu surfaces the cap; out of T2 scope; tracked as Tier 3
-//     followup candidate MB-F-T2-PANEL-CAP-AWARE-UX per ADR §3.3).
-//   - Writes decoded chunk bytes to injected TerminalAdapter (xterm.js-
-//     backed in production via createXtermAdapter; fake in unit tests
-//     per CONSOLE-T03 fixture pattern).
+//     precedent.
+//   - Writes decoded chunk bytes to injected TerminalAdapter.
 //
-// Adapter + subscription share a single useEffect so both are torn down
-// together on unmount / selection-change. On selection-change, the
-// adapter is re-created (fresh scrollback for the newly-selected
-// session — operator should not see the previous session's terminal
-// carry-over in the right pane).
-//
-// WB9-WB10 auto-scroll with operator-pause is layered on this
-// component in a follow-on WB.
+// WB10 (green) — auto-scroll + operator-pause + resume affordance per
+//   ticket §4 WB10:
+//   - Root div uses overflow-y: auto so the operator can scroll.
+//   - useState<boolean> paused (default false). onScroll listener on
+//     root: if scrollTop < scrollHeight - clientHeight - tolerance
+//     (PAUSED_TOLERANCE_PX), setPaused(true).
+//   - When !paused AND a chunk arrives: set scrollTop = scrollHeight
+//     after adapter.write (auto-scroll to bottom).
+//   - When paused: render `<span data-testid="frame-c-autoscroll-
+//     paused" />` indicator + `<button data-testid="frame-c-
+//     autoscroll-resume">` resume affordance.
+//   - Resume click: setPaused(false) + scroll to bottom on next chunk.
 
-import { useEffect, useRef, type CSSProperties, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
 
@@ -50,43 +55,90 @@ export interface TerminalStreamProps {
   readonly createTerminal: () => TerminalAdapter;
 }
 
-const STREAM_ROOT_STYLE: CSSProperties = {
+const ROOT_WRAPPER_STYLE: CSSProperties = {
+  position: 'relative',
   width: '100%',
   height: '100%',
   overflow: 'hidden',
   boxSizing: 'border-box',
 };
 
+const SCROLL_AREA_STYLE: CSSProperties = {
+  width: '100%',
+  height: '100%',
+  overflowY: 'auto',
+  boxSizing: 'border-box',
+};
+
+const RESUME_BUTTON_STYLE: CSSProperties = {
+  position: 'absolute',
+  right: '12px',
+  bottom: '12px',
+  padding: '6px 10px',
+  fontFamily: 'inherit',
+  fontSize: '11px',
+  background: '#1f2937',
+  color: '#dddddd',
+  border: '1px solid #303030',
+  borderRadius: '4px',
+  cursor: 'pointer',
+};
+
+/** Operator must scroll up at least this many pixels from the bottom
+ *  before the paused state activates. Absorbs sub-pixel jitter and
+ *  programmatic-scroll round-trips. */
+const PAUSED_TOLERANCE_PX = 4;
+
 export function TerminalStream({
   targetSessionName,
   consoleBridge,
   createTerminal,
 }: TerminalStreamProps): JSX.Element {
-  const containerRef: RefObject<HTMLDivElement | null> = useRef(null);
+  const scrollAreaRef: RefObject<HTMLDivElement | null> = useRef(null);
+  const terminalContainerRef: RefObject<HTMLDivElement | null> = useRef(null);
+  const [paused, setPaused] = useState<boolean>(false);
+  const pausedRef = useRef<boolean>(false);
+  pausedRef.current = paused;
+
+  const scrollToBottom = useCallback((): void => {
+    const area = scrollAreaRef.current;
+    if (!area) return;
+    area.scrollTop = area.scrollHeight;
+  }, []);
+
+  const handleResume = useCallback((): void => {
+    setPaused(false);
+    scrollToBottom();
+  }, [scrollToBottom]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return undefined;
+    const terminalContainer = terminalContainerRef.current;
+    if (!terminalContainer) return undefined;
 
-    // Adapter mount: creates the xterm.js (or fake) renderer bound to
-    // the container element. Disposed on cleanup.
+    // Adapter mount.
     const adapter = createTerminal();
-    adapter.open(container);
+    adapter.open(terminalContainer);
 
-    // WS subscription: openPanel establishes the daemon-side WebSocket
-    // that emits console:stdout-chunk events for this session (spike
-    // outcome 2). Swallow PanelAlreadyOpen + PanelCapExceeded.
+    // WS subscription.
     consoleBridge.openPanel(targetSessionName).catch(() => {
       /* non-fatal — see ADR §3.1 */
     });
 
-    // Per-session chunk subscription. Filter at the listener (matches
-    // ConsolePanel pattern); mismatching chunks are silently dropped.
     const cleanupSubscription = consoleBridge.onStdoutChunk((p) => {
       if (p.sessionName !== targetSessionName) return;
       const data =
         p.encoding === 'base64' ? decodeBase64Utf8(p.bytes) : p.bytes;
       adapter.write(data);
+      if (!pausedRef.current) {
+        // Auto-scroll to bottom only when not paused. Read pausedRef
+        // (not the captured `paused` from React closure) to get the
+        // current value without re-binding the listener every state
+        // change.
+        const area = scrollAreaRef.current;
+        if (area) {
+          area.scrollTop = area.scrollHeight;
+        }
+      }
     });
 
     return () => {
@@ -95,12 +147,40 @@ export function TerminalStream({
     };
   }, [consoleBridge, targetSessionName, createTerminal]);
 
+  const handleScroll = useCallback((): void => {
+    const area = scrollAreaRef.current;
+    if (!area) return;
+    const distanceFromBottom =
+      area.scrollHeight - area.clientHeight - area.scrollTop;
+    if (distanceFromBottom > PAUSED_TOLERANCE_PX) {
+      setPaused(true);
+    }
+  }, []);
+
   return (
-    <div
-      data-testid="frame-c-terminal-stream-root"
-      ref={containerRef}
-      style={STREAM_ROOT_STYLE}
-    />
+    <div style={ROOT_WRAPPER_STYLE}>
+      <div
+        data-testid="frame-c-terminal-stream-root"
+        ref={scrollAreaRef}
+        onScroll={handleScroll}
+        style={SCROLL_AREA_STYLE}
+      >
+        <div ref={terminalContainerRef} />
+      </div>
+      {paused && (
+        <>
+          <span data-testid="frame-c-autoscroll-paused" hidden aria-hidden />
+          <button
+            type="button"
+            data-testid="frame-c-autoscroll-resume"
+            onClick={handleResume}
+            style={RESUME_BUTTON_STYLE}
+          >
+            Auto-scroll paused · Resume
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 
