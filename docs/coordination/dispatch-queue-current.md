@@ -30,7 +30,6 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 | `verify-chat-mount-1319` | MB-F-CHATSHELL-POLISH-REMAINING progress (T7 polish — conductor-brand + tab-switcher + chat-shell styles) | [verify-chat-mount-t7polish.txt](territorial-manifests/verify-chat-mount-t7polish.txt) | NONE | (post-dispatch) |
 | `__orchestrator_active` | Phase 4 status synthesis doc — T8 + T9 closures + Phase 4 forward planning | [orch-active-phase4-status.txt](territorial-manifests/orch-active-phase4-status.txt) | NONE | (post-dispatch) |
 | `__orchestrator_standby` | Sherpa MVP analysis — verify path availability + read-only analysis OR author absence report | [orch-standby-sherpa.txt](territorial-manifests/orch-standby-sherpa.txt) | NONE | (post-dispatch) |
-| `p7-cortex-draft-1243` | Cortex-minimal scaffold §1-§4 deepening; per gaps-vs-registry-md G1-G16 expansion | [p7-cortex-deepening.txt](territorial-manifests/p7-cortex-deepening.txt) | NONE | (post-dispatch) |
 | `r11-archive-writer` | Round 11 archive §3 propagation patterns + §4 §3.9 validation verdict drafting + §2 remaining scale evidence | [r11-archive-writer.txt](territorial-manifests/r11-archive-writer.txt) | NONE | (continuation; existing manifest) |
 | `r11-queue-watcher` | Round-11-extension queue-watcher-report — next-cohort claim-race + dep-cycle observation across Wave 2 | [r11-queue-watcher.txt](territorial-manifests/r11-queue-watcher.txt) | NONE | (continuation; existing manifest) |
 | `r11-manifest-validator` | Round-11-extension manifest audit — review Wave-2 manifests (9 new) + report grammar/glob/overlap findings | [r11-manifest-validator.txt](territorial-manifests/r11-manifest-validator.txt) | NONE | (continuation; existing manifest) |
@@ -44,6 +43,9 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 | `r11-archive-writer` (Wave 1) | round-11.md skeleton + §1.5-§1.7 + §2.C-§2.D | `72c28fc` + `9a9a96a` |
 | `r11-manifest-validator` (Wave 1) | first audit (§4.1 TERRITORY⊆FORBIDDEN precedence-gap surfaced) | `759b65e` |
 | `r11-queue-watcher` (Wave 1) | first report (shared-index-race evidence) | `262cc44` |
+| `p7-cortex-draft-1243` | Cortex-minimal scaffold §1-§4 + G1-G22 deepening | `228b995` (initial DRAFT) + 2nd-iter deepening — DRAFT-COMPLETE; awaiting operator REGISTRY.md §2 authoring |
+| `c5-ticket-wb1` (Wave 2 Phase 1) | tile-grid-app wiring trinity — partial-revert remediation per Round 11 Phase 1 option 4 | `9b8a4e9` (revert) + `a400c10` (WB2 amendment) + `31d2a59` (coord doc) + `56925b8` (WB3 GREEN getSession alignment) + `24045ab` (WB4 RED) — in progress (post-revert continuation) |
+| `commit-plan-doc-1334` (Wave 2 Phase 1) | TileGridSessionEntry.spawnMode closure (a) | `228a2da` (WB1 GREEN post-revert clean) + `227bd2e` (WB2 RED) — in progress |
 
 ## Honest gaps (per §3.9.D — captured-incident-category placeholders)
 
