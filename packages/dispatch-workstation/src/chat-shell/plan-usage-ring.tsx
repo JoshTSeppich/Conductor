@@ -80,6 +80,19 @@ const TINT_TO_HEX: Record<'green' | 'yellow' | 'red', string> = {
   red: '#ef4444',
 };
 
+// MB-F-CHATSHELL-POLISH-REMAINING WB2 — countdown typography refinement
+// per T7 row 357 polish target. Tabular-nums for stable digit width
+// during ticking (load-bearing for `2h 47m` style countdown per
+// dispatch §1 wireframe target — without tabular-nums, the seconds/
+// minutes digits jitter horizontally as values change). Brighter
+// color + subtle fontWeight 500 increases readability vs the
+// surrounding ring slot.
+const COUNTDOWN_STYLE: React.CSSProperties = {
+  fontVariantNumeric: 'tabular-nums',
+  color: '#cccccc',
+  fontWeight: 500,
+};
+
 const SVG_VIEWBOX = `${-SVG_SIZE / 2} ${-SVG_SIZE / 2} ${SVG_SIZE} ${SVG_SIZE}`;
 
 export function PlanUsageRing({ bridge }: PlanUsageRingProps = {}): JSX.Element {
@@ -118,7 +131,12 @@ export function PlanUsageRing({ bridge }: PlanUsageRingProps = {}): JSX.Element 
           />
         </svg>
       ) : null}
-      <span data-testid="chat-shell-plan-usage-countdown">{countdownText}</span>
+      <span
+        data-testid="chat-shell-plan-usage-countdown"
+        style={COUNTDOWN_STYLE}
+      >
+        {countdownText}
+      </span>
     </div>
   );
 }
