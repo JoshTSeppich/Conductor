@@ -14,9 +14,20 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 - **Frozen contracts** (per CLAUDE.md §1) — NEVER claimable; outside any territory
 - **§3.9.A enforcement**: every `git add` glob-matched against session manifest at add step
 
-## QUEUED
+## QUEUED — Wave 3 (PHASE 2 — operator-acked max-parallel forge forward)
 
-(no QUEUED items — Round 11 Continuation Wave 2 is orchestrator-mediated direct dispatch with pre-bound manifests; sessions begin IN-FLIGHT immediately on first commit)
+(orchestrator-mediated direct dispatch; sessions begin IN-FLIGHT immediately on first commit)
+
+| session | scope | territory | deps |
+|---|---|---|---|
+| `phase4-t8-exec` | MB-T-PHASE-4-SPAWN-RESULT-FIELD-EXTENSIONS (Cluster A bundled ticket; body at `52f3d04`) WB1+ execution | [phase4-t8-cluster-a-exec.txt](territorial-manifests/phase4-t8-cluster-a-exec.txt) | NONE |
+| `phase4-t9-exec` | MB-T-WIREFRAME-T10-MAX-PARALLEL-DATA-FLOW (body at `b76ed51`) WB1+ execution | [phase4-t9-t10-exec.txt](territorial-manifests/phase4-t9-t10-exec.txt) | NONE |
+| `r11-archive-writer` | Round 11 archive §5 round-close prep + §1 RECURRENCE captures + §4 §3.9 verdict update (race-window mechanism evidence post-c5/63eba0f) | [r11-archive-writer.txt](territorial-manifests/r11-archive-writer.txt) | NONE |
+| `r11-queue-watcher` | Wave-3 claim-race + race-window proximity evidence (12+ concurrent IN-FLIGHT scan; defined as 2-session-stage-within-2s) | [r11-queue-watcher.txt](territorial-manifests/r11-queue-watcher.txt) | NONE |
+| `r11-manifest-validator` | Wave-3 manifest audit (5 new manifests this dispatch + grammar/glob review post-§4.1 resolution) | [r11-manifest-validator.txt](territorial-manifests/r11-manifest-validator.txt) | NONE |
+| `__orchestrator_active` | Cluster A bundled ticket WB1 RED execution (probe authoring per body §2) | [orch-active-cluster-a-exec.txt](territorial-manifests/orch-active-cluster-a-exec.txt) | depends-on phase4-t8-exec coord for path-disjoint scope |
+| `__orchestrator_standby` | P3 Phase 4 roadmap rev-2 — incorporate T8+T9 closure evidence + Cluster A scope + Phase 3 trigger readiness | [orch-standby-p3-roadmap-rev.txt](territorial-manifests/orch-standby-p3-roadmap-rev.txt) | NONE |
+| `t2-ticket-body-0905` | Round 11 archive co-author with r11-archive-writer (round-11.md §5 prep parallel write; territorial-disjoint sub-sections) | [t2-archive-coauthor.txt](territorial-manifests/t2-archive-coauthor.txt) | coordinate-with r11-archive-writer (territorial-disjoint sub-sections) |
 
 ## IN-FLIGHT (Continuation Wave 2)
 
