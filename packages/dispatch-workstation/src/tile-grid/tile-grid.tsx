@@ -49,22 +49,6 @@ export interface TileGridSessionEntry {
    *  for sessions seeded via initialSessions without explicit cwd; the
    *  footer's cwd line is omitted in that case (Q-MBT18-7=d). */
   readonly cwd?: string;
-  // ── MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING closure (a) ──────────
-  /** Per-spawn permission mode for the session. Mirrors
-   *  SpawnPermissionMode in spawn-handler.ts:91 — 'auto' ⇔ tmux argv
-   *  carried `--dangerously-skip-permissions`; 'ask' ⇔ default prompt-
-   *  on-each-action CC behavior. Sourced from the extended
-   *  SpawnSessionResult (spawn-handler.ts populates `req.permissionMode
-   *  ?? 'ask'`) and threaded into entries by FrameCRoot's bridge
-   *  subscription. Consumed downstream by DetailPaneProps.spawnMode
-   *  (detail-pane.tsx:144) which forwards to ActionBarProps.spawnMode;
-   *  ActionBar renders `[data-testid="action-bar-bypass-perms-indicator"]`
-   *  iff this value === 'auto' (T3 WB8 contract at commit e713cbd).
-   *  Optional: entries seeded without spawn-result data (e.g.,
-   *  initialSessions prop from test fixtures, daemon-recovery rehydrate
-   *  before the spawn-result envelope is replayed) leave this undefined
-   *  → indicator hidden (ship-shy preserved as the absent-data fallback). */
-  readonly spawnMode?: 'auto' | 'ask';
 }
 
 export interface TileGridProps {
