@@ -34,12 +34,20 @@ import { formatUptime } from './uptime-format.js';
 
 // ─── Inline style constants (no external CSS at WB4) ─────────────────────────
 
+// MB-T-WIREFRAME-T7-VISUAL-POLISH WB4 GREEN — sticky-note aesthetic
+// affordance per Sub-Q-MBTWFT7-F=(i) operator-arbitrated 2026-05-12.
+// Subtle backgroundColor distinct from FrameCRoot detail-col bg gives
+// the session list its sticky-note "paper" feel per wireframe target.
+// Hex chosen to complement existing palette (#0a0a0a darker than the
+// surrounding shell's #111111 default); operator visual-diff at
+// HALT-T7-FINAL-PRE-PUSH may refine.
 const LIST_ROOT_STYLE: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   width: '100%',
   padding: '4px 0',
   boxSizing: 'border-box',
+  backgroundColor: '#0a0a0a',
 };
 
 const ROW_STYLE: CSSProperties = {
@@ -54,6 +62,30 @@ const ROW_STYLE: CSSProperties = {
   fontSize: '12px',
   lineHeight: '1.4',
   boxSizing: 'border-box',
+  // MB-T-WIREFRAME-T7-VISUAL-POLISH WB4 GREEN — explicit borderLeft
+  // sentinel on the default row makes the composition with
+  // ROW_STYLE_SELECTED.borderLeft cleaner (no implicit-undefined →
+  // partial-spread surprise) AND prevents non-selected rows from
+  // shifting horizontally when sibling becomes selected (border-width
+  // is reserved at 3px solid transparent → selected hex flip preserves
+  // the same horizontal offset for content).
+  borderLeft: '3px solid transparent',
+};
+
+// MB-T-WIREFRAME-T7-VISUAL-POLISH WB4 GREEN — Sub-Q-F=(i) selected-row
+// visual affordance: distinct background tint (preserves T1 WB6
+// shipped `#1f2a3f`) + left-border accent (new). PaddingLeft is
+// unchanged because ROW_STYLE reserves the 3px transparent border
+// (selected rows just swap the color; no content reflow).
+//
+// Accent hex `#4a7fb8` chosen as a brighter blue cousin to the
+// existing `#1f2a3f` selected-bg — readable affordance without
+// competing with the bypass-perms warning hex (`#ff8888` per T3
+// action-bar.tsx:158). Operator visual-diff at HALT-T7-FINAL-PRE-PUSH
+// may refine.
+const ROW_STYLE_SELECTED: CSSProperties = {
+  backgroundColor: '#1f2a3f',
+  borderLeft: '3px solid #4a7fb8',
 };
 
 const STATUS_DOT_STYLE_BASE: CSSProperties = {
@@ -209,13 +241,16 @@ export function SessionList(props: SessionListProps): JSX.Element {
           s.tokenBudget !== undefined && s.tokenBudget > 0
             ? Math.round(((s.tokensUsed ?? 0) / s.tokenBudget) * 100)
             : 0;
-        // WB6 — Sub-Q-A=α selection-state visual. aria-selected emitted
-        // as "true"/"false" string per ARIA spec for listbox-pattern
-        // selection. Background tint added when selected for visual
-        // affordance (subtle highlight; details polished at WB11 smoke
-        // operator review).
+        // T1 WB6 — Sub-Q-A=α aria-selected emit per ARIA listbox spec.
+        // T7 WB4 GREEN — Sub-Q-MBTWFT7-F=(i) refines the visual treatment
+        // by composing ROW_STYLE_SELECTED on top of ROW_STYLE. The
+        // composition preserves T1's existing #1f2a3f bg + adds the
+        // borderLeft accent (#4a7fb8 brighter-blue cousin per T7 WB4
+        // accent-hex selection). ROW_STYLE's transparent-border
+        // sentinel ensures non-selected rows align horizontally
+        // identically to selected rows (no reflow on selection change).
         const rowStyle: CSSProperties = isSelected
-          ? { ...ROW_STYLE, backgroundColor: '#1f2a3f' }
+          ? { ...ROW_STYLE, ...ROW_STYLE_SELECTED }
           : ROW_STYLE;
 
         return (
