@@ -54,9 +54,6 @@ import { act } from '@testing-library/react';
 import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
 import { SessionList } from '../../../src/frame-c/session-list.js';
-// @ts-expect-error WB5 RED: `modelToFamily` not yet exported from
-// model-badge.ts at HEAD `be24ed8`. WB6 GREEN adds the export;
-// removing this comment is part of the GREEN ladder step.
 import { modelToFamily } from '../../../src/frame-c/model-badge.js';
 import type { TileGridSessionEntry } from '../../../src/tile-grid/tile-grid.js';
 

@@ -51,3 +51,42 @@ export function modelToLabel(model?: string): string {
       return '';
   }
 }
+
+/**
+ * MB-T-WIREFRAME-T7-VISUAL-POLISH WB6 GREEN — Sub-Q-MBTWFT7-C=(i)
+ * operator-arbitrated 2026-05-12 per-family color coding helper.
+ * Maps a CC model identifier to its model-family label for
+ * `data-model-family` attribute + per-family color lookup at the
+ * SessionList row rendering site (per Sub-Q-C=(i) Sonnet=teal/blue,
+ * Opus=purple/violet, Haiku=amber/gold family scheme).
+ *
+ * Family mapping mirrors `modelToLabel` switch structure:
+ *   'claude-sonnet-4-6' → 'sonnet'
+ *   'claude-opus-4-6'   → 'opus'
+ *   'claude-opus-4-7'   → 'opus'
+ *   'claude-haiku-4-5'  → 'haiku'
+ *   undefined / unknown → 'unknown'
+ *
+ * The `'unknown'` fallback preserves honest no-data semantics matching
+ * `modelToLabel`'s '' (empty-label) fallback — SessionList still
+ * renders a span (no layout disruption) but applies the neutral
+ * 'unknown' family-color (matches Wave B WB4 MODEL_BADGE_STYLE color
+ * '#7a8290' verbatim per Sub-Q-C=(i) representative palette).
+ */
+export function modelToFamily(
+  model?: string,
+): 'sonnet' | 'opus' | 'haiku' | 'unknown' {
+  if (model === undefined || model.length === 0) return 'unknown';
+  switch (model) {
+    case 'claude-sonnet-4-6':
+      return 'sonnet';
+    case 'claude-opus-4-6':
+      return 'opus';
+    case 'claude-opus-4-7':
+      return 'opus';
+    case 'claude-haiku-4-5':
+      return 'haiku';
+    default:
+      return 'unknown';
+  }
+}

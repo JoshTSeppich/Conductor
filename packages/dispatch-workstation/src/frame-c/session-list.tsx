@@ -29,7 +29,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
 import { statusToColor } from './status-color.js';
-import { modelToLabel } from './model-badge.js';
+import { modelToLabel, modelToFamily } from './model-badge.js';
 import { formatUptime } from './uptime-format.js';
 
 // ─── Inline style constants (no external CSS at WB4) ─────────────────────────
@@ -109,15 +109,36 @@ const FALLBACK_DOT_HEX = '#5b9d6e';
 // MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB8 — model-badge inline style
 // (short-form label between status dot and session name per wireframe
 // left-to-right layout). Subtle muted color so it doesn't compete with
-// the primary session-name typography; T7 visual-polish ticket may
-// refine.
+// the primary session-name typography. MB-T-WIREFRAME-T7-VISUAL-POLISH
+// WB6 GREEN — Sub-Q-MBTWFT7-C=(i) per-family color coding splits the
+// hex color into the per-family record below; MODEL_BADGE_STYLE retains
+// the typography defaults (fontSize/weight/letterSpacing/spacing).
+// Color is sourced from MODEL_BADGE_STYLE_BY_FAMILY[family] at render
+// time via spread composition.
 const MODEL_BADGE_STYLE: CSSProperties = {
   fontSize: '10px',
-  color: '#7a8290',
   fontWeight: 500,
   letterSpacing: '0.5px',
   flexShrink: 0,
   whiteSpace: 'nowrap',
+};
+
+// MB-T-WIREFRAME-T7-VISUAL-POLISH WB6 GREEN — Sub-Q-MBTWFT7-C=(i)
+// per-family color scheme (Sonnet=teal/blue, Opus=purple/violet,
+// Haiku=amber/gold, unknown=neutral). Hex values are representative
+// per Sub-Q-C=(i) operator default; operator visual-diff at
+// HALT-T7-FINAL-PRE-PUSH may refine.
+const MODEL_BADGE_STYLE_BY_FAMILY: Record<
+  ReturnType<typeof modelToFamily>,
+  CSSProperties
+> = {
+  sonnet: { color: '#5eb3c4' },
+  opus: { color: '#9b6dd7' },
+  haiku: { color: '#d4a04a' },
+  // 'unknown' preserves the T1 Wave B WB4 muted-neutral hex verbatim
+  // for ship-shy continuity with no-data sessions (pre-spawn-result-
+  // model-population — T1 territory follow-on per audit §7 Dim 5).
+  unknown: { color: '#7a8290' },
 };
 
 // MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB10 — uptime inline style.
@@ -272,7 +293,11 @@ export function SessionList(props: SessionListProps): JSX.Element {
             />
             <span
               data-testid={`frame-c-session-row-model-${s.name}`}
-              style={MODEL_BADGE_STYLE}
+              data-model-family={modelToFamily(s.model)}
+              style={{
+                ...MODEL_BADGE_STYLE,
+                ...MODEL_BADGE_STYLE_BY_FAMILY[modelToFamily(s.model)],
+              }}
             >
               {modelToLabel(s.model)}
             </span>
