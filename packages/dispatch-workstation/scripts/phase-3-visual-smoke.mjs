@@ -28,6 +28,18 @@
 // root FAILS per WB2 SPIKE §4 risk (pnpm workspace @playwright/test
 // resolution requires per-package dir).
 
+import { _electron as electron } from '@playwright/test';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// `scripts/phase-3-visual-smoke.mjs` → package dir → `dist/main/main.js`.
+const DEFAULT_MAIN_PATH = resolve(__dirname, '..', 'dist', 'main', 'main.js');
+const DEFAULT_LAUNCH_TIMEOUT_MS = 10_000;
+const DEFAULT_FIRST_WINDOW_TIMEOUT_MS = 8_000;
+const DEFAULT_RENDER_READY_TIMEOUT_MS = 10_000;
+const RENDER_READY_SELECTOR = '[data-testid="frame-c-root"]';
+
 /**
  * @typedef {'PASS' | 'FAIL' | 'TARGET-ABSENT' | 'BUILD-FAILED' | 'LAUNCH-FAILED'} SmokeState
  *
@@ -71,6 +83,84 @@
  *   reuse existing `dist/` artifacts (useful for repeated runs during
  *   ticket development).
  */
+
+/**
+ * Launch a headless electron instance against `dist/main/main.js` and
+ * wait for the workstation render-tree to mount (Sub-Q-F=(i)
+ * DOM-sentinel via `[data-testid="frame-c-root"]` — Frame C is the
+ * default shell mode per `frame-mode-state.ts:8` `DEFAULT_MODE = 'C'`,
+ * so the testid presence proves the renderer has executed past the
+ * tile-grid mount + frame-c auto-mount factory).
+ *
+ * WB2 SPIKE `9f58359` ratified: `_electron.launch` + `firstWindow()`
+ * succeed in ~3s on macOS Darwin 25.3 + electron 28+. This wraps that
+ * path with the additional render-tree-ready wait + structured dispose
+ * handle.
+ *
+ * Returns `{ electronApp, page, dispose }`. Caller must invoke
+ * `await dispose()` to release the electron child process. Throws on
+ * launch / firstWindow / render-ready timeout — callers in
+ * runPhase3Smoke catch + classify as LAUNCH-FAILED.
+ *
+ * @param {Object} [opts]
+ * @param {string} [opts.mainPath]              — defaults to package
+ *   dist/main/main.js (relative to this script).
+ * @param {number} [opts.launchTimeoutMs]       — default 10000.
+ * @param {number} [opts.firstWindowTimeoutMs]  — default 8000.
+ * @param {number} [opts.renderReadyTimeoutMs]  — default 10000.
+ * @returns {Promise<{ electronApp: unknown, page: unknown, dispose: () => Promise<void> }>}
+ */
+export async function launchHeadless(opts = {}) {
+  const mainPath = opts.mainPath ?? DEFAULT_MAIN_PATH;
+  const launchTimeout = opts.launchTimeoutMs ?? DEFAULT_LAUNCH_TIMEOUT_MS;
+  const firstWindowTimeout =
+    opts.firstWindowTimeoutMs ?? DEFAULT_FIRST_WINDOW_TIMEOUT_MS;
+  const renderReadyTimeout =
+    opts.renderReadyTimeoutMs ?? DEFAULT_RENDER_READY_TIMEOUT_MS;
+
+  const electronApp = await electron.launch({
+    args: [mainPath],
+    timeout: launchTimeout,
+  });
+
+  let page;
+  try {
+    page = await electronApp.firstWindow({ timeout: firstWindowTimeout });
+  } catch (e) {
+    try {
+      await electronApp.close();
+    } catch {
+      /* ignore close errors during launch-time failure */
+    }
+    throw e;
+  }
+
+  // Sub-Q-F=(i) DOM-sentinel — wait for Frame C render-tree mount.
+  // page.waitForSelector throws on timeout per playwright semantics;
+  // caller (runPhase3Smoke) catches + classifies LAUNCH-FAILED.
+  try {
+    await page.waitForSelector(RENDER_READY_SELECTOR, {
+      timeout: renderReadyTimeout,
+    });
+  } catch (e) {
+    try {
+      await electronApp.close();
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  }
+
+  const dispose = async () => {
+    try {
+      await electronApp.close();
+    } catch {
+      /* ignore close errors during dispose */
+    }
+  };
+
+  return { electronApp, page, dispose };
+}
 
 /**
  * Run a Phase 3 visual-comparison smoke cycle.
