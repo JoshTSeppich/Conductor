@@ -71,6 +71,14 @@ interface SpawnSuccessReply {
   result: {
     sessionName: string;
     cwd?: string;
+    // MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING closure (a) WB3 —
+    // spawnMode threaded through from SpawnSessionResult (spawn-handler.ts
+    // populates `req.permissionMode ?? 'ask'`, WB2 GREEN @758ef50).
+    // Source-of-truth contract aligned with renderer-side
+    // TileGridSessionEntry.spawnMode (WB1 GREEN @228a2da). Optional in
+    // the wire shape to preserve forward compat with legacy spawn-result
+    // emitters that may pre-date the field.
+    spawnMode?: 'auto' | 'ask';
   };
 }
 
@@ -212,6 +220,7 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
       if (!isSpawnSuccessReply(reply)) return;
       const sessionName = reply.result.sessionName;
       const replyCwd = reply.result.cwd;
+      const replySpawnMode = reply.result.spawnMode;
       setSessions((current) => {
         // Idempotent dedup — duplicate spawn-result for the same name
         // (e.g., daemon recovery re-fire) does NOT add a second row.
@@ -223,6 +232,13 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
             name: sessionName,
             ...(typeof replyCwd === 'string' && replyCwd.length > 0
               ? { cwd: replyCwd }
+              : {}),
+            // MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING (a) WB3 —
+            // populate entry.spawnMode from the reply when present.
+            // Absent in legacy emits → entry.spawnMode stays undefined
+            // (ship-shy fallback per T3 WB8 + FOLLOWUPS.md:332 (b)).
+            ...(replySpawnMode === 'auto' || replySpawnMode === 'ask'
+              ? { spawnMode: replySpawnMode }
               : {}),
           },
         ];
@@ -290,6 +306,7 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
             branchName={selectedEntry?.branchName}
             tokensUsed={selectedEntry?.tokensUsed}
             tokenBudget={selectedEntry?.tokenBudget}
+            spawnMode={selectedEntry?.spawnMode}
             consoleBridge={consoleBridge}
             createTerminal={createTerminal}
           />
