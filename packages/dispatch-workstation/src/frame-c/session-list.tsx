@@ -29,6 +29,7 @@
 import type { CSSProperties } from 'react';
 import type { TileGridSessionEntry } from '../tile-grid/tile-grid.js';
 import { statusToColor } from './status-color.js';
+import { modelToLabel } from './model-badge.js';
 
 // ─── Inline style constants (no external CSS at WB4) ─────────────────────────
 
@@ -71,6 +72,20 @@ const STATUS_DOT_STYLE_BASE: CSSProperties = {
 // ?? STATUS_DOT_HEX['open']! pattern; statusToColor returns null for
 // 'killed' so the !! coalesce here yields green).
 const FALLBACK_DOT_HEX = '#5b9d6e';
+
+// MB-T-WIREFRAME-T1-SESSION-DATA-FLOW WB8 — model-badge inline style
+// (short-form label between status dot and session name per wireframe
+// left-to-right layout). Subtle muted color so it doesn't compete with
+// the primary session-name typography; T7 visual-polish ticket may
+// refine.
+const MODEL_BADGE_STYLE: CSSProperties = {
+  fontSize: '10px',
+  color: '#7a8290',
+  fontWeight: 500,
+  letterSpacing: '0.5px',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+};
 
 const NAME_STYLE: CSSProperties = {
   fontWeight: 500,
@@ -176,6 +191,12 @@ export function SessionList(props: SessionListProps): JSX.Element {
               style={dotStyle}
               aria-label={`status: ${statusKey}`}
             />
+            <span
+              data-testid={`frame-c-session-row-model-${s.name}`}
+              style={MODEL_BADGE_STYLE}
+            >
+              {modelToLabel(s.model)}
+            </span>
             <span
               data-testid={`frame-c-session-row-name-${s.name}`}
               style={NAME_STYLE}
