@@ -28,9 +28,13 @@
 import type { TileStatus } from '../tile-grid/types.js';
 
 // Wireframe four-color palette per ticket body §3.3 Sub-Q-T1-C=(i).
-// T7 visual-polish ticket may refine these hex values; for v3.0
-// ship they match the audit-doc §1 Dim 5 row + the existing
-// session-list.tsx:66-69 green/amber values for continuity.
+// MB-T-WIREFRAME-T7-VISUAL-POLISH WB2 GREEN 2026-05-12 RATIFIED these
+// hex values for v3.0 ship per Sub-Q-MBTWFT7-B=(i) operator-arbitrated
+// 2026-05-12. Regression-protected by `test/unit/frame-c/probe-mbtwft7-
+// 01-status-color-ratification.spec.ts` (6 probes lock in the palette).
+// Operator visual-diff at HALT-T7-FINAL-PRE-PUSH may direct refinement
+// WBs if dogfood reveals mismatch against wireframe-target-2026-05-11.png
+// (operator-side image).
 const GREEN = '#5b9d6e';
 const GREY = '#888888';
 const AMBER = '#c97a3a';
