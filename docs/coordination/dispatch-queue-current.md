@@ -1,6 +1,6 @@
-# Dispatch Queue — Current Round (Round 11 §3.9 SPECULATIVE — Continuation Wave 2)
+# Dispatch Queue — Current Round (Round 12 §3.9 KNOWN-load-bearing — Wave 1 cascade init)
 
-Authored under §3.4 mechanical translation per OPERATOR DIRECTIVE — ROUND 11 CONTINUATION DISPATCH (2026-05-12). §3.9 SPECULATIVE adoption preserved.
+Authored under §3.4 mechanical translation per OPERATOR DIRECTIVE — MAX-AUTONOMY-WITHIN-FENCES DISPATCH (2026-05-13). Round 11 closed at operator `TERMINATE-ROUND-11` ack 2026-05-13. §3.9 verdict promoted from SPECULATIVE → KNOWN-load-bearing for primitive set per Round 11 §5.C.3 final synthesis. foxworks-cairn plugin retrofit operative for ALL Round 12 NEW sub-session spawns per dispatch §11(II).
 
 ## Schema
 
@@ -14,7 +14,36 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 - **Frozen contracts** (per CLAUDE.md §1) — NEVER claimable; outside any territory
 - **§3.9.A enforcement**: every `git add` glob-matched against session manifest at add step
 
-## QUEUED — Wave 5 (activate-all-sessions toward app completion)
+## QUEUED — Round 12 Wave 1 (plugin-loaded cohort; cascade init)
+
+(orchestrator-mediated direct dispatch per dispatch §11(II); ALL Wave 1 sessions spawn with `--plugin-dir /Users/joshuatseppich/Desktop/Automata/foxworks-tooling` per §11(II); sessions begin IN-FLIGHT on first commit)
+
+| session | scope | territory | deps |
+|---|---|---|---|
+| `r12-archive-writer` | Round 12 live evidence corpus + §5 round-close synthesis when round closes | [r12-archive-writer.txt](territorial-manifests/r12-archive-writer.txt) | NONE |
+| `r12-manifest-validator` | §3.9.A manifest grammar + glob audit (Round 11 §1.5 precedent inherited) | [r12-manifest-validator.txt](territorial-manifests/r12-manifest-validator.txt) | NONE |
+| `r12-queue-watcher` | Race-window proximity + §3.9.B claim atomicity exercise observer | [r12-queue-watcher.txt](territorial-manifests/r12-queue-watcher.txt) | NONE |
+| `r12-phase4-bottom-rail-integration-body` | DRAFT MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION ticket body (closes `MB-F-BOTTOM-RAIL-MOUNT-WIRING-FINAL-INTEGRATION` Tier 2 from `28b0086` BYPASS-PERMS WB7 findings) | [r12-phase4-bottom-rail-integration-body.txt](territorial-manifests/r12-phase4-bottom-rail-integration-body.txt) | NONE — body-drafting only |
+| `r12-phase5-tile-header-integration-body` | DRAFT MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION ticket body (closes `MB-F-STATUS-INDICATOR-TILE-HEADER-INTEGRATION` Tier 2 from `30e4aa8`) | [r12-phase5-tile-header-integration-body.txt](territorial-manifests/r12-phase5-tile-header-integration-body.txt) | NONE — body-drafting only |
+
+## COMPLETED — Round 11 Wave 5 (closure-stamped post `TERMINATE-ROUND-11` 2026-05-13)
+
+8 work units shipped under gen-5 tenure 2026-05-13. Closure commits:
+
+| session | scope | completion-commit |
+|---|---|---|
+| `t3-ticket-body-0905` | MB-T-PHASE-4-T8-SIBLING-EXEC ladder | `4507b49` (WB-final DONE-WITH-DEFERRED-LEG) |
+| `c5-ticket-wb1` (continued) | MB-T-PHASE-4-T9-RATE-LIMIT-SOURCE-PLUG ladder | `de8022b` (WB-final docs + ADR-MBTPHASE4-T9PLUG-A) |
+| `__orchestrator_standby` | P3 roadmap rev-3 | `b7e6dfe` (rev-3 + update-notes) |
+| `t6-ticket-body-0905` | MB-T-PHASE-5-CTX-PERCENT-ACCURACY-DATA-FLOW ticket body | `1b66bc6` (SPECULATIVE Phase 5 forward-position) |
+| `commit-plan-doc-1334` | MB-T-PHASE-5-STATUS-INDICATOR-DATA-FLOW ticket body + WB ladder | `832c03b` (body) → `bf99f9d` (WB-final) + W4A `ff530b1` tsconfig amendment |
+| `phase4-t8-exec` | MB-T-PHASE-4-METHODOLOGY-EPSILON-VISUAL-DIFF ladder | `8b48c10` (WB-final; 11/11 ε probes GREEN; ladder COMPLETE) |
+| `phase4-t9-exec` | MB-T-PHASE-4-BYPASS-PERMS-INDICATOR-DATA-FLOW ladder | `28b0086` (WB7b coord; FINAL ARM CLOSED at component layer) |
+| `gen-5 orchestrator` | 6 new Tier 2/3 followup filings | `30e4aa8` (FOLLOWUPS.md) |
+
+---
+
+## QUEUED — Wave 5 (Round 11 — superseded by Round 12 Wave 1 above; retained for archival)
 
 (orchestrator-mediated direct dispatch; sessions begin IN-FLIGHT immediately on first commit)
 
