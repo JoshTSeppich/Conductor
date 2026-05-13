@@ -16,6 +16,28 @@ import type { CSSProperties } from 'react';
 
 export interface BypassPermsIndicatorProps {
   readonly dispatchMode: 'auto' | 'ask';
+  /**
+   * MB-T-PHASE-4-BYPASS-PERMS-INDICATOR-DATA-FLOW WB6 — optional
+   * aggregated count of live spawned sessions with permissionMode
+   * === 'auto'. Sourced from the workstation main-process
+   * bypass-perms aggregator (`src/main/bypass-perms-source.ts`
+   * shipped at WB2 `469a5e1`; integrated with spawn-handler at
+   * WB4 `bf1c33b`).
+   *
+   * Render-disposition per ticket §3.4 Sub-Q-D=(any):
+   *   showIndicator = (bypassActiveCount ?? 0) > 0
+   *                   || dispatchMode === 'auto'
+   * Any bypassed-session presence triggers indicator; chat-shell
+   * global dispatchMode='auto' preserved as fallback signal
+   * (T4 WB12 semantics) when aggregator unavailable.
+   *
+   * When OMITTED, T4 WB12 dispatchMode-only behavior preserved
+   * verbatim (backward-compat). Consumer plumbing of the
+   * aggregator into this prop is deferred to follow-on
+   * MB-F-BYPASS-PERMS-CONSUMER-WIRING (chat-shell mount.ts is
+   * FORBIDDEN by Wave 4 manifest — future ticket plugs the wire).
+   */
+  readonly bypassActiveCount?: number;
 }
 
 const STYLE: CSSProperties = {
@@ -37,7 +59,9 @@ const ICON_STYLE: CSSProperties = {
 export function BypassPermsIndicator(
   props: BypassPermsIndicatorProps,
 ): JSX.Element | null {
-  if (props.dispatchMode !== 'auto') return null;
+  const showIndicator =
+    (props.bypassActiveCount ?? 0) > 0 || props.dispatchMode === 'auto';
+  if (!showIndicator) return null;
   return (
     <span
       data-testid="bypass-perms-indicator"
