@@ -14,7 +14,19 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 - **Frozen contracts** (per CLAUDE.md §1) — NEVER claimable; outside any territory
 - **§3.9.A enforcement**: every `git add` glob-matched against session manifest at add step
 
-## QUEUED — Wave 3 (PHASE 2 — operator-acked max-parallel forge forward)
+## QUEUED — Wave 4 (sustained forge forward; Phase 3 trigger + Cluster F continuation)
+
+(orchestrator-mediated direct dispatch; sessions begin IN-FLIGHT immediately on first commit)
+
+| session | scope | territory | deps |
+|---|---|---|---|
+| `__orchestrator_active` | **Phase 3 visual verification execution** — run packages/dispatch-workstation/scripts/phase-3-visual-smoke.mjs end-to-end; capture screenshots; report visual gaps for Phase 5 scoping | [orch-active-phase3-visual-verify.txt](territorial-manifests/orch-active-phase3-visual-verify.txt) | NONE (γ tooling shipped at `a8e9a76`) |
+| `phase4-t9-exec` | **MB-T-PHASE-4-BYPASS-PERMS-INDICATOR-DATA-FLOW** (Cluster F per P3-rev-2 §3.2) — ticket body + WB1+ ladder | [phase4-t9-bypass-perms.txt](territorial-manifests/phase4-t9-bypass-perms.txt) | NONE |
+| `phase4-t8-exec` | **MB-T-PHASE-4-METHODOLOGY-EPSILON-VISUAL-DIFF** (Cluster D-ε per P3-rev-2 §3.3 — dispatch-ready) — ticket body + WB1+ ladder | [phase4-t8-methodology-epsilon.txt](territorial-manifests/phase4-t8-methodology-epsilon.txt) | NONE |
+| `r11-archive-writer` | **§5 round-close synthesis FINAL draft** — Round 11 archive close-out preparation | [r11-archive-writer.txt](territorial-manifests/r11-archive-writer.txt) | NONE |
+| `__orchestrator_standby` | P3 roadmap rev-3 — incorporate Wave 3 closures + Phase 3 results when available | [orch-standby-p3-roadmap-rev.txt](territorial-manifests/orch-standby-p3-roadmap-rev.txt) | depends-on __orchestrator_active Phase 3 results |
+
+## QUEUED — Wave 3 (PHASE 2 — operator-acked max-parallel forge forward) [retained for archival]
 
 (orchestrator-mediated direct dispatch; sessions begin IN-FLIGHT immediately on first commit)
 
