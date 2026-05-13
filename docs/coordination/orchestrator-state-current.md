@@ -430,3 +430,100 @@ Per full-build-mode dispatch §4 Phase 1: T4 (Bottom rail) + T5 (BUILD.md) + T7 
 Gen-4 spawn dispatched separately; first-message paste includes lineage (gen-1 → gen-2 unexpected-exit → gen-3 handoff at 750k → gen-4), Phase 1 in-flight state, operator delegations, monitor inheritance, and ORCHESTRATOR_STATE_CONTRACT INVARIANT-5 boot checklist.
 
 **Gen-3 entering deep-halt per INV-RP-3 after handoff verification.**
+
+---
+
+## §13 — Gen-4 handoff to gen-5 (context-pressure threshold ~720k; Round 11 termination-proximity)
+
+Authored 2026-05-13 per ORCHESTRATOR_STATE_CONTRACT INVARIANT-4 + protocol §1 trigger threshold (pre-emptive ~720k per operator §10 awareness directive) + operator-supplemented §A-§G boot context.
+
+### §13.1 — Handoff state
+
+- **session_id (gen-4)**: `orchestrator-2026-05-12-0953`
+- **status (gen-4)**: `handing-off`
+- **successor_session_id (gen-5)**: `orchestrator-2026-05-13-1318` (planned spawn name)
+- **handoff_reason**: pre-emptive context-pressure (operator-acknowledged §10 self-invoke threshold)
+- **lineage**: gen-1 (deprecated b65a1ee) → gen-2 (UNEXPECTED-EXIT) → gen-3 (handoff at 749350 tokens, 747baa5) → **gen-4 (handoff at ~720-750k estimated; this section)** → gen-5
+
+### §13.2 — Round 11 verdict state (per operator §A; preserve through handoff)
+
+- **§3.9.A territorial partitioning**: MODELED → **KNOWN** (r11-manifest-validator + r11-queue-watcher independent evidence)
+- **Race-window/MANDATORY-pathspec discipline**: SPECULATIVE → **KNOWN** per commit `722a0ab` (5-session-concurrent write-authority on spawn-handler.ts + 30+ commit zero-contamination interval; r11-queue-watcher Wave-4/5 extension finding)
+- **§3.9.B queue self-claim**: SPECULATIVE remains — bypassed by orchestrator-mediated dispatch throughout Round 11; honest gap to be captured in archive §4
+- **Per-path commit pathspec**: STRUCTURALLY MANDATORY for all sub-sessions going forward — not advised, REQUIRED
+
+### §13.3 — Round 11 termination proximity (per operator §B)
+
+Gen-5's job is NOT "continue cascade indefinitely." Gen-5's job:
+(a) Receive baton cleanly via HALT-ORCHESTRATOR-5-LOADED
+(b) Observe Wave 5 ladders to completion (MB-T-PHASE-4-T8-SIBLING-EXEC in flight at t3; possibly others)
+(c) Ensure r11-archive-writer §5 round-close synthesis lands with §722a0ab verdict evidence
+(d) Surface TERMINATE-READY to operator with archive saturation evidence
+(e) Stand by for operator TERMINATE-ROUND-11 surface
+
+**Do NOT author Wave 6 dispatch absent operator surface. Do NOT auto-ack TERMINATE-READY.**
+
+### §13.4 — Token-pressure session inventory at handoff (per operator §C)
+
+**Requires rotation before any new dispatch**:
+- t6 (607k, 61%) — crossed §9 watch threshold
+- t1 (587k, 59%) — climbing fast
+- t2 (571k, 57%) — climbing
+- commit-plan-doc-1334 (reading blank; rate-limit recovery)
+
+**Healthy / dispatch-eligible**:
+- c5-ticket-wb1 (356k, 36%)
+- __orchestrator_active (454k, 45%)
+- __orchestrator_standby (360k, 36%)
+- phase4-t8-exec (344k, 34%)
+- phase4-t9-exec (370k, 37%)
+- r11-archive-writer (263k, 26%)
+- r11-queue-watcher (193k, 19%)
+- r11-manifest-validator (162k, 16%)
+- t3-ticket-body-0905 (231k, 23%)
+- verify-chat-mount-1319 (463k, 46%) — climbing but workable
+
+**HALT-protected (operator-only release)**:
+- p7-cortex-draft-1243 (151k; HALT-DRAFT-COMPLETE — operator REGISTRY.md §2 authoring required)
+- t1-ticket-body-0905 (HALT-PENDING per §8.4)
+
+### §13.5 — Inherited Round 11 authority (per operator §E)
+
+All preserved through handoff:
+- §3.9 SPECULATIVE adoption (mechanism-wise; verdicts per §13.2 above)
+- 16-concurrent ceiling
+- Auto-ack envelope per Round 11 dispatch §4(V) + correction-dispatch §4(IV)
+- Hard-escalation triggers per Round 11 dispatch §4(III) + new §4(IV) + correction-dispatch §3
+- MANDATORY pre-commit `git status --short` verification
+- MANDATORY per-path git add + per-path git commit -- pathspec
+
+### §13.6 — Round 11 archive as primary deliverable (per operator §F)
+
+`docs/cairn-under-stress-round-11.md` is THE deliverable. Wave 5 commit `722a0ab` evidence (MANDATORY-pathspec validation) MUST land in archive §4 verdict before round-close. r11-archive-writer was dispatched Wave 3 + Wave 4 (§5 round-close synthesis FINAL); gen-5 supervises completion.
+
+### §13.7 — Active monitor (gen-5 may inherit or relaunch)
+
+Background monitor `bb9kpkj23` (rev7; 60s; file-based HALT dedupe; 15 sub-sessions tracked + line-leading HALT regex covering hyphen/em-dash/colon/period/EOL forms; tail-12 window). Gen-5 may inherit OR relaunch as needed.
+
+### §13.8 — Wave inventory + commit chain summary
+
+- Wave 1 (Round 11 initial): §3.9 infra `d41bacb` + 5 R11 spawns (r11-archive/queue/manifest + phase4-t8/t9)
+- Wave 2 (continuation): 12-session burst dispatch; cross-session contamination THIRD recurrence at `63eba0f`; remediated `9b8a4e9` → `228a2da` (orchestrator-arbitrated option 4)
+- Wave 3 (post-arbitration): 8 dispatches; 4 ladders complete (T8 Cluster A `3e9a203` / T9 SPAWNMODE `294ed23` / T10 `6ce548f` / c5 trinity `ff290c2`)
+- Wave 4 (Phase 3 trigger + Cluster F): 5 dispatches; Cluster D-ε ticket body shipped
+- Wave 5 (activate-all): 9 dispatches; ladders complete = T9-RATE-LIMIT (`50de357`) + T7 TAB-SWITCHER POLISH (`04591ba`); §722a0ab MANDATORY-pathspec validation evidence captured
+
+### §13.9 — Gen-5 boot prompt (consolidated with operator §A-§G supplements)
+
+Spawn command:
+```
+NEW=orchestrator-2026-05-13-1318
+tmux new-session -d -s "$NEW" -x 220 -y 50 -c /Users/joshuatseppich/Desktop/Automata/foxworks-dispatch /Users/joshuatseppich/.local/bin/claude --dangerously-skip-permissions --model claude-opus-4-7
+```
+
+First-message paste (gen-5):
+- Standard boot per `docs/coordination/orchestrator-self-restart-protocol.md` §3
+- PLUS operator-supplements §A-§G verbatim above
+- PLUS termination-proximity framing — gen-5's job is to wrap, not extend
+
+**Gen-4 entering deep-halt per INV-RP-3 after handoff verification of gen-5 alive.**
