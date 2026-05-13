@@ -564,3 +564,207 @@ The Wave-1 outcome framing ("Capability enabled with known limitations") still a
 - Per-path `git commit -- <pathspec>` planned? ✓ (single pathspec: `docs/coordination/manifest-validator-report.md`)
 - Any unlabeled factual claim? ✓ ([KNOWN] / [MODELED] / [SPECULATIVE] labels applied per §2.2)
 - Findings cross-corroborated where possible? ✓ — §12.5 conclusions cross-cited from operator's own `9b8a4e9` revert commit body
+
+---
+
+# §13 — Wave 4/5 extension (2026-05-13)
+
+Round 11 §3.9 SPECULATIVE Wave-4 dispatch (`178b994`, 3 new manifests) and Wave-5 dispatch (`da947dc`, 4 new manifests). Total active manifests: 26 (5 Wave 1 + 9 Wave 2 + 5 Wave 3 + 3 Wave 4 + 4 Wave 5). This extension audits 7 new manifests, escalates spawn-handler.ts overlap to **five-way TERRITORY claim**, surfaces a new **manifest-supersession** grammar gap, and validates the Wave-3 coauthor section-ownership proposal via empirical evidence from `c76f903`.
+
+## §13.1 — Wave 4/5 manifest inventory [KNOWN]
+
+| Manifest | Wave | TERRITORY count | READ-ONLY | FORBIDDEN |
+|---|---|---|---|---|
+| `orch-active-phase3-visual-verify.txt` | 4 | 3 (2 doc + 1 build-artifact glob) | 5 | 11 (incl. `packages/*/src/**` blocks) |
+| `phase4-t8-methodology-epsilon.txt` | 4 | 6 (2 script globs + 1 test + 3 doc) | 3 | 13 |
+| `phase4-t9-bypass-perms.txt` | 4 | 8 (3 src + 2 test + 3 doc) | 2 | 16 |
+| `t3-t8-sibling-exec.txt` | 5 | 8 (3 src + 2 test + 3 doc) | 2 | 15 |
+| `c5-t9-rate-limit-source.txt` | 5 | 6 (2 src + 1 test + 3 doc) | 2 | 15 |
+| `commit-plan-doc-status-indicator.txt` | 5 | 7 (2 src + 2 test + 3 doc) | 2 | 15 |
+| `t6-phase5-ctx-percent.txt` | 5 | 3 docs | 4 | 7 |
+
+READ-ONLY adoption: **7/7 in Wave 4/5 (100%)** vs 80% Wave 3 vs 56% Wave 2 vs 40% Wave 1. Effectively universal. §4.3 (READ-ONLY default unspecified) is now **strictly load-bearing for every new manifest** — codification overdue.
+
+## §13.2 — Tier 0 findings (Wave 4/5)
+
+### §13.2.1 [Tier 0 — FIVE-WAY TERRITORY claim] `spawn-handler.ts` [KNOWN]
+
+`packages/dispatch-workstation/src/main/spawn-handler.ts` is now claimed as TERRITORY by **five active manifests across four waves**:
+
+| # | Manifest | Wave | Status |
+|---|---|---|---|
+| 1 | `commit-plan-doc-spawnmode.txt` | 2 | **superseded but not deprecated** (per §13.2.2) |
+| 2 | `phase4-t8-cluster-a-exec.txt` | 3 | active Cluster A coauthor |
+| 3 | `orch-active-cluster-a-exec.txt` | 3 | active Cluster A coauthor |
+| 4 | `phase4-t9-bypass-perms.txt` | 4 | active — shipping commits (`f1b36d3`, `469a5e1`, etc.) |
+| 5 | `t3-t8-sibling-exec.txt` | 5 | active — newest claim |
+
+Wave-3 §12.2.2 surfaced this as a triple-claim. Wave 4 added one claimant; Wave 5 added another. **The pattern is accelerating, not resolving.** `spawn-handler.ts` is currently MODIFIED in working tree at audit time (confirmed via `git status --short`).
+
+Per Wave-3 §12.3 recommendation, the `SHARED-WITH:` / `COAUTHORED:` clause should have been codified after Wave 3 surfaced the pattern. Wave 4/5 dispatch authored without that codification, so each new claim compounds the implicit overlap.
+
+**Empirically, the discipline framework is holding** — `758ef50` (commit-plan-doc-1334) and `f1b36d3` / `469a5e1` (phase4-t9-bypass-perms) touched `spawn-handler.ts` without merge conflicts because the sessions write to non-overlapping line ranges. This is **convergent file-level coauthoring without grammar-level coauthor declaration** — same risk class as §13.2.2 (line-level race possible).
+
+**Recommended remediation (Tier 0 — escalated from Wave-3):** 
+- (a) Operator-arbitrate: enroll all 5 sessions in a single `COAUTHORED:` clause for `spawn-handler.ts`, OR
+- (b) Revoke the Wave-2 commit-plan-doc-spawnmode claim (per §13.2.2 supersession evidence), narrowing to 4 active claimants, AND codify `SHARED-WITH:` clause for the Cluster-A trio + phase4-t9-bypass + t3-t8-sibling
+
+### §13.2.2 [Tier 0 — MANIFEST SUPERSESSION UNENCODED] commit-plan-doc-1334 dual-manifest [KNOWN]
+
+The same logical session `commit-plan-doc-1334` now has **two active manifests with directly contradictory `spawn-handler.ts` clauses**:
+
+| Manifest | spawn-handler.ts clause |
+|---|---|
+| `commit-plan-doc-spawnmode.txt` (Wave 2) | **TERRITORY** (write authority) |
+| `commit-plan-doc-status-indicator.txt` (Wave 5) | **FORBIDDEN** (deny) |
+
+§3.9 grammar has no manifest-supersession convention. There is no:
+- frontmatter timestamp or version marker
+- explicit `SUPERSEDED-BY:` clause
+- archive-on-respawn convention
+- deprecation flag
+
+Operationally, the Wave-5 manifest reflects current session scope (Phase 5 status-indicator work) and the Wave-2 manifest is logically retired. But a §3.9.A enforcement engine reading both would see two conflicting authorities for the same session-id on the same file — **catastrophic for any automated tool**.
+
+**Recommended remediation (Tier 0 — new grammar gap):** Add to dispatch-queue-current.md §0 either:
+- (a) **Wave-latest-wins convention** — for a given session-id, the manifest in the highest-numbered Wave is canonical; older manifests are implicitly archived. Requires Wave-numbering metadata in manifest filename or content (currently encoded only in filename).
+- (b) **Explicit supersession clause** — `SUPERSEDES: <prior-manifest-filename>` line in the new manifest; orchestrator archives the prior one on Wave dispatch.
+- (c) **Hard rule**: at most one active manifest per session-id; new manifest authoring requires deleting/renaming the prior one. Cleanest but loses Wave history.
+
+## §13.3 — Tier 1 findings (Wave 4/5)
+
+### §13.3.1 [Tier 1] `tile-grid-app.tsx` dual TERRITORY claim [KNOWN]
+
+`packages/dispatch-workstation/src/tile-grid/tile-grid-app.tsx` now claimed by:
+1. `c5-tilegrid-wiring.txt` (Wave 2) — original c5 tile-grid work
+2. `t3-t8-sibling-exec.txt` (Wave 5) — new claim
+
+Same defect class as §13.2.1 (spawn-handler.ts) but only two claimants. No explicit coauthor pattern; no carve-out fences. Possibly intended as session-progression (c5 finished tile-grid-app structural work; t3 extends it with t8-sibling features) but not encoded.
+
+**Recommended remediation:** Same as §13.2.1 — codify `SHARED-WITH:` or arbitrate handoff.
+
+### §13.3.2 [Tier 1] `phase4-t9-bypass-perms` ∩ `c5-t9-rate-limit-source` adjacent territories [MODELED]
+
+Both new Wave-4/5 manifests work on the `phase4-t9` family but on different files:
+- `phase4-t9-bypass-perms` writes `bypass-perms-source*.ts`, `bypass-perms-indicator.tsx`
+- `c5-t9-rate-limit-source` writes `rate-limit-source*.ts`, `coarchitect-rate-limit-source*.ts`
+
+c5-t9 FORBIDDEN explicitly carves out `rate-limit-aggregator.ts` (Wave-1 phase4-t9-exec TERRITORY) and `coarchitect-ipc.ts` — good bidirectional fence. **No TERRITORY overlap** detected; both touch the same `main/` directory but on disjoint files. Surfaced as observation: as new "source plug-in" sub-pattern emerges (multiple sessions building source primitives that one aggregator consumes), §3.9 conventions for this layering should be codified.
+
+## §13.4 — Wave-3 §12.3 coauthor-pattern validation [KNOWN]
+
+Wave-3 §12.3 proposed a `SHARED-WITH:` clause with section-ownership convention (sentinel-block-style within the file). Wave 4/5 commit log provides **direct empirical validation**:
+
+- `c76f903 spike(§3.9): SESSION-t2-archive-coauthor Wave 3 — §5.B complementary round-close prep + coord-notes (anchored on §5.B per r11-archive-writer reservation)`
+
+Commit message explicitly states: "anchored on **§5.B per r11-archive-writer reservation**." This is **section-level reservation within a coauthored file** — exactly the pattern proposed in Wave-3 §12.3. The methodology is now in operational use across 2 sessions on `docs/cairn-under-stress-round-11.md`.
+
+**Status of Wave-3 §12.3 proposal:** validated in-practice; codification still pending. The pattern works empirically; formal grammar would enable §3.9.A enforcement of section-anchor reservations.
+
+## §13.5 — Ad-hoc territory relaxation pattern [KNOWN]
+
+Commit `758ef50 green(MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING): WB2 — SpawnSessionResult.spawnMode + spawn-handler population + 3 consumer-toEqual updates (W2A ad-hoc territory relaxation)` touched 5 files including:
+- `packages/dispatch-workstation/test/unit/mb-t05/test_spawn_daemon_registration.spec.ts`
+- `packages/dispatch-workstation/test/unit/mb-t05/test_spawn_ipc_handler.spec.ts`
+- `packages/dispatch-workstation/test/unit/mb-t-wireframe-t1-session-data-flow/test_post_spawn_liveness_check.spec.ts`
+
+None of these 3 files match any glob in `commit-plan-doc-spawnmode.txt` TERRITORY. The commit subject acknowledges this with "(W2A ad-hoc territory relaxation)" — an **inline annotation pattern** rather than a formal manifest amendment commit (as was done for phase4-t8 via `6d7dff3` and phase4-t9 via `e5c7c96` in Wave 2).
+
+**Comparison of two amendment patterns observed in Round 11:**
+
+| Pattern | Example | When used | Audit trail |
+|---|---|---|---|
+| Formal amendment commit | `6d7dff3 spike(§3.9): correct phase4-t8-exec manifest` | scope-discovery mid-flight | manifest file diff in commit history |
+| Inline annotation | `758ef50 ... (W2A ad-hoc territory relaxation)` | consumer-test updates needed for TERRITORY change | commit subject only; no manifest diff |
+
+The inline-annotation pattern is **less auditable** — a §3.9.A engine cannot detect "this commit touched files outside manifest" without parsing English in commit subjects. Recommend codifying that all territory expansions require a formal `spike(§3.9): expand <session>-manifest` commit BEFORE the cairn-grammar commit that uses the expanded territory.
+
+**Recommended remediation (Tier 2):** Add to dispatch-queue-current.md §0: *"Territory expansions are formal amendments. Ad-hoc relaxation in commit subjects is non-canonical and should be replaced by a `spike(§3.9): expand <manifest>` commit prior to the cairn-grammar commit consuming the expanded scope."*
+
+## §13.6 — Build-artifact TERRITORY observation [KNOWN]
+
+`orch-active-phase3-visual-verify.txt` TERRITORY includes `packages/dispatch-workstation/dist-screenshots/**`. Per CLAUDE.md §3.7, `dist/` is the build-artifact directory; screenshot outputs from `phase-3-visual-smoke.mjs` would be a runtime-generated subtree.
+
+If `dist-screenshots/**` is gitignored (consistent with general `dist/` convention), then TERRITORY writes are filesystem-only — no commits, no §3.9.A glob-match-at-add events. The manifest declares write authority for an out-of-VCS path. Same observational class as Wave-2 §11.2.4 (p7 `/tmp/**` TERRITORY): manifest grammar is internally consistent but enforcement perimeter is empty.
+
+Commit `e0b86e0 docs(phase-3-vv): screenshot artifact 178b994.png — Phase 3 visual verification empty-state capture` actually **committed** a screenshot (`178b994.png`) into the docs/coordination/ tree, not dist-screenshots/. So the actual screenshot-storage convention is coord-doc-relative, not dist-relative. The dist-screenshots/** TERRITORY clause may be aspirational or for a future workflow.
+
+**Surface as observation, not finding.** Recommend orch-active-phase3-vv session clarify whether dist-screenshots/** is actually used; if not, remove from TERRITORY to reduce manifest noise.
+
+## §13.7 — Cross-check commit-log validation (Wave-4/5 window) [KNOWN]
+
+36 commits exist between `ffacdbe` (Wave-3 validator commit) and HEAD. Spot-checks:
+
+| Commit | Session inferred | Files | Compliance |
+|---|---|---|---|
+| `758ef50` | commit-plan-doc-1334 | spawn-handler.ts + 4 test files | **Ad-hoc relaxation** (§13.5); 3/5 files outside manifest |
+| `f1b36d3` | phase4-t9-bypass-perms | probe-mbtwfbypass-02 | ✓ in TERRITORY |
+| `469a5e1` | phase4-t9-bypass-perms | bypass-perms-source.ts | ✓ in TERRITORY |
+| `c5a3a95` | phase4-t8-methodology-epsilon | visual-diff-config.mjs | ✓ in TERRITORY |
+| `e79eee6` | orch-active-phase3-vv | phase-3-vv-results doc | ✓ in TERRITORY |
+| `3e9a203` | phase4-t8-cluster-a + orch-active-cluster-a (Cluster A coauthor) | cluster-a coord + findings docs | ✓ both in TERRITORY (coauthor cluster) |
+| `c76f903` | t2-archive-coauthor | cairn-under-stress-round-11.md + archive-coauthor-notes | ✓ in TERRITORY (coauthored with r11-archive-writer per §13.4) |
+| `b7e6dfe` | orch-standby-p3-rev | phase-4-roadmap-rev-3 + update-notes | ✓ in TERRITORY |
+| `e0b86e0` | orch-active-phase3-vv | screenshot PNG | observation (§13.6) |
+
+**Sample size:** 9 of 36 commits. Compliance: 7/9 strict-in-TERRITORY, 1 ad-hoc-relaxation (§13.5), 1 observation (§13.6). No HALT-TERRITORY-VIOLATION events. No commits rivaling the c5-incident in severity.
+
+**Sample rate trend across Waves:**
+- Wave 2 sample: 4/4 = 100%
+- Wave 3 sample: 8/9 = 89% (c5-incident)
+- Wave 4/5 sample: 7/9 = 78% strict; 8/9 if `758ef50` counts as authorized relaxation, 9/9 if `e0b86e0` is observation only
+
+The trend is consistent: discipline is holding, with informal relaxation patterns emerging as scale increases.
+
+## §13.8 — Outcome classification (Wave 4/5)
+
+**Capability enabled with known limitations.** Cumulative §3.9 SPECULATIVE primitive status as of Wave 5:
+
+| Dimension | Status |
+|---|---|
+| Grammar — single-session, single-clause | [KNOWN] working; minor consistency findings (Wave 1/2) |
+| Grammar — coauthored TERRITORY | [KNOWN] gap; pattern in 3+ clusters; codification overdue |
+| Grammar — manifest supersession | [KNOWN] gap (newly surfaced this Wave) |
+| Grammar — READ-ONLY default | [KNOWN] gap; 100% adoption in Wave 4/5 makes it strictly load-bearing |
+| Grammar — precedence (TERRITORY vs FORBIDDEN) | [KNOWN] gap; empirically deferred per Wave-3 §12.4 |
+| Enforcement — §3.9.A at git add/commit | [KNOWN] unimplemented (Wave-3 §12.5 via c5-incident) |
+| Discipline framework — post-hoc audit | [KNOWN] functioning; operator-bandwidth-bounded |
+| Convention — pathspec commits | [KNOWN] codified Wave-3 (operator Phase 1 reinforcement (d)) |
+| Convention — coauthor section-anchoring | [KNOWN] in-practice (`c76f903`); grammar codification pending |
+| Convention — ad-hoc relaxation | [KNOWN] emergent; should be replaced by formal amendment commits |
+
+## §13.9 — Recommendations (Wave 4/5 forward-position)
+
+**Tier 0 — operator-immediate (cumulative from prior Waves, escalating):**
+1. **Codify `SHARED-WITH:` / `COAUTHORED:` clause** in dispatch-queue-current.md §0 — escalated from Wave-3 §12.9.1. Now demonstrated by 3 clusters: archive-coauthor (validated section-anchor pattern per §13.4), Cluster-A spawn-result trio, and the emerging 5-way spawn-handler.ts complex.
+2. **Codify manifest-supersession convention** in dispatch-queue-current.md §0 — new Wave-5 finding (§13.2.2). Required for any session that respawns under new scope (commit-plan-doc-1334 is the canonical example).
+3. **Arbitrate the 5-way `spawn-handler.ts` claim** (§13.2.1) — either retroactively enroll all 5 as coauthors with section-anchors, or revoke superseded Wave-2 claim.
+
+**Tier 1 — operator near-term:**
+4. **Arbitrate `tile-grid-app.tsx` dual claim** (§13.3.1) — c5 ↔ t3-t8-sibling.
+5. **Replace ad-hoc relaxation pattern with formal amendments** (§13.5).
+6. **Codify §3.9.A enforcement design** with `git commit -- <pathspec>` minimum baseline (Wave-3 §12.9.3 carryover).
+7. **Narrow t1-chatshell-polish TERRITORY** (Wave-2 §11.2.1 + Wave-3 §12.2.3 carryover).
+
+**Tier 2 — grammar formalization (continued carryover):**
+8. Encode READ-ONLY clause default — **100% adoption Wave 4/5 makes this urgent**.
+9. Codify §4.1 TERRITORY-vs-FORBIDDEN precedence.
+10. Lift frozen-contract list to dispatch-queue §0 only.
+11. Define extra-repo / build-artifact TERRITORY semantics (Wave-2 §11.2.4 + §13.6).
+12. Replace prose/sentinel non-glob clause content with literal globs or `INTENT:` clause.
+
+**Tier 3 — convention nudges:**
+13. Prefer narrow probe-prefix globs over broad subdirectory globs with carve-outs.
+14. Schedule §3.9.A enforcement-hook prototype spike — **growing operator-audit burden** as ~10 concurrent sessions become routine.
+
+## §13.10 — Self-check (validator-scoped, Wave 4/5)
+
+- Read every Wave-4/5 manifest file? ✓ (7/7 read: 3 Wave-4 + 4 Wave-5)
+- Note on dispatch directive counts: directive states "4 new Wave-4 manifests" but directory + `178b994` commit confirm Wave 4 has 3 manifests. Interpreted as typo; audited 3 Wave-4 + 4 Wave-5 = 7 total.
+- Cross-checked commit log? ✓ (36 commits `ffacdbe..HEAD`; 9 spot-checks; trend analysis vs Waves 2/3)
+- Re-examined prior-Wave findings? ✓ — spawn-handler.ts overlap escalated from triple to five-way; coauthor pattern empirically validated; new supersession gap surfaced
+- Stayed within TERRITORY? ✓ (only this file edited)
+- Pre-commit `git status --short` check executed per dispatch directive? ✓ (executed before reads; will execute again before commit)
+- Per-path `git commit -- <pathspec>` planned? ✓ (single pathspec: `docs/coordination/manifest-validator-report.md`)
+- Any unlabeled factual claim? ✓ ([KNOWN] / [MODELED] / [SPECULATIVE] labels applied per §2.2)
+- Findings cross-corroborated where possible? ✓ — §13.4 coauthor validation references `c76f903` commit body verbatim; §13.5 ad-hoc relaxation references `758ef50` commit subject verbatim
