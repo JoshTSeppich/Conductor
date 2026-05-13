@@ -178,4 +178,98 @@ This is honest **progress without premature closure** per cairn-under-stress §3
 
 ---
 
-**End of MB-F-CHATSHELL-POLISH-REMAINING progress report.**
+**End of Wave 2 progress report.**
+
+---
+
+## §9 — Round 11 Wave 5 supplement (2026-05-13)
+
+**Dispatch:** Round 11 Wave 5 continuation — "Execute `MB-F-T7-TAB-SWITCHER-POLISH` (FOLLOWUPS row 358 — was T4-closure-dependent; T4 done at `4e8ec96` + chat-shell tab-switcher structural exists at `67de2f8`). Polish tab-switcher styling for dark/active state per wireframe."
+
+**Operator territory ack:** "ACK territory; proceed per manifest scope" (chat 2026-05-13).
+
+### §9.1 — Closure-eligibility re-verification
+
+`[KNOWN]` FOLLOWUPS.md:358 `MB-F-T7-TAB-SWITCHER-POLISH-DEFERRED-TO-T4-CLOSURE` Tier 3 deferral cited TWO closure prerequisites at filing time (T7 WB11 docs `c37ebe5` 2026-05-12). Both met at Wave 5 entry HEAD `f1b36d3`:
+
+| Prerequisite | Filed expectation | Actual at Wave 5 entry |
+|---|---|---|
+| T4 ticket cycle ships | "T4 future ticket cycle ships structural tab-switcher component" | T4 closed at `4e8ec96` per dispatch verbatim |
+| Structural tab-switcher exists | "(likely `chat-shell/tab-switcher.tsx` OR `bottom-rail/tab-switcher.tsx`)" | `packages/dispatch-workstation/src/chat-shell/tab-switcher.tsx` shipped at `67de2f8` (this session lineage, Round 11 Wave 2 WB2 GREEN) |
+
+Dispatch authorizes the T7-follow-on visual-polish cycle the row anticipated. Anti-fabrication deferral from prior cycle (`MB-F-T7-CHATSHELL-POLISH-REMAINING-DOGFOOD-DRIVEN` closure-path-α "await γ pipeline") is OVERRIDDEN for tab-switcher specifically by this explicit operator-driven dispatch.
+
+### §9.2 — Wave 5 cairn ladder
+
+| WB | Commit | Type | Surface |
+|---|---|---|---|
+| WB1 | `47c148d` | red | `probe-t7polish-03-tab-switcher-dark-active.spec.tsx` (6 it-blocks; 3 active-RED bg/border/anti-shift + 3 baseline-GREEN probe-01 anti-regression sentinels) |
+| WB2 | `2b4115c` | green | `tab-switcher.tsx` dark/active polish (BASE longhand+anti-shift / ACTIVE backgroundColor:#0a0a0a + borderBottom:2px solid #4a7fb8) |
+| WB-final | (this commit) | docs | §9 supplement to 2026-05-12 progress doc |
+
+### §9.3 — Polish layer specification (anti-fabrication anchors)
+
+All hex + structural decisions anchor to existing codebase precedent — no invented values. Direct citations:
+
+| Decision | Anchor | Source |
+|---|---|---|
+| Active backgroundColor `#0a0a0a` (dark fill) | session-list.tsx LIST_ROOT_STYLE T7 WB4 sticky-note affordance | `be24ed8` |
+| Active borderBottom `2px solid #4a7fb8` (accent indicator) | session-list.tsx ROW_STYLE_SELECTED borderLeft accent T7 WB4 | `be24ed8` |
+| Inactive borderBottom `2px solid transparent` (anti-shift sentinel) | session-list.tsx ROW_STYLE borderLeft:'3px solid transparent' pattern T7 WB4 | `be24ed8` |
+| Active backgroundColor pattern (button active state) | dispatch-mode-toggle.tsx:79-93 BUTTON_ACTIVE_STYLE precedent | T7-prior |
+| Active fontWeight 600 (preserved from Wave 2) | conductor-brand.tsx BRAND_STYLE precedent + dispatch-mode-toggle pattern | Wave 2 `67de2f8` |
+
+### §9.4 — React shorthand/longhand discipline finding
+
+`[KNOWN]` During Wave 5 WB2 GREEN draft, initial implementation mixed `background:'transparent'` (shorthand on BASE) with `backgroundColor:'#0a0a0a'` (longhand on ACTIVE) which triggered React's runtime warning: *"Removing a style property during rerender (backgroundColor) when a conflicting property is set (background) can lead to styling bugs."*
+
+**Resolution:** converted BASE to `backgroundColor:'transparent'` (longhand-only) — consistent property family across BASE + ACTIVE + INACTIVE. Verified post-resolution: 16/16 t7polish tests GREEN with zero React warnings.
+
+**Forward-propagation pattern** (proposed for orchestrator to file as Tier 3 if material): `MB-F-CSSPROPS-SHORTHAND-LONGHAND-MIXING-IN-STYLE-VARIANTS` — when one style variant uses a CSS shorthand (`background`, `border`, `padding`) and another variant overrides via the matching longhand (`backgroundColor`, `borderBottom`, `paddingTop`), React's reconciler can lose track of the property on transition. Convention: pick longhand throughout when variants override sub-properties. Pattern caught + resolved within Wave 5 WB2; pre-emptively documented to avoid re-discovery in future polish cycles.
+
+### §9.5 — FOLLOWUPS row 358 closure status
+
+`MB-F-T7-TAB-SWITCHER-POLISH-DEFERRED-TO-T4-CLOSURE` Tier 3 row at FOLLOWUPS.md:358 is now **CLOSURE-READY**:
+- Both deferral prerequisites met (T4 done + tab-switcher shipped)
+- Polish landed at `2b4115c` (Wave 5 WB2 GREEN)
+- probe-t7polish-03 GREEN (6 it-blocks) + probe-t7polish-01 no regression (7 it-blocks) + probe-t7polish-02 no regression (3 it-blocks)
+
+`docs/FOLLOWUPS.md` is FORBIDDEN per my manifest; closure stamp filing is **orchestrator/coord territory**. Recommended stamp text:
+
+> **CLOSED at MB-F-T7-TAB-SWITCHER-POLISH (FOLLOWUPS row 358) Wave 5 WB2 GREEN `2b4115c` 2026-05-13** — dark/active polish landed: active tab backgroundColor:#0a0a0a (dark fill per wireframe §1 "Chat (dark/active)") + borderBottom:2px solid #4a7fb8 (active-indicator accent) + inactive tab anti-shift sentinel. Hex values anchor session-list.tsx T7 WB4 palette (`be24ed8`). Probes: `probe-t7polish-03-tab-switcher-dark-active` 6/6 GREEN; probe-t7polish-01 anti-regression 7/7 GREEN preserved. Wiring still pending — tab-switcher.tsx is the orphan-but-ready component; chat-shell.tsx:306-322 inline tab-strip not yet replaced (`MB-F-CHATSHELL-TAB-SWITCHER-WIRING-PENDING` Tier 3 proposed at Wave 2 progress doc §4 — also closure-eligible by sibling-session if/when wiring lands).
+
+### §9.6 — Verification snapshot (Wave 5)
+
+| Verification | Result |
+|---|---|
+| `pnpm --filter dispatch-workstation exec vitest run test/unit/chat-shell/probe-t7polish-{01,02,03}-*` | 16/16 GREEN |
+| Full chat-shell suite (`test/unit/chat-shell/`) | 112/114 GREEN (2 failures = pre-existing T8 deliberately-RED stub-state probes; NOT my regression) |
+| Workstation typecheck (`tsc --noEmit`) | CLEAN |
+| Per-path git add + commit pathspec (§3.9.A enforcement) | Applied at all 3 Wave 5 commits |
+| `git log --oneline origin/main..HEAD` post-push (§2.6) | Empty after each push |
+| Frozen-surface modifications | NONE |
+| React shorthand/longhand warning | RESOLVED (BASE longhand conversion) |
+
+### §9.7 — Cross-session events observed during Wave 5 execution
+
+| Session | Activity | Conflict? |
+|---|---|---|
+| (other-session ipc-deps work) | `M docs/cairn-under-stress-round-11.md` + `M docs/coordination/manifest-validator-report.md` + `M src/main/spawn-handler.ts` + `D test/unit/main/probe-mbtwfbypass-02-*` | NO — pathspec-on-commit isolated all 3 of my commits |
+
+Zero same-path-sweep contamination incidents per `state-contract §4` pathspec-on-commit primitive.
+
+### §9.8 — Outcome classification (CLAUDE.md §2.11)
+
+**Improved (binary flip + behavioral quality)** for tab-switcher.tsx active-state visual treatment. Dark/active state now visually distinguishes the active tab via:
+- Darker background fill (`#0a0a0a` — wireframe-anchored)
+- Colored bottom-border accent (`#4a7fb8` — palette-reuse)
+- fontWeight differential preserved from Wave 2 (`600` vs `400`)
+- Anti-shift sentinel prevents content-jump on tab swap
+
+Polish becomes user-visible when `chat-shell.tsx:306-322` inline tab-strip is replaced by `<TabSwitcher />` invocation (still pending; see Wave 2 §4 + proposed `MB-F-CHATSHELL-TAB-SWITCHER-WIRING-PENDING` Tier 3 row).
+
+---
+
+**End of §9 Round 11 Wave 5 supplement.**
+
+**Authored by:** `verify-chat-mount-1319` Round 11 Wave 5 (2026-05-13) under operator territory ack.
