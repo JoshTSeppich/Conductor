@@ -38,10 +38,16 @@ import {
   subscribeToScrollToSession,
   type ScrollToSessionBridge,
 } from './scroll-to-session-consumer.js';
+import type { TileStatus } from './types.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
 import type { FrameMode } from '../main/frame-mode-state.js';
+import {
+  createSessionStatusSource,
+  type StatusListClient,
+} from '../main/session-status-source.js';
+import { HttpSessionListClient } from '../main/session-cap.js';
 import type {
   ApprovalPolicy,
   ApprovalPolicyGetResponse,
@@ -141,6 +147,12 @@ export interface TileGridAppProps {
     sessionName: string,
     spawnedAtMs: number,
   ) => void;
+  /** MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION WB1 (Path B; Sub-Q-4):
+   *  injectable StatusListClient for tests. Production omits → useEffect
+   *  instantiates a `new HttpSessionListClient()` per decisions doc §3
+   *  ("new HttpSessionListClient instantiation inline in useEffect").
+   *  Mirrors the existing `getCurrentPixelSizes` test-seam pattern. */
+  readonly statusListClient?: StatusListClient;
 }
 
 interface SpawnSuccessReply {
@@ -188,10 +200,20 @@ export function TileGridApp({
   getCurrentPixelSizes,
   heroSessionName,
   onSpawnedAtMsCapture,
+  statusListClient,
 }: TileGridAppProps): JSX.Element | null {
   const [sessions, setSessions] = useState<readonly TileGridSessionEntry[]>([
     ...initialSessions,
   ]);
+
+  // MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION WB1 (Path B; Sub-Q-1=B):
+  // mirror the createSessionStatusSource snapshot in renderer state so
+  // the JSX call site can merge it into the sessions[] prop passed to
+  // <TileGrid>. New immutable Map on each emit so React's
+  // reference-equality dirty-check fires (Sub-Q-2=useEffect-owned).
+  const [statusSnapshot, setStatusSnapshot] = useState<
+    ReadonlyMap<string, TileStatus>
+  >(() => new Map());
 
   // MB-T-PHASE-4-T8-SIBLING-EXEC WB4: renderer-local side-Map for
   // Cluster A `spawnedAtMs`. Mirrors c5-trinity's anchor-only pattern
@@ -314,6 +336,30 @@ export function TileGridApp({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workstationBridge]);
+
+  // MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION WB1 (Path B):
+  // construct a SessionStatusSource on mount, subscribe to its snapshot,
+  // and dispose on unmount. Sub-Q-4: separate HttpSessionListClient
+  // (decoupled from session-cap.ts cap-check poll loop). Test seam:
+  // `statusListClient` prop overrides the production instantiation.
+  // Sub-Q-2: useEffect-owned, one source per TileGridApp mount; cleanup
+  // calls unsub() + source.dispose() per WB5 ConsumerWrapper pattern
+  // (probe-mbtphase5-status-indicator-02-integration.spec.tsx:85-88).
+  useEffect(() => {
+    const listClient: StatusListClient =
+      statusListClient ?? new HttpSessionListClient();
+    const source = createSessionStatusSource({ listClient });
+    const unsub = source.subscribe((snap) => {
+      // Capture into a new immutable Map so setState identity-change
+      // triggers a re-render. The source's internal Map mutates in
+      // place across emits (session-status-source.ts:73-77).
+      setStatusSnapshot(new Map(snap));
+    });
+    return () => {
+      unsub();
+      source.dispose();
+    };
+  }, [statusListClient]);
 
   function persistAndUpdate(
     next: readonly TileGridSessionEntry[],
@@ -443,9 +489,17 @@ export function TileGridApp({
     );
   }
 
+  // MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION WB1 (Sub-Q-3 fallback
+   // chain): merge the live snapshot into each entry. The existing
+   // Tile.status → TileHeader.status → `<span data-testid="tile-status-
+   // indicator" data-status={...}>` chain (tile-header.tsx:225-230)
+   // becomes reactive automatically (Path B preserves the testid).
   return (
     <TileGrid
-      sessions={sessions}
+      sessions={sessions.map((s) => ({
+        ...s,
+        status: statusSnapshot.get(s.name) ?? s.status ?? 'idle',
+      }))}
       consoleBridge={consoleBridge}
       createTerminal={createTerminal}
       onKill={handleKill}
