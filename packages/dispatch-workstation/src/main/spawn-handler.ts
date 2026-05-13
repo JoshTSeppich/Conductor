@@ -203,6 +203,22 @@ export interface SpawnHandlerDeps {
    * Cluster A populator contract at `spawn-session-result-extensions.ts`.
    */
   nowMs?: number;
+  /**
+   * MB-T-PHASE-4-BYPASS-PERMS-INDICATOR-DATA-FLOW WB4: optional
+   * BypassPermsSource for per-spawn permission-mode aggregation.
+   * When supplied, spawnSession calls
+   *   deps.bypassPermsSource.recordSpawn(req.sessionName, req.permissionMode ?? 'ask')
+   * after the SpawnSessionResult is built, BEFORE returning to the
+   * caller. Workstation main-process aggregator owns the in-memory
+   * state; consumer plumbing (chat-shell mount.ts auto-wire) is
+   * deferred per MB-F-BYPASS-PERMS-CONSUMER-WIRING follow-on.
+   *
+   * Field is OPTIONAL — omitting it preserves backward-compat for
+   * existing call sites + MB-T05 legacy unit tests that pre-date
+   * this ticket. Production startup wires the singleton source via
+   * spawn-ipc.ts default-deps construction.
+   */
+  bypassPermsSource?: BypassPermsSource;
 }
 
 export interface SpawnSessionResult {
@@ -460,6 +476,17 @@ export async function spawnSession(
     ...(deps.model !== undefined ? { model: deps.model } : {}),
     ...(deps.nowMs !== undefined ? { now: deps.nowMs } : {}),
   });
+
+  // MB-T-PHASE-4-BYPASS-PERMS-INDICATOR-DATA-FLOW WB4: per-spawn
+  // permissionMode aggregation. Sync post-spawn-success per
+  // Sub-Q-E=(α); fires AFTER tmux + daemon registration succeed,
+  // BEFORE the result envelope is built — guarantees recordSpawn
+  // reflects only successfully-spawned sessions. Default-when-omitted
+  // is 'ask' per spawn-handler.ts:90-92 SpawnPermissionMode docstring.
+  deps.bypassPermsSource?.recordSpawn(
+    req.sessionName,
+    req.permissionMode ?? 'ask',
+  );
 
   return {
     sessionName: registered.name,
