@@ -38,7 +38,6 @@
 // Closure anchor: ticket body §4 WB2; T9 findings §VII row 1 closure target.
 
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error WB2 RED: rate-limit-source module not yet authored until WB3 GREEN
 import { parseAnthropicRateLimitHeaders } from '../../../src/main/rate-limit-source.js';
 import type { RateLimitState } from '../../../src/chat-shell/ring-helpers.js';
 
