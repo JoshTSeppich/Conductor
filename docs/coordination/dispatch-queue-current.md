@@ -33,6 +33,7 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 | session | scope | territory | deps |
 |---|---|---|---|
 | `r12-phase5-tile-header-impl` | **MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION** WB1+ ladder execution per Sub-Q-1=B Path B (3 WBs + WB-final; single-file edit to tile-grid-app.tsx + 3 probe files + findings + impl-coord) | [r12-phase5-tile-header-impl.txt](territorial-manifests/r12-phase5-tile-header-impl.txt) | depends-on r12-phase5-tile-header-integration-body Sub-Q ack at decisions doc (auto-ack'd by gen-5 per dispatch §2; awaiting decisions doc commit) |
+| `r12-phase4-bottom-rail-impl` | **MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION** WB1+ ladder execution per BR-1=(a) renderer-side mount-factory pattern (T9 `de6620e` precedent; 7-9 WBs default-path: WB1-6 + WB8 smoke + WB-final). MOD chat-shell/mount.ts (resolveRender factories) + main.ts (singleton instantiation sentinel zone) + NEW max-parallel-source.ts (raw-fs <userData>/max-parallel.json per CLAUDE.md §3.5) + 3 probe files. **PATH-DISJOINT** from r12-phase5-tile-header-impl (different file scope). | [r12-phase4-bottom-rail-impl.txt](territorial-manifests/r12-phase4-bottom-rail-impl.txt) | depends-on r12-phase4-bottom-rail-integration-body Sub-Q ack at decisions doc (auto-ack'd by gen-5 per dispatch §2; awaiting decisions doc commit) |
 
 ## COMPLETED — Round 11 Wave 5 (closure-stamped post `TERMINATE-ROUND-11` 2026-05-13)
 
