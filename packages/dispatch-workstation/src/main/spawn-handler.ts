@@ -19,11 +19,13 @@
 
 import type { SpawnEnv } from './spawn-env.js';
 import { buildSpawnEnv } from './spawn-env.js';
+import type { BypassPermsSource } from './bypass-perms-source.js';
 import {
   checkSpawnCapacity,
   SessionCapExceededError,
   type SessionListClient,
 } from './session-cap.js';
+import { populateSpawnSessionResultExtensions } from './spawn-session-result-extensions.js';
 
 /**
  * Workstation-side error types per WORKSTATION_CONTRACT.md §6.5
@@ -185,6 +187,22 @@ export interface SpawnHandlerDeps {
    * daemon record.
    */
   claudeBinPath: string;
+  /**
+   * MB-T-PHASE-4-T8-SIBLING-EXEC WB2: explicit model identifier injected
+   * by the caller (e.g., production startup wires `process.env.
+   * CLAUDE_DEFAULT_MODEL` or a settings-derived value). Passed to
+   * `populateSpawnSessionResultExtensions` as `input.model`. Omitted →
+   * populator falls back to undefined; the renderer's TileHeader
+   * `model` default (`'claude-sonnet-4-6'`) covers the legacy path.
+   */
+  model?: string;
+  /**
+   * MB-T-PHASE-4-T8-SIBLING-EXEC WB2: explicit spawn-time injection
+   * (ms-since-epoch). Tests inject deterministic values; production
+   * omits → populator falls back to `Date.now()` at invocation. Per
+   * Cluster A populator contract at `spawn-session-result-extensions.ts`.
+   */
+  nowMs?: number;
 }
 
 export interface SpawnSessionResult {
@@ -222,6 +240,26 @@ export interface SpawnSessionResult {
    * permission-mode semantics entirely.
    */
   spawnMode?: 'auto' | 'ask';
+  /**
+   * MB-T-PHASE-4-T8-SIBLING-EXEC WB2: CC binary model identifier
+   * (e.g., 'claude-opus-4-7'). Sourced via `deps.model` →
+   * `populateSpawnSessionResultExtensions` per Cluster A contract.
+   * Optional; undefined when caller omits both `deps.model` and
+   * env-fallback fails to surface a value. Sibling consumer
+   * (`tile-grid-app.tsx`) populates `TileGridSessionEntry.model` when
+   * non-empty; renderer chip omits when absent.
+   */
+  model?: string;
+  /**
+   * MB-T-PHASE-4-T8-SIBLING-EXEC WB2: workstation-recorded spawn time
+   * in ms-since-epoch. Cluster A populator (`Date.now()` at invocation;
+   * `deps.nowMs` injectable for determinism). Sibling consumer
+   * (`tile-grid-app.tsx`) captures into renderer-local side-Map;
+   * tile-header renders elapsed label from `Date.now() - spawnedAtMs`.
+   * Closes `MB-F-FRAME-C-UPTIME-LOST-ON-FRAME-TOGGLE` closure-path-(iii):
+   * true-session-uptime semantics survive renderer remount.
+   */
+  spawnedAtMs: number;
 }
 
 /**
@@ -414,11 +452,22 @@ export async function spawnSession(
     );
   }
 
+  // MB-T-PHASE-4-T8-SIBLING-EXEC WB2: populate Cluster A extension
+  // fields (model + spawnedAtMs). Populator is pure-fn — deterministic
+  // when `nowMs` is provided, falls back to `Date.now()` otherwise; per
+  // Cluster A contract at `spawn-session-result-extensions.ts`.
+  const extensions = populateSpawnSessionResultExtensions({
+    ...(deps.model !== undefined ? { model: deps.model } : {}),
+    ...(deps.nowMs !== undefined ? { now: deps.nowMs } : {}),
+  });
+
   return {
     sessionName: registered.name,
     sessionId: registered.name,
     panelMounted: false,
     cwd: req.repoPath,
     spawnMode: req.permissionMode ?? 'ask',
+    ...(extensions.model !== undefined ? { model: extensions.model } : {}),
+    spawnedAtMs: extensions.spawnedAtMs,
   };
 }
