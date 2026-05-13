@@ -14,7 +14,23 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 - **Frozen contracts** (per CLAUDE.md §1) — NEVER claimable; outside any territory
 - **§3.9.A enforcement**: every `git add` glob-matched against session manifest at add step
 
-## QUEUED — Wave 4 (sustained forge forward; Phase 3 trigger + Cluster F continuation)
+## QUEUED — Wave 5 (activate-all-sessions toward app completion)
+
+(orchestrator-mediated direct dispatch; sessions begin IN-FLIGHT immediately on first commit)
+
+| session | scope | territory | deps |
+|---|---|---|---|
+| `t3-ticket-body-0905` | **MB-T-PHASE-4-T8-SIBLING-EXEC** (Cluster F per P3-rev-2; consumer-side spawn-handler integration of Cluster A extensions) — ticket body + WB1+ | [t3-t8-sibling-exec.txt](territorial-manifests/t3-t8-sibling-exec.txt) | depends-on Cluster A done at `3e9a203` ✓ |
+| `c5-ticket-wb1` | **MB-T-PHASE-4-T9-RATE-LIMIT-SOURCE-PLUG** (Cluster F per P3-rev-2; coarchitect-rate-limit-source production wiring) — ticket body + WB1+ | [c5-t9-rate-limit-source.txt](territorial-manifests/c5-t9-rate-limit-source.txt) | depends-on T9 plan-timer ladder done at `afd3778` ✓ |
+| `commit-plan-doc-1334` | **MB-T-PHASE-5-STATUS-INDICATOR-DATA-FLOW** (wireframe gap; tile status colors green/amber/red/grey production source) — ticket body + WB1+ | [commit-plan-doc-status-indicator.txt](territorial-manifests/commit-plan-doc-status-indicator.txt) | NONE |
+| `t6-ticket-body-0905` | **MB-T-PHASE-5-CTX-PERCENT-ACCURACY-DATA-FLOW** ticket body forward-position (anticipated Phase 5 gap; per-tile ctx% accuracy) | [t6-phase5-ctx-percent.txt](territorial-manifests/t6-phase5-ctx-percent.txt) | NONE |
+| `t1-ticket-body-0905` | MB-F-T7-CHATSHELL-POLISH-REMAINING-DOGFOOD-DRIVEN execution (light scope; close T7 row 357) | [t1-chatshell-polish.txt](territorial-manifests/t1-chatshell-polish.txt) | NONE (existing manifest) |
+| `t2-ticket-body-0905` | round-11.md §5.C-§5.D coauthor continuation | [t2-archive-coauthor.txt](territorial-manifests/t2-archive-coauthor.txt) | coordinate-with r11-archive-writer (territorial-disjoint sub-sections) |
+| `verify-chat-mount-1319` | MB-F-T7-TAB-SWITCHER-POLISH (T4-closure-dependent row 358 — T4 done; can execute now) | [verify-chat-mount-t7polish.txt](territorial-manifests/verify-chat-mount-t7polish.txt) | NONE (existing manifest) |
+| `r11-manifest-validator` | Wave-4/5 manifest audit — 4 new Wave-4 manifests + 4 new Wave-5 manifests | [r11-manifest-validator.txt](territorial-manifests/r11-manifest-validator.txt) | NONE (continuation) |
+| `r11-queue-watcher` | Wave-4/5 race-window proximity evidence continuation | [r11-queue-watcher.txt](territorial-manifests/r11-queue-watcher.txt) | NONE (continuation) |
+
+## QUEUED — Wave 4 (Phase 3 trigger + Cluster F continuation) [in-flight]
 
 (orchestrator-mediated direct dispatch; sessions begin IN-FLIGHT immediately on first commit)
 
