@@ -526,4 +526,72 @@ First-message paste (gen-5):
 - PLUS operator-supplements §A-§G verbatim above
 - PLUS termination-proximity framing — gen-5's job is to wrap, not extend
 
+### §13.10 — Additional gen-4 → gen-5 inheritance (operator-requested supplement)
+
+**Tooling quirks gen-5 must know**:
+
+1. **CC CLI 2.1.139 paste-compression** — multi-line paste via `tmux paste-buffer` triggers "paste again to expand" prompt. Workaround: one-line file-reference dispatch pattern (write detailed dispatch to `/tmp/dispatch-<N>.txt`; send via `tmux send-keys -t <session> -l '<one-line text pointing to file>'`). Reliable. See gen-4 chat history for examples.
+
+2. **Sub-session BSpace pre-clear pattern** — before dispatch, `for i in $(seq 1 80); do tmux send-keys -t $SESSION BSpace; done; sleep 1`. Clears any operator-direct-typed buffered text + lingering paste artifacts. DO NOT use Ctrl-U on active CC sessions (killed gen-2).
+
+3. **CC interactive select-prompt navigation** — when sub-session presents enumerated options (e.g., c5 territorial-contamination remediation), use `tmux send-keys -t $SESSION Down` x N + `Enter` to select option N+1.
+
+4. **Monitor script location**: `/tmp/orch-gen4-monitor.sh` (rev7 file-based dedupe; bash 3.2 compatible). HALT state dir: `/tmp/orch-gen4-halt-state/`. Gen-5 can adopt OR relaunch own monitor.
+
+5. **HALT-marker convention gap** — mid-line `HALT-X-Y-Z` prose mentions still missed by regex (line-leading anchor required to prevent false-positives from historical scrollback). Closure-β-via-dispatch-directive is the structural fix: gen-5 should reinforce that genuine HALT surfaces lead the line with `⏺ HALT-X-Y-Z` or `🛑 HALT-X-Y-Z` format. Gen-4 missed multiple HALTs (P1 HALT-PRE-INSTALL buried in prose; commit-plan-doc W2 options; orch-active HALT BINDING) during cascade — manual capture-pane checks were the recovery path.
+
+**Workstream state gen-5 inherits**:
+
+6. **Phase 3 visual verification dispatched Wave 4** — `__orchestrator_active` running `packages/dispatch-workstation/scripts/phase-3-visual-smoke.mjs` end-to-end; results pending in `docs/coordination/phase-3-visual-verification-results-2026-05-13.md` (may or may not be landed at handoff time). Critical for Round 11 TERMINATE-READY surface.
+
+7. **Round 11 archive co-authoring topology** — `r11-archive-writer` is primary; `t2-ticket-body-0905` is co-author for §5.B-§5.D parallel-write. Territorial-disjoint sub-sections within same `docs/cairn-under-stress-round-11.md` file. Gen-5 supervises §5 round-close synthesis FINAL completion.
+
+8. **Wave 5 ladders in flight** at handoff: MB-T-PHASE-4-T8-SIBLING-EXEC (t3; WB2 GREEN landed; continuing); MB-T-PHASE-4-T8-METHODOLOGY-EPSILON-VISUAL-DIFF (phase4-t8; ticket body shipped); MB-T-PHASE-4-BYPASS-PERMS-INDICATOR-DATA-FLOW (phase4-t9 Wave 4); MB-T-PHASE-5-STATUS-INDICATOR-DATA-FLOW (commit-plan-doc Wave 5); MB-T-PHASE-5-CTX-PERCENT-ACCURACY-DATA-FLOW (t6 Wave 5 ticket body); P3 roadmap rev-3 (orch-standby).
+
+**Operator pattern**:
+
+9. **Operator surfaces directives at irregular intervals** — LLM-speed-available but doesn't actively monitor. Quiet heartbeat periods are normal; operator returns with multi-paragraph directives. Cadence per Round 11 dispatch §6.
+
+10. **Operator-only territory enforcement gen-5 must respect**:
+    - REGISTRY.md §2 (CLAUDE.md §1 frozen) — **MISSING FROM REPO** (gen-4 verified absent); p7 Cortex-minimal draft authored under absence; awaiting operator authoring
+    - CLAUDE.md (frozen)
+    - ORCHESTRATOR_STATE_CONTRACT.md (frozen schema)
+    - CONDUCTOR_API_CONTRACT.md (frozen)
+    - WORKSTATION_CONTRACT.md §6 (frozen — operator §6.6 amendments arbitrated mid-cascade)
+    - dispatch-core schema.ts §1-§13 (frozen)
+    - MB-T41 orchestrator system prompt (frozen)
+    - Sherpa repo (read-only; absent path — gen-3 + gen-4 verified)
+    - Registry/Cortex repos (NO writes outside /tmp/)
+
+**Critical files for gen-5 reference**:
+
+11. **Live coordination files**:
+    - `docs/coordination/dispatch-queue-current.md` — 5 waves of dispatch state
+    - `docs/coordination/territorial-manifests/` — 20+ manifests
+    - `docs/cairn-under-stress-round-11.md` — Round 11 archive (in-flight §5 FINAL synthesis)
+    - `docs/coordination/phase-4-tier-1-roadmap-rev-2-2026-05-12.md` — current roadmap
+    - `docs/coordination/phase-4-status-2026-05-12.md` — Phase 4 status synthesis
+    - `docs/coordination/manifest-validator-report.md` — §3.9.A audit findings
+    - `docs/coordination/queue-watcher-report.md` — §3.9.B claim-race + race-window evidence
+    - `/tmp/cortex-minimal-draft/` — p7 DRAFT package (operator-only review territory; 5 files, 22 gaps G1-G22)
+
+**State-instance schema gap** (operator-deferred):
+
+12. Multi-generation lineage NOT yet schema-encoded in `ORCHESTRATOR_STATE_CONTRACT.md`. §header has single `predecessor_session_id` field. Generations chained via §11 (gen-3 supplement), §12 (gen-3→gen-4 handoff), §13 (gen-4→gen-5 handoff). Gen-5 should NOT modify schema (operator-arbitrated artifact) but author §14 supplement on its own handoff. Pattern established.
+
+**Round 11 incident corpus** (gen-5 should reference for §5 synthesis supervision):
+
+13. **MB-F-CROSS-SESSION-STAGING-AREA-COMMIT-CONTAMINATION-2026-05-12** (FOLLOWUPS.md row 330) — original + 4 recurrences tracked:
+    - 1st (LANDED): T6 swept T3 file at `0d71590`
+    - 2nd (PREVENTED): T1 WB2 cycle near-miss at `b641eac` (T3 race; T1 caught + refused)
+    - 3rd (LANDED + REMEDIATED): c5↔commit-plan-doc-1334 at `63eba0f`; partial-revert `9b8a4e9` + clean WB1 GREEN `228a2da`
+    - 4th (PREVENTED): commit-plan-doc-1334 found c5's probe-framemode-subscription.spec.tsx in its staging area; unstaged before commit
+    - Validation: 30+ commit zero-contamination interval (Wave 4/5) per `722a0ab` — closure-β working when structurally enforced
+
+14. **MB-F-ORCH-DISPATCH-ENVELOPE-CREEP-POST-ALL-RECMD-2026-05-12** (Tier 1; gen-4 self-audit at `5318421`) — closure path (γ) recommended (ANNOUNCEMENT-per-dispatch + token-pressure exclusion from auto-dispatch)
+
+15. **MB-F-ORCHESTRATOR-MONITOR-HALT-REGEX-MATCHES-STALE-SCROLLBACK-2026-05-12** (Tier 2; row 331; 4 revisions chronicled in body; closure-β urgency CRITICALLY escalated)
+
+**Gen-5 entering active orchestration after HALT-ORCHESTRATOR-5-LOADED operator-ack.**
+
 **Gen-4 entering deep-halt per INV-RP-3 after handoff verification of gen-5 alive.**
