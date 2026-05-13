@@ -33,7 +33,6 @@
 // NOT exist. Imports fail at module resolution.
 
 import { describe, it, expect, vi } from 'vitest';
-// @ts-expect-error WB4 RED: coarchitect-rate-limit-source module not yet authored until WB5 GREEN
 import { createCoarchitectRateLimitSource } from '../../../src/main/coarchitect-rate-limit-source.js';
 import type { RateLimitSource } from '../../../src/main/rate-limit-aggregator.js';
 import type { RateLimitState } from '../../../src/chat-shell/ring-helpers.js';
