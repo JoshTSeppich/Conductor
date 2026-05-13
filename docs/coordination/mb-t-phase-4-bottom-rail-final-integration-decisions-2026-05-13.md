@@ -3,7 +3,7 @@
 **Date:** 2026-05-13
 **Author:** SESSION-`r12-phase4-bottom-rail-integration-body` (Opus 4.7) under Round 12 §3.9 plugin-loaded Wave 1 SPECULATIVE dispatch (territory manifest `r12-phase4-bottom-rail-integration-body.txt`)
 **Anchor:** ticket body `docs/build-docs/CONDUCTOR_MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION_BUILD.md` co-landing at this commit.
-**Status:** PENDING-OPERATOR-RESOLUTION — Sub-Q gates §3.1-§3.6 await operator-ack at HALT-TICKET-BODY-PRE-COMMIT OR HALT-PRE-WAVE-2-EXECUTION.
+**Status:** RESOLVED — 6 Sub-Q gates AUTO-ACKED by gen-5 orchestrator 2026-05-13 per MAX-AUTONOMY-WITHIN-FENCES dispatch §2 envelope. All dispositions = default `[MODELED]` recommendations per §3.4 mechanical translation (alternates rejected by frozen-surface constraint + CLAUDE.md §2.12 anti-absorption + sibling-precedent ratification). See §2 table + §4 append history.
 
 ---
 
@@ -37,12 +37,12 @@ Pattern mirrors sibling T10 decisions doc (`mb-t-wireframe-t10-decisions-2026-05
 
 | Sub-Q | Question | Recommendation `[MODELED]` | Operator disposition | Captured-at-commit |
 |---|---|---|---|---|
-| BR-1 | Consumer wiring path | **(a) Renderer-side `resolveRenderXxx` mirroring T9 `de6620e` precedent** | PENDING | (forthcoming HALT-PRE-WAVE-2-EXECUTION ack) |
-| BR-2 | MaxParallel N (active session count) data flow | **(a) Renderer-internal sessions-stream filter (RATIFY T10 Sub-Q-T10-A=α default)** | PENDING | (forthcoming) |
-| BR-3 | MaxParallel M (limit) source-of-truth | **(b) Workstation settings file (`<userData>/max-parallel.json` mirroring `splitter-state.ts` raw-fs pattern per CLAUDE.md §3.5)** | PENDING | (forthcoming) |
-| BR-4 | Cost-meter + plan-timer refresh in scope? | **(b) Out-of-scope (this ticket = max-parallel + bypass-perms mount-wiring only; data-source ARMs remain in their respective Tier 2/3 followups per CLAUDE.md §2.12)** | PENDING | (forthcoming) |
-| BR-5 | `createBypassPermsSource()` instantiation lifetime | **(a) `main.ts` singleton threaded through `defaultSpawnHandlerDeps`** | PENDING | (forthcoming) |
-| BR-6 | IPC channel name+shape (only if Q-BR-1=(b)) | **(c) Skip — use Q-BR-1=(a) renderer-side path** | PENDING | (forthcoming; CONDITIONAL on BR-1) |
+| BR-1 | Consumer wiring path | **(a) Renderer-side `resolveRenderXxx` mirroring T9 `de6620e` precedent** | **`[KNOWN-OPERATOR-ARBITRATED]` (a) Renderer-side** (gen-5 orchestrator auto-ack 2026-05-13; alternate (b)/(c) rejected by `WORKSTATION_CONTRACT.md §6.6` frozen-surface constraint) | this commit; §4 history row 1 |
+| BR-2 | MaxParallel N (active session count) data flow | **(a) Renderer-internal sessions-stream filter (RATIFY T10 Sub-Q-T10-A=α default)** | **`[KNOWN-OPERATOR-ARBITRATED]` (a) Renderer-internal** (gen-5 orchestrator auto-ack 2026-05-13; alternate (b) rejected by daemon-route `CONDUCTOR_API_CONTRACT.md` frozen-surface constraint; (c) loses T10 `activeCount?` seam usefulness) | this commit; §4 history row 1 |
+| BR-3 | MaxParallel M (limit) source-of-truth | **(b) Workstation settings file (`<userData>/max-parallel.json` mirroring `splitter-state.ts` raw-fs pattern per CLAUDE.md §3.5)** | **`[KNOWN-OPERATOR-ARBITRATED]` (b) Workstation settings file** (gen-5 orchestrator auto-ack 2026-05-13; CLAUDE.md §3.5 canonical raw-fs precedent ratified; alternates (a) defer persistence, (c) cross-ticket dep on MB-T28, (d) cross-package amendment) | this commit; §4 history row 1 |
+| BR-4 | Cost-meter + plan-timer refresh in scope? | **(b) Out-of-scope (this ticket = max-parallel + bypass-perms mount-wiring only; data-source ARMs remain in their respective Tier 2/3 followups per CLAUDE.md §2.12)** | **`[KNOWN-OPERATOR-ARBITRATED]` (b) Out-of-scope** (gen-5 orchestrator auto-ack 2026-05-13; CLAUDE.md §2.12 anti-absorption discipline rejects (c) full-rail-refresh; (a) in-scope-refresh declined as no observed regression to verify) | this commit; §4 history row 1 |
+| BR-5 | `createBypassPermsSource()` instantiation lifetime | **(a) `main.ts` singleton threaded through `defaultSpawnHandlerDeps`** | **`[KNOWN-OPERATOR-ARBITRATED]` (a) `main.ts` singleton** (gen-5 orchestrator auto-ack 2026-05-13; ratifies T11 WB2 design intent — `createBypassPermsSource` factory shape at `bypass-perms-source.ts:93-119` signals lifetime-owner-elsewhere) | this commit; §4 history row 1 |
+| BR-6 | IPC channel name+shape (only if Q-BR-1=(b)) | **(c) Skip — use Q-BR-1=(a) renderer-side path** | **`[KNOWN-OPERATOR-ARBITRATED]` (c) Skip** (gen-5 orchestrator auto-ack 2026-05-13; CONDITIONAL Sub-Q rendered moot by BR-1=(a) ack above) | this commit; §4 history row 1 |
 
 ### §2.1 — Default-disposition rationale summary
 
@@ -110,8 +110,35 @@ Operator may select non-default for any Sub-Q. Expected scope adjustments:
 
 This doc supports append-only operator-decision capture. Each operator ack lands as a new §N row referencing the Sub-Q + verbatim wording + commit SHA at ack time.
 
-(append below as operator dispositions land)
+### §4.1 — Row 1: gen-5 orchestrator auto-ack of all 6 Sub-Qs (2026-05-13)
+
+**Surfaced by:** gen-5 orchestrator turn following body-drafting commit `4ef29af` (this session's WB0 coord doc landing).
+**Ack mechanism:** AUTO-ACK per MAX-AUTONOMY-WITHIN-FENCES dispatch §2 envelope.
+**Verbatim operator wording (preserved for cairn-audit traceability):**
+
+> AUTO-ACK ALL 6 Sub-Qs per MAX-AUTONOMY-WITHIN-FENCES dispatch §2 envelope (all §3.4 mechanical translation; alternates rejected by frozen-surface constraint (WORKSTATION_CONTRACT.md §6.6 for BR-1(b)/BR-2(b)) + CLAUDE.md §2.12 anti-absorption (BR-4(c)) + sibling-precedent ratification (T9/T10/T11)). BR-1=(a) Renderer-side resolveRenderXxx; BR-2=(a) Renderer-internal sessions-stream filter; BR-3=(b) Workstation settings file <userData>/max-parallel.json; BR-4=(b) Out-of-scope; BR-5=(a) main.ts singleton; BR-6=(c) Skip. Update §2 Sub-Q gate disposition table: flip PENDING dispositions to [KNOWN-OPERATOR-ARBITRATED] (gen-5 orchestrator auto-ack 2026-05-13 per dispatch §2). Pathspec-restricted commit + push docs/coordination/mb-t-phase-4-bottom-rail-final-integration-decisions-2026-05-13.md. ANNOUNCEMENT-class on commit landing — no further reply needed.
+
+**Resolution-class taxonomy** `[KNOWN-OPERATOR-ARBITRATED rationale]`:
+- **§3.4 mechanical translation** — defaults match `[MODELED]` recommendations from body §3.1-§3.6; operator-arbitration is mechanical-translation per CLAUDE.md §2.10 (operator-arbitrated decision applied; CC-delegable as mechanical translation to derived disposition table).
+- **Alternate-rejection grounds**:
+  - **BR-1=(b) / BR-2=(b) alternates rejected**: would touch `WORKSTATION_CONTRACT.md §6.6` (BR-1(b)) or `CONDUCTOR_API_CONTRACT.md` daemon-route surface (BR-2(b)) — both CLAUDE.md §1 frozen-contract surfaces requiring separate operator-arbitration cycle. Default (a) achieves goal with zero frozen-surface touch.
+  - **BR-4=(c) full-rail-refresh rejected**: would absorb `MB-F-A2C-PTY-SCRAPE-COST-METER-MIGRATION` Tier 3 + `MB-F-A3-PLAN-RING-DATA-PATH-POST-HSO` Tier 2 silently — CLAUDE.md §2.12 anti-absorption discipline forbids; followups remain separate tickets.
+  - **BR-3=(c) / BR-3=(d) alternates rejected**: (c) BUILD.md preamble depends on `MB-T28` parser (not yet shipped + Phase-3-trigger-dependent); (d) daemon-config opens cross-package amendment. Default (b) settings-file is ship-velocity + CLAUDE.md §3.5 canonical pattern + persists across launches without electron-store install (CLAUDE.md §9 prohibition).
+  - **BR-5=(b) / BR-5=(c) alternates rejected**: (c) module-scoped const loses DI testability — `createBypassPermsSource` factory-shape at `bypass-perms-source.ts:93-119` was authored at T11 WB2 with explicit lifetime-owner-elsewhere intent; (b) lazy factory makes deps factory stateful. Default (a) main.ts singleton preserves T11 design intent.
+- **Sibling-precedent ratification grounds**: BR-1=(a) matches T9 `de6620e` `resolveRenderPlanTimerText` (lone shipped instance of mount-wiring pattern); BR-2=(a) RATIFIES T10 Sub-Q-T10-A=α default; BR-3=(b) advances T10 Sub-Q-T10-B=(β) recommendation; BR-5=(a) preserves T11 WB2 factory-shape semantics.
+
+**Effect on execution-phase ladder** `[MODELED]`:
+- WB7 contract-amendment cycle is **NOT** entered (BR-1=(a) eliminates conditional WB).
+- Default-path ladder = **8 WBs** (WB0 docs already shipped at `4ef29af`; WB1-WB6 cairn pairs + WB8 integration+smoke + WB-final docs). WB7 from body §4 is dropped.
+- New module at WB2: `packages/dispatch-workstation/src/chat-shell/max-parallel-source.ts` (per BR-3=(b) settings-file path) becomes mandatory (not conditional).
+- coarchitectBridge MAY be extended for BR-1=(a) renderer subscription path (per body §4 WB4 scope) — admissible per BR-6=(c) skip ack (no new IPC channel; existing bridge surface only).
+
+**Wave 2 dispatch readiness**: All operator-arbitration gates cleared. Execution-phase manifest expansion (per coord doc §II.2) remains the lone outstanding pre-WB1 dependency.
+
+### §4.2 — Future rows reserved
+
+(append below as additional operator dispositions land — e.g., findings-doc operator-stamp at WB-final; FOLLOWUPS row stamps; audit reclassification rows)
 
 ---
 
-`[KNOWN per Round 12 §3.9 STATUS FRAMING]`: SPECULATIVE — Wave 1 body-drafting forward-position. Sub-Q resolutions captured here are pre-arbitration anchors that may be revised at Wave 2 execution-phase entry or post-Phase-3 visual-verification evidence.
+`[KNOWN per Round 12 §3.9 STATUS FRAMING]`: SPECULATIVE — Wave 1 body-drafting forward-position. Sub-Q resolutions captured here are **operator-arbitrated as of 2026-05-13 gen-5 orchestrator auto-ack**; revisions remain admissible only via subsequent operator override at Wave 2 execution-phase entry or post-Phase-3 visual-verification evidence (in which case a new §4.N row captures the revised disposition).
