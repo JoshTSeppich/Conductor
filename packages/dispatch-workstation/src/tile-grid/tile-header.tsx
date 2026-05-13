@@ -42,6 +42,52 @@ export interface TileHeaderProps {
   /** Token budget (model context window). v3.0 ships stubbed per
    *  Q-MBT15-2 (default 200_000 = Sonnet 4.6 context window). */
   readonly tokenBudget?: number;
+  /** MB-T-PHASE-4-T8-SIBLING-EXEC WB6: workstation-recorded spawn time
+   *  (ms-since-epoch). Sourced from Cluster A populator via
+   *  SpawnSessionResult.spawnedAtMs → tile-grid-app side-Map. When
+   *  defined AND in the past, renders an uptime label adjacent to the
+   *  model chip (`<m>m` for <1h; `<h>h<m>m` for >=1h). When absent,
+   *  in the future, or NaN, the label is omitted.
+   *
+   *  Note: this prop is currently wire-ready but Tile → TileHeader
+   *  prop pass-through is DEFERRED (tile.tsx out of t8-sibling
+   *  territory). Direct render-and-assert exercised via probe-03 at
+   *  WB5 (`probe-mbtphase4-t8sibling-03-tile-header-uptime.spec.tsx`).
+   *  See followup `MB-F-T8-SIBLING-EXEC-TILE-HEADER-SPAWNEDATMS-PASS-
+   *  THROUGH-DEFERRED` (filed at WB-final). */
+  readonly spawnedAtMs?: number;
+  /** MB-T-PHASE-4-T8-SIBLING-EXEC WB6 test seam — injectable Date.now()
+   *  for uptime-label determinism in unit probes. Production omits →
+   *  uses Date.now() at each render. Optional. */
+  readonly nowMs?: number;
+}
+
+/**
+ * MB-T-PHASE-4-T8-SIBLING-EXEC WB6: format an uptime label from a
+ * past spawn timestamp. Returns null when:
+ *   - spawnedAtMs is undefined or non-finite
+ *   - spawnedAtMs is in the future relative to nowMs (clock skew or
+ *     test-injected future time)
+ *   - elapsed is less than 1 minute (avoid noisy "0m" right at spawn)
+ *
+ * Format per build-doc Sub-Q-F:
+ *   - elapsed < 1h:  "<m>m"     (e.g., "5m")
+ *   - elapsed >= 1h: "<h>h<m>m" (e.g., "1h5m")
+ */
+function formatUptimeLabel(
+  spawnedAtMs: number | undefined,
+  nowMs: number,
+): string | null {
+  if (typeof spawnedAtMs !== 'number' || !Number.isFinite(spawnedAtMs)) {
+    return null;
+  }
+  const elapsedMs = nowMs - spawnedAtMs;
+  if (elapsedMs < 60_000) return null;
+  const totalMinutes = Math.floor(elapsedMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h${minutes}m`;
 }
 
 // ── Color tables (placeholder hex; operator confirms in followup) ─────
@@ -149,6 +195,8 @@ export function TileHeader(props: TileHeaderProps): JSX.Element {
     model = 'claude-sonnet-4-6',
     tokensUsed = 0,
     tokenBudget = 200_000,
+    spawnedAtMs,
+    nowMs,
   } = props;
 
   const dotColor = statusDotColor(status);
@@ -158,6 +206,10 @@ export function TileHeader(props: TileHeaderProps): JSX.Element {
   };
 
   const chipShortcode = modelChipShortcode(model);
+
+  // MB-T-PHASE-4-T8-SIBLING-EXEC WB6: uptime label (null when prop
+  // absent / future / sub-minute).
+  const uptimeLabel = formatUptimeLabel(spawnedAtMs, nowMs ?? Date.now());
 
   const tokenRatio = tokenBudget > 0 ? tokensUsed / tokenBudget : 0;
   const tint = tokenMeterTint(tokenRatio);
@@ -209,6 +261,15 @@ export function TileHeader(props: TileHeaderProps): JSX.Element {
           }}
         >
           {chipShortcode}
+        </span>
+      )}
+      {uptimeLabel !== null && (
+        <span
+          data-testid="tile-header-uptime"
+          title={`session spawned ${uptimeLabel} ago`}
+          style={CTX_TEXT_STYLE}
+        >
+          {uptimeLabel}
         </span>
       )}
       <span
