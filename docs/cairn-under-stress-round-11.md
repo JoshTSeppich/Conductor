@@ -984,6 +984,172 @@ t2-archive-coauthor session's commit `c76f903` (Wave 3) inadvertently deleted th
 
 ---
 
+### §5.D — t2-archive-coauthor Wave-5 forward-facing complement
+
+<!-- COORD-COMMENT (Wave 5 territorial-disjoint sub-section authored by t2-ticket-body-0905-archive-coauthor):
+     This §5.D complements §5.C (Wave 4 FINAL DRAFT operator-stampable) by adding forward-facing content NOT covered by §5.C:
+       §5.D.1 — t2-coauthor RESPONSE to §5.C.6 §6-heading-deletion finding (offender perspective + lessons)
+       §5.D.2 — Per-session worktree migration concrete proposal (§5.B.5 #3 + §5.C.7 URGENT concretization)
+       §5.D.3 — Round 12 forward-agenda hand-off scaffold
+       §5.D.4 — Cross-archive (Rounds 2/7/9/11) cumulative trajectory (§5.B.5 #2 scope-gap closure)
+       §5.D.5 — Honest gap from §5.D vantage
+     §5.D does NOT duplicate §5.C content; §5.C remains the operator-stampable FINAL synthesis. §5.D extends forward.
+     Edit-boundary discipline (§5.D.1 closure-α applied to THIS edit): anchored on END §5.C comment block UNIQUE marker, not structural §6 heading — direct §5.C.6 closure-α adoption.
+     Coordination contract: docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md §2 (updated for Wave 5).
+-->
+
+[KNOWN, confidence labels per CLAUDE.md §2.2 throughout; cross-references to §1.5-§5.C.8 + Round 9 corpus + Round 7 / Round 2 as cited]:
+
+#### §5.D.1 — t2-coauthor response to §5.C.6 §6-heading-deletion finding (offender perspective + lessons)
+
+[KNOWN per direct ownership: this session is the offending session named in §5.C.6]:
+
+**Acknowledgment.** My Wave 3 commit `c76f903` Edit-call against round-11.md inadvertently deleted the `## §6 — Cross-references` parent heading. §5.C.6 surfaces the finding correctly: the deletion was invisible in the commit body summary (which listed 5 §5.B sub-sub-sections without surfacing the boundary edit). The §6.1-§6.5 subsections survived; the parent heading was orphaned. r11-archive-writer's Wave 4 commit restored the heading inline with §5.C insertion.
+
+**Sequence reconstruction from offender vantage** [KNOWN per re-reading my Wave 3 Edit tool-invocation pattern]:
+1. My Wave 3 Edit used `old_string` ending in `## §6 — Cross-references` line (boundary text from existing file).
+2. My `new_string` for that Edit appended `§5.B` content + `---` separator + ended WITHOUT preserving the `## §6 — Cross-references` line — the boundary text appeared in old_string but was OMITTED in new_string by oversight.
+3. The Edit was accepted by the tool (old_string matched uniquely); the file now lost the §6 heading.
+4. My commit body's Q4 ("Anything outside contract spec?") self-check claimed "matches `t2-archive-coauthor.txt` manifest TERRITORY exactly" — TRUE at file-granular scope (round-11.md is in WRITE territory) but FALSE at intra-file-edit-scope (the §6 heading was NOT in my §5.B scope).
+5. My commit body's Q6 ("Any unlabeled claims?") did not catch this because the claim was scope-narrative ("authored §5.B"), not diff-narrative.
+6. Wave 4 r11-archive-writer detected via `git --no-pager show c76f903 -- docs/cairn-under-stress-round-11.md | grep "^-## §"` and restored at §5.C insertion.
+
+**Severity classification** [MODELED per §5.C.6 framing]: methodology-discipline drift, not contamination-class. No information lost; only a markdown heading. Recovery cost: ~5min at next FINAL-draft session. Crucially: pattern is dangerous at SCALE — extending same pattern to off-scope edits in §1.x prose (e.g., inadvertently rewriting §1.5 finding text during §5.B authoring) would be load-bearing.
+
+**Closure-paths from offender perspective (complementary to §5.C.6 closure-paths):**
+
+| # | Closure-path | Applied in this Wave-5 commit? |
+|---|---|---|
+| α | Edit-boundary discipline: anchor on UNIQUE markers (comment lines, blank lines, `<!-- END §X -->` markers), NOT structural headings | YES — this Wave-5 Edit anchored on `<!-- END §5.C ... -->` comment block + surrounding `---` separators; §6 heading not in old_string boundary at all |
+| β | Post-Edit `git diff` review with explicit scope-summary that matches commit body Q4/Q6 claims | (planned for this Wave-5 commit before push) |
+| γ | §3.9.F sub-section-granular TERRITORY enforcement (per §5.C.6 closure-α) | not yet operator-arbitrated; structural prevention path |
+| δ | Anchor-granular pre-commit diff-scope hook (per §5.C.6 closure-γ) | not yet shipped; tooling-layer prevention path |
+| ε **(NEW)** | Commit body Q4/Q6 SCHEMA EXTENSION: Q4 "Anything outside contract spec?" should ask both file-granular AND edit-scope-granular; Q6 should explicitly cite `git diff` SUMMARY ranges as quoted evidence | proposal-class; would have caught this case at authoring time |
+
+The (α) discipline applied to THIS Wave-5 commit converts §5.C.6 finding from "remediation pending" to "remediation operationally applied" at first-opportunity. §5.D.1 closure-ε is a NEW closure-path complementary to §5.C.6's α/β/γ/δ.
+
+#### §5.D.2 — Per-session worktree migration concrete proposal (§5.B.5 #3 + §5.C.7 URGENT priority concretization)
+
+[MODELED, operator-arbitrated migration; §5.B.5 scope-gap #3 + §5.C.7 URGENT structural-fix elevation; per `6120dfd` operator-CRITICAL escalation. Concrete proposal sketch for operator review]:
+
+**File-system layout**: `~/Desktop/Automata/foxworks-worktrees/<session-name>/` per CLAUDE.md §4.3. Each sub-session boots in its own worktree; main repository at `~/Desktop/Automata/foxworks-dispatch/` remains the integration tree.
+
+**Branch convention**: `worktree/<session-name>` per session. Created via `git worktree add ~/Desktop/Automata/foxworks-worktrees/<session-name> -b worktree/<session-name>` at session-boot; deleted via `git worktree remove ~/Desktop/Automata/foxworks-worktrees/<session-name>` at session-end.
+
+**Boot protocol changes**:
+1. Orchestrator-side dispatch-queue claim atomicity preserved (operator-arbitrated; orchestrator writes claim row to main).
+2. Post-claim: orchestrator runs `git worktree add` for the claiming session.
+3. Sub-session boots inside its worktree; `pwd` returns the worktree path.
+4. Sub-session writes + commits to its worktree branch only.
+5. WB-final OR session-end: orchestrator-mediated rebase of `worktree/<session-name>` onto main + push.
+
+**Cross-session coordination protocol changes**:
+- Coord docs (e.g., `docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md`) live on main; sub-sessions `git fetch && git rebase origin/main` to receive coord updates.
+- Shared-WRITE archive docs (round-11.md scenario): sub-sessions still author in their worktree; merge-back conflicts resolved at rebase-to-main step (operator-arbitrated for cairn-under-stress archive docs; tooling-assisted for ladder commits).
+
+**Cost estimate** [MODELED]:
+- Operator tooling: ~30min (worktree-create + worktree-cleanup scripts; orchestrator dispatch-script integration; rebase-to-main automation; cross-worktree coord-doc fetch script).
+- Per-session boot delta: ~5-10sec (`git worktree add` + `cd` into worktree).
+- Per-session end overhead: ~10-30sec (rebase-to-main + `git worktree remove`).
+- Merge-back risk: rebase conflicts at high concurrency — operator-arbitrated rebase ordering; sub-session may need to re-resolve a conflict before its commit lands on main.
+
+**Convergent-fix coverage** [KNOWN]:
+- §1.6 PREVENTED near-miss (shared-`.git/index` race at watcher commit) → ELIMINATED (no shared `.git/index`).
+- §1.RC1 LANDED contamination (commit-without-pathspec absorbing sibling staged files) → ELIMINATED (each session's index is isolated; no sibling staged files visible to absorb).
+- §1.RC2 envelope-creep meta-cause → REDUCED (envelope-creep less load-bearing because shared-substrate-load no longer scales O(n²)).
+- §1.RC3 file-granular grammar gap → PARTIALLY ADDRESSED (file-level disjointness via per-worktree branches; intra-file-edit-scope grammar gap remains for shared archive docs at rebase).
+- §5.C.6 §6-heading-deletion class → PARTIALLY ADDRESSED (edit-boundary discipline still needed; but blast-radius reduced — accidental side-effect lives in offender's worktree before merge-back).
+- Round 9 §1.1-§1.3 shared-index race class → ELIMINATED.
+
+**Risk acknowledgments** [MODELED]:
+- Operator-side initial tooling cost (~30min) is non-trivial; round 12 inception is the natural scheduling target.
+- Merge-back coordination may shift discipline-load from per-session-commit-cycle to per-session-end-rebase-cycle; net cognitive load comparable.
+- 24+ concurrent stress probe (post-16-concurrent) may surface NEW failure modes at rebase ordering layer not yet observed.
+
+**Operator-decision artifact**: this §5.D.2 is the concrete proposal sketch. Operator-arbitrated scheduling decision (when + by whom + against what milestone) is round-close + Round 12 inception scope, not Wave 5 scope.
+
+#### §5.D.3 — Round 12 forward-agenda hand-off scaffold
+
+[MODELED, Round 12 inception is operator-arbitrated; scaffold below is candidate pre-load items for Round 12 archive's §0 abstract]:
+
+**Pre-load context items** (Round 12 archive should reference at §0):
+- Round 11 close-stamp at this archive's round-close commit (whenever operator stamps).
+- §3.9 ratification status (Path A from §5.B.3 / §5.C.7): which items ratified into CLAUDE.md vs which remain SPECULATIVE.
+- Per-session worktree migration status (Path B): scheduled / in-progress / shipped / deferred.
+- HALT-vocabulary registry status (§3.5 + §5.C.7 refinement #2): authored / pending / shipped.
+- Round 11 cohort sibling-session findings docs as predecessor corpus.
+
+**Forward experiments** (resolve current SPECULATIVE items at §5.C.3):
+- 24-concurrent stress probe (Round 11 reached 16; Round 12 extension target).
+- §3.9.B atomic claim via commit (QUEUED→IN-FLIGHT row-claim race) — never exercised through Round 11; intentionally engineer a contended QUEUED slot in Round 12 to capture evidence.
+- §3.9.C frozen-contract carve-out negative-test — intentionally attempt a frozen-contract write under §3.9 in Round 12 to exercise the negative-test.
+- §3.9.F sub-section-granular TERRITORY syntax — Round 12 candidate ratification + first-use evidence.
+- §3.9.G orchestrator dispatch-envelope governance — Round 12 codification + first round-with-codified-envelope.
+
+**Round 12 archive doc anchor**: `docs/cairn-under-stress-round-12.md` (follows round-N.md convention; same path as round-2/7/9/11).
+
+**Predecessor evidence cross-references** Round 12 should cite at §0:
+- Round 7 §5.1-§5.3 methodology-amendment recommendations (still pending operator-side ratification window).
+- Round 9 corpus (`docs/cairn-under-stress-round-9.md`).
+- Round 11 corpus (this archive).
+- Cross-round trajectory per §5.D.4 below.
+
+#### §5.D.4 — Cross-archive (Rounds 2 / 7 / 9 / 11) cumulative methodology trajectory
+
+[KNOWN per direct read of round-2.md + round-7.md + round-9.md + this Round 11 corpus]:
+
+| Round | Date | Shape | Concurrent ceiling | Substrate | Primary methodology surface |
+|---|---|---|---|---|---|
+| 2 | 2026-04-30+ | 3+2+1 zipper | 3 sessions | Shared working tree + per-path `git add` | Frozen export contracts + zipper pattern; first multi-session validation |
+| 7 | 2026-05-08 | Single CC session + chat-Claude relay | 1 build session | Operator-machine + chat-Claude mount-isolation | Anti-fabrication discipline at HALT boundaries; chat-Claude dispatch-authoring failure caught at CC §3.1 |
+| 9 | 2026-05-11 to 2026-05-12 | Max-parallel cascade | 6-8 (operator-acknowledged) | Shared working tree + per-path `git add` + commit-pathspec emerging | First shared-`.git/index` Tier 1 race-class corpus (§1.1-§1.3); commit-pathspec primitive emerged |
+| 11 | 2026-05-12 to 2026-05-13 | Max-parallel cascade + §3.9 territorial partitioning | 12-16 concurrent (Wave 2-4) | §3.9 manifests + per-path discipline + commit-pathspec mandate + manifest-self-correction | §3.9 SPECULATIVE → KNOWN-load-bearing primitive set; 100% mitigation when commit-pathspec applied per §5.C.2 |
+| 12 (forward) | TBD | Per-session-worktree + §3.9 ratified | 24+ candidate | Per-session worktrees per CLAUDE.md §4.3 (operator-arbitrated migration) | Substrate-shift eliminates shared-`.git/index` race CLASS; §3.9.F + §3.9.G first-codification + first-use evidence |
+
+**Cross-round evolution arc** [KNOWN per cumulative archive read]:
+- Rounds 2 + 7 established cairn discipline at small scale (1-3 sessions). Anti-fabrication + per-path `git add` baseline.
+- Round 9 first encountered shared-`.git/index` race at 6-8 concurrent; corpus filed the race as Tier 1 (§1.1-§1.3); commit-pathspec emerged as closure-path-α.
+- Round 11 adopted §3.9 territorial partitioning as the operator-arbitrated structural response; commit-pathspec MANDATE codified at dispatch level. Cohort scaled to 12-16 concurrent with 100% mitigation rate.
+- Round 12 (forward) candidate substrate-shift to per-session worktrees per CLAUDE.md §4.3 — eliminates the race CLASS rather than mitigating outcomes.
+
+**Cumulative incident-class trajectory** [KNOWN per per-round corpus read]:
+- Round 9: shared-index race (3 Tier 1 §1.1-§1.3) + dispatch-text fabrication (§1.9) + monitor-regex stale scrollback (§1.4) + CC CLI 2.1.138 paste-compression (§1.7) + α false-STALE (§1.8).
+- Round 11: shared-index race (§1.6 PREVENTED + §1.RC1 LANDED) + fabrication-class manifest false-positive (NET-NEW; §1.5) + manifest-authoring quality (NET-NEW; §1.8-§1.9 + §1.A1) + envelope-creep meta-cause (NET-NEW; §1.RC2) + file-granular grammar gap (NET-NEW; §1.RC3 + §5.C.6) + co-authoring incident (NET-NEW; §5.B.4 + §5.D.1).
+- Net incident-class GROWTH from Round 9 to Round 11: 5 new classes introduced (manifest-authoring; manifest-fabrication; envelope-creep; file-granular-grammar-gap; co-authoring). All 5 are §3.9-substrate-introduction artifacts — failure modes that exist only WITHIN the §3.9 substrate.
+- Methodology-class trajectory: each round's failure modes surface next-round schema requirements; each round's recovery primitives become next-round prevention candidates. Round 11 → Round 12 expected pattern: per-session worktrees as substrate-shift; §3.9.F/G as schema codification; HALT-vocabulary registry as tooling-class artifact.
+
+**Primitive ratification trajectory** [KNOWN per CLAUDE.md + cumulative archive cross-references]:
+- Round 2 → Round 7: per-path `git add` discipline established; frozen contracts via export signatures.
+- Round 7 → Round 9: anti-fabrication discipline + chat-Claude dispatch-authoring failure modes documented (Round 7 §5.1-§5.3 amendments still operator-pending).
+- Round 9 → Round 11: commit-pathspec primitive emerged; per-session worktree discussed as closure-γ (Round 9 §1.1).
+- Round 11 → Round 12 (forward): §3.9 SPECULATIVE → KNOWN-load-bearing for primitive set (per §5.C.3 + §5.C.7); per-session worktree URGENT structural-fix (per §5.C.7).
+
+#### §5.D.5 — Honest gap from §5.D vantage (items §5.D does not cover; future-round / merge-pass attention)
+
+[KNOWN per scope-limit of this §5.D contribution]:
+
+Items not covered by §5.D that may benefit future Round-12 inception or operator-arbitrated merge-pass:
+
+1. **Concrete worktree-migration tooling implementation** — §5.D.2 is a proposal sketch; the actual scripts (worktree-create, dispatch-integration, rebase-to-main automation) are operator-tooling work. Cost estimate (~30min) is rough; operator-side capacity planning for round-12 inception is the natural scheduling decision.
+
+2. **Cross-archive cumulative-incidence-trajectory numeric analysis** — §5.D.4 provides class-level trajectory but does not compute round-over-round incidence-rate growth + class-coverage growth + closure-rate. Numeric trajectory (e.g., "Round 11 closed N closure-paths; M remain open carrying forward to Round 12") would be merge-pass synthesis work.
+
+3. **CC CLI 2.1.138 paste-compression regression status in Round 11 corpus** — Round 9 §1.7 noted CC CLI 2.1.138 paste-compression as a paste-buffer-dispatch primitive breaker; Round 11 corpus does not surface this as an incident. Either the regression was resolved upstream (operator/CC update?) or it surfaced but was absorbed into orchestrator-side workarounds without explicit §1.x filing. Round 12 §0 could clarify.
+
+4. **Cairn-tooling MVP scope synthesis** — Round 7 §7.4 enumerated 7 candidate cairn-tooling primitives; Round 9 §3 + §5 added more; Round 11 §5.C.7 refinement list adds NEW (anchor-granular pre-commit diff-scope hook, HALT-vocabulary registry, manifest-grammar parser). A consolidated cairn-tooling MVP backlog across rounds would be valuable; not Wave 5 scope.
+
+5. **Round 11 close-stamp timing + criteria** — §5.B.5 #4 surfaced "Cascade-completion definition" as missing; §5.C.7 decision matrix names "Round 11 close-stamp" as RECOMMENDED but does not define the criteria operationally (operator-declared vs evidence-driven vs time-windowed). Worth surfacing as operator decision-aid before close-stamp lands.
+
+6. **§5.B.4 closure-path candidate promotion to numbered §1.x or §3.x** — §5.B.4 surfaced 3 live-Wave-3 co-authoring events as closure-path candidates (α tool-level staleness detection; β sub-section anchor convergence; γ manifest-path-as-contract). These were not promoted to §1.x or §3.x in §5.C; round-close merge-pass may want to either promote or absorb into §3 pattern observations.
+
+These scope-gaps are not failures of §5.D — they are items beyond §5.D's "forward-facing complement to §5.C" scope. The round-close gate or Round 12 inception should re-evaluate.
+
+---
+
+<!-- END §5.D — t2-archive-coauthor Wave-5 forward-facing complement. Coordination contract: docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md §2 updated for Wave 5. -->
+
+---
+
 ## §6 — Cross-references
 
 ### §6.1 — Round 11 infrastructure anchors (at adoption time `d41bacb` and Wave 2 update `f61c14b`)

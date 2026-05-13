@@ -26,8 +26,10 @@ Per dispatch P3 (this session's invocation): "co-author docs/cairn-under-stress-
 |---|---|---|---|
 | `### §5 — Round-close synthesis` (existing placeholder; 4-bullet outline) | r11-archive-writer (Wave 1 skeleton `72c28fc`); placeholder + Wave 3 framing prologue updated at `d06f8c7` | Placeholder + Wave 3 prologue retained; round-close fill at operator-arbitrated round-close gate | preserved; modified at `d06f8c7` by sibling for prologue framing |
 | `### §5.A — r11-archive-writer Wave-3 round-close prep contribution` (with §5.A.1-§5.A.6 sub-sub-sections) | r11-archive-writer | r11-archive-writer's Wave 3 contribution: cumulative incident inventory (§5.A.1), closure-path roadmap (§5.A.2), §3.9 SPECULATIVE→ratification disposition framing (§5.A.3), Round-11-vs-Round-9 comparison table (§5.A.4), §3.9 evolution roadmap input (§5.A.5), honest-gap (§5.A.6) | **AUTHORED Wave 3 at `d06f8c7`** |
-| `### §5.B — t2-archive-coauthor Wave-3 complementary contribution` (with §5.B.1+ sub-sub-sections) | **t2-ticket-body-0905-archive-coauthor (this session)** | This session's Wave 3 contribution: **complementary** to §5.A (not duplicative). Drafts merge-checklist crosswalk, round-9→round-11 methodology-trajectory narrative, hardest-open-question for round-close, co-authoring-event-as-methodology-evidence, scope-gap from this session's vantage | **AUTHORED Wave 3 by this session** |
-| `### §5.C+` (numbered post-§5.B) | future-co-author or merge-pass | reserved | not yet authored |
+| `### §5.B — t2-archive-coauthor Wave-3 complementary contribution` (with §5.B.1+ sub-sub-sections) | **t2-ticket-body-0905-archive-coauthor (this session)** | This session's Wave 3 contribution: **complementary** to §5.A (not duplicative). Drafts merge-checklist crosswalk, round-9→round-11 methodology-trajectory narrative, hardest-open-question for round-close, co-authoring-event-as-methodology-evidence, scope-gap from this session's vantage | **AUTHORED Wave 3 by this session at `c76f903`** |
+| `### §5.C — Round-close synthesis FINAL DRAFT (consolidated; Wave 4 operator-stampable)` (with §5.C.1-§5.C.8 sub-sub-sections) | r11-archive-writer | Consolidated §5.A + §5.B + Wave 4 evidence into operator-stampable FINAL DRAFT. 8 sub-sub-sections: ship inventory, contamination inventory, §3.9 verdict, envelope-creep finding, manual closure-β evidence, live FINAL-draft evidence including §6-heading-deletion finding naming this session, final disposition, cross-references | **AUTHORED Wave 4 by sibling** |
+| `### §5.D — t2-archive-coauthor Wave-5 forward-facing complement` (with §5.D.1-§5.D.5 sub-sub-sections) | **t2-ticket-body-0905-archive-coauthor (this session)** | This session's Wave 5 contribution: **forward-facing** to §5.C (not duplicative). 5 sub-sub-sections: response to §5.C.6 §6-heading-deletion finding (offender perspective + closure-paths); per-session worktree migration concrete proposal; Round 12 forward-agenda hand-off scaffold; cross-archive (Rounds 2/7/9/11) cumulative trajectory; honest gap | **AUTHORED Wave 5 by this session** |
+| `### §5.E+` (numbered post-§5.D) | future-co-author or merge-pass | reserved | not yet authored |
 
 **Disjointness contract (binding):**
 - Each sub-author writes ONLY to their own clearly-marked sub-section header (`§5.A.*` for r11-archive-writer; `§5.B.*` for this session).
@@ -63,14 +65,34 @@ At operator-arbitrated round-close gate (post-Wave-3, post-16-concurrent-attempt
 
 ---
 
-## §4 — This session's contribution (Wave 3)
+## §4 — This session's contribution (Waves 3 + 5)
+
+### §4.1 — Wave 3 contribution
 
 Authored at HEAD `5a10334` (P2's round-9 archive initial commit) + r11-archive-writer Wave 2 close at `ba74b53`.
 
 | Artifact | Path | Wave 3 status |
 |---|---|---|
-| This coord-notes file | `docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md` (NEW exclusive territory) | authored Wave 3 |
-| `### §5.B — t2-archive-coauthor Wave-3 complementary contribution` (with §5.B.1+ sub-sub-sections) | `docs/cairn-under-stress-round-11.md` (shared territory; new sub-section appended AFTER `§5.A` per r11-archive-writer's `§5.B+` reservation at round-11.md line 702 in `d06f8c7`) | authored Wave 3 |
+| This coord-notes file | `docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md` (NEW exclusive territory) | authored Wave 3 at `c76f903` |
+| `### §5.B — t2-archive-coauthor Wave-3 complementary contribution` (with §5.B.1+ sub-sub-sections) | `docs/cairn-under-stress-round-11.md` (shared territory; new sub-section appended AFTER `§5.A` per r11-archive-writer's `§5.B+` reservation at round-11.md line 702 in `d06f8c7`) | authored Wave 3 at `c76f903` |
+
+### §4.2 — Wave 5 contribution
+
+Authored at HEAD post-r11-archive-writer's Wave 4 FINAL DRAFT close (§5.C landed). Date 2026-05-13.
+
+| Artifact | Path | Wave 5 status |
+|---|---|---|
+| This coord-notes file §2 + §4 + §5 updates | `docs/coordination/round-11-archive-coauthor-notes-2026-05-12.md` (NEW exclusive territory; in-place updates per §3.9 manifest WRITE clause) | updated Wave 5 |
+| `### §5.D — t2-archive-coauthor Wave-5 forward-facing complement` (with §5.D.1-§5.D.5 sub-sub-sections) | `docs/cairn-under-stress-round-11.md` (shared territory; new sub-section appended AFTER `§5.C` per disjointness contract §2; anchored on UNIQUE `<!-- END §5.C ... -->` comment-block marker per §5.D.1 closure-α — direct §5.C.6 closure-α application to avoid §6-heading-deletion recurrence) | authored Wave 5 |
+
+**Wave 5 contribution scope**: forward-facing complement to §5.C. §5.C is the operator-stampable FINAL DRAFT (Wave 4 r11-archive-writer); §5.D adds 5 sub-sub-sections NOT covered by §5.C:
+- §5.D.1 — t2-coauthor RESPONSE to §5.C.6 §6-heading-deletion finding (offender perspective + closure-paths α-ε; closure-α applied to THIS Wave 5 commit at first opportunity)
+- §5.D.2 — Per-session worktree migration concrete proposal (§5.B.5 #3 + §5.C.7 URGENT priority concretization)
+- §5.D.3 — Round 12 forward-agenda hand-off scaffold
+- §5.D.4 — Cross-archive (Rounds 2/7/9/11) cumulative methodology trajectory (§5.B.5 #2 scope-gap closure)
+- §5.D.5 — Honest gap from §5.D vantage
+
+**§5.C.6 acknowledgment**: §5.D.1 owns the §6-heading-deletion finding from §5.C.6 (this session was the offending session at Wave 3 commit `c76f903`). Closure-path-α (Edit-boundary discipline: anchor on UNIQUE markers, not structural headings) APPLIED to this Wave 5 commit's round-11.md Edit. Wave 5 Edit anchored on `<!-- END §5.C ... -->` comment block + surrounding `---` separators; structural §6 heading NOT in old_string boundary.
 
 **Per-path discipline applied** (per dispatch MANDATORY + Round 9 §1.1 contamination remediation + Round 11 §1.6 commit-pathspec discipline):
 - Pre-stage `git status --short` check.
