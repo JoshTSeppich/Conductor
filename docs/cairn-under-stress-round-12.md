@@ -63,6 +63,50 @@
 | Multi-generation handoff continuity failure | N/A (no unsupervised handoff in Round 11) | **NEW for Round 12** — pending gen-5 → gen-6 handoff |
 | Plugin-loaded sub-session anomalies | N/A (no plugin retrofit in Round 11) | **NEW for Round 12** — pending NEW sub-session spawns |
 | Plugin agent dispatch failure | N/A | **NEW for Round 12** — pending Task tool agent invocations |
+| Deferred-prod-wiring user-visible blast radius (NEW emergent class) | N/A (no precedent in rounds 9/11 corpora) | **OBSERVED §1.1** — operator dogfood 2026-05-13; Frame B empty in Conductor v3.0 shell |
+
+---
+
+### §1.1 — Tier 1 NEW EMERGENT CLASS: deferred-prod-wiring-surface-in-operator-dogfood
+
+**Cite-anchor:** Operator dogfood screenshot 2026-05-13 of Conductor v3.0 shell (Frame B / tile grid EMPTY; other UI elements functional — cost meter + audit stream + tab switcher + cost prefix/suffix) + r12-phase5-tile-header-impl WB1-3 GREEN commits `460fbda` (WB1 — parent-closure status hookup in tile-grid-app.tsx, 3/3 PASS) + `88cc176` (WB2 — empty-window fallback ratification, 2/2 PASS at WB1 GREEN anchor) + `f2c9dca` (WB3 — dispose lifecycle ratification, 2/2 PASS at WB1 GREEN anchor) + decisions doc `3a75cc3` (Sub-Q-4 separate HttpSessionListClient origin; 5 Sub-Q dispositions flipped to [KNOWN-OPERATOR-ARBITRATED] under gen-5 orchestrator auto-ack 2026-05-13 per dispatch §2) + Option A auto-ack 2026-05-13 per dispatch §3.4 source-code-structural-fix framing surfaced by gen-5 orchestrator.
+
+**Sequence reconstruction** [KNOWN per operator dogfood 2026-05-13 + commit anchors verified via `git log` at HEAD `8bb68b3` + orchestrator-surfaced framing 2026-05-13]:
+
+1. r12-phase5-tile-header-impl ladder authored WB1-3 with structural correctness — three probes PASS (`460fbda` 3/3, `88cc176` 2/2, `f2c9dca` 2/2). Structural surfaces: parent-closure status hookup, empty-window fallback ratification, dispose lifecycle ratification.
+2. Decisions doc `3a75cc3` flipped 5 Sub-Q dispositions to [KNOWN-OPERATOR-ARBITRATED] via gen-5 orchestrator auto-ack 2026-05-13 under dispatch §2 envelope. Sub-Q-4 specifically ratified separate HttpSessionListClient instantiation as the production wiring path.
+3. Production HttpSessionListClient instantiation was DEFERRED to followup per Option A framing. gen-5 auto-acked Option A under dispatch §3.4 source-code-structural-fix envelope authority (treating the deferral as mechanical-translation-class for the auto-ack decision).
+4. Operator dogfood 2026-05-13 of the resulting Conductor v3.0 shell reveals Frame B (tile grid) is user-visibly EMPTY. Adjacent shell elements work: cost meter, audit stream, tab switcher, cost prefix/suffix all functional.
+5. Per operator directive 2026-05-13: when r12-phase5-tile-header-impl files `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` at WB-final, gen-5 will file at **Tier 1** (not Tier 2) because dogfood evidence demonstrates the deferral is user-visible-ship-blocking — overriding the default tier inferred from source-code-structural framing.
+
+**Diagnostic** [KNOWN per operator dogfood + commit-anchor cross-reference]:
+
+- §3.4 envelope's source-code-structural-fix framing is a correct gating heuristic for whether mechanical-translation auto-ack is appropriate. The framing applied cleanly to WB1-3 (structural status hookup + fallback + dispose ratification all source-code-structural in nature).
+- HOWEVER the framing's tier-classification implication on the RESULTING followup ("source-code-structural" → Tier 2 default) is decoupled from the user-visible blast radius of the deferral. A structurally-correct WB ladder that DEFERS production wiring can leave the shipped artifact functionally-empty in operator dogfood — invisible to typecheck + unit + probe suites because the probes test the deferred-wired-code-paths-as-deferred (i.e., the structural contract is honored even though the user-visible surface is empty).
+- This is structurally analogous to `MB-F-WORKSTATION-RUNTIME-RELAUNCH-AS-MERGE-GATE` (CLAUDE.md §4.6 — typecheck + unit + integration blind to ERR_MODULE_NOT_FOUND class). Both are "test suites correctly green but operator-observable surface fails" classes. Distinct mechanism (runtime-launch failure vs structurally-PASS-but-deferred-wiring) but same blind-spot topology.
+
+**Methodology insight** [KNOWN per this surface]:
+
+- **§3.4 mechanical-translation auto-ack remains appropriate** for the underlying source-code-structural decisions. The auto-ack envelope is NOT the failure surface; gen-5 auto-acking Option A under §3.4 was correct per the envelope's stated criterion.
+- **Resulting-followup tier-classification must consider dogfood visibility, not just source-code structure.** A followup row born from a DEFERRED production wiring whose deferral is user-visible-ship-blocking is Tier 1 by user-impact, regardless of the source-code-structural framing of the underlying decision.
+- Round 12 introduces this NEW emergent class: **deferred-prod-wiring-surface-in-operator-dogfood**. Distinct from prior cairn-under-stress corpus classes — not race-class (Round 9 §1.1-§1.3 + Round 11 §1.6/§1.RC1), not fabrication-class (Round 11 §1.5), not manifest-quality-class (Round 11 §1.8-§1.A1), not envelope-creep-class (Round 11 §1.RC2). New class: **auto-ack-correct-but-resulting-followup-tier-misclassified-by-user-visible-blast-radius**.
+
+**Closure-paths candidates:**
+
+- **(α) Tier-classification heuristic amendment** — when a followup row references a DEFERRED production wiring whose deferral is reachable in user-facing UI surface, default to Tier 1 even if the source-code-structural framing of the deferral itself is Tier 2-class. Operator-arbitrated text addition to a tiering rubric (location TBD — likely FOLLOWUPS.md preamble or CLAUDE.md §2.12 extension).
+- **(β) Operator-dogfood-as-merge-gate** extension of `MB-F-WORKSTATION-RUNTIME-RELAUNCH-AS-MERGE-GATE` — structural-probe-PASS + runtime-launch-PASS are NECESSARY but NOT SUFFICIENT; operator dogfood of the changed UI surface is the load-bearing gate for user-visibility failures of the deferred-wiring class. Roadmap-class closure (gating discipline expansion).
+- **(γ) Pre-deferral disclosure protocol** — when a WB ladder DEFERS production wiring to followup, the ladder's findings doc must explicitly enumerate the dogfood-visibility implication of the deferral (i.e., "this ladder ships structurally-correct artifact whose user-visible surface remains empty until followup MB-F-X closes"). Operator-arbitrated discipline addition.
+
+**Tier classification:** Tier 1 methodology incident — FIRST surface in Round 12; FIRST user-visible-ship-blocking incident attributed to an auto-ack envelope's downstream tier-classification consequence (the envelope itself remains correct; the tier-classification heuristic for the resulting followup is the gap).
+
+**Cross-references:**
+
+- r12-phase5-tile-header-impl WB1-3 GREEN: `460fbda` / `88cc176` / `f2c9dca` (3 commits, 7 probe assertions PASS cumulatively, structurally correct)
+- Decisions doc: `3a75cc3` (5 Sub-Q dispositions to [KNOWN-OPERATOR-ARBITRATED] under gen-5 auto-ack; Sub-Q-4 = separate HttpSessionListClient origin)
+- Option A auto-ack: gen-5 orchestrator 2026-05-13 per dispatch §2 § §3.4 source-code-structural-fix framing
+- Pending followup: `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` — will be filed by r12-phase5-tile-header-impl at WB-final per operator directive 2026-05-13; gen-5 will file at Tier 1 (override of source-code-structural-class Tier-2 default) per dogfood evidence anchor in this §1.1
+- Structurally-analogous prior class: `MB-F-WORKSTATION-RUNTIME-RELAUNCH-AS-MERGE-GATE` (CLAUDE.md §4.6 — same test-suites-blind-to-operator-observable-failure topology, distinct mechanism)
+- §1.0 row: "Deferred-prod-wiring user-visible blast radius (NEW emergent class)" — registered at this commit
 
 ---
 
