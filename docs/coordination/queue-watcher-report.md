@@ -504,3 +504,171 @@ This Wave-3 extension will be re-extended if Wave 4 dispatches or if any Wave 3 
 [MODELED] **Partial falsification of §21.1 risk model**: orch-active has begun Wave 3 WB1 RED work and is **probe-only authoring**, exactly as queue row 28's "depends-on phase4-t8-exec coord for path-disjoint scope" implies. **No spawn-handler.ts or spawn-session-result*.ts edits observed from orch-active at this snapshot.** The triple-write-authority risk on `spawn-handler.ts` is reduced from "structural-possible" to "behaviorally-not-occurring (orch-active observes path-disjoint convention)."
 
 [MODELED] **Residual risk preserved**: phase4-t8-exec Wave-3 has not yet begun (no `??` or `M ` files matching its TERRITORY observed). When it begins, it will encounter commit-plan-doc-1334's persistent ` M spawn-handler.ts` unstaged-modification state. Manifest amendment by operator or sequenced dispatch remains the cleanest mitigation for the spawn-handler.ts handoff.
+
+---
+
+# Round 11 Continuation Wave 4 + Wave 5 — Extension Section
+
+**Watch pass**: 2026-05-13 ~09:42–09:50
+**Watcher commit reference (prior pass)**: `f645b86`
+**Queue head at this pass**: `69b49fb` (`spike(§3.9): SESSION-r11-archive-writer Wave 4 — §5.C FINAL DRAFT...`); Wave 5 setup at `da947dc`; Wave 4 setup at `178b994`.
+**Manifest inventory delta**: +7 new (Wave 4: `orch-active-phase3-visual-verify`, `phase4-t9-bypass-perms`, `phase4-t8-methodology-epsilon`; Wave 5: `t3-t8-sibling-exec`, `c5-t9-rate-limit-source`, `commit-plan-doc-status-indicator`, `t6-phase5-ctx-percent`). Total manifests on disk: **26**.
+**Concurrency surface**: 9 Wave-5 QUEUED + 5 Wave-4 QUEUED-in-flight + 11 Wave-2 IN-FLIGHT (archival; many sessions actively transitioned to new tickets) — operator-described as "9-session concurrent" for Wave 5 cohort.
+
+## §25 — Wave 4 + Wave 5 referential integrity
+
+[KNOWN] **9/9 Wave-5 manifest refs resolve**:
+
+| QUEUED session | manifest | exists |
+|---|---|---|
+| t3-ticket-body-0905 | t3-t8-sibling-exec.txt | ✓ |
+| c5-ticket-wb1 | c5-t9-rate-limit-source.txt | ✓ |
+| commit-plan-doc-1334 | commit-plan-doc-status-indicator.txt | ✓ |
+| t6-ticket-body-0905 | t6-phase5-ctx-percent.txt | ✓ |
+| t1-ticket-body-0905 | t1-chatshell-polish.txt | ✓ (reused) |
+| t2-ticket-body-0905 | t2-archive-coauthor.txt | ✓ (reused) |
+| verify-chat-mount-1319 | verify-chat-mount-t7polish.txt | ✓ (reused) |
+| r11-manifest-validator | r11-manifest-validator.txt | ✓ (reused) |
+| r11-queue-watcher | r11-queue-watcher.txt | ✓ (reused; this session) |
+
+[KNOWN] **5/5 Wave-4 manifest refs resolve**: `orch-active-phase3-visual-verify.txt`, `phase4-t9-bypass-perms.txt`, `phase4-t8-methodology-epsilon.txt`, `r11-archive-writer.txt`, `orch-standby-p3-roadmap-rev.txt`. No stale refs across either wave.
+
+[MODELED] **Session-name → manifest-file remapping is now a stable pattern across waves**. Wave 2 session names (`t3-ticket-body-0905`, `c5-ticket-wb1`, `commit-plan-doc-1334`, `t6-ticket-body-0905`) reuse identifiers but rebind to NEW manifests per wave (e.g. `c5-tilegrid-wiring.txt` → `c5-t9-rate-limit-source.txt` across Wave 2 → Wave 5). Manifest-ref-per-row remains authoritative; session-name is a soft identifier. Not a staleness risk; surfaced for bookkeeping.
+
+## §26 — Race-window proximity probes (sub-1s cadence)
+
+[KNOWN] **6-probe burst at 500ms cadence (09:43:22.687 → 09:43:25.424, span 2.74s)**: state stable across all 6 snapshots. Two working-tree entries persistent throughout:
+
+- ` M packages/dispatch-workstation/src/main/spawn-handler.ts` (unstaged modification; attributable to phase4-t9-exec-bypass-perms WB-integration in flight per recent commit `f1b36d3` red-WB3 + `469a5e1` green-WB2)
+- ` D packages/dispatch-workstation/test/unit/main/probe-mbtwfbypass-02-spawn-handler-integration.spec.ts` (working-tree-only deletion; same session)
+
+[KNOWN] **NO sub-1s peer-stage transition captured this probe burst.** Sub-2s proximity events (operator-defined race-window) require both (a) two sessions running `git add` at instants within 2s of each other AND (b) snapshot polling that lands inside that window. At 500ms cadence we have 0.5s temporal resolution per probe; 2.74s observation window. **Necessary but insufficient unless peer activity is concurrent.**
+
+[MODELED] **The persistent ` D` deletion entry** is a distinct working-tree state from previous waves (where we've observed `??` untracked and ` M` modified). The deletion will not be captured by any peer commit until phase4-t9-exec-bypass-perms stages it (e.g. `git rm` or `git add` of the deleted path). Until then, it is a peer-WIP signal but not a contamination-risk surface for OTHER sessions: a peer commit without pathspec **cannot** sweep a working-tree-only deletion (only the file modification + add states leak through commit-without-pathspec).
+
+[MODELED] **Distinguishing contamination risk surfaces** (refined from Wave 3 §18 analysis):
+
+| working-tree state | contamination risk via peer `git commit -m` (no pathspec) | mitigation |
+|---|---|---|
+| ` M` (unstaged mod) | LOW — only `git commit -a` would auto-stage; ordinary commit-without-pathspec leaves untouched | Avoid `-a` flag; per-path pathspec |
+| ` D` (unstaged delete) | LOW — same as above | same |
+| `?? ` (untracked) | LOW — untracked files are not in index until `git add` | same |
+| `M ` (staged mod) | **HIGH** — peer commit-without-pathspec WILL include | MANDATORY per-path commit pathspec |
+| `A ` (staged add) | **HIGH** — same | MANDATORY per-path commit pathspec |
+| `D ` (staged delete) | **HIGH** — same | MANDATORY per-path commit pathspec |
+
+This refines the §3.9.A enforcement intuition: **the staged-state cells (uppercase-X in `git status --short`) are the actually-load-bearing race surfaces**. Wave 3 §18 observed only the staged-state contamination surfaces empirically; this pass refines the model with the unstaged-but-modified state (LOW risk despite long-duration visibility).
+
+## §27 — Wave 4 + Wave 5 dep-cycle verification
+
+[KNOWN] **Combined dep graph (14 sessions: 9 Wave-5 + 5 Wave-4)**:
+
+| edge | source | declared |
+|---|---|---|
+| `__orchestrator_standby → __orchestrator_active` | Wave 4 row 43 ("depends-on __orchestrator_active Phase 3 results") | hard blocking |
+| `t3-ticket-body-0905 → 3e9a203` | Wave 5 row 23 (closed Cluster A reference; satisfied) | satisfied historical edge |
+| `c5-ticket-wb1 → afd3778` | Wave 5 row 24 (closed T9 ladder reference; satisfied) | satisfied historical edge |
+| `t2-ticket-body-0905 ↔ r11-archive-writer` | Wave 5 row 28 ("coordinate-with"; semantic non-blocking) | soft coord |
+
+[KNOWN] **No cycles.** Only one hard blocking edge (orch-standby → orch-active); two "depends-on" edges are against historical-committed states (3e9a203 + afd3778) and are therefore already satisfied — not active blockers. Soft coord edge between t2 and r11-archive-writer is reciprocal-but-non-blocking.
+
+[MODELED] **Wave 4 → Wave 5 cross-wave dep**: Wave 4 sessions (orch-active Phase 3, phase4-t9 bypass-perms, phase4-t8 epsilon, orch-standby P3-rev-3) feed forward into Wave 5 sessions but no explicit dep edge is declared. The implicit forward-position is **t3-t8-sibling-exec consumes phase4-t8-cluster-a outputs** (closed at `3e9a203`) and **c5-t9-rate-limit-source consumes T9 plan-timer outputs** (closed at `afd3778`). Both are historical handoffs; no live deadlock potential.
+
+[KNOWN] **Max chain depth across all live dep edges = 1** (orch-standby → orch-active). Same as Wave 3.
+
+## §28 — CRITICAL: `spawn-handler.ts` five-session write-authority concentration
+
+[KNOWN] **`packages/dispatch-workstation/src/main/spawn-handler.ts` appears in 5 manifest TERRITORYs across waves**:
+
+| session | wave | manifest | TERRITORY mention |
+|---|---|---|---|
+| `commit-plan-doc-1334` (spawnmode) | 2 | `commit-plan-doc-spawnmode.txt` | explicit |
+| `phase4-t8-exec` (cluster-a) | 3 | `phase4-t8-cluster-a-exec.txt` | explicit |
+| `__orchestrator_active` (cluster-a) | 3 | `orch-active-cluster-a-exec.txt` | explicit |
+| `phase4-t9-exec` (bypass-perms) | 4 | `phase4-t9-bypass-perms.txt` | explicit |
+| `t3-ticket-body-0905` (t8-sibling) | 5 | `t3-t8-sibling-exec.txt` | explicit |
+
+[KNOWN] **Two of the Wave 5 / Wave 4 sessions ALSO explicitly FORBID `spawn-handler.ts` in OTHER current-wave manifests**:
+
+| session | manifest | spawn-handler.ts position |
+|---|---|---|
+| `commit-plan-doc-1334` (status-indicator) | Wave 5 `commit-plan-doc-status-indicator.txt` | **FORBIDDEN explicit** |
+
+This is internally consistent for commit-plan-doc-1334: Wave 2 work owns spawn-handler.ts (spawnmode closure); Wave 5 work explicitly cedes spawn-handler.ts and operates on session-status-source*.ts instead. Defense-in-depth via explicit FORBID.
+
+[KNOWN] **Live working-tree evidence this watch pass**: ` M spawn-handler.ts` persists across all 6 sub-1s probes. The session responsible (per recent commit-log activity: `f1b36d3` + `469a5e1` + `3c24822` + `42cede6` all from `phase4-t9-exec-bypass-perms` Wave 4) is mid-WB integration.
+
+[MODELED] **Risk profile under Wave-4 → Wave-5 transition**:
+
+1. **phase4-t9-exec-bypass-perms (Wave 4)** is actively modifying spawn-handler.ts (unstaged + WB3 RED probe deletion in flight). When this session lands its bypass-perms WB ladder, it will stage + commit `spawn-handler.ts` modifications.
+
+2. **t3-ticket-body-0905 (Wave 5)** is QUEUED with `spawn-handler.ts` in TERRITORY for sibling-exec scope. If t3 begins before phase4-t9-bypass-perms commits, both sessions will modify the file concurrently.
+
+3. **Existing predecessor commits already touched spawn-handler.ts**:
+   - `758ef50 green(MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING): WB2 — SpawnSessionResult.spawnMode + spawn-handler population` (commit-plan-doc Wave 2)
+   - `5328a97 green(MB-T-PHASE-4-SPAWN-RESULT-FIELD-EXTENSIONS): WB3 — workstation spawn-session-result-extensions populator` (phase4-t8-cluster-a Wave 3)
+
+4. So the historical chain on spawn-handler.ts already includes 2 distinct sessions; Wave 4 + Wave 5 prospective additions could bring this to **5 sessions total** by Wave 5 close.
+
+[KNOWN] **Sequential disposition appears intentional** — each session's WB scope on spawn-handler.ts is incremental (add field, add populator, add bypass-perms integration, add sibling-exec consumer) rather than overlapping. The §3.9.A cross-FORBIDDEN clauses cited in §13.1 / §21.1 for Wave 2-3 are NOT consistently applied at Wave 4-5 manifests — `phase4-t9-bypass-perms.txt` and `t3-t8-sibling-exec.txt` do not explicitly FORBID each other.
+
+[MODELED] **Failure-mode-of-concern**: if phase4-t9-bypass-perms's in-flight ` M` unstaged spawn-handler.ts is `git add`'d and `git commit`'d without pathspec while another session has staged its own spawn-handler.ts edits, the c5-incident pattern (`63eba0f`) repeats — but now across the spawn-handler.ts surface where 3+ sessions have already shipped commits. **The MANDATORY per-path commit pathspec discipline is the only mitigation** (no manifest-level FORBID protects this specific cross-wave overlap).
+
+## §29 — Other Wave-4 + Wave-5 write-path overlap analysis
+
+[KNOWN] Pairwise intersection across NEW Wave-4 + Wave-5 manifests:
+
+| pair | intersection (file-granularity) |
+|---|---|
+| `t3-t8-sibling-exec` ∩ `commit-plan-doc-status-indicator` | ∅ (commit-plan-doc-status FORBIDS spawn-handler.ts + tile-grid-app.tsx; partition clean) |
+| `t3-t8-sibling-exec` ∩ `c5-t9-rate-limit-source` | ∅ (distinct main subdir files: spawn-handler.ts vs rate-limit-source*.ts) |
+| `t3-t8-sibling-exec` ∩ `t6-phase5-ctx-percent` | ∅ (t6 forbids packages/**; docs-only territory) |
+| `c5-t9-rate-limit-source` ∩ `commit-plan-doc-status-indicator` | ∅ (rate-limit-source vs session-status-source; distinct file prefixes) |
+| `c5-t9-rate-limit-source` ∩ `phase4-t9-bypass-perms` | ∅ (rate-limit-source vs bypass-perms-source + spawn-handler split; probe prefixes disjoint: `probe-mbtphase4-t9plug-*` vs `probe-mbtwfbypass-*`) |
+| `phase4-t9-bypass-perms` ∩ `phase4-t8-methodology-epsilon` | ∅ (epsilon writes scripts/**; bypass-perms writes src/main + src/chat-shell; FORBIDs cross-listed) |
+| `phase4-t8-methodology-epsilon` ∩ `orch-active-phase3-visual-verify` | ∅ (epsilon writes scripts/methodology-visual-diff*.mjs + visual-diff-*.mjs; orch-active-phase3-vv writes dist-screenshots/** + coord docs; orch-active READ-ONLYs the scripts but doesn't write them) |
+| `orch-active-phase3-visual-verify` ∩ `orch-standby-p3-roadmap-rev` | ∅ (distinct coord-doc paths) |
+| **`r11-archive-writer` ∩ `t2-archive-coauthor`** | **NON-EMPTY (`docs/cairn-under-stress-round-11.md`) — RECURRENT from Wave 3 §21.2** |
+
+[KNOWN] **§21.2 overlap persists in Wave 4 + Wave 5**: both `r11-archive-writer` and `t2-archive-coauthor` continue to share write-authority on `docs/cairn-under-stress-round-11.md`. Commit log shows active co-authoring: `69b49fb` (r11-archive-writer Wave 4 §5.C FINAL DRAFT) + `c76f903` (t2-archive-coauthor Wave 3 §5.B). The "territorial-disjoint sub-sections" coordination convention appears to be holding empirically (no merge conflict commits observed) — but remains a manifest-level dual-authority.
+
+## §30 — Updated §3.9.D placeholder status (post-Wave-4/5 watch pass)
+
+| placeholder | status |
+|---|---|
+| Queue claim races | Wave 1 shared-index race (`262cc44`). Wave 3 c5-incident `63eba0f`. **Waves 4-5: no new contamination commits observed in `f645b86..HEAD` (30+ commits)** — MANDATORY per-path pathspec discipline appears to be holding under sustained 9+ session concurrency. |
+| Stale manifest references | Still NONE. 26/26 manifest files on disk; all referenced queue rows resolve. |
+| Manifest-violation false positives | Still NONE. KNOWN real-positives unchanged at 3 (Wave 1: 2 manifest amendments; Wave 3: c5-incident). |
+| Queue authoring bottleneck | Wave 4 + Wave 5 setup at `178b994` and `da947dc` both single-commit clean; no Wave 4/5 setup churn observed. |
+| Dep graph deadlock | NONE. Max chain depth 1 (orch-standby → orch-active). |
+| Manifest write-path overlap | **PERSISTENT RECURRENCE**: 5 sessions on spawn-handler.ts across waves (§28); r11-archive ∩ t2 on round-11.md (§21.2 RECURRENT); 3+ cross-wave overlaps detected. Pattern: cross-wave session re-binding produces incremental write-authority accumulation on shared anchor files. |
+| Race-window proximity | Sub-1s 500ms-cadence × 6 probes captured 0 transitions this pass. Empirically: **sustained Wave-4/5 concurrency does NOT produce frequent sub-2s peer-stage events** at observed cadence; peer ops cluster at human-edit timescales (10s-minutes). Strict 2s-proximity catch likely requires git event-hook integration rather than polling. |
+| Cross-session contamination | KNOWN since `63eba0f`. **No new contamination commits observed Waves 4-5** — per-path pathspec discipline holding. |
+| **Cross-wave write-authority accumulation** (NEW placeholder candidate) | **Spawn-handler.ts has 5 sessions across 4 waves authorizing writes. No manifest-level cross-wave FORBID cross-referencing. Defense-in-depth relies entirely on per-path commit pathspec.** |
+
+## §31 — Summary (Wave 4 + Wave 5 watch pass)
+
+[KNOWN] Wave 4 + Wave 5 watch state at queue head `69b49fb`:
+- 9/9 Wave-5 + 5/5 Wave-4 manifest refs resolve; no stale refs.
+- Dep graph: 1 live hard edge (orch-standby → orch-active); 2 satisfied historical edges; 1 soft coord edge. Acyclic. Max depth=1.
+- Sub-1s × 6 probe burst captured 0 transitions over 2.74s window.
+- **Critical finding §28**: `spawn-handler.ts` has 5-session cross-wave write-authority concentration; no manifest-level cross-wave FORBID; defense-in-depth = MANDATORY per-path commit pathspec only.
+- §21.2 r11-archive-writer ∩ t2-archive-coauthor overlap persists across Waves 3-5 (recurrent KNOWN-state).
+- Pre-existing ` M spawn-handler.ts` + ` D probe-mbtwfbypass-02` working-tree state attributable to phase4-t9-exec-bypass-perms WB in-flight.
+- Refined contamination-risk model (§26): staged-state cells (uppercase-X) are load-bearing race surfaces; unstaged-mod/delete/untracked are LOW risk under MANDATORY pathspec discipline.
+
+[KNOWN] **Strongest finding this pass**: §28 cross-wave write-authority accumulation on `spawn-handler.ts`. The §3.9 primitive successfully sequences each wave's WB ladder, but the **same source file becoming a 5-session shared anchor** is a new failure-surface class not seen in Waves 1-3. Mitigation = MANDATORY per-path commit pathspec (no manifest FORBID protects this), and discipline appears to be holding (no new contamination commits in 30+ commit window since Wave 3 close).
+
+[MODELED] **Highest-leverage operator action from this pass**: consider adding **cross-wave FORBID cross-referencing** to Wave-5+ manifests for high-density shared anchors (spawn-handler.ts being the canonical example). E.g., `t3-t8-sibling-exec.txt` could explicitly READ-ONLY-list `commit-plan-doc-spawnmode` and `phase4-t8-cluster-a-exec`'s spawn-handler.ts work as commit-stable upstream. This is a §3.9.A grammar extension (READ-ONLY across wave boundaries) — operator-arbitrated authoring outside this session's TERRITORY.
+
+[SPECULATIVE] **§3.9 SPECULATIVE status update**: across 5 wave-passes, the primitive has:
+- Caught 1 cross-session contamination (`63eba0f`) and produced operator-arbitrated recovery + discipline reinforcement.
+- Caught 2 manifest authoring gaps mid-execution (`e5c7c96`, `6d7dff3`).
+- Surfaced 4 distinct write-path overlap classes (chat-shell, round-11.md, spawn-handler.ts cross-wave, max-parallel-counter.tsx).
+- Sustained 9+ session concurrency across Wave 4-5 without new contamination commits under MANDATORY per-path pathspec discipline.
+
+The primitive's failure modes are **now well-characterized**; mitigations are **either codified (pathspec MANDATORY) or surfaced for operator arbitration (cross-wave FORBID, pre-spawn intersection check)**. The SPECULATIVE-tier label is increasingly load-bearing-against-evidence; promotion to ratified-primitive may be operator-arbitrable.
+
+**Outcome classification per CLAUDE.md §2.11** (this pass): **Improved (binary flip + behavioral quality)** — across 30+ commits since prior watcher pass, no claim-race or contamination incidents observed under sustained 9-session concurrency. The §3.9 primitive + per-path pathspec MANDATORY discipline produces qualitatively different operational state than pre-discipline Wave-2 era.
+
+This extension will be re-extended if a Wave 6 dispatches or if any Wave 4/5 session produces a new claim-race, stage-proximity, or contamination event. No further action by `r11-queue-watcher` until next observation pass.
