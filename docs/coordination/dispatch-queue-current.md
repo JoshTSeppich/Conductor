@@ -26,6 +26,14 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 | `r12-phase4-bottom-rail-integration-body` | DRAFT MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION ticket body (closes `MB-F-BOTTOM-RAIL-MOUNT-WIRING-FINAL-INTEGRATION` Tier 2 from `28b0086` BYPASS-PERMS WB7 findings) | [r12-phase4-bottom-rail-integration-body.txt](territorial-manifests/r12-phase4-bottom-rail-integration-body.txt) | NONE — body-drafting only |
 | `r12-phase5-tile-header-integration-body` | DRAFT MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION ticket body (closes `MB-F-STATUS-INDICATOR-TILE-HEADER-INTEGRATION` Tier 2 from `30e4aa8`) | [r12-phase5-tile-header-integration-body.txt](territorial-manifests/r12-phase5-tile-header-integration-body.txt) | NONE — body-drafting only |
 
+## QUEUED — Round 12 Wave 2 (impl ladders post body-drafting Sub-Q ack)
+
+(orchestrator-mediated direct dispatch per dispatch §11(II); ALL Wave 2 sessions spawn plugin-loaded per §11(II); sessions begin IN-FLIGHT on first commit)
+
+| session | scope | territory | deps |
+|---|---|---|---|
+| `r12-phase5-tile-header-impl` | **MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION** WB1+ ladder execution per Sub-Q-1=B Path B (3 WBs + WB-final; single-file edit to tile-grid-app.tsx + 3 probe files + findings + impl-coord) | [r12-phase5-tile-header-impl.txt](territorial-manifests/r12-phase5-tile-header-impl.txt) | depends-on r12-phase5-tile-header-integration-body Sub-Q ack at decisions doc (auto-ack'd by gen-5 per dispatch §2; awaiting decisions doc commit) |
+
 ## COMPLETED — Round 11 Wave 5 (closure-stamped post `TERMINATE-ROUND-11` 2026-05-13)
 
 8 work units shipped under gen-5 tenure 2026-05-13. Closure commits:
