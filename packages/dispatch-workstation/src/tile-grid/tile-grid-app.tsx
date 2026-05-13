@@ -127,6 +127,20 @@ export interface TileGridAppProps {
    *  followup; until that closes, this prop receives null in
    *  production and is operator-edit-then-restart only. */
   readonly heroSessionName?: string | null;
+  /** MB-T-PHASE-4-T8-SIBLING-EXEC WB4: forward-position observation seam
+   *  for Cluster A `spawnedAtMs` extension field. Fires from the
+   *  spawn-result handler when the reply envelope carries `spawnedAtMs`.
+   *  Optional — production wiring may later use it for persistence
+   *  (e.g., crash-recovery seed of uptime); tests use it to assert
+   *  Cluster A consumer-side propagation. NOT a render seam — uptime
+   *  rendering is fed by the renderer-local spawnedAtMsBySession Map
+   *  whose downstream pass-through to `<Tile>` props is deferred (see
+   *  build-doc §1.5; tile-grid.tsx + tile.tsx out of t8-sibling-exec
+   *  territory). */
+  readonly onSpawnedAtMsCapture?: (
+    sessionName: string,
+    spawnedAtMs: number,
+  ) => void;
 }
 
 interface SpawnSuccessReply {
@@ -138,6 +152,17 @@ interface SpawnSuccessReply {
      *  for defensive parsing — absent → TileGridSessionEntry.cwd
      *  stays undefined and the footer omits the cwd line. */
     cwd?: string;
+    /** MB-T-PHASE-4-T8-SIBLING-EXEC WB4: model identifier from Cluster A
+     *  populator (via spawn-handler.ts WB2). Optional for defensive
+     *  parsing — pre-WB2 spawn-result envelopes omit it; the field
+     *  flows through to `TileGridSessionEntry.model` when present. */
+    model?: string;
+    /** MB-T-PHASE-4-T8-SIBLING-EXEC WB4: spawn-time (ms-since-epoch)
+     *  from Cluster A populator. Optional for defensive parsing — pre-
+     *  WB2 envelopes omit it; captured into the renderer-local
+     *  spawnedAtMsBySession Map when present, and forwarded via
+     *  onSpawnedAtMsCapture for future persistence wiring. */
+    spawnedAtMs?: number;
   };
 }
 
@@ -162,10 +187,22 @@ export function TileGridApp({
   onPersistSessions,
   getCurrentPixelSizes,
   heroSessionName,
+  onSpawnedAtMsCapture,
 }: TileGridAppProps): JSX.Element | null {
   const [sessions, setSessions] = useState<readonly TileGridSessionEntry[]>([
     ...initialSessions,
   ]);
+
+  // MB-T-PHASE-4-T8-SIBLING-EXEC WB4: renderer-local side-Map for
+  // Cluster A `spawnedAtMs`. Mirrors c5-trinity's anchor-only pattern
+  // (`_frameMode`, `_lastScrollTargetSessionName` above) — value held,
+  // downstream prop-drill into `<Tile>` is deferred per build-doc §1.5
+  // (tile-grid.tsx + tile.tsx out of t8-sibling territory). Side-Map
+  // exists separately because `TileGridSessionEntry.spawnedAtMs?` is
+  // not addable this round (tile-grid.tsx FORBIDDEN).
+  const [_spawnedAtMsBySession, setSpawnedAtMsBySession] = useState<
+    ReadonlyMap<string, number>
+  >(() => new Map());
 
   // MB-F-TILEGRIDAPP-FRAMEMODE-SUBSCRIPTION-GAP anchor (c5 ticket): hold
   // subscribed FrameMode in renderer state. Initial 'C' matches the
@@ -205,6 +242,14 @@ export function TileGridApp({
       // didn't carry it (defensive — pre-WB2 workstation builds, test
       // fixtures emitting partial replies).
       const replyCwd = reply.result.cwd;
+      // MB-T-PHASE-4-T8-SIBLING-EXEC WB4: Cluster A extension fields.
+      // `model` flows into the existing `TileGridSessionEntry.model`
+      // field (MB-T15) — full end-to-end propagation (renderer chip
+      // already reads `s.model`). `spawnedAtMs` is captured into the
+      // renderer-local side-Map; downstream prop-drill into `<Tile>`
+      // is deferred per build-doc §1.5.
+      const replyModel = reply.result.model;
+      const replySpawnedAtMs = reply.result.spawnedAtMs;
       setSessions((current) => {
         // Idempotent: a duplicate spawn-result for the same sessionName
         // (e.g., re-fired by daemon recovery) does NOT create a second
@@ -217,12 +262,26 @@ export function TileGridApp({
             ...(typeof replyCwd === 'string' && replyCwd.length > 0
               ? { cwd: replyCwd }
               : {}),
+            ...(typeof replyModel === 'string' && replyModel.length > 0
+              ? { model: replyModel }
+              : {}),
           },
         ];
       });
+      if (typeof replySpawnedAtMs === 'number' && Number.isFinite(replySpawnedAtMs)) {
+        setSpawnedAtMsBySession((prev) => {
+          const next = new Map(prev);
+          next.set(sessionName, replySpawnedAtMs);
+          return next;
+        });
+        if (onSpawnedAtMsCapture) {
+          onSpawnedAtMsCapture(sessionName, replySpawnedAtMs);
+        }
+      }
       if (onSessionMounted) onSessionMounted(sessionName);
     });
-  }, [workstationBridge, onSessionMounted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workstationBridge, onSessionMounted, onSpawnedAtMsCapture]);
 
   // WB11: subscribe to detach-window-closed events. When the operator closes
   // a detached console window (closes the second BrowserWindow), the main
