@@ -62,15 +62,16 @@ import { CostMeter } from './cost-meter.js';
 import { BuildMdTab } from './build-md-tab.js';
 import { BottomRailCostMeter } from './bottom-rail-cost-meter.js';
 // === END: MB-T-WIREFRAME-T4 bottom-rail imports ===
-// === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel pluggable-source imports ===
+// === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel + bypass-perms pluggable-source imports ===
 // Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER:
-// pluggable-source seam for the MaxParallelCounter slot. Production
-// raw-fs / IPC wiring deferred to Tier-1 followup
-// MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-
-// AMENDMENT-2026-05-16 (mirrors 7c8a957 HTTPSESSIONLISTCLIENT-PROD-
-// WIRING-DEFERRED precedent).
+// pluggable-source seams for the MaxParallelCounter + BypassPerms
+// Indicator slots. Production raw-fs / IPC wiring deferred to Tier-1
+// followup MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-
+// CONTRACT-66-AMENDMENT-2026-05-16 (mirrors 7c8a957 HTTPSESSIONLIST
+// CLIENT-PROD-WIRING-DEFERRED precedent).
 import { MaxParallelCounter } from './max-parallel-counter.js';
 import type { MaxParallelSource } from './max-parallel-source.js';
+import { BypassPermsIndicator } from './bypass-perms-indicator.js';
 // === END: MB-T-PHASE-4-BOTTOM-RAIL ===
 // === BEGIN: MB-T27 mix-indicator import ===
 import { MixIndicatorContainer } from './mix-indicator.js';
@@ -214,23 +215,44 @@ export interface MountChatShellOptions {
   // supplied (no auto-build yet).
   readonly renderDispatchModeToggle?: () => ReactNode;
   // === END: MB-T24 ===
-  // === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel slot options ===
-  // Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER. Two seams:
+  // === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel + bypass-perms slot options ===
+  // Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER. Pluggable
+  // seams for both bottom-rail consumers; production IPC wiring lands
+  // via Tier-1 followup MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-
+  // WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16.
+  //
+  // MaxParallelCounter seam:
   //   - `renderMaxParallelCounter` (test/integration injection) —
-  //     explicit override consumed verbatim, mirrors MB-T26/T27 pattern.
-  //   - `maxParallelSource` (pluggable production source seam) —
-  //     consumed by resolveRenderMaxParallelCounter to read the
-  //     ceiling. Production raw-fs / IPC supplier ships via Tier-1
-  //     followup MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-
-  //     WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16. Under DEFER
-  //     scope, no auto-build from window.workstationBridge happens —
-  //     the sessions-stream subscription is itself deferred (rendering
-  //     activeCount=0 against a real maxParallel would mislead users).
-  //     When neither override nor source is supplied, the factory
-  //     returns undefined and the slot stays empty (preserves T4 WB4
-  //     ship semantics per chat-shell.tsx:261 comment).
+  //     explicit override consumed verbatim.
+  //   - `maxParallelSource` (production source seam) — consumed by
+  //     resolveRenderMaxParallelCounter to read the ceiling. No auto-
+  //     build under DEFER (sessions-stream subscription itself is
+  //     deferred). When neither supplied, factory returns undefined.
+  //
+  // BypassPermsIndicator seam:
+  //   - `renderBypassPerms` (test/integration injection) — explicit
+  //     override consumed verbatim, mirrors MaxParallelCounter pattern.
+  //   - `bypassPermsDispatchMode` (pluggable dispatchMode signal) —
+  //     'auto' triggers indicator visibility per T4 WB12 semantics
+  //     (bypass-perms-indicator.tsx:62-63 render rule). When supplied,
+  //     resolveRenderBypassPerms builds the slot supplier passing
+  //     dispatchMode + optional bypassPermsActiveCount through to
+  //     BypassPermsIndicator.
+  //   - `bypassPermsActiveCount` (optional pluggable count) — T11-
+  //     shipped BypassPermsIndicatorProps.bypassActiveCount? (bypass-
+  //     perms-indicator.tsx:40) consumer. Threaded through verbatim.
+  //     Production main-process aggregator subscription deferred to
+  //     Tier-1 followup; under DEFER scope this stays undefined at
+  //     auto-mount, so indicator visibility is driven entirely by
+  //     dispatchMode (T4 WB12 baseline semantics preserved).
+  //   - When neither renderBypassPerms nor bypassPermsDispatchMode is
+  //     supplied, factory returns undefined and slot stays empty
+  //     (preserves chat-shell.tsx:248 empty-slot state today).
   readonly renderMaxParallelCounter?: () => ReactNode;
   readonly maxParallelSource?: MaxParallelSource;
+  readonly renderBypassPerms?: () => ReactNode;
+  readonly bypassPermsDispatchMode?: 'auto' | 'ask';
+  readonly bypassPermsActiveCount?: number;
   // === END: MB-T-PHASE-4-BOTTOM-RAIL ===
 }
 
@@ -530,6 +552,37 @@ function resolveRenderMaxParallelCounter(
       maxParallel: source.read(),
     });
 }
+
+// Resolution order in resolveRenderBypassPerms (mirrors resolveRenderMax
+// ParallelCounter sibling factory above):
+//   1. Explicit `opts.renderBypassPerms` — verbatim (test path).
+//   2. `opts.bypassPermsDispatchMode` supplied — build closure that
+//      wraps <BypassPermsIndicator dispatchMode={...}
+//      bypassActiveCount={opts.bypassPermsActiveCount}/>. Indicator
+//      visibility per T4 WB12 + T11 render rule (showIndicator =
+//      (bypassActiveCount ?? 0) > 0 || dispatchMode === 'auto').
+//   3. Neither — return undefined; chat-shell.tsx:248 renders empty
+//      slot (preserves T4 WB12 ship semantics; current production
+//      state).
+//
+// Under DEFER scope, production runtime hits path 3 today — auto-mount
+// block does not supply opts.bypassPermsDispatchMode (dispatch-mode-
+// bridge IPC is on existing surface but renderer-side mount.ts is
+// pre-bridge-init at module-load time; bridging into mount opts
+// requires the renderer-side wiring that the Tier-1 followup plugs).
+function resolveRenderBypassPerms(
+  opts: MountChatShellOptions,
+): (() => ReactNode) | undefined {
+  if (opts.renderBypassPerms) return opts.renderBypassPerms;
+  const dispatchMode = opts.bypassPermsDispatchMode;
+  if (!dispatchMode) return undefined;
+  const bypassActiveCount = opts.bypassPermsActiveCount;
+  return () =>
+    createElement(BypassPermsIndicator, {
+      dispatchMode,
+      bypassActiveCount,
+    });
+}
 // === END: MB-T-PHASE-4-BOTTOM-RAIL ===
 
 export function mountChatShell(opts: MountChatShellOptions): () => void {
@@ -570,14 +623,16 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
   // chat-shell.tsx owns left-to-right slot ordering.
   const renderDispatchModeToggle = resolveRenderDispatchModeToggle(opts);
   // === END: MB-T24 ===
-  // === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel slot passthrough ===
+  // === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel + bypass-perms slot passthrough ===
   // Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER. Sibling
   // resolution + render-prop pass-through; chat-shell.tsx:121 +
-  // chat-shell.tsx:261 already accept `renderMaxParallelCounter` via
-  // T4 WB4 slot prop. Under DEFER scope the prod runtime resolves to
-  // undefined (no opts.maxParallelSource supplied at auto-mount
-  // block); Tier-1 followup wires the production source.
+  // chat-shell.tsx:132 already accept `renderMaxParallelCounter` +
+  // `renderBypassPerms` via T4 WB4 / WB12 slot props. Under DEFER
+  // scope the prod runtime resolves both to undefined (no opts.max
+  // ParallelSource / opts.bypassPermsDispatchMode supplied at auto-
+  // mount block); Tier-1 followup wires the production sources.
   const renderMaxParallelCounter = resolveRenderMaxParallelCounter(opts);
+  const renderBypassPerms = resolveRenderBypassPerms(opts);
   // === END: MB-T-PHASE-4-BOTTOM-RAIL ===
   root.render(
     createElement(ChatShell, {
@@ -588,6 +643,7 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
       renderDispatchModeToggle,
       renderPlanTimerText,
       renderMaxParallelCounter,
+      renderBypassPerms,
     }),
   );
   // === END: MB-T26 ===
