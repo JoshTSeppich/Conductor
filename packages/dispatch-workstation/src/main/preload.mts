@@ -288,6 +288,38 @@ contextBridge.exposeInMainWorld('workstationBridge', {
   triggerBuildMdDispatch: () =>
     ipcRenderer.invoke('workstation:build-md-dispatch-trigger'),
   // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH dispatch-trigger bridge ===
+  // === BEGIN: MB-T-PHASE-5-TILE-HEADER-PROD-WIRING-FOLLOWUP getDaemonToken ===
+  // Closes MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED
+  // (Tier 1; FOLLOWUPS.md:367). Per gen-6 OPT-β arbitration 2026-05-16
+  // (manifest EXPANSION-1 `735703f`).
+  //
+  // Routes to the pre-existing `workstation:get-daemon-token` IPC handler
+  // at main.ts:466 (inside Fix-92 sentinel zone; reads
+  // ~/.foxworks-dispatch/token via node:fs in the node-capable main
+  // process context). NO new IPC channel — Fix-92 reuse — therefore NO
+  // WORKSTATION_CONTRACT.md §6 amendment required.
+  //
+  // Consumed by src/tile-grid/mount.ts (WB2) to construct a renderer-
+  // safe StatusListClient: mount.ts calls getDaemonToken() then issues
+  // fetch on http://localhost:7878/v2/sessions with the X-Conductor-
+  // Token header, satisfying the StatusListClient interface
+  // (session-status-source-poll.ts:47-55) without importing
+  // session-cap.ts (which pulls node:fs/path/os into the renderer
+  // bundle and breaks build-tile-grid.mjs; confirmed at `4a9633c`).
+  //
+  // Returns trimmed token string or null when the file is absent /
+  // unreadable; mount.ts handles null by skipping createSessionStatus
+  // Source instantiation (the existing useEffect at
+  // tile-grid-app.tsx:357-370 already guards against null/undefined
+  // statusListClient).
+  //
+  // Security note: token is per-session credential local to the
+  // workstation user; exposure to the tile-grid renderer is consistent
+  // with the kanban-webview precedent at card-bridge-preload.mts:53
+  // (which writes the same token to localStorage). No new attack
+  // surface beyond what Fix-92 already established.
+  getDaemonToken: () => ipcRenderer.invoke('workstation:get-daemon-token'),
+  // === END: MB-T-PHASE-5-TILE-HEADER-PROD-WIRING-FOLLOWUP getDaemonToken ===
 });
 
 // CONSOLE-T02: consoleBridge per vision §10.7 (frozen at eac381e).
