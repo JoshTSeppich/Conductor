@@ -26,14 +26,32 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 | `r12-phase4-bottom-rail-integration-body` | DRAFT MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION ticket body (closes `MB-F-BOTTOM-RAIL-MOUNT-WIRING-FINAL-INTEGRATION` Tier 2 from `28b0086` BYPASS-PERMS WB7 findings) | [r12-phase4-bottom-rail-integration-body.txt](territorial-manifests/r12-phase4-bottom-rail-integration-body.txt) | NONE — body-drafting only |
 | `r12-phase5-tile-header-integration-body` | DRAFT MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION ticket body (closes `MB-F-STATUS-INDICATOR-TILE-HEADER-INTEGRATION` Tier 2 from `30e4aa8`) | [r12-phase5-tile-header-integration-body.txt](territorial-manifests/r12-phase5-tile-header-integration-body.txt) | NONE — body-drafting only |
 
-## QUEUED — Round 12 Wave 2 (impl ladders post body-drafting Sub-Q ack)
+## COMPLETED — Round 12 Wave 2 (saturation-stamped post WB-final landings 2026-05-16)
 
-(orchestrator-mediated direct dispatch per dispatch §11(II); ALL Wave 2 sessions spawn plugin-loaded per §11(II); sessions begin IN-FLIGHT on first commit)
+| session | scope | completion-commit |
+|---|---|---|
+| `r12-phase5-tile-header-impl` | MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION Path B 3-WB ladder + WB-final amendment + WB-final docs | `b2af065` (WB-final docs; closed `MB-F-STATUS-INDICATOR-TILE-HEADER-INTEGRATION` Tier 2; 2 new followups at `66ff96d`) |
+| `r12-phase4-bottom-rail-impl` | MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION 6-WB ladder + WB8 smoke + WB-final docs (BR-IMPL-1=(b) DEFER scope per operator 2026-05-16) | `b378127` (WB-final docs; Capability-enabled-with-known-limitations; 3 new followups at `acb6bda`) |
+
+## QUEUED — Round 12 Wave T1-CLOSURE-Wave-1 (retarget cascade per RESUME §2(III); gen-6 cohort)
+
+(orchestrator-mediated direct dispatch per dispatch §11(II); ALL T1-CLOSURE sessions spawn plugin-loaded per §11(II); sessions begin IN-FLIGHT on first commit. Wave-naming per RESUME §2(IV).)
+
+Selection criteria per §14.6 (dogfood-blocking > family-closure > Tier-1-reclass-from-deferred > other-Tier-1-prod-wiring). MB-T07 family already RESOLVED at batch-6 Session B (`7217e66`/`28f55c5`/`fc1d57c`/`e933498`/`f8c57f7`) — removed from priority list.
 
 | session | scope | territory | deps |
 |---|---|---|---|
-| `r12-phase5-tile-header-impl` | **MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION** WB1+ ladder execution per Sub-Q-1=B Path B (3 WBs + WB-final; single-file edit to tile-grid-app.tsx + 3 probe files + findings + impl-coord) | [r12-phase5-tile-header-impl.txt](territorial-manifests/r12-phase5-tile-header-impl.txt) | depends-on r12-phase5-tile-header-integration-body Sub-Q ack at decisions doc (auto-ack'd by gen-5 per dispatch §2; awaiting decisions doc commit) |
-| `r12-phase4-bottom-rail-impl` | **MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION** WB1+ ladder execution per BR-1=(a) renderer-side mount-factory pattern (T9 `de6620e` precedent; 7-9 WBs default-path: WB1-6 + WB8 smoke + WB-final). MOD chat-shell/mount.ts (resolveRender factories) + main.ts (singleton instantiation sentinel zone) + NEW max-parallel-source.ts (raw-fs <userData>/max-parallel.json per CLAUDE.md §3.5) + 3 probe files. **PATH-DISJOINT** from r12-phase5-tile-header-impl (different file scope). | [r12-phase4-bottom-rail-impl.txt](territorial-manifests/r12-phase4-bottom-rail-impl.txt) | depends-on r12-phase4-bottom-rail-integration-body Sub-Q ack at decisions doc (auto-ack'd by gen-5 per dispatch §2; awaiting decisions doc commit) |
+| `r12-t1c-w1-phase5-mount-wiring` | **MB-T-PHASE-5-TILE-HEADER-PROD-WIRING-FOLLOWUP** ticket — closes `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` (Tier 1; FOLLOWUPS:367; dogfood-blocking-class-instance-1). Single-WB ticket per row scope: amend `tile-grid/mount.ts` to instantiate `HttpSessionListClient` (via preload/IPC shim if needed — session arbitrates at HALT 0) + pass into `<TileGridApp statusListClient={...}>`. Verify via re-run of `run-smoke.js` + visual check on Frame B status dots. Includes WB-final findings/decisions/impl-coord docs. | [r12-t1c-w1-phase5-mount-wiring.txt](territorial-manifests/r12-t1c-w1-phase5-mount-wiring.txt) | NONE (HttpSessionListClient already exists at `src/main/session-cap.ts` per phase5 WB-final findings §V) |
+| `r12-t1c-w1-t08-onboarding-renderer-mount` | **MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT** closure ticket (vision §8.1 ship-gate blocker; FOLLOWUPS:74). Author NEW `build-onboarding.mjs` (mirrors `build-coarchitect.mjs`/`build-console-panel.mjs`) + NEW `onboarding.html` + NEW `src/onboarding/mount.tsx` entry point. Conditional-first-launch mount may require main.ts touch — session arbitrates at HALT 0 + surfaces manifest-expansion-Q if needed (main.ts is READ-ONLY in current manifest). Verify via `run-smoke.js` + vision §8.1 first-launch flow. | [r12-t1c-w1-t08-onboarding-renderer-mount.txt](territorial-manifests/r12-t1c-w1-t08-onboarding-renderer-mount.txt) | NONE (onboarding-modal.tsx + onboarding-ipc.ts + api-key-storage.ts already shipped at MB-T08 `d39f35d`) |
+
+## CLOSURE-PENDING-OPERATOR-ARBITRATION (Tier-1 rows requiring operator-only territory per §5(XII); skip-and-surface per RESUME §5(XII))
+
+These Tier-1 rows are recognized as closure-cascade candidates but require operator-arbitration of frozen contracts or path-of-closure decisions BEFORE a closure-impl session can be dispatched. Each row remains OPEN in `docs/FOLLOWUPS.md`; orchestrator skips dispatch + ANNOUNCES the blockage.
+
+| row | tier | arbitration required | rationale |
+|---|---|---|---|
+| `MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16` | Tier 1 | `WORKSTATION_CONTRACT.md §6.6` amendment (add `coarchitect:bypass-perms-update` IPC channel) — operator-only per CLAUDE.md §1 frozen-contract scope | Items 3+4 of the 7-item closure path require channel addition; cannot proceed without operator authoring the §6.6 amendment first. Operator may either (i) author §6.6 amendment in advance + then orchestrator dispatches single-impl closure session, or (ii) split into a contract-authoring HALT + a subsequent impl-WB ladder. |
+| `MB-F-MB-T08-VISION-PROJECT-LIST-CONFIG` | Tier 1 | Operator path-(a)-vs-(b) choice: (a) defer project-list config as v3.0.x followup; (b) extend MB-T08 onboarding with project-picker step before completion | Vision §8.1 ratification expects both API-key entry AND project-list config in first-launch flow. Path (a) ships MB-T08 satisfying API-key only; Path (b) extends onboarding. Choice is operator-arbitrated. |
 
 ## COMPLETED — Round 11 Wave 5 (closure-stamped post `TERMINATE-ROUND-11` 2026-05-13)
 
