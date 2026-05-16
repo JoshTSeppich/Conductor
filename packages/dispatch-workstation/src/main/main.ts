@@ -1393,3 +1393,51 @@ process.stdin.on('data', (chunk: string | Buffer) => {
     }
   }
 });
+
+// === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL deferred-wiring anchor ===
+// Per operator decision 2026-05-16 (BR-IMPL-1=(b) DEFER), the production
+// wiring for the bottom-rail MaxParallelCounter + BypassPermsIndicator
+// consumer surfaces is DEFERRED out of this ticket. The renderer-side
+// pluggable-source seams shipped in chat-shell/mount.ts (resolveRender
+// MaxParallelCounter at b3e8daf + resolveRenderBypassPerms at 8c905b9)
+// accept production sources at MountChatShellOptions but no main-
+// process supplier is wired today.
+//
+// What's deferred (Tier-1 followup body proposed at WB-final):
+//   1. createBypassPermsSource() singleton instantiation at app start.
+//   2. spawn-ipc.ts defaultSpawnHandlerDeps factory population of
+//      bypassPermsSource field (closes the gap at spawn-handler.ts:486
+//      where deps.bypassPermsSource?.recordSpawn is already wired but
+//      always falsy in production).
+//   3. coarchitect-ipc.ts onUpdate fan-out emitting
+//      `coarchitect:bypass-perms-update` to renderer (mirrors rate-
+//      limit-aggregator fan-out at coarchitect-ipc.ts:144-150).
+//   4. preload.mts coarchitectBridge.onBypassPermsUpdate exposure.
+//   5. mount.ts auto-mount block subscribing to onBypassPermsUpdate
+//      and threading bypassPermsActiveCount + bypassPermsDispatchMode
+//      into MountChatShellOptions.
+//   6. Raw-fs <userData>/max-parallel.json reader (per CLAUDE.md §3.5
+//      splitter-state.ts pattern) supplying MaxParallelSource to
+//      mount.ts maxParallelSource option.
+//   7. Renderer-side sessions-stream accumulator off workstationBridge.
+//      onSpawnResult (BR-2=(a) renderer-internal filter ratification).
+//
+// Why deferred: items (3) + (4) require amending WORKSTATION_CONTRACT.md
+// §6.6 IPC channels, which is operator-arbitrated frozen-contract
+// territory per CLAUDE.md §1. Bundling the §6.6 amendment with the
+// renderer pluggable-source seam would gate the seam ship on contract
+// arbitration; operator separated them by deferring items 1-7 to a
+// dedicated Tier-1 followup (mirrors MB-F-MOUNT-WIRING-HTTPSESSIONLIST
+// CLIENT-PROD-WIRING-DEFERRED precedent shipped at 7c8a957 under the
+// same NEW-EMERGENT-CLASS arbitration).
+//
+// Closure path (Tier 1; proposed at WB-final of this ticket; operator-
+// stamp envelope for FOLLOWUPS.md insertion):
+//   MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16
+//
+// Future implementation site: the Tier-1 followup IMPL session lands
+// items 1-7 INSIDE this sentinel zone (CLAUDE.md §3.3 discipline —
+// new logic in existing zone OK when zone-scope-matched; or a sibling
+// `=== BEGIN: MB-T-PHASE-4-BOTTOM-RAIL prod wiring ===` zone if scope
+// expansion is needed).
+// === END: MB-T-PHASE-4-BOTTOM-RAIL ===
