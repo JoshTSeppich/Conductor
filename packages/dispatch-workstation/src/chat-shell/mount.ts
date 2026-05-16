@@ -62,6 +62,16 @@ import { CostMeter } from './cost-meter.js';
 import { BuildMdTab } from './build-md-tab.js';
 import { BottomRailCostMeter } from './bottom-rail-cost-meter.js';
 // === END: MB-T-WIREFRAME-T4 bottom-rail imports ===
+// === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel pluggable-source imports ===
+// Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER:
+// pluggable-source seam for the MaxParallelCounter slot. Production
+// raw-fs / IPC wiring deferred to Tier-1 followup
+// MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-
+// AMENDMENT-2026-05-16 (mirrors 7c8a957 HTTPSESSIONLISTCLIENT-PROD-
+// WIRING-DEFERRED precedent).
+import { MaxParallelCounter } from './max-parallel-counter.js';
+import type { MaxParallelSource } from './max-parallel-source.js';
+// === END: MB-T-PHASE-4-BOTTOM-RAIL ===
 // === BEGIN: MB-T27 mix-indicator import ===
 import { MixIndicatorContainer } from './mix-indicator.js';
 // === END: MB-T27 ===
@@ -204,6 +214,24 @@ export interface MountChatShellOptions {
   // supplied (no auto-build yet).
   readonly renderDispatchModeToggle?: () => ReactNode;
   // === END: MB-T24 ===
+  // === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel slot options ===
+  // Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER. Two seams:
+  //   - `renderMaxParallelCounter` (test/integration injection) —
+  //     explicit override consumed verbatim, mirrors MB-T26/T27 pattern.
+  //   - `maxParallelSource` (pluggable production source seam) —
+  //     consumed by resolveRenderMaxParallelCounter to read the
+  //     ceiling. Production raw-fs / IPC supplier ships via Tier-1
+  //     followup MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-
+  //     WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16. Under DEFER
+  //     scope, no auto-build from window.workstationBridge happens —
+  //     the sessions-stream subscription is itself deferred (rendering
+  //     activeCount=0 against a real maxParallel would mislead users).
+  //     When neither override nor source is supplied, the factory
+  //     returns undefined and the slot stays empty (preserves T4 WB4
+  //     ship semantics per chat-shell.tsx:261 comment).
+  readonly renderMaxParallelCounter?: () => ReactNode;
+  readonly maxParallelSource?: MaxParallelSource;
+  // === END: MB-T-PHASE-4-BOTTOM-RAIL ===
 }
 
 // Adapter from coarchitectBridge → ChatPanel's DaemonClient interface.
@@ -469,6 +497,41 @@ function resolveRenderPlanTimerText(
 }
 // === END: MB-T-WIREFRAME-T9 ===
 
+// === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel slot resolution ===
+// Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER. Resolution order
+// mirrors resolveRenderPlanTimerText (sibling bottom-rail consumer):
+//   1. Explicit `opts.renderMaxParallelCounter` — used verbatim
+//      (test-override / integration fixture path).
+//   2. Explicit `opts.maxParallelSource` — build closure that wraps
+//      <MaxParallelCounter sessions={[]} maxParallel={source.read()} />.
+//      Empty sessions[] is honest under DEFER scope: the renderer-side
+//      sessions-stream subscription (BR-2=(a) renderer-internal filter)
+//      is itself deferred to the Tier-1 followup, so activeCount
+//      degrades to 0 via T10 inline-filter at max-parallel-counter.tsx:65.
+//      The Tier-1 followup will replace this branch with a real
+//      sessions accumulator + source-driven ceiling.
+//   3. Neither — return undefined; chat-shell.tsx:261 renders empty
+//      slot (preserves T4 WB4 ship semantics; current production state).
+//
+// Under DEFER scope, production runtime (no opts.maxParallelSource
+// supplied) hits path 3 → slot renders nothing. This is the intended
+// no-regression state until the Tier-1 followup plugs both seams.
+// Tests can exercise paths 1 + 2 via explicit opts; behavioral
+// assertions live in sibling probe-mbtwt4-02 component-level probes.
+function resolveRenderMaxParallelCounter(
+  opts: MountChatShellOptions,
+): (() => ReactNode) | undefined {
+  if (opts.renderMaxParallelCounter) return opts.renderMaxParallelCounter;
+  const source = opts.maxParallelSource;
+  if (!source) return undefined;
+  return () =>
+    createElement(MaxParallelCounter, {
+      sessions: [],
+      maxParallel: source.read(),
+    });
+}
+// === END: MB-T-PHASE-4-BOTTOM-RAIL ===
+
 export function mountChatShell(opts: MountChatShellOptions): () => void {
   const rootEl = document.getElementById(opts.rootElementId);
   if (!rootEl) throw new Error(`#${opts.rootElementId} not found`);
@@ -507,6 +570,15 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
   // chat-shell.tsx owns left-to-right slot ordering.
   const renderDispatchModeToggle = resolveRenderDispatchModeToggle(opts);
   // === END: MB-T24 ===
+  // === BEGIN: MB-T-PHASE-4-BOTTOM-RAIL max-parallel slot passthrough ===
+  // Per operator decision 2026-05-16 BR-IMPL-1=(b) DEFER. Sibling
+  // resolution + render-prop pass-through; chat-shell.tsx:121 +
+  // chat-shell.tsx:261 already accept `renderMaxParallelCounter` via
+  // T4 WB4 slot prop. Under DEFER scope the prod runtime resolves to
+  // undefined (no opts.maxParallelSource supplied at auto-mount
+  // block); Tier-1 followup wires the production source.
+  const renderMaxParallelCounter = resolveRenderMaxParallelCounter(opts);
+  // === END: MB-T-PHASE-4-BOTTOM-RAIL ===
   root.render(
     createElement(ChatShell, {
       tabs,
@@ -515,6 +587,7 @@ export function mountChatShell(opts: MountChatShellOptions): () => void {
       renderPlanUsageRing,
       renderDispatchModeToggle,
       renderPlanTimerText,
+      renderMaxParallelCounter,
     }),
   );
   // === END: MB-T26 ===
