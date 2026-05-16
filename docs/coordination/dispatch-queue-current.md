@@ -33,9 +33,46 @@ Sessions claim QUEUED items via atomic git commit (move row to IN-FLIGHT). Sessi
 | `r12-phase5-tile-header-impl` | MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION Path B 3-WB ladder + WB-final amendment + WB-final docs | `b2af065` (WB-final docs; closed `MB-F-STATUS-INDICATOR-TILE-HEADER-INTEGRATION` Tier 2; 2 new followups at `66ff96d`) |
 | `r12-phase4-bottom-rail-impl` | MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION 6-WB ladder + WB8 smoke + WB-final docs (BR-IMPL-1=(b) DEFER scope per operator 2026-05-16) | `b378127` (WB-final docs; Capability-enabled-with-known-limitations; 3 new followups at `acb6bda`) |
 
-## QUEUED — Round 12 Wave T1-CLOSURE-Wave-1 (retarget cascade per RESUME §2(III); gen-6 cohort; expanded per operator amendment 2026-05-16 quota-restoration + 6-concurrent-cap)
+## QUEUED — Round 12 Wave T1-CLOSURE-Wave-1 (22-hour max-throughput cascade per operator dispatch v3 2026-05-16; CONTINUOUS-REFILL protocol active)
 
-(orchestrator-mediated direct dispatch per dispatch §11(II); ALL T1-CLOSURE sessions spawn plugin-loaded per §11(II); sessions begin IN-FLIGHT on first commit. Wave-naming per RESUME §2(IV). Operator amendment 2026-05-16: quota-restoration; §7 cadence restored to standard (5 incidents / 60 min); concurrent-session cap up to 6; substrate ceiling preserved.)
+(orchestrator-mediated direct dispatch per dispatch §11(II); ALL T1-CLOSURE sessions spawn plugin-loaded per §11(II); sessions begin IN-FLIGHT on first commit. Wave-naming per RESUME §2(IV). **Operator dispatch v3 2026-05-16 (22-hour max-throughput)**: quota at 7% weekly used + 93% headroom; §7 standard cadence (5 incidents / 60 min); CONTINUOUS-REFILL maintains 6-concurrent throughout 22-hour window; refill-latency target <5 min between session completion and next session spawn; pool exhausts naturally; coarch-arbitrated calls preserved through gen-7 handoff per §10.)
+
+### POOL INVENTORY (gen-6 pre-flight 2026-05-16 + subagent verification per §1.6)
+
+[KNOWN per general-purpose subagent 40 tool calls 2026-05-16; cross-verified via direct git --no-pager log --all --grep on each MB-F-ID]:
+
+- **POOL-A** = 0 net new dispatch entries (dogfood-blocking saturated by in-flight: phase5-mount-wiring + kanban-empty-state-ux)
+- **POOL-B** = 0 net new dispatch entries (MOUNT-WIRING-* covered by phase5; BOTTOM-RAIL-* §6.6-amendment-blocked → workstation-contract-66-draft handles)
+- **POOL-C** = 3 ELIGIBLE entries: (1) MB-F-INTEGRATION-TEST-ELECTRON-PROCESS-LEAK (FOLLOWUPS:153; 3-4 WB; **DISPATCHED** as r12-t1c-w1-electron-process-leak-cleanup); (2) MB-F-WORKTREE-FRESH-MISSING-DIST-CRASH (FOLLOWUPS:155; 2 WB; held — path-collision risk with completed post-pull-rebuild; defer to refill cycle); (3) MB-F-WORKSTATION-SESSION-LIFECYCLE-UI-MIRRORING (FOLLOWUPS:318; 8+ WB; DEFER — too large)
+- **STAMP-LAG-ELIGIBLE** = 1 confirmed (CONSOLE-T03-SHELL-INTEGRATION FOLLOWUPS:138) + 5 verify-via-sweep candidates (FOLLOWUPS:199, 325, 330, 336, 349); handled by stamp-lag-sweep session
+- **SKIP** = 30+ rows (operator-only / already-RESOLVED / §6.6-amendment-blocked / in-flight)
+
+**Critical drift finding [KNOWN]**: Operator §4 Tier-A list (7 rows) was STALE — all 7 already RESOLVED at HEAD via `36d8f3a` (MB-T07 family stamp commit) + `8d48e1e` (MB-T05 family stamp commit). Sweep session re-scoped to Tier-B (3 rows; NOT-ELIGIBLE per ZERO closure-keyed commits) + Tier-C (1 row) + Tier-D (5 verify-via-sweep candidates).
+
+| session | scope | territory | deps | status |
+|---|---|---|---|---|
+| `r12-t1c-w1-phase5-mount-wiring` | **MB-T-PHASE-5-TILE-HEADER-PROD-WIRING-FOLLOWUP** ticket — closes `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` (Tier 1; FOLLOWUPS:367). 2-WB OPT-β ladder + WB-final docs LANDED at `a34a9e8` (per origin/main). | [r12-t1c-w1-phase5-mount-wiring.txt](territorial-manifests/r12-t1c-w1-phase5-mount-wiring.txt) (EXPANSION-1 grants preload.mts WRITE) | NONE | WB-final shipped `a34a9e8` (dogfood-class instance 1 source-closed; operator-rebuild gate per §15 IV; do NOT stamp dogfood CLOSED until operator post-rebuild verification) |
+| `r12-t1c-w1-t08-onboarding-renderer-mount` | **STALE-DISPATCH-RESOLVED 2026-05-16** — MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT shipped at batch-6 Session-C `9cc238b`. FOLLOWUPS row 74 RESOLVED at `d6b4107`. | [r12-t1c-w1-t08-onboarding-renderer-mount.txt](territorial-manifests/r12-t1c-w1-t08-onboarding-renderer-mount.txt) | N/A | STALE-DISPATCH-RESOLVED → idle-standby (recyclable via /clear) |
+| `r12-t1c-w1-kanban-empty-state-ux` | **MB-F-WORKSTATION-KANBAN-EMPTY-STATE-UX** closure (Tier 1; FOLLOWUPS:173). 2-WB Path A ladder (manifest EXPANSION-2 grants KanbanEmptyState.tsx + KanbanPanel.tsx instead of original empty-state.tsx + kanban-region.tsx naming). | [r12-t1c-w1-kanban-empty-state-ux.txt](territorial-manifests/r12-t1c-w1-kanban-empty-state-ux.txt) (EXPANSION-2 file-name renames) | NONE | IN-FLIGHT (Path A ACK'd; resumed) |
+| `r12-t1c-w1-dispatch-core-post-pull-rebuild` | **MB-F-DISPATCH-CORE-POST-PULL-REBUILD-DISCIPLINE** closure (Tier 1; FOLLOWUPS:172). WB-final LANDED `6eaf194` closure path-(a) postinstall hook. | [r12-t1c-w1-dispatch-core-post-pull-rebuild.txt](territorial-manifests/r12-t1c-w1-dispatch-core-post-pull-rebuild.txt) | NONE | WB-final shipped; row 172 RESOLVED at `fa95d8c` |
+| `r12-t1c-w1-parallel-cairn-atomic-commit` | **MB-F-PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW** path-(β) closure (Tier 1; FOLLOWUPS:348). WB-final LANDED `173ead7` `scripts/cairn-atomic-commit.sh` shipped. | [r12-t1c-w1-parallel-cairn-atomic-commit.txt](territorial-manifests/r12-t1c-w1-parallel-cairn-atomic-commit.txt) | NONE | WB-final shipped; row 348 PARTIAL-RESOLVED at `fa95d8c` (path-α/γ still OPEN) |
+
+### 22-hour-window expansion cohort (4 new sub-sessions spawning at this commit)
+
+| session | scope | territory | type |
+|---|---|---|---|
+| `r12-t1c-w1-stamp-lag-sweep` | **STAMP-LAG SWEEP** per §4 — re-scoped to Tier-C (CONSOLE-T03-SHELL-INTEGRATION confirmed ELIGIBLE) + Tier-D (5 verify-via-sweep candidates: 199, 325, 330, 336, 349). Operator §4 Tier-A list confirmed STALE pre-flight (all 7 already RESOLVED). | [r12-t1c-w1-stamp-lag-sweep.txt](territorial-manifests/r12-t1c-w1-stamp-lag-sweep.txt) | sweep-class |
+| `r12-t1c-w1-workstation-contract-66-draft` | **DRAFT-ONLY §6.6 IPC amendment** per §5(I). Coarch-specified channel `coarchitect:bypass-perms-update` (renderer→main). Mirrors §6.1-6.5 patterns. Unblocks BOTTOM-RAIL impl ticket (FOLLOWUPS:369). | [r12-t1c-w1-workstation-contract-66-draft.txt](territorial-manifests/r12-t1c-w1-workstation-contract-66-draft.txt) | draft-only |
+| `r12-t1c-w1-worktree-migration-plan` | **DRAFT-ONLY worktree migration plan** per §5(II). gen-4 URGENT-escalation per `6120dfd`. Closes path-α + path-γ of MB-F-PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW. Cutover at natural-fence post-window. | [r12-t1c-w1-worktree-migration-plan.txt](territorial-manifests/r12-t1c-w1-worktree-migration-plan.txt) | draft-only |
+| `r12-t1c-w1-electron-process-leak-cleanup` | **POOL-C #2 closure** — MB-F-INTEGRATION-TEST-ELECTRON-PROCESS-LEAK (Tier 1; FOLLOWUPS:153). 3-4 WB; afterEach + afterAll cleanup primitives in 4 integration suites. Path-disjoint. | [r12-t1c-w1-electron-process-leak-cleanup.txt](territorial-manifests/r12-t1c-w1-electron-process-leak-cleanup.txt) | closure-class |
+
+**Active concurrent count post-expansion**: 1 (phase5-finishing) + 1 (kanban) + 4 (new) = 6 of 6 cap. CONTINUOUS-REFILL on next WB-final.
+
+**Refill candidates ranked** (continuous-refill protocol):
+1. POOL-C #1: MB-F-WORKTREE-FRESH-MISSING-DIST-CRASH (FOLLOWUPS:155; 2-WB; verify path-collision with post-pull-rebuild before dispatch)
+2. POOL-C #3 (deferred): MB-F-WORKSTATION-SESSION-LIFECYCLE-UI-MIRRORING (FOLLOWUPS:318; 8+ WB; defer until smaller closures land)
+3. Tier-2 sweep authorization request to operator if pool exhausts before window close (per §11)
+
 
 Selection criteria per §14.6 (dogfood-blocking > family-closure > Tier-1-reclass-from-deferred > other-Tier-1-prod-wiring). MB-T07 family already RESOLVED at batch-6 Session B (`7217e66`/`28f55c5`/`fc1d57c`/`e933498`/`f8c57f7`) — removed from priority list.
 
