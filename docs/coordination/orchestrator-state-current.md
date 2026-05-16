@@ -595,3 +595,142 @@ First-message paste (gen-5):
 **Gen-5 entering active orchestration after HALT-ORCHESTRATOR-5-LOADED operator-ack.**
 
 **Gen-4 entering deep-halt per INV-RP-3 after handoff verification of gen-5 alive.**
+
+---
+
+## §14 — Gen-5 handoff to gen-6 (UNSUPERVISED per MAX-AUTONOMY-WITHIN-FENCES §5(I))
+
+Authored 2026-05-16 at gen-5 ~715-720k pre-emptive context-pressure threshold per operator MAX-AUTONOMY-WITHIN-FENCES dispatch 2026-05-13 §5(I) (single unsupervised handoff authorized) + RESUME + RETARGET dispatch 2026-05-16 §6(II).
+
+### §14.1 — Handoff state
+
+- **session_id (gen-5)**: `orchestrator-2026-05-13-1318`
+- **status (gen-5)**: `handing-off-unsupervised`
+- **successor_session_id (gen-6)**: `orchestrator-2026-05-16-handoff` (planned spawn name)
+- **handoff_reason**: pre-emptive context-pressure (gen-5 ~715-720k estimated post Wave 2 saturation actions) + per dispatch §6(II) authorization
+- **lineage**: gen-1 → gen-2 (UNEXPECTED-EXIT) → gen-3 (749350t) → gen-4 (~720-750k) → gen-5 (this; ~715-720k) → **gen-6 (UNSUPERVISED; first unsupervised handoff in cairn-under-stress corpus)**
+- **gen-6 handoff is OPERATOR-AUTHORIZED-ONCE**: gen-6 → gen-7 REQUIRES operator ack per dispatch §5(II); gen-6 must surface HALT-CONTEXT-PRESSURE-PENDING when approaching its own ~720k threshold
+
+### §14.2 — Round 12 cascade state at handoff
+
+**Wave 2 SATURATION REACHED 2026-05-16** (post 26+hr operator pause + RESUME dispatch):
+- ✓ r12-phase5-tile-header-impl LADDER COMPLETE: `b2af065` WB-final
+  - Sub-Q dispositions 5/5 KNOWN-OPERATOR-ARBITRATED (gen-5 auto-ack 2026-05-13)
+  - WB1 RED → WB1 GREEN → WB2 GREEN → WB3 GREEN → WB1 amendment `4a9633c` → WB-final
+  - Closed: `MB-F-STATUS-INDICATOR-TILE-HEADER-INTEGRATION` (Tier 2; RESOLVED at `b2af065`)
+  - 2 new followups filed at `66ff96d`:
+    - `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` (Tier 1 per operator dogfood directive 2026-05-13)
+    - `MB-F-STATUS-SOURCE-FRAME-C-SESSION-LIST-INTEGRATION` (Tier 3)
+- ✓ r12-phase4-bottom-rail-impl LADDER COMPLETE: `b378127` WB-final
+  - Sub-Q dispositions 6/6 KNOWN-OPERATOR-ARBITRATED (gen-5 auto-ack 2026-05-13 + operator BR-IMPL-1=(b) DEFER 2026-05-16)
+  - WB1 RED `7e951a8` → WB2 GREEN `b3e8daf` → WB3 RED `3393fcf` → WB4 GREEN `8c905b9` → WB5 RED `e4dc734` → WB6 GREEN `10df792` → WB8 smoke (CLEAN; 2 pre-existing failures triaged via plugin agent) → WB-final `b378127`
+  - 3 new followups filed at `acb6bda`:
+    - `MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16` (Tier 1 per operator BR-IMPL-1=(b) DEFER + dogfood class anchor `7c8a957`)
+    - `MB-F-T25-PLAN-USAGE-ROUNDTRIP-INTEGRATION-TEST-STALE-AFTER-T9-AUTOWIRE` (Tier 2)
+    - `MB-F-T8-COST-METER-AGGREGATOR-PROBE-MBTWFT8-01-RED-AT-HEAD` (Tier 3)
+
+### §14.3 — Round 12 §1 emergent class captured
+
+`spike(§3.9): Round 12 §1.1 — Tier 1 NEW EMERGENT CLASS deferred-prod-wiring-surface-in-operator-dogfood` at `7c8a957` (gen-5 dispatched r12-archive-writer; operator dogfood evidence captured = empty Frame B). This class has TWO instances:
+1. `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` (phase5)
+2. `MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16` (phase4-bottom-rail)
+
+Both are Tier-1 per operator classification (dogfood-blocking). Both shipped pluggable seams; both deferred production wiring.
+
+### §14.4 — §11(VIII) plugin retrofit empirical evidence accumulated
+
+**KNOWN data points** (this session's first cascade-scope evidence):
+- `cairn-phase-1-diagnose` agent dispatched at r12-phase4-bottom-rail-integration-body — returned 130k-token report; parent session retained citations locally (strong context-savings evidence)
+- `cairn-phase-1-diagnose` agent dispatched at r12-phase5-tile-header-impl boot — transient `API Internal server error`; fell back to 10-file direct reads (graceful degradation pattern confirmed)
+- `cairn-test-failure-triage` agent dispatched at r12-phase4-bottom-rail-impl WB8 — successfully identified 2 pre-existing test failures (T9 `de6620e` + T8 `31709e0`); CLAUDE.md §4.5 baseline preserved + 2 new Tier 2/3 followups generated from triage output
+
+**Working hypothesis [MODELED]**: plugin retrofit amortizes at multi-WB ladders + WB8 smoke triage. Single-cycle observer sessions over-cost relative to plugin-less. Boot overhead ~30-35k tokens per session; pays off at >3 WB iterations.
+
+### §14.5 — Operator-arbitration backlog (unchanged; gen-6 inherits)
+
+| Item | Class | Status |
+|---|---|---|
+| REGISTRY.md §2 authoring | operator-only | p7-cortex-draft-1243 HALT-DRAFT-COMPLETE since Round 11 Wave 2 |
+| MB-T41 revision (Q-V35-7(a)) | operator-only | Long-standing; gates v3.5-alpha measurement |
+| Per-session worktree migration | URGENT-escalated per `6120dfd` | Round 12+ candidate |
+| Operator weekly quota reset May 17 | (timeline) | Conservative cadence preserved until reset |
+| Phase 3 visual-verification entry | operator-arbitrated | Empty Frame B dogfood evidence already captured |
+
+### §14.6 — Cascade RETARGET pending (gen-6 inherits)
+
+Per RESUME dispatch §2(III) at in-flight saturation, retarget to Tier-1 closure cascade:
+
+**Selection criteria** (in order):
+1. Dogfood-blocking (the empty-Frame-B class)
+2. Same ticket family as recently-shipped (close the family)
+3. Tier-1 reclass-from-deferred (followups generated this cascade)
+4. Other Tier-1 rows touching prod-wiring layer
+
+**Priority target families** (per RESUME §2(III)):
+- MB-T07 (card-bridge preload, main IPC wiring, daemon-audit client)
+- MB-T08 (onboarding renderer mount, project-list config)
+- HttpSessionListClient mount wiring (from `7c8a957` deferred row — NOW filed at `66ff96d`)
+- Bottom-rail prod wiring (from BR-IMPL-1 Option-b deferred row — NOW filed at `acb6bda`)
+
+**New wave naming convention**: post-retarget waves named "Round 12 Wave T1-CLOSURE-Wave-N" per RESUME dispatch §2(IV).
+
+### §14.7 — In-flight saturation criteria met (per RESUME §2(II))
+
+- ✓ All R12 plugin-loaded impl sessions WB-final'd (phase5 + phase4-bottom-rail both COMPLETE)
+- ✓ All deferred-prod-wiring Tier-1 followups filed (66ff96d + acb6bda)
+- ⏳ r12-archive-writer Wave 2 closure synthesis — **gen-6 dispatches at first opportunity post-handoff**
+- ✓ No QUEUED entries in dispatch-queue-current.md Round 12 Wave 2 (Wave 2 was last)
+
+### §14.8 — Cross-session sub-session state at handoff
+
+R12 plugin-loaded (gen-6 inherits monitoring of):
+- r12-archive-writer: 82k tokens; idle halt-correct; **gen-6 dispatches Wave 2 closure synthesis** + standby for next Round 12 incident capture
+- r12-manifest-validator: 108k tokens; idle halt-correct (no Wave 2+ manifests authored yet; gen-6 may dispatch Wave T1-CLOSURE manifest audit at retarget)
+- r12-queue-watcher: 98k tokens; idle observation halt; gen-6 may extend with Wave T1-CLOSURE race-window evidence
+- r12-phase5-tile-header-integration-body: 151k tokens; LADDER FAMILY COMPLETE; idle-standby; may /clear for Wave T1-CLOSURE work if reused
+- r12-phase4-bottom-rail-integration-body: 174k tokens; LADDER FAMILY COMPLETE; idle-standby
+- r12-phase5-tile-header-impl: 237k tokens; LADDER COMPLETE; idle-standby
+- r12-phase4-bottom-rail-impl: 241k tokens; LADDER COMPLETE; idle-standby ("Session terminating. Halt." declared)
+
+R11 plugin-less (preserved as-is per §11(IV) additive policy):
+- All 15 sessions remain in their post Round-11 closure-stamped state per §13.4 inventory
+
+### §14.9 — Monitor inheritance
+
+Gen-5 monitor `byrnat67c` (gen-5 60s heartbeat; 20 sessions tracked; HALT/90PCT-ROTATION/UNREACHABLE events) was operative through gen-5 lifetime. **Gen-6 may inherit OR relaunch with updated SESSIONS list** to include any new gen-6-spawned sub-sessions for the Tier-1 closure cascade.
+
+Monitor script at `/tmp/orch-gen5-monitor.sh` (rev5 inherited from gen-4 line-leading HALT regex). Gen-6 may TaskStop `byrnat67c` and relaunch updated script as `/tmp/orch-gen6-monitor.sh` with new SESSIONS list.
+
+### §14.10 — Active dispatch authorizations preserved through handoff
+
+Per RESUME + RETARGET dispatch 2026-05-16:
+- Cascade authorization §2 ELIGIBLE list (Tier-1 closure cascade)
+- §3 hard-escalation triggers preserved + extended (§5(XII) "Tier-1 row needs operator-only-territory → file closure-pending-operator-arbitration + skip to next")
+- §4 discipline invariants preserved (per-path discipline + Q1-Q9 + confidence labels + §3.7 halt discipline + §3.9.A territory glob-check)
+- §6 token awareness + multi-gen handoff (gen-6 → gen-7 needs operator ack)
+- §7 operator quota awareness (May 17 reset ~1 day from this commit; reduced cadence operative)
+- §8 natural-fence termination conditions
+- §9 reduced surface cadence (ANNOUNCEMENT every 10 incidents OR 90 min)
+
+### §14.11 — Gen-6 boot prompt + spawn
+
+Gen-6 will be spawned with foxworks-cairn plugin loaded per dispatch §11(II):
+
+```bash
+PLUGIN_DIR="/Users/joshuatseppich/Desktop/Automata/foxworks-tooling"
+REPO="/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch"
+CC="/Users/joshuatseppich/.local/bin/claude"
+NEW="orchestrator-2026-05-16-handoff"
+tmux new-session -d -s "$NEW" -x 220 -y 50 -c "$REPO" \
+  "$CC --dangerously-skip-permissions --model claude-opus-4-7 --plugin-dir $PLUGIN_DIR"
+```
+
+Boot prompt to /tmp/gen6-boot-prompt.txt + dispatched via tmux send-keys -l with file-reference pattern per gen-4 §13.10 #1.
+
+### §14.12 — Gen-5 entering deep-halt per INV-RP-3
+
+After §14 commit + push + gen-6 spawn + dispatch + verification + HALT-BATON-PASSED operator surface, gen-5 enters deep-halt per INV-RP-3. No further dispatches from gen-5.
+
+**Gen-6 entering active orchestration with Tier-1 closure cascade retarget scope.**
+
+**Gen-5 entering deep-halt per INV-RP-3 after handoff verification of gen-6 alive.**
