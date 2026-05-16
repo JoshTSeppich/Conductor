@@ -7,10 +7,10 @@ This file is auto-loaded by Claude Code for every session in this repo. It encod
 This file is operator-authored (Joshua Seppich) and tracks the state of the Conductor v3.0 build. Updates to this file are themselves operator-arbitrated.
 
 **Frozen contract surfaces** (operator-arbitrated only; never CC-modified):
-- `REGISTRY.md §2` — Registry binary contracts
-- `docs/build-docs/CONDUCTOR_API_CONTRACT.md` — Conductor v2/v3 API contract (committed at `3ddca60`)
+- `REGISTRY.md §2` — Registry binary contracts (top-level; prospective — operator authoring in flight per p7-cortex-draft-1243)
+- `CONDUCTOR_API_CONTRACT.md` — Conductor v2/v3 API contract (top-level; committed at `3ddca60`)
 - `packages/dispatch-core/src/v3/schema.ts` §1-§13 — Zod schema spine for all cross-package contracts
-- `docs/build-docs/WORKSTATION_CONTRACT.md` §6 — IPC + endpoints
+- `WORKSTATION_CONTRACT.md` §6 — IPC + endpoints (top-level)
 
 **If CC encounters a frozen surface in the path of necessary work**, halt and surface to operator. Do not modify. Mechanical translation of frozen arbitrations into derived code (e.g., schema-derived types) is permissible under tight scope, then operator-reviewed.
 
