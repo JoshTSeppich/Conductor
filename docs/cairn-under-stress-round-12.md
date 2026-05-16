@@ -63,7 +63,8 @@
 | Multi-generation handoff continuity failure | N/A (no unsupervised handoff in Round 11) | **NEW for Round 12** — pending gen-5 → gen-6 handoff |
 | Plugin-loaded sub-session anomalies | N/A (no plugin retrofit in Round 11) | **NEW for Round 12** — pending NEW sub-session spawns |
 | Plugin agent dispatch failure | N/A | **NEW for Round 12** — pending Task tool agent invocations |
-| Deferred-prod-wiring user-visible blast radius (NEW emergent class) | N/A (no precedent in rounds 9/11 corpora) | **OBSERVED §1.1 + REPLICATED §1.1.A** — operator dogfood 2026-05-13 (Frame B empty) + 2026-05-16 `acb6bda` second instance (empty bottom-rail slots) |
+| Deferred-prod-wiring user-visible blast radius (NEW emergent class) | N/A (no precedent in rounds 9/11 corpora) | **OBSERVED §1.1 + REPLICATED §1.1.A + ORIGIN CLOSED §2.C** — operator dogfood 2026-05-13 (Frame B empty) + 2026-05-16 `acb6bda` second instance (empty bottom-rail slots) + `a34a9e8` first-instance Tier-1 closure landed 2026-05-16 |
+| Followups-stamp-lag (NEW emergent class; SWEEP-DISCIPLINE) | N/A (no precedent in rounds 9/11 corpora) | **OBSERVED §1.2 + SELF-CORRECTED** — t08-onboarding-renderer-mount HALT-STALE-DISPATCH-0 2026-05-16; SWEEP-DISCIPLINE row filed `d6b4107`; closure-path-β operationally applied at `735703f` within minutes |
 
 ---
 
@@ -156,6 +157,49 @@ This dimension is a **structural strengthening** of closure-path (β) (operator-
 - FOLLOWUPS row anchors: `66ff96d` (phase5 batch) + `acb6bda` (phase4-BR batch)
 - Orchestrator-state §14.3 captures the two-instance enumeration verbatim (gen-5 → gen-6 handoff record)
 
+### §1.2 — Tier 3 NEW EMERGENT CLASS: followups-stamp-lag-gap (SWEEP-DISCIPLINE) — detected via stale-dispatch-0; self-corrected within minutes
+
+**Cite-anchor:** `d6b4107` (gen-6 orchestrator-mediated row filing — row 74 RESOLVED + NEW Tier-3 SWEEP-DISCIPLINE row) + FOLLOWUPS.md:372 (row body verbatim) + `735703f` Wave T1-CLOSURE-Wave-1 expansion body (operational application of closure-path-β within minutes) + MEMORY.md `feedback_stale_dispatch_detection` (pre-existing discipline that did not propagate to dispatch-time decision boundary).
+
+**Sequence reconstruction** [KNOWN per `d6b4107` body + FOLLOWUPS.md:372 + `735703f` body]:
+
+1. **Batch-6 Session-C wiring-mounts** (merge `9cc238b` 2026-05-04) shipped `MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT` (FOLLOWUPS.md:74) full closure: red `93c474b` + green `a89e52a` + merge `9cc238b` + main.ts sentinel `60058a1`. All 4 NEW artifacts confirmed present at HEAD: `scripts/build-onboarding.mjs`, `src/onboarding/mount.tsx`, `src/onboarding/onboarding.html`, `src/main/onboarding-mount.ts`. **The closure work shipped, but the FOLLOWUPS.md row state was NOT moved to RESOLVED.**
+2. **12-day lag** (2026-05-04 → 2026-05-16): no RESOLVED stamp landed; row 74 remained in OPEN state.
+3. **Gen-6 cascade §14.6 retarget** 2026-05-16 selected row 74 as Tier-1 closure candidate based on its OPEN state; dispatched `SESSION-r12-t1c-w1-t08-onboarding-renderer-mount` (Wave T1-CLOSURE-Wave-1 cohort).
+4. **t08 session HALTED at HALT 0** phase-1-diagnose. Performed 3-source triangulation: commit log (`9cc238b` merge + ancestors) + filesystem (4 artifacts present) + main.ts sentinel (`60058a1` zone). Confirmed STALE-DISPATCH-0: dispatch describes work already merged. Surfaced `HALT-STALE-DISPATCH-0` to gen-6 before authoring any code. **Cost: 64k tokens consumed; 0 commits authored; 0 files modified; anti-fabrication discipline preserved.**
+5. **Gen-6 mediated row filing at `d6b4107`**: row 74 stamped RESOLVED with full closure evidence + NEW Tier-3 row `MB-F-FOLLOWUPS-RESOLVED-SWEEP-DISCIPLINE` (FOLLOWUPS.md:372) filed in same commit. Row 372 captures the methodology gap explicitly.
+6. **Closure-path-β operationally applied immediately at `735703f`** Wave T1-CLOSURE-Wave-1 expansion: gen-6 pre-flight checked 3 NEW closure candidates via `git --no-pager log --all --grep "<MB-F-ID>" 2026-05-16` per row 372's recommended path. All 3 candidates (KANBAN-EMPTY-STATE-UX, DISPATCH-CORE-POST-PULL-REBUILD, PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW) confirmed CLEAN (no prior closure-keyed commits). Pre-check primitive operational within MINUTES of row filing.
+
+**Diagnostic** [KNOWN per `d6b4107` + `735703f` sequence]:
+
+- The followups-stamp-lag gap is a **methodology discipline drift** — NOT a behavior regression. Code shipped correctly; only the FOLLOWUPS.md row state lagged.
+- The drift is **recurrent**: MEMORY.md `feedback_stale_dispatch_detection` (Phase-1 pre-check principle) existed prior to gen-6's cascade but did not propagate to gen-6's Wave T1-CLOSURE-Wave-1 candidate-selection step. Memory-feedback row present but NOT applied at the dispatch-time decision boundary.
+- **Self-correcting closure cycle observed**: detection (t08 HALT) → row filing (`d6b4107`) → closure-path-β applied (`735703f`) — completed within same gen-6 orchestrator session, minutes apart. No human operator intervention required for the closure cycle.
+
+**Methodology insight** [KNOWN]:
+
+- **Memory-feedback rows are forward-propagation primitives but NOT enforcement primitives** — they document the principle without enforcing it at the dispatch-time decision boundary. Closure-path-β (orchestrator-side bash macro) converts the principle from documentation to enforcement.
+- **HALT-STALE-DISPATCH-0 is a NEW HALT-vocabulary entry** — extends Round 11 §3.5 HALT vocabulary registry (Round 11 introduced HALT-TERRITORY-ACK + HALT-TERRITORY-VIOLATION + HALT-MANIFEST-TEST-DISCOVERY + HALT-AMBIGUOUS-MANIFEST + HALT-QUEUE-DRIFT). Auto-ack-eligibility: orchestrator can self-resolve via row-state update (no operator-arbitrated content) — mirrors HALT-TERRITORY-ACK semantics per Round 11 §1.A precedent.
+- **Anti-fabrication discipline directly prevented harm**: t08 session's HALT 0 phase-1-diagnose triangulation caught the stale dispatch before any code authored. Without phase-1-diagnose discipline (per memory `feedback_stale_dispatch_detection`), t08 might have authored speculative red/green commits against ALREADY-SHIPPED code — fabrication-class incident class.
+
+**Closure-paths candidates** (per FOLLOWUPS.md:372):
+
+- **(α)** CLAUDE.md §2.12 amendment — row-stamp-in-closure-commit discipline; every closure-keyed commit MUST include FOLLOWUPS.md row stamp in same commit (or immediate follow-on). Operator-arbitrated.
+- **(β) RECOMMENDED + KNOWN-operational** — orchestrator §14 cascade-selection pre-check primitive: `git --no-pager log --all --grep "<row-id>"` before queueing each candidate row. KNOWN-operational at `735703f` (3-candidate pre-check applied within minutes of row filing).
+- **(γ)** Periodic operator-side RESOLVED-SWEEP pass to reconcile shipped-but-unstamped rows. Operator-arbitrated.
+
+**Tier classification:** Tier 3 — methodology gap; not a behavior regression. Per FOLLOWUPS.md:372 explicit classification.
+
+**Cross-references:**
+
+- FOLLOWUPS.md:372 (row body verbatim authoritative; this archive entry summarizes)
+- t08 session anchor: `SESSION-r12-t1c-w1-t08-onboarding-renderer-mount` HALT 0 (0 commits authored)
+- Closure-path-β operational application: `735703f` Wave T1-CLOSURE-Wave-1 cohort revision with 3 pre-flight stale-dispatch checks
+- Predecessor memory-feedback row: MEMORY.md `feedback_stale_dispatch_detection`
+- HALT-vocabulary extension: Round 11 §3.5 anchor
+- Anti-fabrication discipline anchor: CLAUDE.md §2.1 + Round 11 §1.5 fabrication-class precedent
+- §1.0 row: "Followups-stamp-lag (NEW emergent class; SWEEP-DISCIPLINE)" — registered at this commit
+
 ---
 
 ## §2 — Methodology propagation observed
@@ -187,6 +231,40 @@ This dimension is a **structural strengthening** of closure-path (β) (operator-
 **Diagnostic** [MODELED → KNOWN-PARTIAL per §14.4 hypothesis crystallization]: Plugin retrofit amortizes at multi-WB ladders + WB8 smoke triage. Three successful dispatches + one graceful-degradation across Wave 2 yields non-trivial evidence corpus. Single-cycle observer sessions over-cost relative to plugin-less per gen-5 working hypothesis. Boot overhead estimated ~30-35k tokens per session; pays off at >3 WB iterations. Hypothesis status: graduates from MODELED to **KNOWN-PARTIAL** because the 3-dispatch evidence corpus is now non-trivial — full KNOWN requires Wave T1-CLOSURE-Wave-1 additional data points.
 
 **Methodology insight** [KNOWN]: Plugin agent dispatch failure modes observed in Wave 2 are graceful-degradation-class (API transient error → fallback to direct reads). No methodology-gap class observed (e.g., agent returning fabricated results, agent contaminating parent's context). The plugin retrofit's failure surface is upstream-API-class, not methodology-class.
+
+### §2.C — Wave T1-CLOSURE-Wave-1 closure-cascade evidence (T+0h marker; first 4-hour interval per gen-6 §7 22-hour cascade window dispatch 2026-05-16)
+
+[KNOWN per `a34a9e8` + `173ead7` + `6eaf194` + `d6b4107` + `735703f` commit anchors; verified via `git log` post-`f328e92` at HEAD `a34a9e8`]:
+
+**Three Tier-1 closure ladders landed since Wave 2 closure-synthesis** (`f328e92`):
+
+| Closure ticket | Closure-target row | Closure path | Ladder commits | WB-final docs |
+|---|---|---|---|---|
+| `MB-T-PHASE-5-TILE-HEADER-PROD-WIRING-FOLLOWUP` | `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` (FOLLOWUPS.md:367; **§1.1 ORIGIN Tier-1 row**) | OPT-β manifest EXPANSION-1 (preload.mts WRITE granted); 2-WB ladder; fetch-based StatusListClient (no frozen-contract amendment) | `00ea555` WB1 RED → `2a93e00` WB1 GREEN (preload.mts getDaemonToken bridge) → `e0e4c60` WB2 RED → `6d106dc` WB2 GREEN (mount.ts renderer-safe StatusListClient) | `a34a9e8` |
+| `MB-F-DISPATCH-CORE-POST-PULL-REBUILD-DISCIPLINE` | FOLLOWUPS.md:172 | Closure path-(a): postinstall hook | `23f7c88` WB1 GREEN (postinstall hook + probe-01) → `24c7d41` WB2 GREEN (dist-freshness probe-02 LIVE + MECHANISM invariants) | `6eaf194` |
+| `MB-F-PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW` | FOLLOWUPS.md:348 (**perennial Round 9 §1.1 + Round 11 §1.6/§1.RC1 race-class**) | Closure-path-β: `cairn-atomic-commit.sh` script + race-detection probe | `7d7a55f` WB1 GREEN (cairn-atomic-commit.sh skeleton + probe-01 contract) → `69ea3d0` WB2 GREEN (probe-02 race-detection + cross-shell verification) | `173ead7` |
+
+**§1.1 ORIGIN row Tier-1 closure** [KNOWN per `a34a9e8`]: The first instance of Round 12 §1.1 emergent class (`MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED`) is now CLOSED at `a34a9e8`. **The Round-12 emergent class' first instance reached closure within a single cascade window** (origin `7c8a957` 2026-05-13 → closure `a34a9e8` 2026-05-16; ~3 days). Operator-classified Tier-1 → high-leverage closure consistent with closure-path-(α) prediction in §1.1. Divergence from original HttpSessionListClient design (fetch-based renderer-safe variant) tracked as Tier-2 followup per `a34a9e8` proposal.
+
+**Perennial race-class FINALLY CLOSED via path-β** [KNOWN per `173ead7`]: `MB-F-PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW` (FOLLOWUPS.md:348) traces back to Round 9 §1.1-§1.3 + Round 11 §1.6 (PREVENTED) + Round 11 §1.RC1 (LANDED at `c5/63eba0f`). Closure-path-(α) per-session-worktree migration was operator-CRITICAL-escalated at `6120dfd` (Round 11 §1.RC1 closure-path-δ) but **NOT** the path taken. Closure-path-(β) ships INSTEAD as `cairn-atomic-commit.sh` — atomic stage-commit-push script with race-detection probe. **Cross-round closure**: Round 9 + Round 11 incident corpus structurally closed without requiring worktree migration. Round 9 §1.1 and Round 11 §1.RC1 LANDED-contamination class is now eligible for `[KNOWN-closure-pending-operator-stamp]` once the FOLLOWUPS.md:348 row receives its RESOLVED stamp.
+
+**Dispatch-core dist-freshness gap CLOSED via path-(a)** [KNOWN per `6eaf194`]: postinstall hook in `dispatch-core/package.json` + dist-freshness probe-02. Closes `MB-F-DISPATCH-CORE-POST-PULL-REBUILD-DISCIPLINE` referenced explicitly in CLAUDE.md §3.4. Post-pull workstation typecheck failures now structurally prevented at postinstall.
+
+**Cascade-velocity observation** [KNOWN per commit timestamps]: Three Tier-1 closure ladders landed in close temporal proximity within a single gen-6 orchestrator session, ~hours apart. All path-disjoint per pre-flight stale-dispatch checks at `735703f`. **No contamination observed**; per-path discipline + commit-pathspec discipline sustained at higher concurrency than Wave 2 (5 concurrent path-disjoint sessions vs Wave 2's 2 active-impl + 1 archive + 1 FOLLOWUPS interleave).
+
+**Cascade selection methodology (continuous-refill operational)** [KNOWN per `735703f` body]: After t08 session HALTED at HALT 0 (stale-dispatch detection), gen-6 expanded Wave T1-CLOSURE-Wave-1 with 3 NEW closure candidates path-disjoint from in-flight phase5-mount-wiring session. Pre-flight stale-dispatch checks applied per closure-path-β. This is **continuous-refill protocol** in action — formalized as §3.3 below.
+
+**Operator-arbitration-blocked rows expanded** (per `735703f` body, §5(XII) operator-arbitration-class):
+
+- `MB-F-HSO-02-PROTOCOL-DRIFT-TEMPLATE-ENFORCEMENT` — `hso-system-prompts/orchestrator.md` is operator-only frozen per CLAUDE.md §1.
+- `MB-F-CONSOLE-T03-SHELL-INTEGRATION` — STALE-DISPATCH-RISK per subagent scan; operator should verify open status via `git log --grep` before authorizing dispatch.
+- `MB-F-HSO-01-TURN-DISPATCH-SYNCHRONOUS` — scope ambiguity (MB-T37 ticket-body authoring + workstream-active status unclear); operator scope arbitration needed.
+
+**Cross-references (Wave T1-CLOSURE-Wave-1 supplement):**
+
+- Wave T1-CLOSURE-Wave-1 initial dispatch: `f43ab3d` (gen-6 retarget per orchestrator-state §14.6)
+- Wave T1-CLOSURE-Wave-1 expansion: `735703f` (3 NEW sessions + cohort revision + 3 operator-arbitration-blocked rows)
+- SWEEP-DISCIPLINE row anchor: `d6b4107` (§1.2 incident origin + closure-path-β source-of-record)
 
 ---
 
@@ -226,6 +304,66 @@ The Round 12 §1.1 NEW EMERGENT CLASS is now KNOWN-REPLICATED within a single ro
 
 **Methodology insight** [KNOWN per phase5 findings §IX(3)]: 26+hr operator-pause gap between phase5 WB1-3 (2026-05-13) and amendment + WB-final docs (2026-05-16) demonstrates working-tree state preserved cleanly across operator-pause; recovery-loop is operator-resilient by design. Retry-poke prompt 2026-05-16 resumed without context loss. This is independent observation supporting MODELED→KNOWN status of long-pause-resumption discipline.
 
+### §3.3 — Continuous-refill protocol (Wave T1-CLOSURE-Wave-N orchestrator cascade)
+
+[KNOWN per `735703f` Wave T1-CLOSURE-Wave-1 expansion + gen-6 §7 22-hour cascade window dispatch 2026-05-16]:
+
+**Pattern characterization:**
+
+As sub-sessions HALT (e.g., t08 STALE-DISPATCH-0 at HALT 0) or COMPLETE (e.g., phase5-mount-wiring / post-pull-rebuild / atomic-commit ladders at WB-final), the cascade **auto-refills with new candidates to maintain throughput**. Specifically:
+
+1. Wave T1-CLOSURE-Wave-1 initial dispatch (`f43ab3d`) seeded 2 sessions.
+2. t08 session HALTED at HALT 0 (§1.2 detection).
+3. Gen-6 mediated row filing (`d6b4107`) AND **simultaneously** expanded the cohort with 3 NEW path-disjoint sessions (`735703f`). Cohort grew from 2 → 5 (1 RESOLVED via t08-HALT + 1 in-flight phase5-mount-wiring + 3 NEW).
+4. Each refill candidate **pre-flight stale-dispatch checked** via closure-path-β (`git --no-pager log --all --grep "<MB-F-ID>"`) to prevent recurrence of §1.2 cycle.
+
+**Cascade-velocity rationale** [KNOWN per gen-6 §7 22-hour cascade window]:
+
+Operator amendment 2026-05-16 lifted quota + authorized concurrent closure session count up to 6 + directed 4 additional T1-CLOSURE candidates path-disjoint. The continuous-refill protocol maximizes Wave-throughput while preserving §3.9.A territory-disjoint discipline.
+
+**Distinct from Round 11 cascade patterns** [KNOWN]:
+
+- Round 11 used **batched Wave dispatch** (Wave 1: 5 sessions → Wave 2: 12 sessions → Wave 3: 16 sessions) with operator-arbitrated wave boundaries between dispatches.
+- Round 12 Wave T1-CLOSURE-Wave-1 uses **continuous-refill** within a single gen-6 orchestrator session: HALT/COMPLETE events trigger immediate cohort expansion; no wave-boundary arbitration required.
+- Continuous-refill is enabled by: (i) gen-6 §7 22-hour cascade window authorization, (ii) closure-path-β stale-dispatch pre-check primitive (prevents re-introduction of stale dispatches into the refill candidate set).
+
+**Methodology insight** [KNOWN]:
+
+- Continuous-refill REQUIRES closure-path-β stale-dispatch pre-check to be sound. Without pre-check, refill candidates risk recurring §1.2 cycle waste (64k-token HALT 0 cost per stale-dispatch).
+- This is **structurally similar to Round 11 §3.6 closure-γ ANNOUNCEMENT-per-dispatch** (envelope-creep prevention) — both protocols enable sustained orchestrator throughput by encoding pre-check discipline into the dispatch loop itself.
+- **SPECULATIVE → MODELED forward-projection**: continuous-refill protocol may extend to Wave T1-CLOSURE-Wave-N beyond Wave-1; needs additional data points to graduate KNOWN.
+
+### §3.4 — Self-correcting closure cycle (meta-pattern: incident-detected → row-filed → closure-path-applied → next-dispatch-protected)
+
+[KNOWN per §1.2 lifecycle `d6b4107` + `735703f` within-minutes timeline]:
+
+**Pattern characterization:**
+
+The §1.2 SWEEP-DISCIPLINE incident lifecycle exhibits a NEW methodology-class pattern: **self-correction within the same orchestrator session**, no human operator intervention required for the closure cycle.
+
+1. **Detection** (t08 HALT 0 phase-1-diagnose, ~64k tokens, 0 commits authored)
+2. **Row filing** (`d6b4107`: row 74 RESOLVED stamp + new SWEEP-DISCIPLINE Tier-3 row 372)
+3. **Closure-path application** (`735703f`: closure-path-β operationally applied to 3 NEW Wave T1-CLOSURE-Wave-1 candidates within minutes of row filing)
+4. **Next-dispatch protection** (3-candidate pre-flight checks: CLEAN; cascade continues without recurrence)
+
+**Distinct from Round 11 closure cycles** [KNOWN]:
+
+- Round 11 closure cycles typically spanned **multiple orchestrator sessions** + operator-arbitrated remediation (e.g., §1.RC1 c5/`63eba0f` → revert chain `9b8a4e9` → coord doc `31d2a59` → Tier-1 RECURRENCE update `6120dfd` — multi-day, multi-session, operator-mediated).
+- Round 12 §1.2 lifecycle: **single orchestrator session**, minutes apart. The protocol primitives (HALT discipline + memory-feedback + orchestrator-mediated row filing) compose to enable self-correction without human-in-the-loop.
+
+**Methodology insight** [KNOWN]:
+
+- Self-correction is **proof-of-maturity** for methodology infrastructure. Round 11 §1.RC1 required operator-mediated revert chain because the discipline-gap surface was novel; Round 12 §1.2 self-corrected because: (i) HALT discipline at session boot caught the stale-dispatch surface, (ii) closure-path-β was articulable as a few-line bash macro within the same row body, (iii) gen-6 orchestrator immediately applied the macro at next dispatch.
+- This pattern is **load-bearing for sustained autonomous cascade** under gen-6 §7 22-hour window: no operator intervention required for methodology-class incidents enables max-throughput cascade.
+- **SPECULATIVE forward-projection**: self-correction lifecycle may generalize to other methodology-class incidents in Wave T1-CLOSURE-Wave-N; needs additional data points to graduate KNOWN.
+
+**Cross-references:**
+
+- §1.2 incident anchor: t08 HALT 0 + `d6b4107` row filing
+- Closure-path-β operational application: `735703f` pre-flight checks
+- Round 11 §1.RC1 contrast: multi-session operator-mediated recovery vs Round 12 §1.2 single-session self-correction
+- Round 11 §3.5 HALT-vocabulary precedent (registry of HALT names + auto-ack eligibility)
+
 ---
 
 ## §4 — §3.9 validation verdict (extends Round 11 §4.1 verdicts)
@@ -249,6 +387,16 @@ Round 12-specific verdict targets populated as evidence accumulates below.
 - **§3.9.G envelope-creep prevention: SUSTAINED-OPERATIONAL through Wave 2.** Closure-γ ANNOUNCEMENT-per-dispatch cadence held across Wave 2 cascade; no recurrence of Round 11 §1.RC2 pattern observed.
 - **§3.9.B atomic claim mechanism: STILL SPECULATIVE-UNTESTED.** Wave 2 had pre-sequenced dispatches (no parallel claim race materialized). Round 12 has not yet exercised the §3.9.B mechanism through Wave 2; remains target for Wave T1-CLOSURE-Wave-N cascade evidence.
 - **NEW Round-12-class verdict — foxworks-cairn plugin retrofit per §11(VIII): MODELED → KNOWN-PARTIAL** [per §2.B + §14.4 hypothesis crystallization]. Amortizes at multi-WB ladders + WB8 smoke triage (3 successful agent dispatches: 1 phase-1-diagnose 130k-token + 1 graceful-degradation fallback + 1 test-failure-triage producing 2 new followups); single-cycle observer sessions over-cost relative to plugin-less baseline; boot overhead estimated ~30-35k tokens per session; pays off at >3 WB iterations. Full KNOWN status requires Wave T1-CLOSURE-Wave-1 additional data points.
+
+**Round 12 Wave T1-CLOSURE-Wave-1 verdict advancements** [KNOWN per Wave T1-CLOSURE-Wave-1 commit corpus + §1.2 lifecycle + commit-body subagent-citation scan at HEAD `a34a9e8`]:
+
+- **§3.9.A commit-pathspec mandate: SUSTAINED-KNOWN through Wave T1-CLOSURE-Wave-1.** 14+ post-`f328e92` commits across 5 concurrent path-disjoint sessions; zero contamination observed. Race-class structural-closure shipped at `173ead7` (`cairn-atomic-commit.sh`) — sustains commit-pathspec discipline as primary mitigation while adding atomic-script as composable mechanical defense.
+- **§3.9.G envelope-creep prevention: SUSTAINED-OPERATIONAL.** No recurrence; continuous-refill protocol (§3.3) operates within §3.9.G envelope discipline.
+- **§3.9.B atomic claim mechanism: STILL SPECULATIVE-UNTESTED.** Wave T1-CLOSURE-Wave-1 used pre-sequenced dispatches + continuous-refill (no parallel claim race materialized).
+- **NEW Round-12-class verdict — followups-stamp-lag-gap (SWEEP-DISCIPLINE): MODELED-OBSERVED → KNOWN-SELF-CORRECTING.** §1.2 lifecycle demonstrates self-correction within minutes via closure-path-β operational application (`d6b4107` → `735703f`). Closure-path-(α) CLAUDE.md §2.12 amendment remains operator-arbitrated.
+- **NEW Round-12-class verdict — continuous-refill protocol: MODELED → KNOWN-OPERATIONAL.** Wave T1-CLOSURE-Wave-1 cohort grew 2 → 5 within single gen-6 orchestrator session without contamination; closure-path-β stale-dispatch pre-check primitive validated operational within minutes of row filing.
+- **NEW Round-12-class verdict — self-correcting closure cycle (meta-pattern §3.4): MODELED.** Single-data-point observation (§1.2 lifecycle); SPECULATIVE for generalization beyond single methodology-class incident.
+- **§11(VIII) plugin retrofit verdict refinement** [KNOWN per scan of 14 cascade commits post-`f328e92`]: commit-body subagent-citation density is **LOW** — only 2 of 14 cascade commits reference plugin agents in body (`735703f` "subagent scan" identifying CONSOLE-T03-SHELL-INTEGRATION stale-dispatch-risk + `d6b4107` "cairn-anti-fabrication-verifier discipline" mention). Diagnosis: either (a) sub-sessions use subagents internally but don't cite in commit bodies, OR (b) sub-sessions don't use subagents at the per-WB granularity, OR (c) the closure-class WBs (single-file edits + short ladders) don't warrant per-WB subagent invocation. **§11(VIII) measurable evidence-gathering is currently limited by commit-body-citation discipline; SPECULATIVE-on-codification** — needs separate per-session SITREP protocol citing all Task tool dispatches to graduate KNOWN-PARTIAL → KNOWN. Recommended closure: gen-6 protocol amendment to require session-end SITREP enumerating subagent dispatches.
 
 ---
 
@@ -326,6 +474,11 @@ Round 12-specific verdict targets populated as evidence accumulates below.
 | `phase5-tile-header-integration` | `docs/coordination/territorial-manifests/phase5-tile-header-integration.txt` | YES | 1 | Body-drafting prep (wires StatusIndicator into tile-grid.tsx tile-header slot) feeding Wave 2 phase5 impl |
 | `r12-phase5-tile-header-impl` | `docs/coordination/territorial-manifests/r12-phase5-tile-header-impl.txt` | YES | 2 | MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION ladder (Path B 3-WB + WB-final amendment + WB-final docs); 7/7 probes GREEN; `b2af065` closure |
 | `r12-phase4-bottom-rail-impl` | `docs/coordination/territorial-manifests/r12-phase4-bottom-rail-impl.txt` | YES | 2 | MB-T-PHASE-4-BOTTOM-RAIL-FINAL-INTEGRATION ladder (6 WB + WB8 smoke + WB-final docs); 7/7 probes GREEN; `b378127` closure; BR-IMPL-1=(b) DEFER scope |
+| `r12-t1c-w1-phase5-mount-wiring` | `docs/coordination/territorial-manifests/r12-t1c-w1-phase5-mount-wiring.txt` (per `735703f` EXPANSION-1) | YES | T1-CLOSURE-W1 | Closes `MB-F-MOUNT-WIRING-HTTPSESSIONLISTCLIENT-PROD-WIRING-DEFERRED` (§1.1 origin Tier-1; FOLLOWUPS.md:367); 2-WB OPT-β ladder (preload bridge + mount.ts fetch-based StatusListClient); `a34a9e8` WB-final |
+| `r12-t1c-w1-t08-onboarding-renderer-mount` | `docs/coordination/territorial-manifests/r12-t1c-w1-t08-onboarding-renderer-mount.txt` (per `f43ab3d` initial dispatch) | YES | T1-CLOSURE-W1 | STALE-DISPATCH-0 RESOLVED at HALT 0; closure shipped at batch-6 Session-C `9cc238b` 2026-05-04; row 74 RESOLVED `d6b4107`; **§1.2 anchor session** |
+| `r12-t1c-w1-kanban-empty-state-ux` | `docs/coordination/territorial-manifests/r12-t1c-w1-kanban-empty-state-ux.txt` (per `735703f`) | YES | T1-CLOSURE-W1 | Closes `MB-F-WORKSTATION-KANBAN-EMPTY-STATE-UX` (FOLLOWUPS.md:173); dispatch-web/src/kanban/ scope |
+| `r12-t1c-w1-dispatch-core-post-pull-rebuild` | `docs/coordination/territorial-manifests/r12-t1c-w1-dispatch-core-post-pull-rebuild.txt` (per `735703f`) | YES | T1-CLOSURE-W1 | Closes `MB-F-DISPATCH-CORE-POST-PULL-REBUILD-DISCIPLINE` (FOLLOWUPS.md:172) closure-path-(a); `6eaf194` WB-final |
+| `r12-t1c-w1-parallel-cairn-atomic-commit` | `docs/coordination/territorial-manifests/r12-t1c-w1-parallel-cairn-atomic-commit.txt` (per `735703f`) | YES | T1-CLOSURE-W1 | Closes `MB-F-PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW` (FOLLOWUPS.md:348) closure-path-β; **closes perennial Round 9 §1.1 + Round 11 §1.6/§1.RC1 race-class**; `173ead7` WB-final |
 
 (More sessions added as cascade ramps under Wave T1-CLOSURE-Wave-N per gen-6 dispatch.)
 
