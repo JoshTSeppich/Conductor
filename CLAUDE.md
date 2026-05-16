@@ -253,10 +253,10 @@ Inventory at `/mnt/user-data/outputs/wireframe-tickets-inventory.md` (operator-s
 
 For deeper context, consult:
 - `docs/build-docs/CONDUCTOR_V3_RESCOPE.md` — current rescope, ticket specs
-- `docs/build-docs/CONDUCTOR_API_CONTRACT.md` — frozen API contract (§10.5 has self-check Q1-Q9)
-- `docs/build-docs/WORKSTATION_CONTRACT.md` — workstation IPC + endpoints
-- `docs/build-docs/00_BUILD_INDEX.md` — Registry binary build sequencing
-- `docs/build-docs/REGISTRY.md` — 16-binary Registry architecture
+- `CONDUCTOR_API_CONTRACT.md` — frozen API contract (top-level; §10.5 has self-check Q1-Q9)
+- `WORKSTATION_CONTRACT.md` — workstation IPC + endpoints (top-level)
+- `00_BUILD_INDEX.md` — Registry binary build sequencing (top-level; prospective — file not yet authored)
+- `REGISTRY.md` — 16-binary Registry architecture (top-level; prospective — operator authoring in flight per p7-cortex-draft-1243)
 - `docs/coordination/` — per-session findings + decision docs
 - `docs/FOLLOWUPS.md` — open findings + resolved closures
 
