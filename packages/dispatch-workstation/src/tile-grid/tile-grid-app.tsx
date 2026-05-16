@@ -47,7 +47,6 @@ import {
   createSessionStatusSource,
   type StatusListClient,
 } from '../main/session-status-source.js';
-import { HttpSessionListClient } from '../main/session-cap.js';
 import type {
   ApprovalPolicy,
   ApprovalPolicyGetResponse,
@@ -337,18 +336,27 @@ export function TileGridApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workstationBridge]);
 
-  // MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION WB1 (Path B):
+  // MB-T-PHASE-5-TILE-HEADER-STATUS-INTEGRATION WB1 (Path B; amended
+  // post-WB-final smoke per operator Option A 2026-05-13):
   // construct a SessionStatusSource on mount, subscribe to its snapshot,
-  // and dispose on unmount. Sub-Q-4: separate HttpSessionListClient
-  // (decoupled from session-cap.ts cap-check poll loop). Test seam:
-  // `statusListClient` prop overrides the production instantiation.
-  // Sub-Q-2: useEffect-owned, one source per TileGridApp mount; cleanup
-  // calls unsub() + source.dispose() per WB5 ConsumerWrapper pattern
-  // (probe-mbtphase5-status-indicator-02-integration.spec.tsx:85-88).
+  // and dispose on unmount. Sub-Q-2: useEffect-owned, one source per
+  // TileGridApp mount; cleanup calls unsub() + source.dispose() per
+  // WB5 ConsumerWrapper pattern (probe-mbtphase5-status-indicator-02-
+  // integration.spec.tsx:85-88).
+  //
+  // WB-final smoke amendment: Sub-Q-4 originally prescribed inline
+  // `new HttpSessionListClient()` fallback here. That instantiation
+  // pulls node:fs / node:path / node:os into the renderer esbuild
+  // bundle (session-cap.ts:138-140 top-level imports) and breaks
+  // build-tile-grid.mjs. Fallback DROPPED — `statusListClient` must be
+  // provided explicitly (production wiring deferred to followup MB-F-
+  // TILE-HEADER-STATUS-INTEGRATION-RENDERER-WIRING Tier 2). When
+  // statusListClient is undefined, the subscription no-ops; the
+  // existing tile-header chain falls back to seeded `s.status` or
+  // 'idle' (Sub-Q-3 fallback chain handles undefined snapshot).
   useEffect(() => {
-    const listClient: StatusListClient =
-      statusListClient ?? new HttpSessionListClient();
-    const source = createSessionStatusSource({ listClient });
+    if (!statusListClient) return undefined;
+    const source = createSessionStatusSource({ listClient: statusListClient });
     const unsub = source.subscribe((snap) => {
       // Capture into a new immutable Map so setState identity-change
       // triggers a re-render. The source's internal Map mutates in
