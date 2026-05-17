@@ -21,11 +21,20 @@
 // (MB-T19 WB2) and test/unit/tile-layout-grid-fit/probe-01-spec-table.spec.ts
 // (MB-T12 WB2): pure-fn assertions, no React, no mocks.
 
+// @vitest-environment happy-dom
+
 import { describe, it, expect } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import {
   computeAgentGridLayout,
   type AgentGridLayout,
 } from '../../../src/tile-grid/agent-grid-layout.js';
+import {
+  TileGrid,
+  type TileGridSessionEntry,
+} from '../../../src/tile-grid/tile-grid.js';
+import { makeFakeConsoleBridge } from '../console-t03/fake-console-bridge.js';
+import { makeFakeTerminalAdapter } from '../console-t03/fake-terminal-adapter.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // N=1..12 — operator-vision "1-12 concurrent" range
@@ -220,5 +229,146 @@ describe('MB-T-MVP-W2 WB1 — computeAgentGridLayout return shape', () => {
     expect(Object.keys(layout).sort()).toEqual(
       ['cols', 'gridTemplateAreas', 'overflow', 'rows'].sort(),
     );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// WB2 — TileGrid React-level: agentGridMode prop activates the new
+// layout; default prop=undefined preserves legacy uniform geometry.
+// ─────────────────────────────────────────────────────────────────────
+
+function makeTileFixtures(sessionNames: string[]): {
+  bridge: ReturnType<typeof makeFakeConsoleBridge>;
+  sessions: TileGridSessionEntry[];
+  createTerminal: () => ReturnType<typeof makeFakeTerminalAdapter>;
+} {
+  return {
+    bridge: makeFakeConsoleBridge(),
+    sessions: sessionNames.map((name) => ({ name })),
+    createTerminal: () => makeFakeTerminalAdapter(),
+  };
+}
+
+describe('MB-T-MVP-W2 WB2 — <TileGrid agentGridMode> activation', () => {
+  it('agentGridMode={true} + N=4 renders 2×2 (operator-vision "2x2" anchor)', () => {
+    const { bridge, sessions, createTerminal } = makeTileFixtures([
+      'a',
+      'b',
+      'c',
+      'd',
+    ]);
+    render(
+      <TileGrid
+        sessions={sessions}
+        consoleBridge={bridge.bridge}
+        createTerminal={createTerminal}
+        agentGridMode={true}
+      />,
+    );
+    const root = screen.getByTestId('tile-grid-root');
+    expect(root.getAttribute('data-tile-count')).toBe('4');
+    expect(root.getAttribute('data-agent-grid-mode')).toBe('true');
+    expect(root.style.gridTemplateRows).toBe('repeat(2, 1fr)');
+    expect(root.style.gridTemplateColumns).toBe('repeat(2, 1fr)');
+    for (const name of ['a', 'b', 'c', 'd']) {
+      expect(within(root).getByTestId(`tile-cell-${name}`)).toBeInTheDocument();
+    }
+  });
+
+  it('agentGridMode={true} + N=6 renders 2×3 (operator-vision "2x3" anchor)', () => {
+    const { bridge, sessions, createTerminal } = makeTileFixtures([
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+      'f',
+    ]);
+    render(
+      <TileGrid
+        sessions={sessions}
+        consoleBridge={bridge.bridge}
+        createTerminal={createTerminal}
+        agentGridMode={true}
+      />,
+    );
+    const root = screen.getByTestId('tile-grid-root');
+    expect(root.getAttribute('data-agent-grid-mode')).toBe('true');
+    expect(root.style.gridTemplateRows).toBe('repeat(2, 1fr)');
+    expect(root.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
+  });
+
+  it('agentGridMode={true} + N=9 renders 3×3 (vs uniform 2×4)', () => {
+    const names = Array.from({ length: 9 }, (_, i) => `s${i}`);
+    const { bridge, sessions, createTerminal } = makeTileFixtures(names);
+    render(
+      <TileGrid
+        sessions={sessions}
+        consoleBridge={bridge.bridge}
+        createTerminal={createTerminal}
+        agentGridMode={true}
+      />,
+    );
+    const root = screen.getByTestId('tile-grid-root');
+    expect(root.getAttribute('data-agent-grid-mode')).toBe('true');
+    expect(root.style.gridTemplateRows).toBe('repeat(3, 1fr)');
+    expect(root.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
+  });
+
+  it('agentGridMode={true} + N=12 renders 3×4 (graceful 1-12 ceiling)', () => {
+    const names = Array.from({ length: 12 }, (_, i) => `s${i}`);
+    const { bridge, sessions, createTerminal } = makeTileFixtures(names);
+    render(
+      <TileGrid
+        sessions={sessions}
+        consoleBridge={bridge.bridge}
+        createTerminal={createTerminal}
+        agentGridMode={true}
+      />,
+    );
+    const root = screen.getByTestId('tile-grid-root');
+    expect(root.getAttribute('data-agent-grid-mode')).toBe('true');
+    expect(root.style.gridTemplateRows).toBe('repeat(3, 1fr)');
+    expect(root.style.gridTemplateColumns).toBe('repeat(4, 1fr)');
+  });
+
+  it('agentGridMode default (omitted) preserves uniform geometry (no regression)', () => {
+    // N=9 uniform layout is 2×4; agent-grid would be 3×3. This assertion
+    // captures the non-regression contract: <TileGrid> without explicit
+    // agentGridMode behaves bit-identical to pre-WB2 (MB-T12 default).
+    const names = Array.from({ length: 9 }, (_, i) => `s${i}`);
+    const { bridge, sessions, createTerminal } = makeTileFixtures(names);
+    render(
+      <TileGrid
+        sessions={sessions}
+        consoleBridge={bridge.bridge}
+        createTerminal={createTerminal}
+      />,
+    );
+    const root = screen.getByTestId('tile-grid-root');
+    expect(root.getAttribute('data-agent-grid-mode')).toBe('false');
+    // Uniform layout at N=9 → 2×4 + overflow=true
+    expect(root.style.gridTemplateRows).toBe('repeat(2, 1fr)');
+    expect(root.style.gridTemplateColumns).toBe('repeat(4, 1fr)');
+  });
+
+  it('hero-mode wins precedence over agentGridMode (Q-W2-2 FLAG-PRESERVE)', () => {
+    const { bridge, sessions, createTerminal } = makeTileFixtures([
+      'a',
+      'b',
+      'c',
+    ]);
+    render(
+      <TileGrid
+        sessions={sessions}
+        consoleBridge={bridge.bridge}
+        createTerminal={createTerminal}
+        agentGridMode={true}
+        heroSessionName="a"
+      />,
+    );
+    const root = screen.getByTestId('tile-grid-root');
+    expect(root.getAttribute('data-hero-mode')).toBe('true');
+    expect(root.getAttribute('data-agent-grid-mode')).toBe('false');
   });
 });

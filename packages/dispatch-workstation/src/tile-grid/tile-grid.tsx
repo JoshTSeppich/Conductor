@@ -22,6 +22,7 @@ import {
   computeHeroSquadLayout,
   type HeroSquadLayout,
 } from './tile-hero-squad-layout.js';
+import { computeAgentGridLayout } from './agent-grid-layout.js';
 import type { GridOverride } from '../main/tile-grid-state.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
@@ -127,6 +128,30 @@ export interface TileGridProps {
    * handle at the hero/squad boundary is operator-draggable.
    */
   readonly heroSessionName?: string | null;
+  /**
+   * MB-T-MVP-W2-AGENT-GRID WB2 — agent-grid layout activation
+   * (operator-vision Component 2: docs/coordination/operator-vision-
+   * three-pane-conductor-2026-05-17.md:80-85).
+   *
+   * When `true` AND hero-mode is INACTIVE (heroSessionName is null/
+   * undefined or doesn't match any session), the layout switches to
+   * `computeAgentGridLayout`: 2x2/2x3/3x3/3x4 explicit grid honoring
+   * operator vision's "1-12 concurrent tiles gracefully" requirement.
+   *
+   * When `false` / undefined, the layout defaults to the uniform
+   * `computeGridLayout` (existing MB-T12 default — preserves all
+   * MB-T12 ladder tests including probe-01-grid-renders-n-tiles which
+   * exercises <TileGrid> directly without setting this prop).
+   *
+   * Hero-mode takes precedence (Q-W2-2 disposition (b): FLAG-PRESERVE
+   * hero-squad — no state-file migration). When both heroSessionName
+   * matches and agentGridMode === true, hero-mode wins.
+   *
+   * Production wiring: TileGridApp defaults this prop to `true` for
+   * MVP (mount.ts → <TileGridApp> with no explicit override → flips
+   * to agent-grid). Tests using <TileGrid> directly opt-in explicitly.
+   */
+  readonly agentGridMode?: boolean;
 }
 
 const noop = (): void => {
@@ -159,6 +184,7 @@ export function TileGrid({
   renderAutopilotSlot,
   renderFooterSlot,
   heroSessionName,
+  agentGridMode,
 }: TileGridProps): JSX.Element | null {
   // Hooks must be unconditional and run in the same order on every
   // render (React Rules of Hooks). Layout / shape checks happen below
@@ -176,11 +202,19 @@ export function TileGrid({
       ? sessions.findIndex((s) => s.name === heroSessionName)
       : -1;
   const isHeroMode = heroIndex >= 0;
+  // MB-T-MVP-W2 WB2 — agent-grid layout activation. Hero-mode takes
+  // precedence (Q-W2-2 FLAG-PRESERVE); when both flags suggest layout
+  // selection, hero wins. agentGridMode === true → computeAgentGridLayout
+  // (operator-vision Component 2 default for MVP). Otherwise →
+  // computeGridLayout (existing uniform default).
+  const isAgentGridMode = !isHeroMode && agentGridMode === true;
   const layout = isEmpty
     ? null
     : isHeroMode
       ? computeHeroSquadLayout(sessions.length, heroIndex)
-      : computeGridLayout(sessions.length);
+      : isAgentGridMode
+        ? computeAgentGridLayout(sessions.length)
+        : computeGridLayout(sessions.length);
 
   const overrideMatchesShape =
     !isEmpty &&
@@ -388,6 +422,7 @@ export function TileGrid({
       data-testid="tile-grid-root"
       data-tile-count={sessions.length}
       data-hero-mode={isHeroMode ? 'true' : 'false'}
+      data-agent-grid-mode={isAgentGridMode ? 'true' : 'false'}
       style={gridStyle}
     >
       {sessions.map((s, idx) => {

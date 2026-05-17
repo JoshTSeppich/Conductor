@@ -152,6 +152,19 @@ export interface TileGridAppProps {
    *  ("new HttpSessionListClient instantiation inline in useEffect").
    *  Mirrors the existing `getCurrentPixelSizes` test-seam pattern. */
   readonly statusListClient?: StatusListClient;
+  /** MB-T-MVP-W2-AGENT-GRID WB2 — agent-grid layout activation toggle
+   *  (operator-vision Component 2: docs/coordination/operator-vision-
+   *  three-pane-conductor-2026-05-17.md:80-85).
+   *
+   *  Default: `true` (MVP production default — flips the renderer to
+   *  the 2x2/2x3/3x3/3x4 agent-grid layout for "1-12 concurrent tiles
+   *  gracefully" per operator vision). Pass `false` explicitly to opt
+   *  out (e.g., test fixtures asserting legacy uniform geometry).
+   *
+   *  Per Q-W2-1 disposition (b): prop-gated with TileGridApp-level
+   *  default of true. Hero-mode (heroSessionName matches) takes
+   *  precedence over agent-grid (Q-W2-2 FLAG-PRESERVE). */
+  readonly agentGridMode?: boolean;
 }
 
 interface SpawnSuccessReply {
@@ -200,6 +213,7 @@ export function TileGridApp({
   heroSessionName,
   onSpawnedAtMsCapture,
   statusListClient,
+  agentGridMode = true,
 }: TileGridAppProps): JSX.Element | null {
   const [sessions, setSessions] = useState<readonly TileGridSessionEntry[]>([
     ...initialSessions,
@@ -521,6 +535,7 @@ export function TileGridApp({
       gridOverride={initialGridOverride}
       getCurrentPixelSizes={getCurrentPixelSizes}
       heroSessionName={heroSessionName ?? null}
+      agentGridMode={agentGridMode}
     />
   );
 }
