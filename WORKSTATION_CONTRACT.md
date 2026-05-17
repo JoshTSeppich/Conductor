@@ -409,6 +409,22 @@ Existing channels in this category predate this contract subsection (`workstatio
 | **Authoring ticket** | `MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH` WB10 GREEN |
 | **Signature choice rationale** | No payload — trigger is intentionally parameter-free per Sub-Q-MBTWFT5-B=(ii) operator-click semantics (button click → trigger → result). Future variants (auto-on-load per Sub-Q-B=(i); fs-watch per Sub-Q-B=(iii)) compose by main-process internally invoking the same controller method without renderer involvement. Stub deps posture per WB10 commit body: `getCompletedTaskIds` returns empty, `getMaxParallel` returns 4, `fireSpawn` returns `{declined: true}` — production wiring deferred to follow-on tickets (MB-F-T5-COMPLETED-TASK-IDS-PRODUCTION-WIRING + MB-F-T5-FIRESPAWN-ORCHESTRATOR-FIRE-SPAWN-WIRING + MB-F-T5-MAX-PARALLEL-T4-DEPENDENCY). |
 
+
+#### Channel #7 — `coarchitect:bypass-perms-update` (Wave R12-CLOSURE-Wave-2, MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-17)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `coarchitect:bypass-perms-update` |
+| **Direction** | main → renderer (broadcast via webContents.send to all subscribed renderer windows) |
+| **Payload (main→renderer)** | `{ sessionName: string, bypassPerms: boolean, prevBypassPerms: boolean }` |
+| **Receiver shape** | Renderer subscribes via `coarchitectBridge.onBypassPermsUpdate(callback)` returning unsubscribe function |
+| **Bridge surface** | `window.coarchitectBridge.onBypassPermsUpdate(callback: (payload: BypassPermsUpdatePayload) => void): () => void` |
+| **Bridge style** | subscription (callback-based; returns unsubscribe) — flat-method convention per `preload.mts:14` |
+| **Action** | (1) Main's `BypassPermsSource` aggregator detects state change via internal `onUpdate` callback chain. (2) Main fans out via `webContents.send('coarchitect:bypass-perms-update', { sessionName, bypassPerms, prevBypassPerms })` to all subscribed renderer windows. (3) Each renderer's registered callbacks fire. (4) Renderer consumers (e.g. `bypass-perms-indicator.tsx`) react to state change. |
+| **Failure modes** | N/A for broadcast direction — main is producer, renderer is consumer. No round-trip rejection. If `webContents.send` fails (closed window), main logs warning and continues (non-fatal per Electron IPC semantics). |
+| **Consumer** | `bypass-perms-indicator.tsx` (renderer; reads aggregated count via existing channel + subscribes via this new channel for state-change reactions). New consumer pattern: subscribe-and-react instead of read-on-demand. |
+| **Authoring ticket** | Paired with implementation ticket spinning out FOLLOWUPS:369 (`MB-T-PHASE-4-BOTTOM-RAIL-PROD-WIRING-FOLLOWUP`); this contract amendment is WB1 RED contract-author step. |
+| **Signature choice rationale** | Broadcast direction matches FOLLOWUPS:369 IPC fan-out prescription. Subscription pattern (`onX(callback)`) is renderer-side idiomatic for Electron IPC subscriptions; no precedent in §6.1-6.5 (all invoke-based) so this establishes new pattern for broadcast channels. Future broadcast channels should follow `onX(callback): unsubscribe` shape. |
 #### Result-type discriminated unions (Wave C #3 contract per coord note §4)
 
 Inline-banner UX (Sub-Q-MBTWBDPFA-C=(α)): when host (Frame C detail-pane) catches a non-`ok` result from any `frameCBridge.*` call, it passes the result down to `ActionBar` via `failureState` prop. `ActionBar` renders a `<div role="alert" data-testid="action-bar-failure-banner">` element with `error_type` + `message` + Dismiss button. Auto-dismiss on next successful action (persistent-on-error semantics).
