@@ -31,6 +31,7 @@ import {
   type CostInfo,
   type SessionV2,
 } from 'dispatch-core/src/v2/schema.js';
+import type Database from 'better-sqlite3';
 import { readRegistryV2, writeRegistryV2 } from '../migration/schema-v2.js';
 import {
   transitionSessionState,
@@ -38,6 +39,7 @@ import {
 } from '../state/transitions.js';
 import type { EmitFn } from '../events/bus.js';
 import type { WatcherManager } from '../watchers/manager.js';
+import { deleteSessionPolicy } from '../db/session-policies.js';
 
 /** fd v1 default. Tracked under DAEMON-F04 threshold-tuning followup. */
 const STALE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -248,6 +250,15 @@ export interface SessionsStateRoutesDeps {
   /** T13: detach watcher when transitioning to killed (terminal
    *  state per §6.1; no further events expected). Optional. */
   watcherManager?: WatcherManager;
+  /** MB-F-T13-SESSION-POLICY-CLEANUP-ON-KILL (FOLLOWUPS.md:170):
+   *  delete the session_policies row on transition to killed so a
+   *  re-spawn under the same name cannot pick up a stale policy.
+   *  Best-effort housekeeping; failure is tolerated and does not
+   *  500 a successful state transition (mirrors tmux-failure
+   *  tolerance at the killSession site per DAEMON-T08 P8 +
+   *  DAEMON-F10). Optional so tests that don't exercise the v3
+   *  SQLite layer can omit it. */
+  db?: Database.Database;
 }
 
 export async function registerSessionsStateRoutes(
@@ -292,8 +303,26 @@ export async function registerSessionsStateRoutes(
       // T13: detach watcher on terminal-state transition. No
       // further handoff_written events are expected from a
       // killed session.
+      //
+      // MB-F-T13-SESSION-POLICY-CLEANUP-ON-KILL (FOLLOWUPS.md:170):
+      // delete the corresponding session_policies row so a re-spawn
+      // under the same name does not pick up a stale policy. Best-
+      // effort: a sqlite DELETE failure is tolerated (logged at
+      // warn) and the state-transition response remains 200,
+      // matching the tmux-failure tolerance precedent at the
+      // killSession site (sessions.ts:278-281 comment).
       if (targetState === 'killed') {
         deps.watcherManager?.detach(name);
+        if (deps.db) {
+          try {
+            deleteSessionPolicy(deps.db, name);
+          } catch (err) {
+            request.log.warn(
+              { err, session: name },
+              'session_policies cleanup failed on killed transition; tolerated',
+            );
+          }
+        }
       }
 
       const now = new Date();

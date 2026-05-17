@@ -346,6 +346,10 @@ export async function startup(opts: StartupOpts = {}): Promise<StartupHandle> {
     tmuxOps: opts.tmuxOps,
     emit: bus.emit,
     watcherManager,
+    // MB-F-T13-SESSION-POLICY-CLEANUP-ON-KILL (FOLLOWUPS.md:170):
+    // thread the v3 sqlite handle so the killed-state branch can
+    // best-effort delete the corresponding session_policies row.
+    db,
   });
 
   // DAEMON-T09: POST /v2/sessions/:name/prompts. Validates state
