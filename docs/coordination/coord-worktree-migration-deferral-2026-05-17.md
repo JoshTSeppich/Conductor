@@ -41,10 +41,28 @@ Path-α to be re-evaluated when ANY of the following fires:
 1. Current Round 12 v4 high-concurrency cascade closes naturally (cascade drain to TERMINATE-CASCADE-READY)
 2. Path-β observably fails under v4 stress AND failure cannot be addressed by path-β refinement
 3. Operator schedules deliberate 2-4 hour focus block for cutover
+4. **operator-discipline-gap-manifests** — operator-induced cross-session-staging-area-commit-contamination observed (path-β mitigation requires DISCIPLINE TO USE the `cairn-atomic-commit.sh` tool; orchestrator-layer or operator-layer actors who skip the tool can still trigger the race that path-β was designed to mitigate). Worktree substrate-shift (path-α) eliminates the shared `.git/index` entirely, so this class of contamination cannot occur regardless of discipline.
 
 Whichever fires first.
 
 v4 cascade SERVES as the path-β stress test at 12-cap concurrency. Results inform path-α urgency calculus.
+
+### Gate criterion (4) — first instance observed (PARTIAL FIRE)
+
+[KNOWN per commit-anchor + operator-arbitrated incident capture in cairn-under-stress-round-12.md §1.X "operator-discipline gap during deferral-decision authoring at 12-cap concurrency"]:
+
+This commit (`37d1f26` operator-decision: worktree migration DEFERRED, authored 2026-05-17 ~17:00 MDT) was itself the FIRST instance of criterion (4). Sequence:
+
+1. cw2-console-t02 sub-session (Round 12 Wave R12-CLOSURE-Wave-2 cohort) had STAGED WB2 GREEN WIP in shared `.git/index`: `packages/dispatch-workstation/src/console-panel/reconnect-backoff.ts` (53 lines NEW) + `packages/dispatch-workstation/src/main/console-ipc.ts` (+19 lines).
+2. Operator ran `git add docs/coordination/coord-worktree-migration-deferral-2026-05-17.md` WITHOUT pre-stage `git status --short` verification per CLAUDE.md §2.7 (per-path discipline includes pre-commit territory verification, not just per-path add).
+3. Operator ran `git commit` — committing BOTH the operator's deferral doc AND cw2-console-t02's pre-staged WB2 GREEN under operator authorship.
+4. cw2-console-t02 closure path arbitrated as RESOLVED-BY-OPERATOR-CONTAMINATION (analogous to RESOLVED-BY-EQUIVALENCE; closure-pattern extension authored by gen-7 cascade).
+
+**Significance**: criterion (4) PARTIAL-FIRED (single observation; not yet a pattern). Per V4 stress-test framing in §"Path-β remains the working defense", path-β at `173ead7` would have prevented this contamination IF the operator had used `cairn-atomic-commit.sh`. The operator did not. This is direct evidence that path-β's mitigation surface is mechanism-only and does not protect against actor-discipline gaps. Path-α (substrate-shift) would close the gap regardless of actor discipline.
+
+**Re-evaluation gate status**: criterion (4) has PARTIAL-FIRED on a single instance. Per operator-arbitration 2026-05-17, this does NOT yet trigger immediate cutover — the deferral remains intact pending either: (a) recurrence of criterion (4), (b) any of criteria (1)-(3) firing first, or (c) operator re-arbitration.
+
+Evidence anchor: docs/cairn-under-stress-round-12.md §1.X — title "operator-discipline gap during deferral-decision authoring at 12-cap concurrency" (r12-archive-writer-authored at next archive commit).
 
 ---
 
