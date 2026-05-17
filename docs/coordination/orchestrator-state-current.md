@@ -871,3 +871,19 @@ If operator chooses (A) HANDOFF, gen-7 boot prompt at `/tmp/gen7-boot-prompt.txt
 **If autonomous handoff triggers** (per §10 conditions): gen-7 boot prompt authoring + spawn + dispatch + gen-6 enters deep-halt per INV-RP-3.
 
 **If TERMINATE-CASCADE-READY**: gen-6 authors §15 post-cascade report per dispatch §15 structure (5 sections) + cascade concludes + all sessions remain idle-standby for next operator-engagement window.
+
+### §15.13 — TERMINATE-CASCADE-READY received (operator option C; 2026-05-17)
+
+Operator selected option (C) TERMINATE-CASCADE-READY response to HALT-CONTEXT-PRESSURE-PENDING cycle 14 surface. Cascade concludes at natural-fence (saturation; 9 closures shipped + 10 NEW followups + 2 draft-only artifacts; 16.5h early-terminate within 22h fence per dispatch §12(d)).
+
+**Post-cascade report (5 sections per dispatch §15)** surfaced to operator inline at termination (NOT committed to repo per dispatch §15 framing — chat-surface report). Sections: CASCADE METRICS (31 commits / 9 closures / 14 polling cycles / 8 subagent invocations) + MVP-SHIPPABILITY ASSESSMENT (phase5 source-closed + dogfood-rebuild-gated) + OPERATOR-ARBITRATION BACKLOG (12 items remaining) + DOGFOOD VALIDATION TODO (7-step rebuild + verify sequence) + NEXT-WINDOW STRATEGIC RECOMMENDATIONS (ready items + blocked items + cascade health + plugin retrofit verdict).
+
+**Gen-6 status**: idle-standby (NOT deep-halt per INV-RP-3; no handoff to gen-7 spawned). Polling cycle ENDED. ScheduleWakeup OMITTED. Next operator engagement starts fresh prompt cycle.
+
+**Gen-7 spawn**: SKIPPED per option (C). §15 supplement at `69ce0c4` + this §15.13 termination note preserved for archaeological reference + next-window orchestrator boot context.
+
+**All 11 sub-sessions remain idle-standby**: phase5/t08/kanban/post-pull-rebuild/atomic-commit/stamp-lag-sweep/workstation-66-draft/worktree-migration-plan/electron-process-leak/worktree-fresh-dist + r12-archive-writer. Recyclable via /clear-and-reuse OR can be killed by operator if next-window approach differs.
+
+**Gen-6 monitor (PID per ps aux)**: still running in background (`/tmp/orch-gen6-monitor.sh`; 32-session list). Operator may kill OR leave running for next-window orchestrator inheritance.
+
+**End of Wave T1-CLOSURE-Wave-1 cascade. Cascade-mid §15 supplement (cycle 14) + §15.13 termination note (this cycle) are the load-bearing handoff artifacts for next-window orchestrator boot.**
