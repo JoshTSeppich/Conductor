@@ -971,3 +971,63 @@ tmux new-session -d -s "$NEW" -x 220 -y 50 -c "$REPO" \
 After gen-7 ACKs §A read step + §B scope, gen-6 surfaces HALT-BATON-PASSED-GEN-6-GEN-7 + enters deep-halt per INV-RP-3. Operator may kill gen-6 tmux session at any time post-handoff.
 
 **Gen-6 cascade-mid contributions PRESERVED IN HISTORY**: 9 closures + 10 followups + 2 drafts + §15 supplement + §15.13 (superseded) + this §16 changeover. All gen-7 work BUILDS on gen-6 outputs without rework.
+
+## §16.10 — Gen-7 boot ACK (V4 high-concurrency stress cascade ACTIVE)
+
+Authored 2026-05-17 by gen-7 (`orchestrator-2026-05-17-stress`) at boot-completion + operator GREEN-LIGHT acknowledgment.
+
+### §16.10.1 — Inheritance read step verified (INVARIANT-5)
+
+[KNOWN per direct Read tool invocations this session]:
+- CLAUDE.md — auto-loaded via project instructions; cairn primitives + frozen contracts + §1-§9 absorbed
+- `docs/coordination/orchestrator-state-current.md` §14+§15+§16 — read fully (lines 601-973)
+- `/tmp/gen6-partial-shutdown-state-2026-05-16.md` — read fully (§15 chat-surface report + §15.13 OPERATOR-ERROR superseded note)
+- `docs/coordination/dispatch-queue-current.md` — read fully (Wave T1-CLOSURE-Wave-1 cohort + POOL state + CLOSURE-PENDING table)
+- `docs/FOLLOWUPS.md` — header + structure absorbed; full row body content read deferred to per-closure-session basis (428KB / 381 lines; targeted-read on demand)
+- `docs/cairn-under-stress-round-11.md` §3.9 — §4.1-§4.6 validation verdict table read (§3.9.A KNOWN-load-bearing-via-counter-example; §3.9.G MODELED-necessary; 11-15 concurrent envelope established)
+- `docs/cairn-under-stress-round-12.md` — read fully (§0-§5.A.Wave-2); §12 stress-cascade section TO-BE-AUTHORED by r12-archive-writer per V4 §B(VI)
+- `WORKSTATION_CONTRACT.md` — §1-§3 + section index read; §6.6 IPC channels at lines 297-535 referenced (operator parallel-authoring amendment per §16.10.3 below)
+
+### §16.10.2 — V4 §B scope ACK + naming correction
+
+V4 high-concurrency stress cascade ACTIVE with all §B(I)-(VIII) parameters absorbed verbatim. Per operator correction this turn: wave naming is **R12-CLOSURE-Wave-2** (not T2-CLOSURE-Wave-1) because Tier-1 pool still has rows beyond gen-6's CC-eligible exhaustion; Tier-2 + Tier-3 sweep is opportunistic per §B(III) POOL-A → POOL-D ranking, not a separate Tier-promotion. Wave T1-CLOSURE-Wave-1 (gen-6) and Wave R12-CLOSURE-Wave-2 (gen-7) are sequential within Round 12.
+
+### §16.10.3 — Operator parallel-authoring channel (§5(XII) skip-to-next active)
+
+Per operator this turn: operator may be in-chat with co-architect parallel-authoring **WORKSTATION_CONTRACT.md §6.6 amendment** finalization based on gen-6 draft at `/tmp/workstation-contract-66-amendment-draft/{amendment-text,pattern-analysis,downstream-impact,operator-review-checklist}.md`. Bottom-rail prod-wiring closure rows blocked on §6.6 (notably FOLLOWUPS:369 `MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16`) **REMAIN BLOCKED** per §5(XII) until operator commits the amendment. Gen-7 cascade SKIPS-TO-NEXT for any candidate referencing §6.6 in its closure path.
+
+### §16.10.4 — Multi-gen pre-authorization confirmed
+
+Per operator GREEN-LIGHT this turn + V4 §B(V): gen-7 → gen-8 PRE-AUTHORIZED unsupervised at 720k threshold; gen-8 → gen-9 PRE-AUTHORIZED unsupervised; gen-9 → gen-10 requires operator ack. Lineage saturation at gen-9-approaching-720k = natural-fence termination per §H(e).
+
+### §16.10.5 — Phase-1 foundational actions (this commit + this session)
+
+1. ✓ Authored §16.10 boot ACK supplement (this commit)
+2. ⏳ POOL-C Tier-2 inventory subagent dispatched (general-purpose; background) — ranked candidate list + path-disjoint groupings expected
+3. ⏳ Gen-7 monitor relaunch (`/tmp/orch-gen7-monitor.sh`) — extends gen-6 32-session list with V4 12-cap producing slots
+4. ⏳ r12-archive-writer recycle for §12.0 stress-cascade archive scaffold per §B(VI)
+5. ⏳ Wave R12-CLOSURE-Wave-2 first cohort dispatch (12-cap target; mix of recycled idle-standby + fresh spawns)
+
+### §16.10.6 — Cascade authorizations active for gen-7
+
+- Aggressive subagent invocation per V4 §B(IV) — every closure session SHOULD invoke cairn-phase-1-diagnose at start, cairn-test-failure-triage on GREEN failures, cairn-cross-package-impact for multi-package scope, cairn-anti-fabrication-verifier per stamp-lag batch, cairn-followup-drafter for drafts
+- Round 12 §12 stress-cascade archive AUTHORIZED — §12.1-§12.5 sections to populate (concurrency envelope test + contamination events + plugin retrofit verdict at scale + continuous-refill stress test + multi-gen handoff at depth)
+- Coarch-arbitrated calls (§3/§16.4) inherited + extended per V4 §C(VIII)+(IX)
+- Operator-async authorized per §G — cascade self-orchestrates to natural fence per §H
+
+### §16.10.7 — Operator-arbitration backlog inherited (unchanged from §15.7)
+
+12 items preserved verbatim. Gen-7 may surface NEW arbitration items as cascade progresses; tracks for next operator engagement window. Items 3+4 (WORKSTATION_CONTRACT.md §6.6 + worktree-migration-plan) currently in operator's parallel-authoring channel per §16.10.3.
+
+### §16.10.8 — Hard-escalation triggers ACTIVE (V4 extensions)
+
+- v3 §9 inherited
+- (XX) Three contamination events / 30min → HALT + reduce to 8-cap
+- (XXI) Subagent boot failures >50% rate → HALT + surface
+- (XXII) Closure pool depletion <4h before reset → surface OPPORTUNISTIC-EXIT-WINDOW
+
+### §16.10.9 — Gen-7 status
+
+**Active**: foundational steps in progress; first cohort dispatch pending POOL-C inventory return. Next surface: **SITREP-1** when first cohort active. ANNOUNCEMENT cadence per §J: every 5 incidents OR 60 min (standard); reduced to 10/90 if operator quota approaches 55% per §H(c) early-warning.
+
+**Gen-7 cascade-window**: ~22:11 MDT 2026-05-16 → ~04:11 MDT 2026-05-17 (6-hour window). Boot at ~22:30 MDT (estimated; awaiting first WB-final timestamp). Reset arrives at fence per §H(a).
