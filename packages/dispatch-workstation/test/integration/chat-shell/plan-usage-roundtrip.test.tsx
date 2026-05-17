@@ -44,8 +44,17 @@ interface FakeBridge {
   subscribeCount: () => number;
 }
 
+// MB-F-T25-PLAN-USAGE-ROUNDTRIP-INTEGRATION-TEST-STALE-AFTER-T9-AUTOWIRE
+// (FOLLOWUPS:370 closure) — multi-subscriber fake bridge per production
+// chat-shell/mount.ts post-T9 (de6620e) fan-out: resolveRenderPlanUsageRing
+// (path 2) AND resolveRenderPlanTimerText (path 2) BOTH subscribe to
+// bridge.onRateLimitUpdate. Single-slot last-writer-wins fake bridge
+// caused 6/6 deterministic-fail since T9 ship 2026-05-12; array-based
+// multi-subscriber pattern restores production-faithful semantics
+// (canonical pattern reference:
+// test/unit/chat-shell-mix-indicator/probe-02-mix-indicator-container-subscription.spec.tsx:31-47).
 function makeFakeBridge(): FakeBridge {
-  let captured: ((state: RateLimitState) => void) | null = null;
+  const captured: ((state: RateLimitState) => void)[] = [];
   let cleanups = 0;
   let subscribes = 0;
   const bridge: CoarchitectBridge = {
@@ -63,7 +72,7 @@ function makeFakeBridge(): FakeBridge {
     onStreamDone: () => () => {},
     onStreamError: () => () => {},
     onRateLimitUpdate: (cb) => {
-      captured = cb;
+      captured.push(cb);
       subscribes += 1;
       return () => {
         cleanups += 1;
@@ -71,12 +80,12 @@ function makeFakeBridge(): FakeBridge {
     },
   };
   const fireUpdate = (state: RateLimitState) => {
-    if (!captured) {
+    if (captured.length === 0) {
       throw new Error(
         'integration: cb not captured — onRateLimitUpdate not invoked at mount',
       );
     }
-    captured(state);
+    for (const cb of captured) cb(state);
   };
   return {
     bridge,
@@ -164,7 +173,10 @@ describe('MB-T25 WB4 — plan-usage ring full-mount integration', () => {
       '[data-testid="chat-shell-plan-usage-slot"]',
     );
     expect(slot).toBeTruthy();
-    expect(subscribeCount()).toBe(1);
+    // Post-T9 (de6620e): PlanUsageRing + PlanTimerTextContainer BOTH subscribe
+    // to bridge.onRateLimitUpdate via mount.ts resolveRenderPlanUsageRing (path
+    // 2) + resolveRenderPlanTimerText (path 2). subscribeCount === 2.
+    expect(subscribeCount()).toBe(2);
     // Initial state: no RateLimitState observed → em-dash placeholder + no SVG
     expect(
       document.querySelector('[data-testid="chat-shell-plan-usage-countdown"]')
@@ -271,7 +283,8 @@ describe('MB-T25 WB4 — plan-usage ring full-mount integration', () => {
 
     expect(cleanupCount()).toBe(0);
     unmount();
-    expect(cleanupCount()).toBe(1);
+    // Post-T9: 2 subscribers → 2 cleanup-fns invoked on unmount.
+    expect(cleanupCount()).toBe(2);
 
     cleanup();
   });
@@ -300,14 +313,15 @@ describe('MB-T25 WB4 — plan-usage ring full-mount integration', () => {
     expect(planUsageSlot).toBeTruthy();
     expect(header!.contains(planUsageSlot!)).toBe(true);
 
-    // Verify position: plan-usage child index < any cost-meter child index
-    // (cost-meter not present here because bridge has no onCostUpdate, but
-    // we still verify the slot is the FIRST child of header-bar).
+    // Verify position: plan-usage child index < any cost-meter child index.
+    // Post-T9 (de6620e): plan-timer slot (T9 ship) prepends header-bar at
+    // index 0; plan-usage slot shifts to index 1. Ordering invariant
+    // [plan-timer | plan-usage | cost-meter | …] preserved.
     const headerChildren = Array.from(header!.children);
     const planUsageIdx = headerChildren.findIndex(
       (c) => c.getAttribute('data-testid') === 'chat-shell-plan-usage-slot',
     );
-    expect(planUsageIdx).toBe(0);
+    expect(planUsageIdx).toBe(1);
 
     unmount();
     cleanup();
