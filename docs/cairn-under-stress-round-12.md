@@ -484,11 +484,151 @@ Round 12-specific verdict targets populated as evidence accumulates below.
 
 ---
 
+## §12 — V4 high-concurrency stress-cascade archive (Wave R12-CLOSURE-Wave-2)
+
+### §12.0 — Section preamble
+
+**Scope** [KNOWN per gen-7 boot ACK `0529441` + V4 dispatch §B(VI) verbatim]: Capture concurrency-stress evidence + plugin-retrofit-at-scale verdict refinement during V4 12-cap concurrent producing-sub-session cascade window (~22:11 MDT 2026-05-16 → ~04:11 MDT 2026-05-17; 6-hour window). Authored by SESSION-r12-archive-writer (plugin-loaded; idle-standby recycled from T+4h cross-round closure insight per orchestrator-state §16.3 inventory).
+
+**Anchors** [KNOWN per direct git log + Read]:
+
+- V4 dispatch text: `/tmp/gen7-boot-prompt.txt` (V4 §A-§K verbatim per orchestrator-state §16.8)
+- Gen-7 boot ACK: `0529441 docs(orchestrator-state-current): §16.10 gen-7 boot ACK (V4 high-concurrency cascade ACTIVE; operator GREEN-LIGHT)`
+- Gen-6 → gen-7 changeover: `a1eb408` (orchestrator-state §16 supersedes §15.13 OPERATOR-ERROR per `e7b40d3`)
+- This dispatch (continuation): `/tmp/r12-archive-writer-gen7-continuation.txt`
+- Round 11 concurrency envelope baseline: Round 11 §4.1 (11-15 concurrent validated envelope per §3.9.A KNOWN-load-bearing-via-counter-example; 5 recovered contamination events with cairn discipline holding)
+- Cross-round closure precedent (T+4h pre-V4): `cairn-atomic-commit.sh` structurally closes Round 9 §1.1-§1.3 + Round 11 §1.6/§1.RC1 race-class (per §2.C + §3.4 prior archive entries)
+
+**Round 11 envelope baseline (reference for §12.1 stress test)** [KNOWN per Round 11 archive §4.1 inherited verbatim in §4 above]:
+
+Round 11 corpus established 11-15 concurrent sessions as the validated envelope:
+- KNOWN at file-disjoint scope through 16+ concurrent
+- Commit-pathspec mandate KNOWN-load-bearing-via-counter-example
+- §3.9.G envelope-creep prevention KNOWN operationally
+- §3.9.B atomic claim mechanism SPECULATIVE-UNTESTED (untested through Round 11 + Round 12 Wave 2 + Wave T1-CLOSURE-Wave-1)
+
+V4 12-cap is **WITHIN this envelope**; not envelope-stretching. Goal per V4 §B(VI): sustained-throughput data + plugin retrofit verdict ratchet, not envelope expansion.
+
+**§F forward-confidence predictions** [SPECULATIVE per gen-7 dispatch §F]:
+
+- §12.1: SPECULATIVE → KNOWN by window-close (operator continuous data via incident captures)
+- §12.2: SPECULATIVE → KNOWN if cascade exercises §3.9 mitigations; SPECULATIVE-zero if no contamination occurs
+- §12.3: MODELED-PARTIAL → KNOWN-PARTIAL within window; full KNOWN may need Wave R12-CLOSURE-Wave-N continuation
+- §12.4: MODELED → KNOWN-OPERATIONAL via 12-cap stress at sustained throughput
+- §12.5: SPECULATIVE → KNOWN only if gen-7 → gen-8 handoff actually fires within window
+
+---
+
+### §12.1 — Concurrency stress envelope test (12-cap target; within Round 11 11-15 validated envelope)
+
+[Populates with active concurrent-producing-sub-session count snapshots over 6h window. Per V4 §B per §16.10.5 phase-1 foundational actions.]
+
+| Timestamp | Active concurrent producing sub-sessions | Notes (cohort composition; cascade-event class) |
+|---|---|---|
+| 2026-05-17 gen-7 boot (T+0h) | **0 producing** + 11 idle-standby (recyclable per §16.3 inventory) + 1 archive-writer (this session) | Pre-first-cohort dispatch state per §16.10.5 phase-1 foundational actions. POOL-C Tier-2 inventory subagent in flight (background per §16.10.5 step 2); first cohort dispatch pending POOL-C inventory return. R11 plugin-less sessions (15) preserved as-is per §13.4 inventory (out-of-cap). [KNOWN per `0529441` §16.10.5 + §16.10.9 status + this commit] |
+
+(More rows added at each cascade-state snapshot — typically per cohort dispatch, per WB-final, per refill event, per ANNOUNCEMENT cadence per V4 §J.)
+
+**Envelope-stress observations** [SPECULATIVE pending evidence; rows populate as accumulated]:
+
+- Sustained 12-cap throughput target per V4 §B; KNOWN-OPERATIONAL predicted by window-close per §F
+- Contamination events SPECULATIVE: Round 11 corpus had 5 recovered events at 11-15 concurrent; V4 12-cap may see 2-5 events per V4 §B(VII) expectation; §3.9.B atomic claim race materialization possible if continuous-refill velocity outpaces commit-pathspec serialization
+- Hard-escalation triggers per §16.10.8: (XX) Three contamination events / 30min → HALT + reduce to 8-cap (envelope-protection mechanism)
+
+---
+
+### §12.2 — Contamination events captured + 8-step recovery exercised
+
+(Per V4 §B(VII) — expected 2-5 events over 6h window. Per-event row populated as detected.)
+
+| Detect-time | Session(s) affected | 8-step recovery trace | Lock-in behavioral change | Preserved evidence |
+|---|---|---|---|---|
+| _(pending — no events at T+0h)_ | — | — | — | — |
+
+**Expected event classes** [MODELED per Round 9/11 corpus + Round 12 Wave-T1C-W1 closures]:
+
+- **Shared-`.git/index` race window** (Round 9 §1.1-§1.3 + Round 11 §1.6/§1.RC1 class) — structurally closed via `cairn-atomic-commit.sh` (T+4h §2.C closure at `173ead7`); EXPECTED ZERO at V4 IF sub-sessions adopt the atomic script
+- **Per-path discipline gap** (sweep-in of sibling untracked work) — Round 11 §1.5/§1.A1 class; mitigated by commit-pathspec mandate (§3.9.A SUSTAINED-KNOWN through Wave-T1C-W1 per §4)
+- **Fabrication-class incidents** (Round 11 §1.5 precedent) — anti-fabrication-verifier subagent expected to catch at session boot per §16.10.6 aggressive-subagent-invocation authorization
+- **Stale-dispatch-0 recurrence** (Round 12 §1.2 SWEEP-DISCIPLINE class) — mitigated by closure-path-β git-grep pre-check primitive (KNOWN-SELF-CORRECTING per §4 verdict); EXPECTED ZERO at V4 IF gen-7 applies pre-check at every dispatch
+
+---
+
+### §12.3 — Plugin retrofit empirical verdict at scale (subagent invocation ledger)
+
+(Per V4 §B(VI) goal: MODELED-PARTIAL → KNOWN ratchet via Wave R12-CLOSURE-Wave-2 corpus growth. Per §4 §11(VIII) refinement: subagent-citation density was LOW in Wave-T1C-W1; V4 §16.10.6 authorizes aggressive-subagent-invocation to grow corpus.)
+
+| Timestamp | Agent | Dispatching session | Token cost | Outcome | Amortization data point |
+|---|---|---|---|---|---|
+| 2026-05-17 gen-7 boot (T+0h) | `general-purpose` | gen-7 orchestrator (`orchestrator-2026-05-17-stress`) | TBD (background dispatch per §16.10.5 step 2; agentId tracked by gen-7) | Pending — POOL-C Tier-2 inventory + ranking + path-disjoint groupings | Initial Phase-1 inventory cost; outcome will inform whether Tier-2 sweep amortization holds at scale [KNOWN per §16.10.5 phase-1 step 2] |
+
+(More rows added at each subagent dispatch observation — typically per closure-session boot, per WB-final triage, per stamp-lag batch, per anti-fabrication verifier invocation.)
+
+**Baseline (Wave 2 + Wave-T1C-W1 corpus per §2.B + §4 prior verdict):**
+
+- 3 successful agent dispatches + 1 graceful-degradation accumulated through Wave 2
+- MODELED → KNOWN-PARTIAL at Wave 2 close
+- Boot overhead ~30-35k tokens per session; amortizes at >3 WB iterations
+- Commit-body subagent-citation density LOW (2 of 14 Wave-T1C-W1 cascade commits cite plugin agents in body — §4 refinement note)
+
+**V4 ratchet target** [SPECULATIVE per §F prediction]:
+
+- KNOWN-PARTIAL → KNOWN within window IF aggressive-subagent-invocation per §16.10.6 produces >10 documented dispatches with consistent amortization curve
+- Full KNOWN may need Wave R12-CLOSURE-Wave-N continuation per §F prediction
+- Recommended closure (carried forward from §4 §11(VIII) refinement): session-end SITREP protocol citing all Task tool dispatches — enables measurable corpus growth independent of per-WB commit-body citation discipline
+
+---
+
+### §12.4 — Continuous-refill protocol stress test (refill-velocity metrics)
+
+(Per V4 §B(VI) + §3.3 prior pattern characterization. Pool-depletion trajectories + refill-source POOL-A/B/C/D ranking per §16.4 V4 extension.)
+
+| Timestamp | Event | Refill-velocity (Δt from WB-final → next dispatch) | Pool state (A/B/C/D remaining) | Refill-source |
+|---|---|---|---|---|
+| _(pending — no WB-finals at T+0h)_ | — | — | — | — |
+
+**Pool inventory at gen-7 boot** [KNOWN per §16.3 + §16.10.5 + §16.10.7]:
+
+- **POOL-A (Tier-1 closure candidates)**: exhausted within gen-6 Wave T1-CLOSURE-Wave-1 CC-eligible scope; remaining rows BLOCKED on operator arbitration (notably FOLLOWUPS:369 `MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16` per §16.10.3 operator parallel-authoring channel; §5(XII) skip-to-next active)
+- **POOL-B (Tier-1 RESOLVED-pending-stamp)**: pending stamp-lag-sweep operator-review (4 UNCERTAIN rows flagged at `d4b0206` per §16.3 r12-t1c-w1-stamp-lag-sweep entry)
+- **POOL-C (Tier-2 candidates)**: inventory subagent dispatched at gen-7 boot per §16.10.5 step 2; awaiting return — COARCH-AUTHORIZED per §16.4 V4 §C(VIII)
+- **POOL-D (Tier-3 candidates)**: COARCH-AUTHORIZED per §16.4 V4 §C(IX); dispatchable only after Tier-1 + Tier-2 substantially closed
+
+**Continuous-refill protocol baseline** [KNOWN per §3.3 prior pattern characterization]:
+
+- Pattern MODELED → KNOWN-OPERATIONAL at Wave-T1C-W1 close (gen-6 cohort grew 2 → 5 within single session)
+- V4 12-cap stress test target: sustained refill-velocity at 12-cap; pool-depletion-trajectory observations as POOL-A → POOL-B → POOL-C → POOL-D progressively exhausts
+
+---
+
+### §12.5 — Multi-gen handoff at depth (gen-7 → gen-8 → gen-9 lineage saturation)
+
+(Per V4 §B(V) multi-gen pre-authorization extension. Per-handoff: trigger / inheritance read time / continuity verification / pre-deep-halt artifact.)
+
+| Handoff | Trigger | Inheritance read time | Continuity verification | Pre-deep-halt artifact |
+|---|---|---|---|---|
+| gen-6 → gen-7 (precedent landed at this archive's T+0h) | Operator-correction post §15.13 OPERATOR-ERROR keystroke; cascade RESUMES per V4 dispatch 2026-05-17 (§16 supersedes §15.13) | §16.10.1 inheritance read step: CLAUDE.md (auto-loaded) + orchestrator-state §14+§15+§16 (lines 601-973) + `/tmp/gen6-partial-shutdown-state-2026-05-16.md` + dispatch-queue-current.md + FOLLOWUPS.md (header + targeted-read deferred) + Round 11 §3.9 §4.1-§4.6 + Round 12 archive §0-§5.A.Wave-2 + WORKSTATION_CONTRACT §1-§3+§6.6 | §16.10 boot ACK commit `0529441` (operator GREEN-LIGHT acknowledged this turn) | Gen-6 §15.13 superseded note + `/tmp/gen6-partial-shutdown-state-2026-05-16.md` archaeological reference per §16 supersession |
+| _gen-7 → gen-8 (PRE-AUTHORIZED unsupervised at 720k threshold per §16.10.4)_ | _Pending; not yet triggered (gen-7 active at boot; threshold ~720k context window)_ | — | — | — |
+| _gen-8 → gen-9 (PRE-AUTHORIZED unsupervised)_ | _Pending; gates gen-9-approaching-720k natural-fence per §H(e)_ | — | — | — |
+| _gen-9 → gen-10 (REQUIRES OPERATOR ACK per §16.10.4)_ | _Pending; lineage saturation gate; natural-fence termination per V4 §H(e)_ | — | — | — |
+
+**Multi-gen depth observations** [SPECULATIVE pending evidence per §F]:
+
+- Gen-7 → gen-8 handoff fires only if gen-7 reaches ~720k context within window
+- If gen-7 stays under 720k for window-close (~04:11 MDT 2026-05-17), handoff does NOT fire; §12.5 receives ZERO new rows → SPECULATIVE-zero status per §F prediction
+- Inheritance-read-time at depth: track read-step token cost as data point; orchestrator-state §16+ accumulating per-gen supplements may degrade read-step efficiency over multi-gen depth
+
+---
+
+**§12 section LIVE for V4 cascade-window evidence accumulation. ANNOUNCEMENT cadence per V4 §J: every 5 incidents OR 60 min (standard); reduced to 10/90 if operator quota approaches 55% per §H(c) early-warning per §16.10.9.**
+
+---
+
 **Confidence labels throughout (per CLAUDE.md §2.2):**
 
-- KNOWN: gen-5 self-state at boot + Round 11 archive content + plugin path validation + git log evidence at HEAD `30e4aa8` (skeleton anchor) and HEAD `fc5c86e` (Wave 2 closure-synthesis anchor) + phase5/phase4-BR findings docs at WB-final + FOLLOWUPS.md lines 361/367-371 row bodies + orchestrator-state §14 handoff record.
-- MODELED → KNOWN-PARTIAL (Wave 2 evidence promotion): foxworks-cairn plugin retrofit value-add per §11(VIII) target (3 successful dispatches + 1 graceful-degradation accumulated).
-- MODELED (held): cascade-velocity projections under Wave T1-CLOSURE; tier-classification heuristic codification trajectory; gen-6 → gen-7 unsupervised handoff timing (operator-ack-required per dispatch §5(II)).
-- SPECULATIVE: §3.9.B atomic claim exercise outcome (Wave 2 had pre-sequenced dispatches; mechanism untested); Round 12 multi-generation handoff continuity (gen-5 → gen-6 in progress at this commit; gen-6 lifetime to be observed).
+- KNOWN: gen-5/gen-6/gen-7 self-state at boot + Round 11 archive content + plugin path validation + git log evidence at HEAD `30e4aa8` (skeleton anchor), `fc5c86e` (Wave 2 closure-synthesis anchor), and `0529441` (gen-7 boot ACK anchor) + phase5/phase4-BR findings docs at WB-final + FOLLOWUPS.md lines 361/367-372 row bodies + orchestrator-state §14/§15/§16 handoff records.
+- MODELED → KNOWN-PARTIAL (Wave 2 + Wave-T1C-W1 evidence promotion): foxworks-cairn plugin retrofit value-add per §11(VIII) target (3 successful dispatches + 1 graceful-degradation + 1 V4 inventory dispatch in flight); SWEEP-DISCIPLINE KNOWN-SELF-CORRECTING; continuous-refill KNOWN-OPERATIONAL.
+- MODELED (held): cascade-velocity projections under V4 12-cap; tier-classification heuristic codification trajectory; self-correcting closure cycle generalization beyond §1.2 single-data-point.
+- SPECULATIVE: §3.9.B atomic claim exercise outcome (still untested through Wave-T1C-W1); V4 12-cap envelope-stress observations (§12.1-§12.5 populate as window unfolds); gen-7 → gen-8 handoff materialization within window (§F SPECULATIVE-zero candidate).
 
-**Wave 2 closure synthesis landed. Round 12 archive remains LIVE for Wave T1-CLOSURE-Wave-N evidence capture per gen-6 retarget per orchestrator-state §14.6.**
+**Round 12 archive LIVE: §1-§6 complete through Wave-T1C-W1 closure; §12 V4 stress-cascade scaffold authored at this commit per V4 §B(VI) authorization + gen-7 §16.10.5 phase-1 foundational actions. Section populates as V4 cascade unfolds through ~04:11 MDT 2026-05-17 fence.**
