@@ -6,6 +6,7 @@ import type {
 import { useSessions } from '../query/useSessions.js';
 import { useUIStore } from '../store/ui.js';
 import { KanbanColumn } from './KanbanColumn.js';
+import { KanbanEmptyState } from './KanbanEmptyState.js';
 
 const STORAGE_KEY = 'show-archived';
 
@@ -84,27 +85,31 @@ export function KanbanPanel(): ReactNode {
           Show archived
         </label>
       </header>
-      <div
-        className={`grid flex-1 overflow-auto ${
-          showArchived ? 'grid-cols-5' : 'grid-cols-4'
-        }`}
-      >
-        {COLUMNS.map((c) => (
-          <KanbanColumn
-            key={c.status}
-            status={c.status}
-            label={c.label}
-            sessions={grouped[c.status]}
-          />
-        ))}
-        {showArchived && (
-          <KanbanColumn
-            status="archived"
-            label="Archived"
-            sessions={archived}
-          />
-        )}
-      </div>
+      {main.length === 0 && archived.length === 0 ? (
+        <KanbanEmptyState />
+      ) : (
+        <div
+          className={`grid flex-1 overflow-auto ${
+            showArchived ? 'grid-cols-5' : 'grid-cols-4'
+          }`}
+        >
+          {COLUMNS.map((c) => (
+            <KanbanColumn
+              key={c.status}
+              status={c.status}
+              label={c.label}
+              sessions={grouped[c.status]}
+            />
+          ))}
+          {showArchived && (
+            <KanbanColumn
+              status="archived"
+              label="Archived"
+              sessions={archived}
+            />
+          )}
+        </div>
+      )}
     </section>
   );
 }

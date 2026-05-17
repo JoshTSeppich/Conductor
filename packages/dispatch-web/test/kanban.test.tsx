@@ -48,13 +48,23 @@ beforeEach(() => {
 
 describe('WEB-T09 KanbanPanel', () => {
   it('renders 4 main columns in v1 sort order (awaiting_review > stale > running > idle)', async () => {
+    // Seed ≥1 non-killed session so the column grid renders (post-WB2
+    // conditional: 0 non-killed → KanbanEmptyState, not columns). The
+    // sort-order assertion is independent of which column the seeded
+    // session lands in.
     server.use(
-      http.get('/v2/sessions', () => HttpResponse.json({ sessions: {} })),
+      http.get('/v2/sessions', () =>
+        HttpResponse.json({
+          sessions: {
+            'seed-session': { ...baseSession, computed_status: 'idle' },
+          },
+        }),
+      ),
     );
     const { wrapper } = createWrapper();
     render(<KanbanPanel />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByTestId('kanban-column-awaiting_review')).toBeInTheDocument();
+      expect(screen.getByText('seed-session')).toBeInTheDocument();
     });
     const cols = screen.getAllByTestId(/^kanban-column-/);
     const ids = cols.map((c) => c.getAttribute('data-testid'));
