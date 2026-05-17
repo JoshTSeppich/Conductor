@@ -31,6 +31,7 @@ import { ipcMain, type IpcMain, type WebContents } from 'electron';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { computeBackoffDelay } from '../console-panel/reconnect-backoff.js';
 
 const DAEMON_HTTP_URL = process.env['FOXWORKS_DAEMON_URL'] ?? 'http://localhost:7878';
 const DAEMON_WS_URL = process.env['FOXWORKS_DAEMON_WS_URL'] ?? 'ws://localhost:7878';
@@ -103,6 +104,10 @@ interface PanelState {
   lastSeq: number;
   reconnectPending: boolean;
   closedByOperator: boolean;
+  /** MB-F-CONSOLE-T02-RECONNECT-BACKOFF WB1: count of FAILED reconnect attempts
+   *  so far. Drives `computeBackoffDelay`; reset to 0 on successful socket
+   *  open. WB2 ceiling fires `shouldGiveUp` against this counter. */
+  reconnectAttempt: number;
 }
 
 // CONDUCTOR_API_CONTRACT.md §4.7.3 close-code semantics:
@@ -216,6 +221,7 @@ export class ConsoleIpcController {
       lastSeq: 0,
       reconnectPending: false,
       closedByOperator: false,
+      reconnectAttempt: 0,
     };
     this.panels.set(sessionName, state);
 
@@ -276,6 +282,10 @@ export class ConsoleIpcController {
 
   private wireSocket(sessionName: string, sock: ConsoleWebSocket, state: PanelState): void {
     sock.on('open', () => {
+      // MB-F-CONSOLE-T02-RECONNECT-BACKOFF WB1: a successful socket open
+      // resets the failed-attempt counter so the next disconnect-streak
+      // restarts at BASE_DELAY_MS rather than carrying the prior counter.
+      state.reconnectAttempt = 0;
       sock.send(JSON.stringify({ type: 'subscribe', last_seq: state.lastSeq }));
     });
 
@@ -307,6 +317,13 @@ export class ConsoleIpcController {
 
   private scheduleReconnect(sessionName: string, state: PanelState): void {
     if (state.reconnectPending) return;
+    // MB-F-CONSOLE-T02-RECONNECT-BACKOFF WB1: exponential backoff replaces the
+    // prior fixed 1s delay. `reconnectAttempt` counts FAILED reconnects so far;
+    // it increments at schedule time so the next pending-fire uses the next
+    // doubling. The 'open' handler resets it on successful reconnect.
+    // WB2 will add `shouldGiveUp` ceiling enforcement + terminal error surface.
+    const delayMs = computeBackoffDelay(state.reconnectAttempt);
+    state.reconnectAttempt += 1;
     state.reconnectPending = true;
     // Production timer; ignored in tests (testReconnectNow drives synchronously).
     setTimeout(() => {
@@ -315,7 +332,7 @@ export class ConsoleIpcController {
       if (!live || !live.reconnectPending) return;
       live.reconnectPending = false;
       this.connectSocket(sessionName, live);
-    }, 1_000).unref?.();
+    }, delayMs).unref?.();
   }
 
   private handleWsMessage(sessionName: string, raw: string, state: PanelState): void {
