@@ -24,11 +24,18 @@
 //     descendants include "Electron Helper (Renderer)" / "Electron Helper (GPU)".
 //     All have "Electron" in their comm string and are caught by the default
 //     pattern.
-//   - On macOS, when the main Electron process is killed, helpers may briefly
-//     re-parent to launchd before exiting. Helpers that re-parent are out of
-//     reach for the ancestor-bounded sweep — accepted limitation. The main
-//     process kill should trigger helper exit via process-group propagation
-//     in the common case.
+//   - On macOS, when a test's spawn shim is killed (via test's inline
+//     `child.kill('SIGKILL')` cleanup or a test timeout), the Electron .app
+//     processes that the shim forked re-parent to launchd. Ancestor-bounded
+//     sweep (pgrep -P process.pid) misses these orphans because their parent
+//     chain no longer transits process.pid. WB-final verification observed
+//     31 leaks under exactly this pattern. To close the gap, the helper
+//     polls descendants of process.pid every 500ms during the test and
+//     accumulates observed PIDs into a fork-scoped set. In afterAll we kill
+//     any PID in that set that is still alive — re-parenting does not change
+//     the PID, so the kill succeeds regardless of who the current parent is.
+//     The set is fork-scoped (module-state inside the fork's V8 isolate), so
+//     one fork's afterAll cannot interfere with another fork's live processes.
 
 import { execSync } from 'node:child_process';
 import { afterAll, afterEach } from 'vitest';
@@ -159,16 +166,111 @@ export async function sweepOrphanDescendants(
   return killed;
 }
 
+// Fork-scoped observed-descendants set. Polled at intervals so that PIDs
+// spawned during the test are captured BEFORE they have a chance to re-parent
+// to launchd. In afterAll we kill any observed PID that is still alive — this
+// catches re-parented orphans (PIDs survive re-parenting) without ranging
+// across other forks (each fork's set only contains its own descendants).
+const observedDescendants = new Set<number>();
+let pollTimer: NodeJS.Timeout | null = null;
+
+function snapshotDescendantsOnce(): void {
+  const queue: number[] = [process.pid];
+  const seen = new Set<number>();
+  while (queue.length > 0) {
+    const pid = queue.shift();
+    if (pid === undefined || seen.has(pid)) continue;
+    seen.add(pid);
+    if (pid !== process.pid) observedDescendants.add(pid);
+    for (const child of pgrepChildren(pid)) queue.push(child);
+  }
+}
+
+export function startDescendantPolling(intervalMs = 500): void {
+  if (pollTimer) return;
+  pollTimer = setInterval(snapshotDescendantsOnce, intervalMs);
+  // Don't keep the event loop alive solely for this timer.
+  pollTimer.unref();
+}
+
+export function stopDescendantPolling(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+export function getObservedDescendants(): readonly number[] {
+  return Array.from(observedDescendants);
+}
+
+export function clearObservedDescendants(): void {
+  observedDescendants.clear();
+}
+
+/** Kill any PID in the observed-descendants set that is still alive (regardless
+ *  of whether it has re-parented to launchd). PIDs are unique system-wide so
+ *  this never crosses fork boundaries. Clears the set after kills. */
+export async function killObservedDescendants(opts: {
+  logKilled?: boolean;
+} = {}): Promise<number[]> {
+  const logKilled = opts.logKilled ?? true;
+  const killed: number[] = [];
+  for (const pid of observedDescendants) {
+    if (pid === process.pid) continue;
+    if (pid === process.ppid) continue;
+    try {
+      process.kill(pid, 0); // verify alive
+      process.kill(pid, 'SIGKILL');
+      killed.push(pid);
+    } catch {
+      // already dead or not killable
+    }
+  }
+  observedDescendants.clear();
+  if (killed.length > 0) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (logKilled) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[electron-process-cleanup] killed ${killed.length} observed PID(s) ` +
+          `(includes re-parented orphans): ${killed.join(', ')}`,
+      );
+    }
+  }
+  return killed;
+}
+
 /** Register vitest afterEach + afterAll hooks for Electron-process cleanup.
  *  Intended to be called once from `test/setup.ts` so the hooks attach to
- *  every spec fork. Safe to call from inside individual spec files too. */
+ *  every spec fork. Safe to call from inside individual spec files too.
+ *
+ *  Three-stage protection:
+ *    1. Descendant polling (started at registration) — snapshots descendants
+ *       of this fork's PID every 500ms, accumulating into a fork-scoped
+ *       observed-descendants set. Captures Electron PIDs BEFORE they get a
+ *       chance to re-parent to launchd.
+ *    2. afterEach — kills any opt-in trackChild()-registered survivors.
+ *    3. afterAll — stops polling, runs sweepOrphanDescendants (live tree),
+ *       then killObservedDescendants (captures re-parented orphans by PID,
+ *       fork-isolated by the observed-set's construction).
+ *
+ *  Fork isolation: each vitest worker fork has its own module-scope
+ *  observedDescendants set + pollTimer. PIDs are unique system-wide, so one
+ *  fork's afterAll can never accidentally kill another fork's live Electron. */
 export function registerElectronCleanup(): void {
+  startDescendantPolling();
   afterEach(async () => {
     if (trackedChildren.length > 0) {
       await killAllTracked();
     }
   });
   afterAll(async () => {
+    stopDescendantPolling();
+    // Capture a final snapshot in case anything was spawned after the last
+    // poll tick but before afterAll fired.
+    snapshotDescendantsOnce();
     await sweepOrphanDescendants(process.pid);
+    await killObservedDescendants();
   });
 }

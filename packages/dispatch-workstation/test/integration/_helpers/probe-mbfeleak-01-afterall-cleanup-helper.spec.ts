@@ -14,9 +14,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { spawn } from 'node:child_process';
 import {
+  clearObservedDescendants,
+  getObservedDescendants,
   killAllTracked,
+  killObservedDescendants,
   registerElectronCleanup,
   resetTracked,
+  startDescendantPolling,
+  stopDescendantPolling,
   sweepOrphanDescendants,
   trackChild,
 } from './electron-process-cleanup.js';
@@ -44,7 +49,53 @@ describe('electron-process-cleanup helper (WB1 unit probe)', () => {
     expect(typeof killAllTracked).toBe('function');
     expect(typeof resetTracked).toBe('function');
     expect(typeof sweepOrphanDescendants).toBe('function');
+    expect(typeof startDescendantPolling).toBe('function');
+    expect(typeof stopDescendantPolling).toBe('function');
+    expect(typeof killObservedDescendants).toBe('function');
+    expect(typeof getObservedDescendants).toBe('function');
+    expect(typeof clearObservedDescendants).toBe('function');
     expect(typeof registerElectronCleanup).toBe('function');
+  });
+
+  it('descendant polling captures spawned children even after they die', async () => {
+    clearObservedDescendants();
+    startDescendantPolling(50);
+    const child = spawn('sh', ['-c', 'exec sleep 300'], { stdio: 'ignore' });
+    expect(child.pid).toBeGreaterThan(0);
+    // Give poll a chance to snapshot (multiple intervals)
+    await settle(500);
+    stopDescendantPolling();
+
+    const observed = getObservedDescendants();
+    expect(observed).toContain(child.pid);
+
+    child.kill('SIGKILL');
+    clearObservedDescendants();
+  });
+
+  it('killObservedDescendants kills observed PIDs that are still alive', async () => {
+    clearObservedDescendants();
+    startDescendantPolling(50);
+    const child = spawn('sh', ['-c', 'exec sleep 300'], { stdio: 'ignore' });
+    expect(child.pid).toBeGreaterThan(0);
+    await settle(500);
+    stopDescendantPolling();
+
+    expect(getObservedDescendants()).toContain(child.pid);
+
+    const killed = await killObservedDescendants({ logKilled: false });
+    await settle(100);
+    expect(killed).toContain(child.pid);
+    expect(pidAlive(child.pid!)).toBe(false);
+    // set is cleared after kill
+    expect(getObservedDescendants()).toEqual([]);
+  });
+
+  it('killObservedDescendants is fork-isolated — observed set is module-state', () => {
+    // Verifies the set is just a Set, not a global. Cross-fork interference
+    // would require shared state, which we don't have (V8 isolate per fork).
+    clearObservedDescendants();
+    expect(getObservedDescendants()).toEqual([]);
   });
 
   it('trackChild + killAllTracked: tracked child is SIGKILLed', async () => {
