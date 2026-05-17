@@ -734,3 +734,140 @@ After §14 commit + push + gen-6 spawn + dispatch + verification + HALT-BATON-PA
 **Gen-6 entering active orchestration with Tier-1 closure cascade retarget scope.**
 
 **Gen-5 entering deep-halt per INV-RP-3 after handoff verification of gen-6 alive.**
+
+## §15 — Gen-6 cascade-mid supplement (22-hour max-throughput; SAFETY ARTIFACT per dispatch §10(b))
+
+Authored 2026-05-17 (~05:00 UTC; ~22:00 MDT day 1) at gen-6 ~700-750k pre-emptive context-pressure threshold per operator 22-hour max-throughput dispatch §10. **NOT YET a handoff** — supplement-only safety artifact authored proactively while operator-async (~5h since polling directive 2026-05-16 ~17:25 MDT). Per §10(b), supplement-authored is a prerequisite for autonomous gen-6 → gen-7 handoff; pre-authoring de-risks emergency-handoff scenarios. Gen-7 spawn DEFERRED pending operator option (A)/(B)/(C)/(D) decision per HALT-CONTEXT-PRESSURE-PENDING cycle 14.
+
+### §15.1 — Cascade scope at supplement-authoring
+
+- **Wave**: Round 12 Wave T1-CLOSURE-Wave-1 (gen-6 cohort; operator dispatch v3 2026-05-16 16:50 MDT)
+- **Window**: 22-hour max-throughput; ~5h elapsed; ~17h remaining at supplement authoring time
+- **Mode**: full-autonomous polling per operator 2026-05-16 directive "every 3 minutes; auto ack full autonomous"
+
+### §15.2 — Closure-cascade outcomes (9 closure stamps + 10 NEW followup rows)
+
+**9 closure stamps filed this window** (all CLOSED/RESOLVED/PARTIAL/DEFER):
+
+| Row | Disposition | Closure commit(s) |
+|---|---|---|
+| 74 — MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT | RESOLVED (STALE-DISPATCH; shipped batch-6 9cc238b) | `d6b4107` |
+| 75 — MB-F-MB-T08-VISION-PROJECT-LIST-CONFIG | DEFER-TO-v3.0.x | `fa95d8c` (per coarch §3(I)) |
+| 138 — MB-F-CONSOLE-T03-SHELL-INTEGRATION | RESOLVED (STAMP-LAG; shipped batch-6 Session-C) | `d4b0206` |
+| 153 — MB-F-INTEGRATION-TEST-ELECTRON-PROCESS-LEAK | RESOLVED (31→0 leaks; WB3+WB4 polling) | `60bfa93`+`805cabd`+`7cade94`+`2b25d4b`+`86d102d` |
+| 155 — MB-F-WORKTREE-FRESH-MISSING-DIST-CRASH | RESOLVED (pretest hook + helper) | `3005743`+`0dac630`+`c4838fb` |
+| 172 — MB-F-DISPATCH-CORE-POST-PULL-REBUILD-DISCIPLINE | RESOLVED (postinstall hook) | `23f7c88`+`24c7d41`+`6eaf194` |
+| 173 — MB-F-WORKSTATION-KANBAN-EMPTY-STATE-UX | CLOSED (KanbanEmptyState component + conditional render) | `92fbc41`+`d212c80`+`5104e2a` |
+| 348 — MB-F-PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW | PARTIAL-β (cairn-atomic-commit.sh) | `7d7a55f`+`69ea3d0`+`173ead7` |
+| 349 — MB-F-T7-WB7-FILTERBAR | RESOLVED (STAMP-LAG; T7 WB7-revised applied) | `d4b0206` |
+
+**10 NEW Tier-2/3 followup rows filed**: `MB-F-MTIME-PROBE-UNSOUNDNESS` (T3) + `MB-F-WORKSTATION-DIST-REBUILD-PARITY` (T2) + `MB-F-CAIRN-ATOMIC-COMMIT-HEREDOC-SUPPORT` (T3) + `MB-F-CAIRN-ATOMIC-COMMIT-CI-INTEGRATION` (T3) + `MB-F-CAIRN-ATOMIC-COMMIT-PNPM-WRAPPER` (T3) + `MB-F-FOLLOWUPS-RESOLVED-SWEEP-DISCIPLINE` (T3) + `MB-F-BUILD-OUTPUT-FRESHNESS-PROBE-DESIGN-PATTERN` (T3) + `MB-F-T12-TILE-GRID-EMPTY-STATE` (T2) + `MB-F-PROBE-AUTHOR-WAITFOR-DATA-NOT-SCAFFOLDING` (T3) + `MB-F-ELEAK-CLOSURE-POLLING-OVERHEAD-FLAKE-DELTA` (T3).
+
+### §15.3 — Sub-session inventory (11 sessions; all IDLE-STANDBY post-saturation)
+
+All sub-session token counts per gen-6 monitor heartbeat 2026-05-16 ~21:48 MDT (cycle 14):
+
+| Session | State | Tokens | Closure |
+|---|---|---|---|
+| `r12-t1c-w1-phase5-mount-wiring` | idle (WB-final shipped a34a9e8) | 227,700 | row 367 — operator-rebuild-gated per §15(IV) dogfood |
+| `r12-t1c-w1-t08-onboarding-renderer-mount` | idle (STALE-DISPATCH-RESOLVED) | 67,605 | row 74 — recyclable via /clear |
+| `r12-t1c-w1-kanban-empty-state-ux` | idle (WB-final shipped 5104e2a) | 147,992 | row 173 CLOSED |
+| `r12-t1c-w1-dispatch-core-post-pull-rebuild` | idle (WB-final shipped 6eaf194) | 109,211 | row 172 RESOLVED |
+| `r12-t1c-w1-parallel-cairn-atomic-commit` | idle (WB-final shipped 173ead7) | 123,653 | row 348 PARTIAL-β |
+| `r12-t1c-w1-stamp-lag-sweep` | idle (SWEEP-COMPLETE d4b0206) | 149,268 | 2 RESOLVED + 4 UNCERTAIN for operator review |
+| `r12-t1c-w1-workstation-contract-66-draft` | idle (DRAFT-COMPLETE 40d9a0f) | 149,432 | /tmp/workstation-contract-66-amendment-draft/ + 9 Qs |
+| `r12-t1c-w1-worktree-migration-plan` | idle (DRAFT-COMPLETE 8cd4143) | 115,260 | /tmp/per-session-worktree-migration-plan/ + 3 Qs |
+| `r12-t1c-w1-electron-process-leak-cleanup` | idle (WB-final shipped 86d102d) | 234,170 | row 153 RESOLVED |
+| `r12-t1c-w1-worktree-fresh-dist` | idle (WB-final shipped c4838fb) | 113,766 | row 155 RESOLVED |
+| `r12-archive-writer` | idle (T+0h d8dc7cd + T+4h interval observed) | ~235,000 | Round 12 archive deepening continues |
+
+R11 plugin-less sessions (15) + r12-manifest-validator + r12-queue-watcher + 2 r12 body-drafting sessions remain idle-standby per §14.8 inventory (no further activity this window).
+
+### §15.4 — Round 12 archive state
+
+- §1.1 NEW EMERGENT CLASS captured at `7c8a957` (deferred-prod-wiring-surface-in-operator-dogfood; 2 instances filed: rows 367 + 369)
+- §1.2 NEW EMERGENT CLASS captured at `d8dc7cd` (T+0h interval — closure cascade dispatch state + self-correcting cycle)
+- T+4h §7 interval surfaced cross-round closure insight: `scripts/cairn-atomic-commit.sh` STRUCTURALLY CLOSES Round 9 §1.1 + Round 11 §1.6/§1.RC1 perennial shared-.git/index race class WITHOUT worktree migration. Path-α urgency reframed-down ("methodologically-cleaner-improvement" not CRITICAL).
+- Next §7 interval ~T+8h (~24:50 MDT 2026-05-17 ~00:50 UTC day 2)
+
+### §15.5 — Stamp-lag sweep state
+
+- 2 RESOLVED stamps applied at `d4b0206`: row 138 (CONSOLE-T03-SHELL-INTEGRATION) + row 349 (T7-WB7-FILTERBAR path-α)
+- 2 UNCERTAIN flagged for operator review: row 325, row 330
+- 2 NOT-ELIGIBLE flagged: row 199 (closure cites sibling row 348 ID), row 336 (CLAUDE.md §2.7 amendment not applied)
+- Evidence doc at `docs/coordination/r12-t1c-w1-stamp-lag-sweep-evidence-2026-05-16.md` §IV.1-IV.4 with recommended stamp bodies
+- Operator §4 Tier-A prescribed list (7 rows) confirmed STALE — all 7 already RESOLVED at HEAD via `36d8f3a` (MB-T07 family) + `8d48e1e` (MB-T05 family)
+
+### §15.6 — Draft-only artifact states (operator-stamp envelope at /tmp/)
+
+| Session | Artifact path | Operator arbitration Qs |
+|---|---|---|
+| workstation-contract-66-draft | `/tmp/workstation-contract-66-amendment-draft/{amendment-text,pattern-analysis,downstream-impact,operator-review-checklist}.md` | 9 Qs surfaced; highest-leverage = §1 direction + §7 consumer gap (gate the entire amendment) |
+| worktree-migration-plan | `/tmp/per-session-worktree-migration-plan/{migration-steps,contamination-class-closure,cutover-timing-analysis,operator-ratification-prompt,post-migration-validation}.md` | 3 Qs surfaced; default cutover-timing Option A (natural-fence at 22h close) recommended; **URGENCY REFRAMED-DOWN** per T+4h cross-round insight (path-β structurally closes race class) |
+
+Findings docs at `docs/coordination/r12-t1c-w1-workstation-contract-66-draft-findings-2026-05-16.md` + `docs/coordination/r12-t1c-w1-worktree-migration-plan-findings-2026-05-16.md`.
+
+### §15.7 — Operator-arbitration backlog (gen-7 inherits if option (A); else operator-side persistence)
+
+1. **CLAUDE.md §3.4 amendment text** — codify postinstall hook discipline (post-pull-rebuild findings doc §8)
+2. **CLAUDE.md §2.7 amendment text** — document cairn-atomic-commit.sh primitive (atomic-commit findings §V)
+3. **WORKSTATION_CONTRACT.md §6.6 amendment text** — `coarchitect:bypass-perms-update` channel (workstation-66-draft /tmp/)
+4. **Per-session worktree migration plan** — operator-ratification per worktree-migration-plan /tmp/ (urgency-reframed-down)
+5. **4 stamp-lag UNCERTAIN/NOT-ELIGIBLE rows** — 199, 325, 330, 336 (evidence doc §IV)
+6. **§11(III) TIER-2 SWEEP AUTHORIZATION** — surfaced cycle 9 ANNOUNCEMENT; no response
+7. **HALT-CONTEXT-PRESSURE-PENDING** — surfaced cycle 14; 4 options (A)/(B)/(C)/(D) pending operator
+8. **REGISTRY.md §2 authoring** — long-standing operator-only territory (unchanged from §14.5)
+9. **MB-T41 revision** — long-standing operator-only territory (unchanged)
+10. **BOTTOM-RAIL §6.6 amendment** — unblocks row 369 closure-impl session
+
+### §15.8 — COARCH-ARBITRATED CALLS (§3) — preserved through cascade for gen-7
+
+| Coarch ID | Disposition | Status |
+|---|---|---|
+| §3(I) MB-F-MB-T08-VISION-PROJECT-LIST-CONFIG | DEFER-TO-v3.0.x | STAMPED at `fa95d8c` |
+| §3(II) MB-F-MB-T08-ONBOARDING-RENDERER-MOUNT | Let current session finish | STALE-DISPATCH-RESOLVED at `d6b4107` |
+| §3(III) MB-F-CONSOLE-T03-SHELL-INTEGRATION | STAMP-LAG-VERIFY per §4 | STAMPED RESOLVED at `d4b0206` |
+| §3(IV) MB-F-HSO-02-PROTOCOL-DRIFT-TEMPLATE-ENFORCEMENT | DEFER post-cascade | Unchanged; deferred |
+| §3(V) MB-F-HSO-01-TURN-DISPATCH-SYNCHRONOUS | NEEDS-OPERATOR-SCOPE-CLARIFICATION | Tagged in CLOSURE-PENDING; awaiting operator scope |
+| §3(VI) MB-T41 revision | DEFER post-cascade | Unchanged |
+| §3(VII) Phase 3 visual-verification entry | DEFER (post-rebuild dependency) | Unchanged |
+
+### §15.9 — CLOSURE POOL state at supplement authoring
+
+- **POOL-A**: 0 (saturated by 2 in-flight + stamp-lag-sweep)
+- **POOL-B**: 0 (MOUNT-WIRING covered by phase5; BOTTOM-RAIL §6.6-amendment-blocked)
+- **POOL-C #1**: ✓ DISPATCHED + CLOSED (row 155; worktree-fresh-dist)
+- **POOL-C #2**: ✓ DISPATCHED + CLOSED (row 153; electron-process-leak)
+- **POOL-C #3**: DEFERRED — MB-F-WORKSTATION-SESSION-LIFECYCLE-UI-MIRRORING (FOLLOWUPS:318) too large (8+ WB; cross-package)
+- **POOL FULLY EXHAUSTED** — no further CC-eligible Tier-1 closure dispatches possible without operator Tier-2 sweep authorization per §11(III)
+
+### §15.10 — Subagent invocation log (§11(VIII) plugin retrofit evidence)
+
+| Subagent | Invocations | Outcomes |
+|---|---|---|
+| `general-purpose` | 1 (POOL inventory at cycle 2) | 40 tool calls; 240k tokens; 6 candidates identified; STALE Tier-A finding |
+| `cairn-anti-fabrication-verifier` | 2 (1 fail no-tool; 1 success at stamp-lag-sweep) | First attempt halted-no-tool-access (anti-fabrication preserved); second successful batched-5-rows validation |
+| `cairn-phase-1-diagnose` | 3 (worktree-migration-plan + electron-process-leak + worktree-fresh-dist sessions; phase5 + kanban + workstation-66-draft + atomic-commit + post-pull-rebuild sessions either invoked it or chose direct-read per amortization heuristic) | All successful; recurring strong fit for ≥3-WB ladders |
+| `cairn-cross-package-impact` | 1 (worktree-migration-plan) | Successful; informed migration-steps plan |
+| `cairn-followup-drafter` | 1 (workstation-contract-66-draft) | Successful; informed amendment-text drafting |
+
+**Empirical verdict refinement [MODELED → KNOWN-partial]**: plugin retrofit amortizes well at ≥3-WB ladders + multi-phase analysis tickets; single-cycle sweep sessions also benefit (cairn-anti-fabrication-verifier per-batch). Boot overhead ~30-35k tokens per session confirmed across this window. NEW finding: subagents that can fail with "Tool calls not permitted" need fallback to general-purpose (cairn-anti-fabrication-verifier vs general-purpose at cycle 2).
+
+### §15.11 — Gen-7 boot prompt (deferred; only if operator chooses option (A))
+
+If operator chooses (A) HANDOFF, gen-7 boot prompt at `/tmp/gen7-boot-prompt.txt` (TO BE AUTHORED) following gen-6 boot prompt pattern with:
+- Lineage update: gen-1 → gen-2 → gen-3 → gen-4 → gen-5 → gen-6 → **gen-7**
+- Reference §15 supplement as primary boot context (per §14 pattern)
+- Cascade state: POOL EXHAUSTED; 9 closures shipped; 6 operator-arbitration items pending
+- §10 multi-gen authorization: gen-7 → gen-8 STILL requires operator ack
+- Continue per RESUME §2 + dispatch v3 §1.5 if Tier-2 authorized; else maintain idle-standby
+
+### §15.12 — Gen-6 status
+
+**Current**: ACTIVE polling cycle 14+ (3-min cadence per operator directive); context ~700-750k estimated; standing by for operator response to HALT-CONTEXT-PRESSURE-PENDING.
+
+**Pending operator decision**: option (A) gen-7 handoff / (B) continue / (C) TERMINATE-CASCADE / (D) Tier-2 authorization.
+
+**If autonomous handoff triggers** (per §10 conditions): gen-7 boot prompt authoring + spawn + dispatch + gen-6 enters deep-halt per INV-RP-3.
+
+**If TERMINATE-CASCADE-READY**: gen-6 authors §15 post-cascade report per dispatch §15 structure (5 sections) + cascade concludes + all sessions remain idle-standby for next operator-engagement window.
