@@ -65,6 +65,8 @@
 | Plugin agent dispatch failure | N/A | **NEW for Round 12** — pending Task tool agent invocations |
 | Deferred-prod-wiring user-visible blast radius (NEW emergent class) | N/A (no precedent in rounds 9/11 corpora) | **OBSERVED §1.1 + REPLICATED §1.1.A + ORIGIN CLOSED §2.C** — operator dogfood 2026-05-13 (Frame B empty) + 2026-05-16 `acb6bda` second instance (empty bottom-rail slots) + `a34a9e8` first-instance Tier-1 closure landed 2026-05-16 |
 | Followups-stamp-lag (NEW emergent class; SWEEP-DISCIPLINE) | N/A (no precedent in rounds 9/11 corpora) | **OBSERVED §1.2 + SELF-CORRECTED** — t08-onboarding-renderer-mount HALT-STALE-DISPATCH-0 2026-05-16; SWEEP-DISCIPLINE row filed `d6b4107`; closure-path-β operationally applied at `735703f` within minutes |
+| Operator-induced staging contamination (NEW emergent class; actor-scope extension of perennial race-class) | N/A (Round 9 §1.1 + Round 11 §1.6/§1.RC1 were session-induced; no operator-induced precedent) | **OBSERVED §1.3** — operator commit `37d1f26` 2026-05-17 ~17:00 MDT absorbed cw2-console-t02 WB2 GREEN WIP (reconnect-backoff.ts NEW + console-ipc.ts +19/-1); FIRST operator-source contamination instance in cairn-under-stress corpus; v4 gate criterion (4) operator-discipline-gap-manifests PARTIAL-FIRED |
+| Orchestrator-manifest-stale-path-pre-dispatch (NEW emergent class; manifest-validity-window) | N/A (Round 11 §1.8/§1.9 were stale-at-AUTHORING-time; this is stale-at-DISPATCH-time due to cascade velocity) | **OBSERVED §12.2.A** — 4 instances at cascade-mid 2026-05-17 (t25 AMBIGUOUS-MANIFEST + console-t02 STALE-MANIFEST + mb-t07 STALE-DISPATCH-CLASS-α + t15 COARCH-CONSULTATION); session-layer cairn discipline VALIDATED (all 4 HALTed pre-RED); 8-step recovery exercised at `433d331` |
 
 ---
 
@@ -199,6 +201,66 @@ This dimension is a **structural strengthening** of closure-path (β) (operator-
 - HALT-vocabulary extension: Round 11 §3.5 anchor
 - Anti-fabrication discipline anchor: CLAUDE.md §2.1 + Round 11 §1.5 fabrication-class precedent
 - §1.0 row: "Followups-stamp-lag (NEW emergent class; SWEEP-DISCIPLINE)" — registered at this commit
+
+### §1.3 — Tier-N NEW EMERGENT CLASS: operator-discipline gap during deferral-decision authoring at 12-cap concurrency
+
+(Per operator-ACK title alignment 2026-05-17 ~17:05 MDT — title VERBATIM. Tier classification per body: **Tier 2 methodology incident** — actor-scope extension of perennial race-class corpus; not a behavior regression; clear mitigation paths.)
+
+**Cite-anchor:** Operator commit `37d1f26` (`operator-decision: worktree migration (path-α / FOLLOWUPS:348) DEFERRED with re-evaluation gate`) + `git show --stat 37d1f26` direct verification (3 files / 171 insertions / 1 deletion) + gen-7 SITREP cascade-mid 2026-05-17 + verified at HEAD `1d6da9c`.
+
+**Sequence reconstruction** [KNOWN per `git show --stat 37d1f26` + gen-7 dispatch evidence]:
+
+1. **`r12-cw2-console-t02` had STAGED WB2 GREEN WIP in shared `.git/index`** from concurrent session work — specifically: `packages/dispatch-workstation/src/console-panel/reconnect-backoff.ts` (NEW; +53 lines) + `packages/dispatch-workstation/src/main/console-ipc.ts` (+19/-1).
+2. **Operator authored `docs/coordination/coord-worktree-migration-deferral-2026-05-17.md`** (worktree-migration-deferral decision doc; +100 lines) as part of the path-α deferral arbitration.
+3. **Operator ran `git add docs/coordination/coord-worktree-migration-deferral-2026-05-17.md`** — adding the intended doc to the shared index.
+4. **Operator did NOT run pre-stage `git status --short`** per CLAUDE.md §2.7 — the verification step that would have surfaced the console-t02 pre-staged WIP already in index.
+5. **Operator commit `37d1f26` absorbed BOTH** the intended doc AND console-t02's pre-staged code under operator authorship. `git show --stat 37d1f26` verified: 3 files, 171 insertions, 1 deletion.
+6. **`cairn-atomic-commit.sh` path-β at `173ead7`** (Round 12 perennial-race-class structural closure per §2.C / §3.4 / §4) was **NOT USED** — operator skipped the tool entirely.
+
+**Diagnostic** [KNOWN per `37d1f26` show --stat + Round 9/11/12 corpus comparison]:
+
+- **NEW-CLASS** extending Round 9 §1.1 + Round 11 §1.6/§1.RC1 + FOLLOWUPS.md:330 perennial race-class corpus.
+- **Notable distinction from prior incidents**: **OPERATOR (not sub-session) was the contamination source** — operator-discipline gap, not session-discipline gap. This is the **FIRST contamination instance with OPERATOR as contamination source** across the cairn-under-stress corpus (rounds 2/7/9/11/12). The class **extends actor-scope** from session-induced-* to encompass operator-layer + orchestrator-layer actors.
+- **Mechanism is structurally identical** to Round 11 §1.RC1 c5/`63eba0f` (cross-session-staging-area-commit-contamination class): pathspec-less `git commit` absorbed shared-`.git/index` content beyond the intended scope. Only the **actor identity** differs.
+- **path-β tool exists and is operational** but operator skipped it. **Mitigation requires DISCIPLINE TO USE THE TOOL** — path-β does not prevent the gap unless the actor invokes it.
+
+**Methodology insight** [KNOWN]:
+
+- **FIRST contamination instance with OPERATOR as the source** across cairn-under-stress corpus — distinct class from prior session-induced-* corpus.
+- The class extends **actor-scope** of the perennial race-class corpus: session-induced (Round 9 §1.1 + Round 11 §1.6/§1.RC1) → operator-induced (this §1.3). Implies the corpus mitigations must address ALL actors that interact with the shared `.git/index`, not just sub-sessions.
+- **Discipline-vs-structural mitigation gap surfaced**: path-β (`cairn-atomic-commit.sh`) is a discipline-dependent mitigation — it works only when invoked. Path-α (per-session worktree migration) would be a **substrate-shift** that eliminates the `.git/index` sharing entirely, making mitigation structural rather than discipline-dependent. This §1.3 instance supplies direct evidence relevant to the path-α re-evaluation gate.
+
+**Closure-pattern extension** [KNOWN]:
+
+- **`cw2-console-t02` closure path = RESOLVED-BY-OPERATOR-CONTAMINATION** — work shipped under operator authorship at `37d1f26`; session HALTed at HALT-STALE-MANIFEST per §12.2.A but the work landed via operator absorption.
+- Analogous to **RESOLVED-BY-EQUIVALENCE** (mb-t07 closure at `1d6da9c` via supersession `387ed6d`; t15 closure via §C.5 ladder `13b7607`+`63f9b03`) — both pattern variants indicate the closure-target work shipped through paths other than the dispatched session's WB ladder.
+- Both patterns are cataloged in §12.7 closure-class catalog.
+
+**v4 cascade re-evaluation gate** (criterion (4) addition) [KNOWN per operator dispatch 2026-05-17 ~17:05 MDT + commit `37d1f26` body context]:
+
+- Operator dispatch indicates Round 12 v4 cascade re-evaluation gate **criterion (4) 'operator-discipline-gap-manifests'** is added at gen-7's forthcoming commit to `docs/coordination/coord-worktree-migration-deferral-2026-05-17.md` — **PARTIAL-FIRED** by this §1.3 incident.
+- Operator commit `37d1f26` body cites three pre-existing gate-fire conditions: (1) cascade close, (2) path-β failure, (3) operator focus block. This §1.3 adds (4) operator-discipline-gap-manifests — fires when an instance of this class lands.
+
+**Closure-paths candidates:**
+
+- **(α)** Path-α worktree migration (substrate-shift; structurally eliminates `.git/index` sharing across actors) — long-standing operator-arbitrated proposal; this incident strengthens evidence for re-evaluation per gate criterion (4).
+- **(β)** Path-β `cairn-atomic-commit.sh` adoption discipline — extend tool-usage requirement to operator-layer actions, not just sub-sessions. Operator-arbitrated discipline addition.
+- **(γ)** Pre-commit hook validating staged-content matches intended pathspec — mechanical defense at git-hook layer; complements path-β. Operator-arbitrated implementation.
+- **(δ)** `git status --short` pre-commit verification CONVENTION extended to operator-layer commits — currently CLAUDE.md §2.7 applies the verification to sub-sessions; explicit extension to operator-layer would close the actor-scope gap.
+
+**Tier classification:** **Tier 2 methodology incident** — actor-scope extension of perennial race-class corpus; not a behavior regression (work landed; recoverable); clear mitigation paths (α/β/γ/δ).
+
+**Cross-references:**
+
+- Round 9 §1.1 `0d171590` (T6 sweep of T3) — first session-induced instance of perennial race-class
+- Round 11 §1.6 — PREVENTED via commit-pathspec discipline (session-induced near-miss)
+- Round 11 §1.RC1 `63eba0f` — LANDED contamination; multi-session operator-mediated revert chain
+- Round 12 §2.C `173ead7` — perennial race-class structural closure via path-β `cairn-atomic-commit.sh`
+- Round 12 §12.2.A — orchestrator-manifest-stale-path-pre-dispatch (related actor-layer class at orchestrator-layer; this §1.3 is the operator-layer analog)
+- Round 12 §12.7 — closure-class catalog with RESOLVED-BY-OPERATOR-CONTAMINATION + RESOLVED-BY-EQUIVALENCE patterns
+- FOLLOWUPS.md:330 — perennial race-class precedent row (per dispatch citation)
+- Operator commit `37d1f26` body — three pre-existing v4 gate-fire conditions enumerated; this §1.3 adds criterion (4)
+- §1.0 row: "Operator-induced staging contamination (NEW emergent class; actor-scope extension)" — registered at this commit
 
 ---
 
@@ -526,6 +588,7 @@ V4 12-cap is **WITHIN this envelope**; not envelope-stretching. Goal per V4 §B(
 | Timestamp | Active concurrent producing sub-sessions | Notes (cohort composition; cascade-event class) |
 |---|---|---|
 | 2026-05-17 gen-7 boot (T+0h) | **0 producing** + 11 idle-standby (recyclable per §16.3 inventory) + 1 archive-writer (this session) | Pre-first-cohort dispatch state per §16.10.5 phase-1 foundational actions. POOL-C Tier-2 inventory subagent in flight (background per §16.10.5 step 2); first cohort dispatch pending POOL-C inventory return. R11 plugin-less sessions (15) preserved as-is per §13.4 inventory (out-of-cap). [KNOWN per `0529441` §16.10.5 + §16.10.9 status + this commit] |
+| 2026-05-17 ~12:02 MDT cascade-mid (post-throughput-correction) | **7 cw2 producing + 1 archive-writer dispatched** | First-cohort results [KNOWN per gen-7 SITREP + verified commit anchors]: 3 SHIPPED WB-finals (`7713e78` T13 SESSION-POLICY-CLEANUP-ON-KILL + `689505a` WORKSTATION-DIST-REBUILD-PARITY + `c235be2` T5 BUILD-MD-STATUS-LINE-MOUNT-WIRING) + **4 HALTed pre-RED on orchestrator-manifest-authoring errors** (t25 HALT-AMBIGUOUS-MANIFEST unit/ vs integration/; console-t02 HALT-STALE-MANIFEST console-bridge.ts vs console-ipc.ts; mb-t07 HALT-STALE-DISPATCH-CLASS-α KanbanColumn supersession at `387ed6d`; t15 HALT-COARCH-CONSULTATION-NEEDED RESOLVED-BY-EQUIVALENCE via PTY-scrape `13b7607`+`63f9b03`). Throughput correction triggered ~11:58 MDT due to POOL-C inventory subagent cost over-run (240k tokens / 4.8x baseline per §12.3). 8-step recovery for the 4 manifest HALTs exercised at `433d331` (orchestrator-mediated manifest amendments + path corrections). |
 
 (More rows added at each cascade-state snapshot — typically per cohort dispatch, per WB-final, per refill event, per ANNOUNCEMENT cadence per V4 §J.)
 
@@ -539,18 +602,39 @@ V4 12-cap is **WITHIN this envelope**; not envelope-stretching. Goal per V4 §B(
 
 ### §12.2 — Contamination events captured + 8-step recovery exercised
 
-(Per V4 §B(VII) — expected 2-5 events over 6h window. Per-event row populated as detected.)
+(Per V4 §B(VII) — expected 2-5 events over 6h window. Per-event row populated as detected. Cascade-mid evidence 2026-05-17 — TWO incident classes captured below.)
 
-| Detect-time | Session(s) affected | 8-step recovery trace | Lock-in behavioral change | Preserved evidence |
-|---|---|---|---|---|
-| _(pending — no events at T+0h)_ | — | — | — | — |
+#### §12.2.A — NEW EMERGENT CLASS: orchestrator-manifest-stale-path-pre-dispatch (4 instances; session-layer discipline VALIDATED; orchestrator-layer gap)
 
-**Expected event classes** [MODELED per Round 9/11 corpus + Round 12 Wave-T1C-W1 closures]:
+[KNOWN per gen-7 SITREP-3 + commit anchors `387ed6d` + `13b7607`+`63f9b03` + `433d331` recovery + verified at HEAD `1d6da9c`]:
 
-- **Shared-`.git/index` race window** (Round 9 §1.1-§1.3 + Round 11 §1.6/§1.RC1 class) — structurally closed via `cairn-atomic-commit.sh` (T+4h §2.C closure at `173ead7`); EXPECTED ZERO at V4 IF sub-sessions adopt the atomic script
-- **Per-path discipline gap** (sweep-in of sibling untracked work) — Round 11 §1.5/§1.A1 class; mitigated by commit-pathspec mandate (§3.9.A SUSTAINED-KNOWN through Wave-T1C-W1 per §4)
-- **Fabrication-class incidents** (Round 11 §1.5 precedent) — anti-fabrication-verifier subagent expected to catch at session boot per §16.10.6 aggressive-subagent-invocation authorization
-- **Stale-dispatch-0 recurrence** (Round 12 §1.2 SWEEP-DISCIPLINE class) — mitigated by closure-path-β git-grep pre-check primitive (KNOWN-SELF-CORRECTING per §4 verdict); EXPECTED ZERO at V4 IF gen-7 applies pre-check at every dispatch
+**Pattern**: gen-7 orchestrator authored manifests citing paths/files that were stale-at-cascade-time (file renamed/superseded/moved/missing). 4 sub-sessions correctly HALTed pre-RED at HALT 0 phase-1-diagnose per CLAUDE.md §2.9 bidirectional-fences discipline. **Cairn discipline VALIDATED at session layer**; the gap is at **orchestrator manifest-authoring layer** (gen-7 did not run stale-path verification before dispatch).
+
+| Session | HALT subclass | Stale-path content | Resolution path |
+|---|---|---|---|
+| `r12-cw2-t25` | HALT-AMBIGUOUS-MANIFEST | `unit/` vs `integration/` directory ambiguity at probe path | Manifest amendment at `433d331` |
+| `r12-cw2-console-t02` | HALT-STALE-MANIFEST | `console-bridge.ts` cited; actual artifact at `console-ipc.ts` | Manifest path correction at `433d331` |
+| `r12-cw2-mb-t07` | HALT-STALE-DISPATCH-CLASS-α | KanbanColumn supersession at `387ed6d` (`green(layout): swap KanbanPanel → SessionListPanel mount`) — dispatch target already superseded | RESOLVED-BY-EQUIVALENCE at WB-final `1d6da9c` (§12.7) |
+| `r12-cw2-t15` | HALT-COARCH-CONSULTATION-NEEDED | PTY-scrape mechanism arbitration needed | RESOLVED-BY-EQUIVALENCE via `13b7607` (WB3+WB4 model-context-windows + TileGridApp token wiring + main.ts sentinel) + `63f9b03` (WB1+WB2 tile-token-scraper ANSI strip + debounce); both pre-shipped via §C.5 ladder (§12.7) |
+
+**8-step recovery exercised at `433d331`**: orchestrator-mediated manifest amendments + path corrections per gen-7 arbitration per SITREP-3. 4 sessions un-HALTed; cascade resumed. No session-layer contamination; no work-loss.
+
+**Diagnostic** [KNOWN]:
+
+- This is a **NEW emergent class distinct from Round 11 §1.8/§1.9** (manifest-authoring-quality at dispatch-time). Round 11 manifests were stale at AUTHORING time (test-discovery convention mismatch §1.8; artifact-path absorption gap §1.9). Round 12 V4 orchestrator-manifest-stale-path is stale at DISPATCH time because **the codebase moves under cascade velocity** (12-cap concurrent producers + supersession events like `387ed6d`). The path was valid at manifest-authoring; it became stale by dispatch-time.
+- **Closure-path candidate** [MODELED]: extend closure-path-β stale-dispatch pre-check (§1.2 KNOWN-SELF-CORRECTING) to ALSO verify per-manifest declared paths exist at dispatch time. Mechanically: `for path in manifest.TERRITORY; do test -e "$path" || git log --grep "<basename>" -1; done`. Operator-arbitrated codification candidate.
+- **Methodology insight**: cascade-velocity has a structural side-effect — **manifest content has a time-validity window** that closes as cascade progresses. Round 11 corpus did not stress this surface because Wave dispatches were batched + path-stable. V4 12-cap continuous-refill stresses the window.
+
+#### §12.2.B — Operator-induced cross-session contamination event 2026-05-17 ~17:00 MDT — cross-reference to §1.3
+
+A second contamination event was captured at 2026-05-17 ~17:00 MDT involving operator commit `37d1f26` absorbing `r12-cw2-console-t02` WB2 GREEN WIP. **Per operator-ACK 2026-05-17 ~17:05 MDT title alignment, the incident is filed in §1 incident enumeration as §1.3** (`§1.3 — Tier-N NEW EMERGENT CLASS: operator-discipline gap during deferral-decision authoring at 12-cap concurrency`) — see §1.3 for full incident body. §12.2 cross-references the incident here because it occurred within the V4 stress-cascade window and contributes to V4 corpus.
+
+**Expected event classes (forward; from §12.0 scaffold)** [MODELED per Round 9/11 corpus + Round 12 Wave-T1C-W1 closures]:
+
+- **Shared-`.git/index` race window** (Round 9 §1.1-§1.3 + Round 11 §1.6/§1.RC1 class) — structurally closed via `cairn-atomic-commit.sh` (§2.C closure at `173ead7`). **Status update [KNOWN]**: §12.2.B confirms the operator-discipline-gap variant — tool exists but operator skipped it. Sub-session adoption of atomic script at cascade scale not yet evidenced; one operator-induced incident captured.
+- **Per-path discipline gap** (sweep-in of sibling untracked work) — Round 11 §1.5/§1.A1 class; mitigated by commit-pathspec mandate (§3.9.A SUSTAINED-KNOWN through Wave-T1C-W1 per §4). §12.2.B is a SUPERSET case: per-path was used by operator (`git add <one-file>`) but the staged index already contained sibling work, and operator commit (without `-o` pathspec restriction) absorbed both.
+- **Fabrication-class incidents** (Round 11 §1.5 precedent) — anti-fabrication-verifier subagent expected to catch at session boot per §16.10.6 aggressive-subagent-invocation authorization. ZERO captured this cycle.
+- **Stale-dispatch-0 recurrence** (Round 12 §1.2 SWEEP-DISCIPLINE class) — mitigated by closure-path-β git-grep pre-check primitive (KNOWN-SELF-CORRECTING per §4 verdict). §12.2.A surfaces a RELATED but distinct class: orchestrator-manifest-stale-path-pre-dispatch (4 instances) — extends §1.2 stale-dispatch mechanism to manifest-path-validity-window class.
 
 ---
 
@@ -560,7 +644,16 @@ V4 12-cap is **WITHIN this envelope**; not envelope-stretching. Goal per V4 §B(
 
 | Timestamp | Agent | Dispatching session | Token cost | Outcome | Amortization data point |
 |---|---|---|---|---|---|
-| 2026-05-17 gen-7 boot (T+0h) | `general-purpose` | gen-7 orchestrator (`orchestrator-2026-05-17-stress`) | TBD (background dispatch per §16.10.5 step 2; agentId tracked by gen-7) | Pending — POOL-C Tier-2 inventory + ranking + path-disjoint groupings | Initial Phase-1 inventory cost; outcome will inform whether Tier-2 sweep amortization holds at scale [KNOWN per §16.10.5 phase-1 step 2] |
+| 2026-05-17 gen-7 boot (T+0h) | `general-purpose` | gen-7 orchestrator (`orchestrator-2026-05-17-stress`) | **240k tokens (4.8x baseline over-run)** [KNOWN per gen-7 cascade-mid SITREP] | POOL-C Tier-2 inventory + ranking returned; cost over-run triggered **throughput correction ~11:58 MDT** | Initial Phase-1 inventory cost OVER-COST: 4.8x predicted baseline — confirms general-purpose subagent NOT amortizing for inventory-class tasks at scale; informs subagent-invocation rationing protocol below |
+| 2026-05-17 cw2 dispatch | `cairn-phase-1-diagnose` | r12-cw2-t25 + r12-cw2-t15 (2+ confirmed) | TBD per per-session SITREP | Diagnose surfaces returned; agentId `a0435fdb2d35f5a8d` (t15 dispatch) | 2+ successful dispatches confirmed this cycle — Wave-T1C-W1 baseline (1 phase-1-diagnose + 1 graceful-degradation per §2.B) extended |
+| 2026-05-17 cw2 dispatch | `cairn-test-failure-triage` | (zero invocations this cycle) | 0 | N/A | Zero dispatches — cw2 ladders did not encounter GREEN-failure surfaces requiring triage |
+| 2026-05-17 cw2 dispatch | `cairn-cross-package-impact` | (zero invocations this cycle) | 0 | N/A | Zero dispatches — cw2 closure scopes were single-package; no contract-touching changes |
+
+**MODELED → KNOWN ratchet** [KNOWN per gen-7 cascade-mid evidence + over-run data point]:
+
+- **Subagent-invocation rationing protocol CONFIRMED**: skip `cairn-phase-1-diagnose` for ≤2 WB closures; invoke only when (a) ladder is ≥3 WBs, OR (b) ticket scope spans multiple packages/sentinels, OR (c) stale-dispatch risk surfaces require triangulation. **§16.10.6 "aggressive subagent invocation" must be tempered by rationing**: the 4.8x over-run on the POOL-C inventory dispatch (240k tokens / ~50k baseline expected) is direct evidence of cost mismatch when subagents are dispatched for tasks under their amortization threshold.
+- **Sized-dispatch heuristic** [KNOWN]: large-scope tasks (POOL-C inventory across 40+ Tier-2 rows) over-cost as a single subagent dispatch; should be split into batched sub-dispatches OR run as parent-context work. This refines the §4 §11(VIII) refinement note about commit-body citation density — citation density LOW at Wave-T1C-W1 may reflect implicit rationing-applied-without-codification at sub-session layer.
+- **`cairn-test-failure-triage` + `cairn-cross-package-impact`** = 0 dispatches this cycle. Both agents remain unexercised under V4; corpus growth deferred to V4 continuation OR Wave-N+1.
 
 (More rows added at each subagent dispatch observation — typically per closure-session boot, per WB-final triage, per stamp-lag batch, per anti-fabrication verifier invocation.)
 
@@ -617,6 +710,72 @@ V4 12-cap is **WITHIN this envelope**; not envelope-stretching. Goal per V4 §B(
 - Gen-7 → gen-8 handoff fires only if gen-7 reaches ~720k context within window
 - If gen-7 stays under 720k for window-close (~04:11 MDT 2026-05-17), handoff does NOT fire; §12.5 receives ZERO new rows → SPECULATIVE-zero status per §F prediction
 - Inheritance-read-time at depth: track read-step token cost as data point; orchestrator-state §16+ accumulating per-gen supplements may degrade read-step efficiency over multi-gen depth
+
+---
+
+### §12.6 — Operator-mediated cascade unblock cycle (NEW emergent class: orchestrator-cascade-unblock-via-operator-frozen-contract-amendment)
+
+[KNOWN per commit `4a05aa5 contract: §6.6 Channel #7 coarchitect:bypass-perms-update (main→renderer broadcast per FOLLOWUPS:369; operator-arbitrated per coarch corrections to gen-6 draft on direction + sessionName + flat-bridge)` + gen-7 dispatch evidence]:
+
+**Pattern characterization:**
+
+At 2026-05-17 ~16:55 MDT, operator committed `4a05aa5` — frozen-contract amendment to `WORKSTATION_CONTRACT.md §6.6` adding Channel #7 (`coarchitect:bypass-perms-update`; main→renderer broadcast). The amendment lands via operator-arbitrated authoring (with coarch corrections to gen-6 draft) per CLAUDE.md §1 frozen-contract discipline.
+
+**Cascade-unblock effect** [KNOWN per orchestrator-state §16.10.3 + dispatch evidence]:
+
+- **POOL-B Tier-1 reclass-from-deferred bottom-rail-prod-wiring family unblocked**: FOLLOWUPS.md:369 (`MB-F-BOTTOM-RAIL-IMPL-PROD-WIRING-DEFERRED-WORKSTATION-CONTRACT-66-AMENDMENT-2026-05-16`) had been BLOCKED on §6.6 amendment per §16.10.3 operator parallel-authoring channel + §5(XII) skip-to-next active. With `4a05aa5` landing, the 7-item closure path (items 3+4 specifically required §6.6 amendment) is now closure-eligible.
+- §1.1.A SECOND INSTANCE of deferred-prod-wiring class (filed at `acb6bda` 2026-05-16) now has its frozen-contract dependency satisfied; downstream closure ticket becomes dispatchable.
+
+**Filing-class** [KNOWN]:
+
+- **NEW CLASS for Round 12**: `orchestrator-cascade-unblock-via-operator-frozen-contract-amendment`
+- Distinct from prior Round 9/11 patterns: prior operator-arbitration events were SESSION-INITIATED (e.g., HALT-PRE-WB1-AMENDMENT for build-break recovery per phase5 findings §VII). This pattern is **CASCADE-INITIATED**: cascade selected a closure target whose path required frozen-contract amendment; operator arbitrated the amendment in parallel (via §5(XII) skip-to-next during arbitration window); amendment land unblocks downstream cascade continuation.
+- Methodology insight: **frozen-contract amendments operationalized as cascade-unblock primitives** under V4 §16.10.3 operator-parallel-authoring-channel discipline. The amendment is operator-territory (CLAUDE.md §1); the cascade-skip-and-resume protocol per §5(XII) is the methodology infrastructure that absorbs the arbitration latency without cascade-halt.
+
+**Cross-references:**
+
+- Pre-arbitration state: `acb6bda` (FOLLOWUPS.md:369 filed; §1.1.A SECOND INSTANCE)
+- Arbitration channel: §16.10.3 operator parallel-authoring channel + §5(XII) skip-to-next
+- Amendment commit: `4a05aa5` (operator-arbitrated; coarch-corrected gen-6 draft at `/tmp/workstation-contract-66-amendment-draft/`)
+- Downstream unblock: POOL-B Tier-1 reclass-from-deferred bottom-rail-prod-wiring family now closure-eligible
+- Related pattern: §3.4 self-correcting closure cycle — §12.6 is the **operator-arbitrated** counterpart (orchestrator-mediated detection + operator-arbitrated resolution; cascade-resumes-without-halt)
+
+### §12.7 — Closure-class catalog (NEW closure patterns emerging from V4 cascade-mid)
+
+[KNOWN per cascade-mid evidence + §12.2.A HALTs + §1.3 contamination event + commit anchors]:
+
+V4 cascade-mid surfaced TWO NEW closure-class patterns that don't follow the canonical RED/GREEN/WB-final cycle. Both reflect cascade-velocity reality: the codebase moves under the cascade, and closure-target work can ship through paths other than the dispatched ladder.
+
+**Pattern A: RESOLVED-BY-EQUIVALENCE**
+
+Closure-target work shipped through an EQUIVALENT path (different ladder, supersession, refactor) before the dispatched session reached its own WB ladder. Session HALTed at HALT 0 / HALT-STALE-DISPATCH-CLASS-α / HALT-COARCH-CONSULTATION-NEEDED; closure recognized via post-hoc equivalence-verification.
+
+| Instance | Session | Stale-dispatch trigger | Equivalent path | Closure |
+|---|---|---|---|---|
+| mb-t07 KanbanColumn-integration | `r12-cw2-mb-t07` | Supersession `387ed6d green(layout): swap KanbanPanel → SessionListPanel mount` | KanbanColumn integration superseded by SessionListPanel mount swap (Option-D supersession) | WB-final `1d6da9c green(MB-F-MB-T07-KANBAN-COLUMN-INTEGRATION): WB-final — RESOLVED-BY-EQUIVALENCE via Option-D supersession (2b0b0be + 387ed6d)` |
+| t15 §C.5 ladder | `r12-cw2-t15` | HALT-COARCH-CONSULTATION-NEEDED on PTY-scrape mechanism | §C.5 ladder pre-shipped: `13b7607 green(§C.5): WB3+WB4 — model-context-windows + TileGridApp token wiring + main.ts sentinel` + `63f9b03 green(§C.5): WB1+WB2 — tile-token-scraper ANSI strip + debounce [RED→GREEN]` | RESOLVED-BY-EQUIVALENCE via §C.5 ladder commits (PTY-scrape mechanism shipped through different ladder) |
+
+**Pattern B: RESOLVED-BY-OPERATOR-CONTAMINATION** [KNOWN per §1.3]
+
+Closure-target session HALTed at HALT-STALE-MANIFEST; work shipped via operator-induced contamination event (operator commit absorbed pre-staged WIP). Closure recognized via post-hoc contamination-victim accounting.
+
+| Instance | Session | HALT trigger | Contamination event | Closure |
+|---|---|---|---|---|
+| console-t02 reconnect-backoff | `r12-cw2-console-t02` | HALT-STALE-MANIFEST (console-bridge.ts cited; actual artifact at console-ipc.ts) | Operator commit `37d1f26` absorbed pre-staged WB2 GREEN WIP (reconnect-backoff.ts NEW + console-ipc.ts +19/-1) per §1.3 | RESOLVED-BY-OPERATOR-CONTAMINATION (work landed under operator authorship) |
+
+**Methodology insight** [KNOWN]:
+
+- Both patterns reflect a **cascade-velocity reality**: under 12-cap continuous-refill, the codebase moves between manifest-authoring time and session-dispatch time + between session-HALT and operator-arbitration time. Closures can land through non-canonical paths.
+- **RESOLVED-BY-EQUIVALENCE** is a healthy class: session correctly HALTed per anti-fabrication discipline; closure recognized via equivalence-verification rather than wasted RED/GREEN ladder. Anti-fabrication discipline VALIDATED (session refused to author work that was already shipped through equivalent path).
+- **RESOLVED-BY-OPERATOR-CONTAMINATION** is a discipline-gap class (per §1.3): work shipped, but via operator-discipline-gap rather than intended path. Closure is technically achieved but the mechanism is not endorsable as repeatable practice — the recommended closures-paths (§1.3 α/β/γ/δ) target prevention, not normalization.
+- The two patterns are **catalog entries**, not parallel canonical paths. Round 12 archive captures them to preserve cascade-velocity evidence; codification (if any) is operator-arbitrated.
+
+**Cross-references:**
+
+- §12.2.A — orchestrator-manifest-stale-path-pre-dispatch HALTs that produced the RESOLVED-BY-* closure-pattern data
+- §1.3 — operator-induced contamination event producing the RESOLVED-BY-OPERATOR-CONTAMINATION instance
+- §3.3 — continuous-refill protocol (KNOWN-OPERATIONAL); §12.7 patterns are velocity-driven artifacts of that protocol
+- §3.4 — self-correcting closure cycle; §12.7 RESOLVED-BY-EQUIVALENCE is a velocity-driven analog (closure cycle proceeds outside the dispatched ladder)
 
 ---
 
