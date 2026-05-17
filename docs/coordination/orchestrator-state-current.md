@@ -887,3 +887,87 @@ Operator selected option (C) TERMINATE-CASCADE-READY response to HALT-CONTEXT-PR
 **Gen-6 monitor (PID per ps aux)**: still running in background (`/tmp/orch-gen6-monitor.sh`; 32-session list). Operator may kill OR leave running for next-window orchestrator inheritance.
 
 **End of Wave T1-CLOSURE-Wave-1 cascade. Cascade-mid §15 supplement (cycle 14) + §15.13 termination note (this cycle) are the load-bearing handoff artifacts for next-window orchestrator boot.**
+
+## §16 — Gen-6 → Gen-7 changeover (cascade RESUMES per operator correction; V4 high-concurrency dispatch)
+
+Authored 2026-05-17 at operator-correction: TERMINATE-CASCADE-READY at §15.13 was **OPERATOR-ERROR KEYSTROKE**. Cascade RESUMES per **V4 high-concurrency stress-test dispatch** (operator-quota-window ~22:11 MDT 2026-05-16 → ~04:11 MDT 2026-05-17; 6-hour window; 12-cap concurrent stress test within Round 11 validated envelope).
+
+§15.13 termination note (`e7b40d3`) is SUPERSEDED by this §16. Cascade did NOT terminate; partial-shutdown state preserved at `/tmp/gen6-partial-shutdown-state-2026-05-16.md` for archaeological reference.
+
+### §16.1 — Lineage update
+
+gen-1 → gen-2 (UNEXPECTED-EXIT) → gen-3 → gen-4 → gen-5 → gen-6 (this; cascade-mid 9 closures + 10 followups + 2 drafts shipped) → **gen-7 (V4 high-concurrency stress cascade)**.
+
+Multi-gen pre-authorization extended per V4 §B(V): gen-7 → gen-8 PRE-AUTHORIZED unsupervised at 720k; gen-8 → gen-9 PRE-AUTHORIZED; gen-9 → gen-10 REQUIRES operator ack.
+
+### §16.2 — V4 dispatch scope (12-cap concurrent stress test)
+
+Per V4 §B:
+- **Concurrency cap**: 12 producing sub-sessions (Round 11 validated stress envelope; 11-15 concurrent yielded 5 recovered contamination events with cairn discipline holding)
+- **Continuous-refill**: per v3 §1.5 — when any closure session WB-finals, IMMEDIATELY dispatch next eligible row from POOL-A/B/C/D (Tier-1 + Tier-2 + Tier-3)
+- **Tier-2 + Tier-3 sweep AUTHORIZED** per V4 §C(VIII)+(IX)
+- **Aggressive subagent invocation**: cairn-phase-1-diagnose at every closure session start + cairn-test-failure-triage on WB GREEN failures + cairn-cross-package-impact for multi-package scope + cairn-anti-fabrication-verifier per stamp-lag batch + cairn-followup-drafter for drafts
+- **Round 12 §12 stress-cascade archive** AUTHORIZED — r12-archive-writer to author 5 new sub-sections (§12.1-§12.5) capturing concurrency-stress evidence + plugin-retrofit-at-scale verdict refinement
+
+### §16.3 — Cascade state at gen-7 boot
+
+**11 idle-standby sub-sessions** (preserved from cycle 14 inventory; recyclable via /clear-and-reuse for V4 refill):
+- r12-t1c-w1-phase5-mount-wiring (227k; WB-final shipped `a34a9e8`; row 367 awaiting operator-dogfood verification)
+- r12-t1c-w1-t08-onboarding-renderer-mount (67k; STALE-DISPATCH-RESOLVED)
+- r12-t1c-w1-kanban-empty-state-ux (148k; WB-final shipped `5104e2a`; row 173 CLOSED)
+- r12-t1c-w1-dispatch-core-post-pull-rebuild (109k; WB-final shipped `6eaf194`; row 172 RESOLVED)
+- r12-t1c-w1-parallel-cairn-atomic-commit (124k; WB-final shipped `173ead7`; row 348 PARTIAL-β)
+- r12-t1c-w1-stamp-lag-sweep (149k; SWEEP-COMPLETE `d4b0206`; 2 RESOLVED + 4 UNCERTAIN for operator review)
+- r12-t1c-w1-workstation-contract-66-draft (149k; DRAFT-COMPLETE `40d9a0f`; 9 Qs surfaced)
+- r12-t1c-w1-worktree-migration-plan (115k; DRAFT-COMPLETE `8cd4143`; 3 Qs surfaced; urgency reframed-down)
+- r12-t1c-w1-electron-process-leak-cleanup (234k; WB-final shipped `86d102d`; row 153 RESOLVED)
+- r12-t1c-w1-worktree-fresh-dist (114k; WB-final shipped `c4838fb`; row 155 RESOLVED)
+- r12-archive-writer (235k; T+4h interval completed; cross-round closure insight surfaced)
+
+R11 plugin-less sessions (15) preserved as-is per §13.4 inventory.
+
+### §16.4 — Coarch-arbitrated calls (inherited from V3 §3; preserved + extended for V4)
+
+Same 7 dispositions from V3 §3 preserved verbatim. PLUS V4 additions:
+- **§C(VIII) Tier-2 sweep authorization** = COARCH-AUTHORIZED (dispatchable when Tier-1 pool exhausts OR refill-velocity supplement)
+- **§C(IX) Tier-3 sweep authorization** = COARCH-AUTHORIZED (dispatchable only after Tier-1 + Tier-2 substantially closed)
+
+### §16.5 — Round 12 archive state
+
+Status at gen-7 boot:
+- §1.1 NEW EMERGENT CLASS (deferred-prod-wiring-surface-in-operator-dogfood) — 2 instances filed (rows 367 + 369)
+- §1.2 T+0h closure-cascade-dispatch-state + self-correcting cycle
+- T+4h cross-round closure insight (cairn-atomic-commit.sh structurally closes Round 9 + Round 11 race class)
+- **§12 stress-cascade archive section** AUTHORIZED for V4 window (per V4 §B(VI))
+
+### §16.6 — Pending sub-session manifests (gen-6 dispatched; gen-7 inherits all paths)
+
+- `docs/coordination/territorial-manifests/r12-t1c-w1-stamp-lag-sweep.txt` (RESOLVED + 4 UNCERTAIN flagged for operator review; sweep complete)
+- `docs/coordination/territorial-manifests/r12-t1c-w1-workstation-contract-66-draft.txt` (DRAFT-COMPLETE; /tmp/ artifacts ready)
+- `docs/coordination/territorial-manifests/r12-t1c-w1-worktree-migration-plan.txt` (DRAFT-COMPLETE; /tmp/ artifacts ready)
+- `docs/coordination/territorial-manifests/r12-t1c-w1-electron-process-leak-cleanup.txt` (WB-final shipped; EXPANSION-3 grant for test/setup.ts preserved)
+- All other r12 manifests preserved per §16.3 inventory
+
+### §16.7 — Operator-arbitration backlog inherited by gen-7
+
+Per §15.7 — 12 items preserved verbatim. Gen-7 may surface NEW arbitration items as cascade progresses; tracks for next operator engagement.
+
+### §16.8 — Gen-7 boot prompt + spawn
+
+Boot prompt authored at `/tmp/gen7-boot-prompt.txt` (V4 §A-§K verbatim; 12-cap stress cascade authorization).
+
+Spawn command (per V4 §1(V)):
+```bash
+PLUGIN_DIR="/Users/joshuatseppich/Desktop/Automata/foxworks-tooling"
+REPO="/Users/joshuatseppich/Desktop/Automata/foxworks-dispatch"
+CC="/Users/joshuatseppich/.local/bin/claude"
+NEW="orchestrator-2026-05-17-stress"
+tmux new-session -d -s "$NEW" -x 220 -y 50 -c "$REPO" \
+  "$CC --dangerously-skip-permissions --model claude-opus-4-7 --plugin-dir $PLUGIN_DIR"
+```
+
+### §16.9 — Gen-6 entering deep-halt per INV-RP-3 (post gen-7 boot ACK)
+
+After gen-7 ACKs §A read step + §B scope, gen-6 surfaces HALT-BATON-PASSED-GEN-6-GEN-7 + enters deep-halt per INV-RP-3. Operator may kill gen-6 tmux session at any time post-handoff.
+
+**Gen-6 cascade-mid contributions PRESERVED IN HISTORY**: 9 closures + 10 followups + 2 drafts + §15 supplement + §15.13 (superseded) + this §16 changeover. All gen-7 work BUILDS on gen-6 outputs without rework.
