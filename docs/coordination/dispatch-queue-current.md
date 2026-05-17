@@ -86,6 +86,46 @@ Selection criteria per §14.6 (dogfood-blocking > family-closure > Tier-1-reclas
 
 **Active concurrent session count** [KNOWN per gen-6 monitor `/tmp/orch-gen6-monitor.log` heartbeat at this commit time]: 1 active impl (phase5) + 3 about-to-spawn (kanban + post-pull + atomic-commit) = 4. Operator cap = 6. Headroom for 2 additional in Wave T1-CLOSURE-Wave-1 if operator authorizes CONSOLE-T03 (FOLLOWUPS:138; STALE-DISPATCH-RISK requires operator review) or HSO-01 (FOLLOWUPS:249; MB-T37 scope clarification needed).
 
+## QUEUED — Round 12 Wave R12-CLOSURE-Wave-2 (V4 high-concurrency stress cascade per gen-7 dispatch 2026-05-17; 12-cap concurrent; CONTINUOUS-REFILL protocol active)
+
+(orchestrator-mediated direct dispatch per gen-7 boot prompt §K; ALL Wave R12-CLOSURE-Wave-2 sessions spawn plugin-loaded; sessions begin IN-FLIGHT on first commit. Wave-naming per operator correction 2026-05-17: "R12-CLOSURE-Wave-2" because Tier-1 pool still has rows; Tier-2/3 swept opportunistically per V4 §B(III) POOL-A→D ranking. **Operator dispatch v4 2026-05-17 GREEN-LIGHT**: 6-hour window (~22:11 MDT 2026-05-16 → ~04:11 MDT 2026-05-17); 12-cap concurrent; aggressive subagent invocation per V4 §B(IV); Round 12 §12 stress-cascade archive authorized per §B(VI); multi-gen pre-authorization gen-7→8→9 unsupervised per §B(V).)
+
+### POOL-C INVENTORY (gen-7 pre-flight 2026-05-17 + general-purpose subagent 30 tool calls 240k tokens)
+
+[KNOWN per gen-7 POOL-C inventory subagent agentId `a6a2f38bc4934ae90` 2026-05-17; cross-verified via direct git --no-pager log --all --grep on each MB-F-ID per gen-6 §1.2 closure-path-β stale-dispatch pre-check primitive]:
+
+- **POOL-A** = 0 net new (gen-6 saturated; remaining Tier-1 rows are operator-arbitration-blocked per CLOSURE-PENDING table above)
+- **POOL-B** = 0 net new (BOTTOM-RAIL §6.6-amendment-blocked per §16.10.3 — operator parallel-authoring at /tmp/workstation-contract-66-amendment-draft/)
+- **POOL-C** = 36 Tier-2 OPEN candidates (10 Priority-A SIMPLE + 24 Priority-B MEDIUM); 9 STALE-DISPATCH detections flagged for stamp-lag-sweep cycle 2
+- **POOL-D** = 174 Tier-3 candidates per probe v2 (DISPATCHABLE only after POOL-C substantially closes per V4 §C(IX))
+
+### Wave R12-CLOSURE-Wave-2 first cohort (7 fresh-spawn sessions; r12-archive-writer continues §12 archive authoring; refill to 12-cap as WB-finals fire)
+
+| session | scope | territory | type | priority | status |
+|---|---|---|---|---|---|
+| `r12-cw2-console-t02-reconnect-backoff` | **MB-F-CONSOLE-T02-RECONNECT-BACKOFF** (Tier 2; FOLLOWUPS:132). Exponential backoff in console-bridge + max-attempts ceiling + terminal error surface. 2-WB + WB-final. **PATH-DISJOINT** (console-panel/console-bridge.ts isolated). | [r12-cw2-console-t02-reconnect-backoff.txt](territorial-manifests/r12-cw2-console-t02-reconnect-backoff.txt) | closure-class | POOL-C A1 | QUEUED (spawning) |
+| `r12-cw2-t13-session-policy-cleanup` | **MB-F-T13-SESSION-POLICY-CLEANUP-ON-KILL** (Tier 2; FOLLOWUPS:170). DELETE FROM session_policies at PATCH /v2/sessions/:name/state when state='killed' + idempotency. 2-WB + WB-final. **PATH-DISJOINT** (dispatch-daemon only). | [r12-cw2-t13-session-policy-cleanup.txt](territorial-manifests/r12-cw2-t13-session-policy-cleanup.txt) | closure-class | POOL-C A2 | QUEUED (spawning) |
+| `r12-cw2-t5-build-md-status-line-mount` | **MB-F-T5-BUILD-MD-STATUS-LINE-MOUNT-WIRING** (Tier 2; FOLLOWUPS:353). Mount BuildMdStatusLine in FrameCRoot + useEffect readBuildMd + onSpawnTriggerClick wiring. 2-WB + WB-final. **PATH-DISJOINT** (frame-c/ only). | [r12-cw2-t5-build-md-status-line-mount.txt](territorial-manifests/r12-cw2-t5-build-md-status-line-mount.txt) | closure-class | POOL-C A6 | QUEUED (spawning) |
+| `r12-cw2-workstation-dist-rebuild-parity` | **MB-F-WORKSTATION-DIST-REBUILD-PARITY** (Tier 2; FOLLOWUPS:373). Mirror dispatch-core postinstall pattern (gen-6 `6eaf194`) into dispatch-workstation/package.json + dist-freshness probe. 2-WB + WB-final. **PATH-DISJOINT** (workstation package.json only). | [r12-cw2-workstation-dist-rebuild-parity.txt](territorial-manifests/r12-cw2-workstation-dist-rebuild-parity.txt) | closure-class | POOL-C A8 | QUEUED (spawning) |
+| `r12-cw2-mb-t07-kanban-column-integration` | **MB-F-MB-T07-KANBAN-COLUMN-INTEGRATION** (Tier 2; FOLLOWUPS:84). Wire OrchestratorCardsLane into KanbanColumn.tsx for awaiting_review + stale columns. 3-WB + WB-final. **PATH-DISJOINT** (dispatch-web only). | [r12-cw2-mb-t07-kanban-column-integration.txt](territorial-manifests/r12-cw2-mb-t07-kanban-column-integration.txt) | closure-class | POOL-C B7 | QUEUED (spawning) |
+| `r12-cw2-t25-plan-usage-roundtrip-test` | **MB-F-T25-PLAN-USAGE-ROUNDTRIP-INTEGRATION-TEST-STALE-AFTER-T9-AUTOWIRE** (Tier 2; FOLLOWUPS:370). Refactor fake bridge to multi-subscriber + fix 6 stale assertions (cairn-test-failure-triage finding from `de6620e`). TEST-ONLY (no src/ changes). 2-WB + WB-final. **PATH-DISJOINT**. | [r12-cw2-t25-plan-usage-roundtrip-test.txt](territorial-manifests/r12-cw2-t25-plan-usage-roundtrip-test.txt) | closure-class | POOL-C B12 | QUEUED (spawning) |
+| `r12-cw2-t15-autopilot-token-integration` | **MB-F-T15-AUTOPILOT-TOKEN-INTEGRATION** (Tier 2; FOLLOWUPS:189). Wire autopilot loop telemetry → TileGridApp setSessions per-session token updates. 2-WB + WB-final. **PATH-DISJOINT** (tile-grid/ only). | [r12-cw2-t15-autopilot-token-integration.txt](territorial-manifests/r12-cw2-t15-autopilot-token-integration.txt) | closure-class | POOL-C A4 | QUEUED (spawning) |
+
+**Active concurrent session count target** [MODELED per V4 §B(I)]: 7 cw2 closure + 1 r12-archive-writer (§12 stress-cascade archive) = 8 producing at first cohort dispatch. Refill targets 12-cap as WB-finals fire per V4 §B(II) continuous-refill protocol.
+
+**Refill candidates ranked** (per POOL-C inventory + V4 §B(III) POOL-A→D ranking):
+1. POOL-C Priority A: A3 (MB-T05-PAYLOAD-VALIDATION; touches dispatch-core schema — operator-supervised mechanical translation), A5 (T15-SESSION-DAEMON-FIELDS-WIRING; tile-grid; sequential after A4 completes), A9 (T11-T13-ACTION-TYPE-ENUM-DEDUP; dispatch-core), A10 (DISPATCH-CORE-DUAL-IMPORT-PATTERN-DRIFT; workstation eslint), A7 (WORKSTATION-TSCONFIG-TILE-GRID-TSX-EXCLUDE-CONVENTION; **CLAUDE.md amendment portion operator-only — split scope at refill**)
+2. POOL-C Priority B: B1-B24 (24 MEDIUM candidates; path-disjoint groupings 1-9 per POOL-C inventory §D)
+3. Stamp-lag-sweep cycle 2 — 9 STALE-DISPATCH detections from POOL-C inventory §F (recycle `r12-t1c-w1-stamp-lag-sweep` session)
+4. POOL-D Tier-3 dispatch only after POOL-C substantially closes (~60%+ per V4 §C(IX))
+
+**Subagent invocation plan** (V4 §B(IV) aggressive invocation):
+- Every cw2 session SHOULD invoke `cairn-phase-1-diagnose` at boot per shared bootstrap §B
+- `cairn-test-failure-triage` on every WB GREEN test failure
+- `cairn-cross-package-impact` if scope grows to ≥2 packages
+- `cairn-anti-fabrication-verifier` per batch of 5 rows in stamp-lag-sweep cycle 2
+- r12-archive-writer logs all invocations to §12.3 plugin-retrofit verdict at scale
+
 ## CLOSURE-PENDING-OPERATOR-ARBITRATION (Tier-1 rows requiring operator-only territory per §5(XII); skip-and-surface per RESUME §5(XII))
 
 These Tier-1 rows are recognized as closure-cascade candidates but require operator-arbitration of frozen contracts or path-of-closure decisions BEFORE a closure-impl session can be dispatched. Each row remains OPEN in `docs/FOLLOWUPS.md`; orchestrator skips dispatch + ANNOUNCES the blockage.
