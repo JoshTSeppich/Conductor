@@ -47,8 +47,24 @@ import {
   DEFAULT_FILTER_STATE,
   type FilterState,
 } from './session-filter-bar.js';
+import { BuildMdStatusLine } from './build-md-status-line.js';
+import type { BuildMdLoadResult } from '../build-md/types.js';
 import type { ConsoleBridge } from '../main/console-bridge.js';
 import type { TerminalAdapter } from '../console-panel/terminal-adapter.js';
+
+// MB-F-T5-BUILD-MD-STATUS-LINE-MOUNT-WIRING WB1 — bridge surface shape
+// for the BUILD.md driver. Mirrors preload.mts:275,288 signatures
+// (readBuildMd + triggerBuildMdDispatch ship inside T5 sentinel zones
+// at HEAD). Accessed via globalThis pattern (mirrors
+// detail-pane.tsx:575-583 readSwarmState precedent).
+interface BuildMdWindowBridge {
+  readonly readBuildMd?: (opts?: { path?: string }) => Promise<BuildMdLoadResult>;
+  readonly triggerBuildMdDispatch?: () => Promise<unknown>;
+}
+
+interface WindowWithBuildMdBridge {
+  workstationBridge?: BuildMdWindowBridge;
+}
 
 // Narrow subset of WorkstationBridgeShape (tile-grid-app.tsx:41-86)
 // — only the onSpawnResult method is load-bearing for T1 WB3 sessions-
@@ -94,11 +110,28 @@ function isSpawnSuccessReply(x: unknown): x is SpawnSuccessReply {
 
 const ROOT_STYLE: CSSProperties = {
   display: 'flex',
-  flexDirection: 'row',
+  flexDirection: 'column',
   height: '100%',
   width: '100%',
   boxSizing: 'border-box',
   overflow: 'hidden',
+};
+
+const BODY_ROW_STYLE: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'row',
+  flex: '1 1 auto',
+  minHeight: 0,
+  width: '100%',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
+};
+
+const BOTTOM_STATUS_ROW_STYLE: CSSProperties = {
+  flexShrink: 0,
+  borderTop: '1px solid #303030',
+  width: '100%',
+  boxSizing: 'border-box',
 };
 
 const SESSION_LIST_COL_STYLE: CSSProperties = {
@@ -282,36 +315,74 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
   );
   const filteredSessions = applyFilter(sessions, filterState);
 
+  // MB-F-T5-BUILD-MD-STATUS-LINE-MOUNT-WIRING WB1 — BUILD.md state
+  // holder + initial load on mount. Mirrors detail-pane.tsx:575-583
+  // globalThis access pattern (window.workstationBridge guard, then
+  // promise-then setState). When bridge or method absent (non-Electron
+  // envs, test fixtures without readBuildMd), buildMdResult stays null
+  // and BuildMdStatusLine does not render — graceful degradation.
+  const [buildMdResult, setBuildMdResult] =
+    useState<BuildMdLoadResult | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const win = (globalThis as unknown as { window?: WindowWithBuildMdBridge })
+      .window;
+    const bridge = win?.workstationBridge;
+    if (!bridge?.readBuildMd) return undefined;
+    void bridge
+      .readBuildMd()
+      .then((result) => {
+        if (cancelled) return;
+        setBuildMdResult(result);
+      })
+      .catch(() => {
+        // Swallow — bridge errors leave buildMdResult null; status line
+        // simply doesn't render. Operator surfaces this through the
+        // wireframe error-state branches once a real load completes.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div data-testid="frame-c-root" style={ROOT_STYLE}>
-      <div
-        data-testid="frame-c-session-list-col"
-        style={SESSION_LIST_COL_STYLE}
-      >
-        <SessionFilterBar
-          sessions={sessions}
-          filterState={filterState}
-          onFilterStateChange={setFilterState}
-        />
-        <SessionList
-          sessions={filteredSessions}
-          onSelect={handleSelect}
-          selectedSessionName={selected}
-        />
-      </div>
-      <div data-testid="frame-c-detail-col" style={DETAIL_COL_STYLE}>
-        {selected !== null && (
-          <DetailPane
-            selectedSessionName={selected}
-            branchName={selectedEntry?.branchName}
-            tokensUsed={selectedEntry?.tokensUsed}
-            tokenBudget={selectedEntry?.tokenBudget}
-            spawnMode={selectedEntry?.spawnMode}
-            consoleBridge={consoleBridge}
-            createTerminal={createTerminal}
+      <div style={BODY_ROW_STYLE}>
+        <div
+          data-testid="frame-c-session-list-col"
+          style={SESSION_LIST_COL_STYLE}
+        >
+          <SessionFilterBar
+            sessions={sessions}
+            filterState={filterState}
+            onFilterStateChange={setFilterState}
           />
-        )}
+          <SessionList
+            sessions={filteredSessions}
+            onSelect={handleSelect}
+            selectedSessionName={selected}
+          />
+        </div>
+        <div data-testid="frame-c-detail-col" style={DETAIL_COL_STYLE}>
+          {selected !== null && (
+            <DetailPane
+              selectedSessionName={selected}
+              branchName={selectedEntry?.branchName}
+              tokensUsed={selectedEntry?.tokensUsed}
+              tokenBudget={selectedEntry?.tokenBudget}
+              spawnMode={selectedEntry?.spawnMode}
+              consoleBridge={consoleBridge}
+              createTerminal={createTerminal}
+            />
+          )}
+        </div>
       </div>
+      {buildMdResult !== null && (
+        <div style={BOTTOM_STATUS_ROW_STYLE}>
+          <BuildMdStatusLine result={buildMdResult} />
+        </div>
+      )}
     </div>
   );
 }
