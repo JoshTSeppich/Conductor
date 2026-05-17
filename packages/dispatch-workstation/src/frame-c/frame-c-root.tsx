@@ -346,6 +346,30 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
     };
   }, []);
 
+  // MB-F-T5-BUILD-MD-STATUS-LINE-MOUNT-WIRING WB2 — spawn-trigger
+  // click handler per FOLLOWUPS:353 closure-path note: invokes
+  // bridge.triggerBuildMdDispatch() then re-invokes bridge.readBuildMd()
+  // to refresh status counts post-dispatch. Errors swallowed (status
+  // line surfaces them on next successful load).
+  const handleSpawnTriggerClick = (): void => {
+    const win = (globalThis as unknown as { window?: WindowWithBuildMdBridge })
+      .window;
+    const bridge = win?.workstationBridge;
+    if (!bridge?.triggerBuildMdDispatch) return;
+    void bridge
+      .triggerBuildMdDispatch()
+      .then(() => {
+        if (!bridge.readBuildMd) return;
+        return bridge.readBuildMd().then((result) => {
+          setBuildMdResult(result);
+        });
+      })
+      .catch(() => {
+        // Swallow — failed trigger leaves prior buildMdResult in place;
+        // next successful load updates it.
+      });
+  };
+
   return (
     <div data-testid="frame-c-root" style={ROOT_STYLE}>
       <div style={BODY_ROW_STYLE}>
@@ -380,7 +404,10 @@ export function FrameCRoot(props: FrameCRootProps): JSX.Element {
       </div>
       {buildMdResult !== null && (
         <div style={BOTTOM_STATUS_ROW_STYLE}>
-          <BuildMdStatusLine result={buildMdResult} />
+          <BuildMdStatusLine
+            result={buildMdResult}
+            onSpawnTriggerClick={handleSpawnTriggerClick}
+          />
         </div>
       )}
     </div>
