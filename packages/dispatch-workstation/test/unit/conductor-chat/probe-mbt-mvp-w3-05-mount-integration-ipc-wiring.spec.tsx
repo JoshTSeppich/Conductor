@@ -191,16 +191,27 @@ describe('MB-T-MVP-W3 WB4 (gen-7 lane) — mount integration + IPC wiring', () =
     }
   });
 
-  it('renders gracefully when window.conductorChatBridge is absent (default empty state)', () => {
-    // No bridge present → mount succeeds with empty default state.
+  it('renders gracefully when window.conductorChatBridge is absent (DEFAULT_IDLE_STATE)', () => {
+    // No bridge present → mount succeeds with the default idle state
+    // (one assistant intro bubble per WB5 §5.5 screenshot oracle).
+    // WB4 originally asserted truly-empty defaults; WB5 corrects the
+    // default to match the design idle screenshot. The "bridge absent"
+    // contract remains: subscribe/emit are no-ops; the surface still
+    // mounts cleanly with default-rendering content.
     delete (window as unknown as { conductorChatBridge?: unknown })
       .conductorChatBridge;
     const result = tryAutoMountConductorChat();
     expect(result.mounted).toBe(true);
     expect(screen.getByTestId('conductor-chat-root')).toBeInTheDocument();
-    // No messages → no user/assistant/dispatch/system message testids.
+    // No user / dispatch / system / typing variants at idle.
     expect(screen.queryByTestId('conductor-message-user')).toBeNull();
-    expect(screen.queryByTestId('conductor-message-assistant')).toBeNull();
+    expect(screen.queryByTestId('conductor-message-dispatch')).toBeNull();
+    expect(screen.queryByTestId('conductor-message-system')).toBeNull();
+    expect(screen.queryByTestId('conductor-message-typing')).toBeNull();
+    // Exactly one assistant intro bubble per the default idle state.
+    expect(
+      screen.queryAllByTestId('conductor-message-assistant'),
+    ).toHaveLength(1);
     if (result.mounted) result.dispose();
   });
 });

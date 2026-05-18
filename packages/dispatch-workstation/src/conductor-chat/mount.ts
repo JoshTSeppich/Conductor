@@ -100,8 +100,19 @@ export type ConductorChatMountResult =
 
 const DEFAULT_AUTO_MOUNT_ROOT_ID = 'conductor-chat-mount-root';
 
-const EMPTY_STATE: ConductorChatState = {
-  messages: [],
+// Canonical intro assistant message — verbatim from design app.jsx:86.
+// Renders into the idle-state thread per the §5.5 NORMATIVE screenshot
+// oracle (all 6 design screenshots show this single intro bubble when
+// nothing is attached). When a production bridge ships via
+// MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED followup the bridge can
+// override this default through getInitialState; absent that, the
+// renderer defaults to an idle screen that matches the design.
+const CANONICAL_INTRO_TEXT =
+  "Conductor ready. Attach a build.md and I'll plan it into ordered steps, " +
+  'hand them to the Orchestrator one at a time, and watch the agent panes for failures.';
+
+const DEFAULT_IDLE_STATE: ConductorChatState = {
+  messages: [{ role: 'assistant', text: CANONICAL_INTRO_TEXT }],
   attached: null,
   queue: [],
   running: 0,
@@ -120,7 +131,7 @@ function ConductorChatApp(props: ConductorChatAppProps): React.ReactElement {
   const { bridge, renderHeader } = props;
   const initial = React.useMemo(() => {
     if (bridge?.getInitialState) return bridge.getInitialState();
-    return EMPTY_STATE;
+    return DEFAULT_IDLE_STATE;
   }, [bridge]);
   const [state, setState] = React.useState<ConductorChatState>(initial);
 
