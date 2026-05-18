@@ -46,7 +46,7 @@ export function FocusPaneHeader({
   const resolvedNow = typeof nowMs === 'number' ? nowMs : Date.now();
   const uptimeLabel = formatUptimeLabel(spawnedAtMs, resolvedNow);
   return (
-    <div data-testid="orchestrator-focus-pane-header-bar">
+    <div data-testid="orchestrator-focus-pane-header">
       <span data-testid="orchestrator-focus-pane-header-pid">{EM_DASH}</span>
       <span data-testid="orchestrator-focus-pane-header-uptime">{uptimeLabel ?? EM_DASH}</span>
       <span data-testid="orchestrator-focus-pane-header-cpu">{EM_DASH}</span>
