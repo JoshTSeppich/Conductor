@@ -791,5 +791,15 @@
          xterm-backed TerminalAdapter. Defer so it loads after the other
          renderers but before the body close. -->
     <script src="../orchestrator-focus-pane/renderer.js" defer></script>
+    <!-- MB-T-MVP-CONDUCTOR-CHAT-MOUNT-WIRING conductor-chat renderer:
+         auto-mounts <ConductorChat> into #chat-region #root (lines 297-299)
+         via mount-entry.ts → tryAutoMountConductorChat({rootElementId:'root'}).
+         Q1=(d) per operator arbitration: render-only mount-wiring with
+         bridge=null; DEFAULT_IDLE_STATE seeds the canonical intro bubble.
+         Production action wiring (composer send, header pause/cancel,
+         paperclip attach) deferred to Ticket B per FOLLOWUPS row 390
+         MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED. Replaces the chat-shell
+         <script> tag removed in r12-mvp-w3-chatshell-sweep (aef0ac8). -->
+    <script src="../conductor-chat/renderer.js" defer></script>
   </body>
 </html>
