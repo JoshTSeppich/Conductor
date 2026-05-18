@@ -4,3 +4,4 @@
 2026-05-17T19:44Z | gen-7-w3 | 9357fd8 | src/conductor-chat/build-md-chip.tsx (WB3 GREEN — build-md-chip body; unblocks operator-CC composer integration)
 2026-05-18T01:47Z | operator-CC | 605fd7c | test/unit/conductor-chat/probe-mbt-mvp-w3-03-composer-paperclip-textarea-send.spec.tsx (WB3 RED — composer probe-03 paperclip+textarea+send+chip-placeholder+dispatch-next)
 2026-05-18T01:51Z | operator-CC | f46649d | src/conductor-chat/composer.tsx (WB3 GREEN — composer body: paperclip+textarea+send+chip-stub+dispatch-next; 8/8 probe pass)
+2026-05-18T01:57Z | operator-CC | 84e7c67 | test/unit/conductor-chat/probe-mbt-mvp-w3-04-header-pause-resume-cancel.spec.tsx (WB4 RED — header probe-04 brand+filename-pill+pause/resume+cancel)
