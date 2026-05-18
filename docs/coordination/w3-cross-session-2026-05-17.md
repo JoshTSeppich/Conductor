@@ -10,3 +10,4 @@
 2026-05-18T02:17Z | gen-7-w3 | fa5afbb | src/conductor-chat/mount.ts + index.ts + conductor-chat.tsx slot composition (WB4 GREEN — Path-B stub-only IPC; 45/45 cross-session suite pass)
 2026-05-18T02:20Z | gen-7-w3 | f4b6642 | test/unit/conductor-chat/probe-mbt-mvp-w3-06-screenshot-fidelity-acceptance.spec.tsx (WB5 RED — §5.5 NORMATIVE HARD GATE idle-only oracle; 5/7 structural pass + 2/7 intro-message RED)
 2026-05-18T02:24Z | gen-7-w3 | bdc50a8 | src/conductor-chat/mount.ts + probe-05 update (WB5 GREEN — DEFAULT_IDLE_STATE seeds canonical intro; 52/52 cross-session suite pass; §5.5 HARD GATE 7/7)
+2026-05-18T02:33Z | gen-7-w3 | 28b5692 | test/integration/probe-mbt-mvp-w3-07-conductor-chat-integration.test.ts (WB6 GREEN — integration acceptance probe verifying WB1-WB5 + operator-CC composer+header end-to-end; 8/8 pass; 60/60 cross-session combined)
