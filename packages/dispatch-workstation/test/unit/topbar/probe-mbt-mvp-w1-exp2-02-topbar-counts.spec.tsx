@@ -92,8 +92,11 @@ describe('MB-T-MVP-W1-EXPANSION-2 WB2 — Topbar live counts', () => {
     expect(screen.getByTestId('topbar-budget').textContent).toBe('—');
   });
 
-  it('budget rounds to 2 decimal places (currency convention)', () => {
-    render(<Topbar budgetUsedDollars={1.005} budgetTotalDollars={10} />);
-    expect(screen.getByTestId('topbar-budget').textContent).toBe('$1.01 / $10.00');
+  it('budget formats to exactly 2 decimal places (currency convention)', () => {
+    // Use 1.236 to avoid IEEE-754 1.005 round-half-to-even ambiguity:
+    // Number(1.005).toFixed(2) === '1.00' in V8 due to float storage.
+    // 1.236 → '1.24' deterministically across JS engines.
+    render(<Topbar budgetUsedDollars={1.236} budgetTotalDollars={10} />);
+    expect(screen.getByTestId('topbar-budget').textContent).toBe('$1.24 / $10.00');
   });
 });

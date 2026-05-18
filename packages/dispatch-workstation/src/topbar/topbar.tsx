@@ -95,6 +95,15 @@ const TOPBAR_META_STYLE: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
+// WB2 — separator pip between meta items (design-handoff:
+// .topbar-sep { width: 1px; height: 14px; background: var(--border); }).
+const TOPBAR_SEP_STYLE: React.CSSProperties = {
+  width: 1,
+  height: 14,
+  background: COLOR_BORDER,
+  display: 'inline-block',
+};
+
 export interface TopbarProps {
   /**
    * Environment label (e.g. "staging · us-east"). Per Q-EXP2-2 auto-ack
@@ -102,6 +111,41 @@ export interface TopbarProps {
    * pending live IPC wiring (Tier-2 followup at WB-final).
    */
   envLabel?: string;
+  /**
+   * Live pane count (N panes). undefined → em-dash placeholder.
+   * Design app.jsx:292 `${sessions.length} pane${sessions.length === 1 ? '' : 's'}`.
+   */
+  paneCount?: number;
+  /**
+   * Live running session count (M running). 0 renders verbatim per
+   * focus-pane-header.tsx renderNumericOrDash precedent.
+   */
+  runningCount?: number;
+  /**
+   * Gates queue/done block visibility per design app.jsx:295
+   * `{attached && (<><span/><span/></>)}`.
+   */
+  buildMdAttached?: boolean;
+  /**
+   * Queue depth shown under buildMdAttached. undefined → em-dash.
+   */
+  buildMdQueue?: number;
+  /**
+   * Done count shown under buildMdAttached. undefined → em-dash.
+   * (Computed in design as `attached.steps - queue.length - runningCount`;
+   * caller supplies pre-computed value.)
+   */
+  buildMdDone?: number;
+  /**
+   * Budget used in dollars. Display formatted as "$U.UU" with 2-decimal
+   * currency rounding. Per atomic display rule: both used+total must be
+   * present, else render em-dash for the whole budget label.
+   */
+  budgetUsedDollars?: number;
+  /**
+   * Budget total in dollars. See budgetUsedDollars.
+   */
+  budgetTotalDollars?: number;
 }
 
 function renderEnvLabelOrDash(value: string | undefined): string {
@@ -109,7 +153,50 @@ function renderEnvLabelOrDash(value: string | undefined): string {
   return value;
 }
 
-export function Topbar({ envLabel }: TopbarProps = {}): React.ReactElement {
+function renderPaneCountOrDash(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return EM_DASH;
+  return `${value} pane${value === 1 ? '' : 's'}`;
+}
+
+function renderRunningCountOrDash(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return EM_DASH;
+  return `${value} running`;
+}
+
+function renderNumericOrDash(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return EM_DASH;
+  return String(value);
+}
+
+function formatCurrency(value: number): string {
+  return `$${value.toFixed(2)}`;
+}
+
+function renderBudgetOrDash(
+  used: number | undefined,
+  total: number | undefined,
+): string {
+  if (
+    typeof used !== 'number' ||
+    !Number.isFinite(used) ||
+    typeof total !== 'number' ||
+    !Number.isFinite(total)
+  ) {
+    return EM_DASH;
+  }
+  return `${formatCurrency(used)} / ${formatCurrency(total)}`;
+}
+
+export function Topbar({
+  envLabel,
+  paneCount,
+  runningCount,
+  buildMdAttached,
+  buildMdQueue,
+  buildMdDone,
+  budgetUsedDollars,
+  budgetTotalDollars,
+}: TopbarProps = {}): React.ReactElement {
   return (
     <div data-testid="topbar-root" style={TOPBAR_STYLE}>
       <div data-testid="topbar-left" style={TOPBAR_SIDE_STYLE}>
@@ -124,10 +211,30 @@ export function Topbar({ envLabel }: TopbarProps = {}): React.ReactElement {
             v_mvp
           </span>
         </div>
+        <span style={TOPBAR_SEP_STYLE} />
+        <span data-testid="topbar-pane-count" style={TOPBAR_META_STYLE}>
+          {renderPaneCountOrDash(paneCount)}
+        </span>
+        <span style={TOPBAR_SEP_STYLE} />
+        <span data-testid="topbar-running-count" style={TOPBAR_META_STYLE}>
+          {renderRunningCountOrDash(runningCount)}
+        </span>
+        {buildMdAttached && (
+          <>
+            <span style={TOPBAR_SEP_STYLE} />
+            <span data-testid="topbar-queue-done" style={TOPBAR_META_STYLE}>
+              {`queue: ${renderNumericOrDash(buildMdQueue)} · done: ${renderNumericOrDash(buildMdDone)}`}
+            </span>
+          </>
+        )}
       </div>
       <div data-testid="topbar-right" style={TOPBAR_SIDE_STYLE}>
         <span data-testid="topbar-env-label" style={TOPBAR_META_STYLE}>
           {renderEnvLabelOrDash(envLabel)}
+        </span>
+        <span style={TOPBAR_SEP_STYLE} />
+        <span data-testid="topbar-budget" style={TOPBAR_META_STYLE}>
+          {renderBudgetOrDash(budgetUsedDollars, budgetTotalDollars)}
         </span>
       </div>
     </div>
