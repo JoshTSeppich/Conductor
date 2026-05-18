@@ -160,6 +160,88 @@ const OSTRIP_BAR_QUEUED_STYLE: React.CSSProperties = {
   background: COLOR_BORDER,
 };
 
+// Per HTML:270-282 .ostrip-footer + .ostrip-slots.
+const OSTRIP_FOOTER_STYLE: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+};
+
+const OSTRIP_SLOTS_WRAP_STYLE: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+};
+
+const OSTRIP_SLOTS_STYLE: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, 10px)',
+  gridAutoRows: '10px',
+  gap: 3,
+  maxHeight: 36,
+  overflow: 'hidden',
+};
+
+// Per HTML:284-296 .ostrip-slot.
+const OSTRIP_SLOT_BASE_STYLE: React.CSSProperties = {
+  width: 10,
+  height: 10,
+  borderRadius: 2,
+  position: 'relative',
+  overflow: 'hidden',
+  padding: 0,
+  border: 'none',
+  transition: 'transform 120ms ease, background 200ms ease',
+};
+
+// Status background colors per HTML:297-301.
+const OSTRIP_SLOT_STATUS_BG: Record<string, string> = {
+  empty: 'rgba(35, 35, 43, 0.6)',      // color-mix(--border 60%, transparent)
+  starting: '#f0a062',                  // --warn
+  running: '#6ad4b8',                   // --ok
+  done: 'rgba(35, 35, 43, 0.7)',        // color-mix(--ok 30%, --border) — approximate
+  error: '#e07472',                     // --err
+};
+
+// Per HTML:302-307 .ostrip-slot-pulse.
+const OSTRIP_SLOT_PULSE_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  background: COLOR_OK,
+  opacity: 0.4,
+};
+
+// Per HTML:313-330 .ostrip-legend.
+const OSTRIP_LEGEND_STYLE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  fontFamily: "'IBM Plex Mono', monospace",
+  fontSize: 9.5,
+  color: COLOR_TEXT_MUTE,
+  flexShrink: 0,
+};
+
+const OSTRIP_LEGEND_ENTRY_STYLE: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+};
+
+const OSTRIP_LEGEND_SWATCH_BASE: React.CSSProperties = {
+  display: 'inline-block',
+  width: 8,
+  height: 8,
+  borderRadius: 2,
+};
+
+export type SlotSessionStatus = 'starting' | 'running' | 'done' | 'error';
+
+export interface SlotSession {
+  id: string;
+  name: string;
+  status: SlotSessionStatus;
+}
+
 export interface OrchestratorStripProps {
   /**
    * Filename of currently-attached build.md (drives title text override).
@@ -181,7 +263,26 @@ export interface OrchestratorStripProps {
   runningCount?: number;
   queuedCount?: number;
   totalSteps?: number;
+  /**
+   * Live sessions filling the SlotGrid in order. Slots beyond
+   * sessions.length render as empty (disabled buttons). Per design
+   * jsx:32 `Array.from({ length: maxSlots }, (_, i) => sessions[i] || null)`.
+   */
+  sessions?: SlotSession[];
+  /**
+   * Max slot count (10×10 squares fill the grid). Default 64 per
+   * operator vision chat1.md:107 + scope-arbitration §2.3 (maxSlots
+   * radio ∈ {16, 32, 64}; production cap arbitration deferred).
+   */
+  maxSlots?: number;
+  /**
+   * Click handler invoked with the slot's session (live slots only;
+   * empty slots are disabled).
+   */
+  onSlotClick?: (session: SlotSession) => void;
 }
+
+const DEFAULT_MAX_SLOTS = 64;
 
 function safeCount(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
@@ -228,6 +329,80 @@ function ProgressBar({
   );
 }
 
+function SlotGrid({
+  sessions,
+  maxSlots,
+  onSlotClick,
+}: {
+  sessions: SlotSession[];
+  maxSlots: number;
+  onSlotClick?: (session: SlotSession) => void;
+}): React.ReactElement {
+  // Design jsx:32: `Array.from({ length: maxSlots }, (_, i) => sessions[i] || null)`.
+  const slots: (SlotSession | null)[] = Array.from(
+    { length: maxSlots },
+    (_, i) => sessions[i] ?? null,
+  );
+  return (
+    <div data-testid="ostrip-slots" style={OSTRIP_SLOTS_STYLE}>
+      {slots.map((session, i) => {
+        const status: 'empty' | SlotSessionStatus = session?.status ?? 'empty';
+        const title = session ? `${session.name} · ${status}` : 'empty slot';
+        const bg = OSTRIP_SLOT_STATUS_BG[status] ?? OSTRIP_SLOT_STATUS_BG.empty;
+        return (
+          <button
+            key={i}
+            data-testid={`ostrip-slot-${i}`}
+            data-status={status}
+            title={title}
+            type="button"
+            disabled={session === null}
+            style={{
+              ...OSTRIP_SLOT_BASE_STYLE,
+              background: bg,
+              cursor: session === null ? 'default' : 'pointer',
+            }}
+            onClick={() => {
+              if (session !== null) onSlotClick?.(session);
+            }}
+          >
+            {session?.status === 'running' && (
+              <span
+                data-testid={`ostrip-slot-pulse-${i}`}
+                style={OSTRIP_SLOT_PULSE_STYLE}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Legend(): React.ReactElement {
+  const entries: { key: string; label: string; bg: string }[] = [
+    { key: 'running', label: 'running', bg: COLOR_OK },
+    { key: 'starting', label: 'starting', bg: '#f0a062' },
+    { key: 'done', label: 'done', bg: 'rgba(35, 35, 43, 0.7)' },
+    { key: 'error', label: 'error', bg: '#e07472' },
+    { key: 'empty', label: 'idle', bg: 'rgba(35, 35, 43, 0.6)' },
+  ];
+  return (
+    <div data-testid="ostrip-legend" style={OSTRIP_LEGEND_STYLE}>
+      {entries.map((e) => (
+        <span
+          key={e.key}
+          data-testid={`ostrip-legend-${e.key}`}
+          style={OSTRIP_LEGEND_ENTRY_STYLE}
+        >
+          <i style={{ ...OSTRIP_LEGEND_SWATCH_BASE, background: e.bg }} />
+          {e.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Stat({
   label,
   testid,
@@ -259,11 +434,16 @@ export function OrchestratorStrip({
   runningCount,
   queuedCount,
   totalSteps,
+  sessions,
+  maxSlots,
+  onSlotClick,
 }: OrchestratorStripProps = {}): React.ReactElement {
   const safeDone = safeCount(done);
   const safeRunning = safeCount(runningCount);
   const safeQueued = safeCount(queuedCount);
   const safeTotal = safeCount(totalSteps);
+  const resolvedSessions = sessions ?? [];
+  const resolvedMaxSlots = typeof maxSlots === 'number' ? maxSlots : DEFAULT_MAX_SLOTS;
 
   const titleText =
     typeof attachedName === 'string' && attachedName.length > 0
@@ -312,6 +492,16 @@ export function OrchestratorStrip({
         queuedCount={safeQueued}
         totalSteps={safeTotal}
       />
+      <div style={OSTRIP_FOOTER_STYLE}>
+        <div style={OSTRIP_SLOTS_WRAP_STYLE}>
+          <SlotGrid
+            sessions={resolvedSessions}
+            maxSlots={resolvedMaxSlots}
+            onSlotClick={onSlotClick}
+          />
+        </div>
+        <Legend />
+      </div>
     </div>
   );
 }
