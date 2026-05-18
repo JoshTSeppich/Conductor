@@ -70,6 +70,15 @@ export interface TileProps {
   /** Token budget (model context window). Default 200_000 per
    *  Q-MBT15-2 stub. */
   readonly tokenBudget?: number;
+  // ── MB-T-MVP-W2-AGENT-GRID WB3: spawnedAtMs end-to-end prop-drill ─
+  /** Spawn-time (ms-since-epoch) for the session. Threaded to
+   *  <TileHeader spawnedAtMs> where `formatUptimeLabel(spawnedAtMs,
+   *  Date.now())` renders the operator-vision-Component-2 uptime
+   *  chrome element. Optional — when undefined, uptime label is
+   *  conditionally suppressed inside TileHeader (graceful absent-data).
+   *  Source: TileGridSessionEntry.spawnedAtMs populated by tile-grid-
+   *  app.tsx spawn-result handler from the SpawnSessionResult envelope. */
+  readonly spawnedAtMs?: number;
   // ── MB-T16 WB4: tile-header picker slot render-prop ───────────────
   /** Render-prop for the picker slot (Q-MBT16-4=a). When provided,
    *  the closure is called with the tile's `sessionName` and the
@@ -153,6 +162,7 @@ export function Tile({
   model,
   tokensUsed,
   tokenBudget,
+  spawnedAtMs,
   renderPickerSlot,
   renderAutopilotSlot,
   renderFooterSlot,
@@ -210,6 +220,7 @@ export function Tile({
           model={model}
           tokensUsed={tokensUsed}
           tokenBudget={tokenBudget}
+          spawnedAtMs={spawnedAtMs}
         />
         <div data-slot="picker" data-testid={`tile-picker-slot-${sessionName}`}>
           {/* MB-T-WIREFRAME-C1P4: closure suppressed under compact;

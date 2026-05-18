@@ -300,6 +300,15 @@ export function TileGridApp({
             ...(typeof replyModel === 'string' && replyModel.length > 0
               ? { model: replyModel }
               : {}),
+            // MB-T-MVP-W2-AGENT-GRID WB3: thread spawnedAtMs into the
+            // entry so <Tile> → <TileHeader> can render the uptime label
+            // per operator-vision Component 2 spec. The side-Map
+            // (_spawnedAtMsBySession) is preserved for the existing
+            // onSpawnedAtMsCapture callback consumers.
+            ...(typeof replySpawnedAtMs === 'number' &&
+            Number.isFinite(replySpawnedAtMs)
+              ? { spawnedAtMs: replySpawnedAtMs }
+              : {}),
           },
         ];
       });

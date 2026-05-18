@@ -50,6 +50,19 @@ export interface TileGridSessionEntry {
    *  for sessions seeded via initialSessions without explicit cwd; the
    *  footer's cwd line is omitted in that case (Q-MBT18-7=d). */
   readonly cwd?: string;
+  // ── MB-T-MVP-W2-AGENT-GRID WB3: spawnedAtMs end-to-end prop-drill ────
+  /** Spawn-time (ms-since-epoch) sourced from the SpawnSessionResult
+   *  envelope (Cluster A populator, MB-T-PHASE-4-T8-SIBLING-EXEC WB2).
+   *  Wave-2 closes the prop-drill gap left by t8-sibling-exec build-doc
+   *  §1.5 ("tile-grid.tsx + tile.tsx out of t8-sibling-exec territory"):
+   *  tile-grid-app.tsx now stores the value in this entry field (parallel
+   *  to the renderer-local `_spawnedAtMsBySession` Map kept for legacy
+   *  callback observability), tile-grid.tsx passes it to <Tile>, and
+   *  tile.tsx threads it to <TileHeader> where `formatUptimeLabel` renders
+   *  the operator-vision-Component-2-mandated uptime chrome element.
+   *  Optional: pre-WB2-of-t8-sibling spawn envelopes omit it; in that case
+   *  uptime label is conditionally hidden (graceful absent-data). */
+  readonly spawnedAtMs?: number;
   // ── MB-F-TILEGRIDSESSIONENTRY-SPAWNMODE-MISSING closure (a) ──────────
   /** Per-spawn permission mode for the session. Mirrors
    *  SpawnPermissionMode in spawn-handler.ts:91 — 'auto' ⇔ tmux argv
@@ -459,6 +472,7 @@ export function TileGrid({
               model={s.model}
               tokensUsed={s.tokensUsed}
               tokenBudget={s.tokenBudget}
+              spawnedAtMs={s.spawnedAtMs}
               renderPickerSlot={renderPickerSlot}
               renderAutopilotSlot={renderAutopilotSlot}
               renderFooterSlot={renderFooterSlot}
