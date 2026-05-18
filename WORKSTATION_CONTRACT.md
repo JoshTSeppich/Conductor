@@ -425,6 +425,107 @@ Existing channels in this category predate this contract subsection (`workstatio
 | **Consumer** | `bypass-perms-indicator.tsx` (renderer; reads aggregated count via existing channel + subscribes via this new channel for state-change reactions). New consumer pattern: subscribe-and-react instead of read-on-demand. |
 | **Authoring ticket** | Paired with implementation ticket spinning out FOLLOWUPS:369 (`MB-T-PHASE-4-BOTTOM-RAIL-PROD-WIRING-FOLLOWUP`); this contract amendment is WB1 RED contract-author step. |
 | **Signature choice rationale** | Broadcast direction matches FOLLOWUPS:369 IPC fan-out prescription. Subscription pattern (`onX(callback)`) is renderer-side idiomatic for Electron IPC subscriptions; no precedent in §6.1-6.5 (all invoke-based) so this establishes new pattern for broadcast channels. Future broadcast channels should follow `onX(callback): unsubscribe` shape. |
+
+
+#### Channel #8 — `orchestrator-state:get-snapshot` (MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING, Ticket B)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `orchestrator-state:get-snapshot` |
+| **Direction** | renderer → main (invoke/handle) |
+| **Payload** | none |
+| **Response** | `Promise<OrchestratorStateSnapshot>` — see §6.6 OrchestratorStateSnapshot type below |
+| **Bridge surface** | `window.orchestratorStateBridge.getSnapshot(): Promise<OrchestratorStateSnapshot>` |
+| **Bridge style** | getter (no args) — NEW `orchestratorStateBridge` `contextBridge.exposeInMainWorld` binding (per per-IPC-family-prefix convention matching `frameCBridge` precedent at Channels #2-#4) |
+| **Consumer** | All three EXPANSION-2 mount entries (Topbar / OrchestratorStrip / ConductorChat) call this at auto-mount time for initial render before subscribing to live updates via Channel #9. Mirrors `coarchitect:getRateLimitState` precedent (`coarchitect-ipc.ts:129-131`). |
+| **Lifecycle** | Request-response; main reads aggregator's cached `latestSnapshot` field. Returns last-known snapshot OR a `polledAt: null` sentinel when no poll has fired yet (renderer surfaces honest "—" placeholders during boot). |
+| **Failure modes** | N/A in v3.0 — main is producer; cached snapshot always exists post-construction (initial seed at aggregator init time with `polledAt: null` + empty `sessions`/`messages` + `attached: null` + `paused` read from pause-state-store + `daemonReachable: false`). |
+| **Authoring ticket** | `MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING` WB1 RED (this amendment) |
+| **Signature choice rationale** | `Promise<OrchestratorStateSnapshot>` getter-style mirrors Channel #1 `workstationBridge.readSwarmState` precedent (no-args getter returning typed shape). NEW top-level `orchestratorStateBridge` binding rather than extending `workstationBridge` because the snapshot is a cross-surface aggregate (Topbar + OrchestratorStrip + ConductorChat all consume), not a workstation-internal file-read; per-IPC-family-prefix convention (`frameCBridge` precedent) keeps the namespace cohesive. |
+
+#### Channel #9 — `orchestrator-state:update` (MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING, Ticket B)
+
+| Field | Value |
+|---|---|
+| **Channel name** | `orchestrator-state:update` |
+| **Direction** | main → renderer (broadcast via `webContents.send` to all subscribed renderer windows) |
+| **Payload (main→renderer)** | `OrchestratorStateSnapshot` — see type definition below |
+| **Receiver shape** | Renderer subscribes via `orchestratorStateBridge.onUpdate(callback)` returning unsubscribe function |
+| **Bridge surface** | `window.orchestratorStateBridge.onUpdate(callback: (snapshot: OrchestratorStateSnapshot) => void): () => void` |
+| **Bridge style** | subscription (callback-based; returns unsubscribe) — flat-method convention per `preload.mts:14`; matches Channel #7 `coarchitect:bypass-perms-update` broadcast precedent (`onX(callback): unsubscribe`) |
+| **Action (main side)** | (1) `OrchestratorStateAggregator` polls daemon `GET /v2/sessions` on a 3000ms cadence with backoff to 12000ms on failure — mirrors `session-status-source-poll.ts` BACKOFF_CAP_MS=12000 pattern. (2) On each poll-success, aggregator derives the snapshot from sessions array + injected build-md attach state + pause-state-store + narration-store + daemon-reachability outcome. (3) Aggregator increments `snapshot.seq` (monotonic counter); dedup via `seq` comparison against `latestSnapshot.seq` (only emits when changed). (4) Aggregator fans out via `webContents.send('orchestrator-state:update', snapshot)` to all subscribed renderer windows. (5) Each renderer's registered callbacks fire. |
+| **Failure modes** | N/A for broadcast direction — main is producer. If `webContents.send` fails (closed window), main logs warning and continues (non-fatal per Electron IPC semantics; matches Channel #7 disposition). Daemon-poll failures are encoded INSIDE the snapshot as `daemonReachable: false` rather than as channel-level rejection. |
+| **Consumer** | All three EXPANSION-2 mount entries (Topbar / OrchestratorStrip / ConductorChat) subscribe at auto-mount time after the initial `getSnapshot()` call. Each renderer's mount.ts maps `OrchestratorStateSnapshot` to its component-specific prop shape (Topbar.paneCount/runningCount/queue/done/etc.; OrchestratorStrip.sessions[]/counts; ConductorChat.messages/queue/total/running/paused). |
+| **Authoring ticket** | `MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING` WB1 RED (this amendment) |
+| **Signature choice rationale** | Broadcast direction matches Channel #7 `coarchitect:bypass-perms-update` precedent for renderer↔main subscription patterns. Single snapshot-shape broadcast (rather than per-field channels) eliminates triple-polling (three surfaces otherwise polling `GET /v2/sessions` independently) and keeps cross-surface counts in lock-step. The aggregator dedup via `snapshot.seq` prevents thread-flicker in ConductorChat's `messages` array regenerating on every tick (R-B3 risk register entry). |
+
+##### OrchestratorStateSnapshot type (workstation-local TypeScript interface)
+
+Per Q4 operator arbitration (`MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING` §0 pre-authorization 2026-05-18): `OrchestratorStateSnapshot` is authored as a workstation-local TypeScript interface in `packages/dispatch-workstation/src/main/orchestrator-state-types.ts` (WB2 RED) — NOT a Zod schema in `dispatch-core/src/v3/schema.ts §14`. Rationale: the snapshot is workstation-internal; daemon does not know about it; CLI does not consume it. Matches `BuildMdLoadResult` precedent at Channel #5 (also workstation-only, also IPC-payload, also lives in workstation src tree at `src/build-md/types.ts`).
+
+```typescript
+// packages/dispatch-workstation/src/main/orchestrator-state-types.ts (WB2 RED, MB-T-MVP-W4)
+
+export interface OrchestratorSessionLite {
+  readonly name: string;
+  readonly state?: 'armed' | 'paused' | 'held' | 'killed';
+  readonly computed_status?: 'idle' | 'running' | 'awaiting_review' | 'stale';
+}
+
+export interface OrchestratorMessage {
+  readonly role: 'user' | 'assistant' | 'dispatch' | 'system' | 'typing';
+  readonly text?: string;
+  /** typing-variant only: number of agents currently producing tokens. */
+  readonly running?: number;
+  readonly id?: string;
+}
+
+export interface AttachedBuildMdState {
+  readonly name: string;      // file basename for chip rendering
+  readonly path: string;      // absolute path (resolved at attach time)
+  readonly steps: number;     // task count from DAG
+  readonly queue: number;     // ready-set size
+  readonly done: number;      // completed-task-set size
+  readonly running: number;   // in-flight dispatch count
+  readonly errored: number;   // errorCount from BuildMdStatus
+}
+
+export interface OrchestratorStateSnapshot {
+  /** Monotonic counter; renderer may ignore out-of-order broadcasts. */
+  readonly seq: number;
+  /** Wall-clock ISO of last successful poll; null until first poll completes. */
+  readonly polledAt: string | null;
+  /** Live daemon-sessions snapshot per latest GET /v2/sessions. */
+  readonly sessions: ReadonlyArray<OrchestratorSessionLite>;
+  /** Build-md attach state OR null when nothing attached. */
+  readonly attached: AttachedBuildMdState | null;
+  /** Orchestrator narration log (Q1=(c) persisted append-only JSON). */
+  readonly messages: ReadonlyArray<OrchestratorMessage>;
+  /** Pause/resume gate (Q2=(a) workstation-side OrchestratorPauseStateStore). */
+  readonly paused: boolean;
+  /** Daemon-reachability — false when last poll rejected (drives Topbar error banner). */
+  readonly daemonReachable: boolean;
+}
+```
+
+**Derived fields (computed inside each renderer surface, not on the wire):**
+
+- `Topbar.paneCount = sessions.length`
+- `Topbar.runningCount = sessions.filter(s => s.computed_status === 'running').length`
+- `Topbar.queue = attached?.queue ?? 0`
+- `Topbar.done = attached?.done ?? 0`
+- `Topbar.buildMdAttached = attached !== null`
+- `OrchestratorStrip.sessions = sessions` (mapped to `SlotSession` shape — caller-side mapping)
+- `OrchestratorStrip.runningCount/queuedCount/done/erroredCount` — derived from sessions + attached
+- `OrchestratorStrip.ratePerMin / etaSeconds` — derived in-renderer via `computeThroughputAndEta` against a rolling history accumulated from `snapshot.attached.done`
+- `ConductorChat.queue = attached?.queue ?? 0`
+- `ConductorChat.total = attached?.steps ?? 0`
+- `ConductorChat.running = sessions.filter(s => s.computed_status === 'running').length`
+
+**Why derivation is renderer-side rather than wire-side:** the snapshot is a minimal serializable payload; each renderer maps it to its component-specific prop shape. This matches the Tile-grid pattern at `tile-grid/mount.ts` (StatusListClient → tile-grid-app.tsx prop derivation) and avoids snapshot-shape churn when one surface adds a derived field.
+
+**Action channels OUT OF SCOPE for this amendment:** ConductorChat exposes six bridge action callbacks (`send`, `attach`, `detach`, `dispatchNext`, `togglePause`, `cancel`). These write-side channels are DEFERRED to Ticket C (`MB-T-CONDUCTOR-CHAT-ACTION-WIRING-PENDING` — to be filed at this ticket's WB-final as Tier-1 forward-pointer). This amendment authors read-side state surface ONLY (Channels #8 + #9 above). Ticket B's mount-entry wiring keeps action callbacks as stub no-ops; Ticket C lands the action-channel family (`conductor-chat:send`, `:attach`, `:detach`, `:dispatch-next`, `:toggle-pause`, `:cancel`) via subsequent §6.6 amendment.
+
 #### Result-type discriminated unions (Wave C #3 contract per coord note §4)
 
 Inline-banner UX (Sub-Q-MBTWBDPFA-C=(α)): when host (Frame C detail-pane) catches a non-`ok` result from any `frameCBridge.*` call, it passes the result down to `ActionBar` via `failureState` prop. `ActionBar` renders a `<div role="alert" data-testid="action-bar-failure-banner">` element with `error_type` + `message` + Dismiss button. Auto-dismiss on next successful action (persistent-on-error semantics).
