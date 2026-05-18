@@ -801,5 +801,21 @@
          MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED. Replaces the chat-shell
          <script> tag removed in r12-mvp-w3-chatshell-sweep (aef0ac8). -->
     <script src="../conductor-chat/renderer.js" defer></script>
+    <!-- MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING topbar renderer:
+         auto-mounts <Topbar> as a body-level fixed-position overlay at
+         top:0 (the component's own style sets position:fixed); subscribes
+         to window.orchestratorStateBridge (exposed by preload.mts at
+         bf901ce) for Channel #9 broadcasts; derives paneCount /
+         runningCount / buildMdAttached / queue / done from §6.6 frozen
+         snapshot. envLabel + budget left as em-dash placeholders pending
+         Tier-2 MB-F-MVP-W4-TOPBAR-BUDGET-ENVLABEL-CHANNELS-PENDING. -->
+    <script src="../topbar/renderer.js" defer></script>
+    <!-- MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING orchestrator-strip
+         renderer: auto-mounts <OrchestratorStrip> as a body-level
+         overlay; subscribes to the same orchestratorStateBridge;
+         derives SlotSession[] from snapshot.sessions + counts from
+         snapshot.attached + throughput/ETA via renderer-side rolling
+         history accumulator per §6.6 derived-fields contract. -->
+    <script src="../orchestrator-strip/renderer.js" defer></script>
   </body>
 </html>
