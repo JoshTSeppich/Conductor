@@ -280,9 +280,105 @@ export interface OrchestratorStripProps {
    * empty slots are disabled).
    */
   onSlotClick?: (session: SlotSession) => void;
+  /**
+   * Errored session count. Per design jsx:109 `{errored > 0 && <Stat label="failed" .../>}`.
+   * undefined / 0 hides the failed stat.
+   */
+  erroredCount?: number;
+  /**
+   * Throughput rate per minute (pre-computed via computeThroughputAndEta).
+   * Default 0 renders "0.0/min" per design jsx:110.
+   */
+  ratePerMin?: number;
+  /**
+   * Estimated time-to-empty-queue in seconds (pre-computed via
+   * computeThroughputAndEta). null → ETA stat hidden per design jsx:111
+   * `{eta != null && <Stat label="eta" .../>}`.
+   */
+  etaSeconds?: number | null;
 }
 
+// Per design jsx:76: 30-second rolling window for throughput calc.
 const DEFAULT_MAX_SLOTS = 64;
+
+const DEFAULT_THROUGHPUT_WINDOW_MS = 30_000;
+
+export interface ThroughputSample {
+  /** Wall-clock millis at which this sample was taken. */
+  t: number;
+  /** done-count snapshot at time t. */
+  done: number;
+}
+
+export interface ThroughputResult {
+  /** Computed rate per minute. 0 when insufficient history. */
+  ratePerMin: number;
+  /**
+   * ETA in seconds (queue / (rate/60)). null when (a) rate=0 OR
+   * (b) queued=0 (design jsx:87-89 guard).
+   */
+  etaSeconds: number | null;
+}
+
+/**
+ * Pure-fn helper computing throughput rate + ETA per design jsx:70-89:
+ *
+ *   const oldest = history[0];
+ *   const delta = done - oldest.done;
+ *   const secs = (now - oldest.t) / 1000;
+ *   setThroughput(secs > 0 ? (delta / secs) * 60 : 0);
+ *   const eta = throughput > 0 && queue.length > 0
+ *     ? (queue.length / (throughput / 60))
+ *     : null;
+ *
+ * History is filtered to entries within `windowMs` of the latest sample
+ * before rate calc, mirroring design `histRef.current.filter(h => now - h.t < 30000)`.
+ *
+ * Pure (no side effects, no React); caller orchestrates timer / history
+ * accumulation.
+ */
+export function computeThroughputAndEta({
+  history,
+  queued,
+  windowMs,
+}: {
+  history: ThroughputSample[];
+  queued: number;
+  windowMs: number;
+}): ThroughputResult {
+  if (history.length < 2) return { ratePerMin: 0, etaSeconds: null };
+  const latest = history[history.length - 1]!;
+  // Inclusive `<=` semantics (boundary kept): the design's strict `<` at
+  // jsx:77 is push-then-filter pragmatism (just-pushed `t===now` would
+  // never hit the boundary). As a pure-fn over caller-supplied history,
+  // inclusive semantics avoid the trap when samples land exactly at
+  // windowMs ago.
+  const windowed = history.filter((h) => latest.t - h.t <= windowMs);
+  if (windowed.length < 2) return { ratePerMin: 0, etaSeconds: null };
+  const oldest = windowed[0]!;
+  const deltaDone = latest.done - oldest.done;
+  const deltaSecs = (latest.t - oldest.t) / 1000;
+  const ratePerMin = deltaSecs > 0 ? (deltaDone / deltaSecs) * 60 : 0;
+  const etaSeconds =
+    ratePerMin > 0 && queued > 0 ? queued / (ratePerMin / 60) : null;
+  return { ratePerMin, etaSeconds };
+}
+
+function formatRate(ratePerMin: number): string {
+  return `${ratePerMin.toFixed(1)}/min`;
+}
+
+/**
+ * mm:ss formatter per design jsx:5-10 fmtClock. Non-finite / negative
+ * returns em-dash placeholder (W1 Q3/Q4 mech-translation). Zero is a
+ * valid ETA and renders 00:00 (test asserts).
+ */
+function formatEtaClock(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return EM_DASH;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 function safeCount(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
@@ -437,7 +533,16 @@ export function OrchestratorStrip({
   sessions,
   maxSlots,
   onSlotClick,
+  erroredCount,
+  ratePerMin,
+  etaSeconds,
 }: OrchestratorStripProps = {}): React.ReactElement {
+  const resolvedRate = typeof ratePerMin === 'number' && Number.isFinite(ratePerMin)
+    ? ratePerMin
+    : 0;
+  const showFailed =
+    typeof erroredCount === 'number' && Number.isFinite(erroredCount) && erroredCount > 0;
+  const showEta = etaSeconds !== undefined && etaSeconds !== null;
   const safeDone = safeCount(done);
   const safeRunning = safeCount(runningCount);
   const safeQueued = safeCount(queuedCount);
@@ -484,6 +589,25 @@ export function OrchestratorStrip({
             testid="ostrip-stat-done"
             value={renderCountOrDash(done)}
           />
+          {showFailed && (
+            <Stat
+              label="failed"
+              testid="ostrip-stat-failed"
+              value={String(erroredCount)}
+            />
+          )}
+          <Stat
+            label="rate"
+            testid="ostrip-stat-rate"
+            value={formatRate(resolvedRate)}
+          />
+          {showEta && (
+            <Stat
+              label="eta"
+              testid="ostrip-stat-eta"
+              value={formatEtaClock(etaSeconds as number)}
+            />
+          )}
         </div>
       </div>
       <ProgressBar
