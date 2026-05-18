@@ -792,5 +792,13 @@
     <!-- MB-T12 WB12 tile-grid renderer: auto-mounts <TileGridApp> into
          #tile-grid-root via window.workstationBridge + window.consoleBridge. -->
     <script src="../tile-grid/renderer.js"></script>
+    <!-- MB-T-MVP-W1 orchestrator-focus-pane renderer: auto-mounts <FocusPane>
+         as a body-level fixed-position overlay (Q-MVP-W1-6=(c) operator ack).
+         The bundle creates its own #orchestrator-focus-pane-mount-root div on
+         DOMContentLoaded and wires the existing coarchitect:ptyChunk broadcast
+         (filtered __orchestrator_active per pty-stream-relay.ts:48) into an
+         xterm-backed TerminalAdapter. Defer so it loads after the other
+         renderers but before the body close. -->
+    <script src="../orchestrator-focus-pane/renderer.js" defer></script>
   </body>
 </html>
