@@ -1149,6 +1149,36 @@ app.whenReady().then(async () => {
   }
   // === END: MB-T17 autopilot IPC ===
 
+  // === BEGIN: MB-T-MVP-W1-ORCHESTRATOR-FOCUS-PANE mount (do not modify outside this block) ===
+  // WB7 — Wave-1 sentinel zone per Q-MVP-W1-5=(a) ack (operator 17:55 MDT).
+  //
+  // This block reserves the main-process anchor for the orchestrator-focus-
+  // pane wiring. Per Q-MVP-W1-1=(a) ack (operator 17:55 MDT) the renderer
+  // consumes the EXISTING `coarchitect:ptyChunk` broadcast emitted by
+  // src/main/pty-stream-relay.ts:52 — NO new IPC channel + NO new main-side
+  // controller registration is required.
+  //
+  // Per Q-MVP-W1-6=(c) overlay strategy: the renderer-side bundle
+  // (src/orchestrator-focus-pane/mount.ts) auto-creates its own overlay div
+  // and attaches to document.body on DOMContentLoaded, so the READ-ONLY
+  // workstation-shell.html does NOT need a `<script>` tag or anchor div
+  // edit at this WB. Production load wiring (script-tag injection into
+  // shell.html OR webContents.executeJavaScript bridge) is the gate for
+  // user-visible mount and is deferred to a follow-on wave with operator
+  // shell.html territory amendment — Tier-1 followup
+  // MB-F-MVP-W1-PRODUCTION-MOUNT-WIRING-PENDING-SHELL-HTML-AMENDMENT
+  // (filed at WB-final).
+  //
+  // Smoke-harness sentinel: emit FOCUS_PANE_IPC_READY when
+  // MB_TEST_HOOKS=1 so the runtime-launch smoke can assert the new
+  // sentinel zone was reached without ERR_MODULE_NOT_FOUND class bugs
+  // (mirrors MB-T12 / MB-T16 / MB-T17 patterns at lines 1088 / 1116 /
+  // 1148).
+  if (process.env['MB_TEST_HOOKS'] === '1') {
+    process.stdout.write('FOCUS_PANE_IPC_READY\n');
+  }
+  // === END: MB-T-MVP-W1-ORCHESTRATOR-FOCUS-PANE mount ===
+
   // MB-T24 dispatch-mode IPC was relocated UP to register BEFORE
   // createWindow (see WB4b runtime-smoke finding zone above near
   // registerSpawnIpcHandlers). Renderer DispatchModeToggle invokes
