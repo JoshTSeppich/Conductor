@@ -774,15 +774,6 @@
         console.log('SHELL_READY');
       });
     </script>
-    <!-- MB-T20 WB4: chat-shell renderer is the new owner of #chat-region #root
-         (Q-MBT20-4=a single renderer per region). chat-shell/mount.ts mounts
-         ChatShell as the Family-B tab-host shell with the Chat tab body
-         delegating to coarchitect/chat-panel.js's ChatPanel via direct import
-         (Q-MBT20-3=a wrap; coarchitectBridge reused per Q-MBT20-5=a — preload
-         exposes the same bridge globals used pre-T20 so chat IPC contract is
-         unchanged). The pre-T20 line was: <script src="../coarchitect/renderer.js"></script>
-         which auto-mounted ChatPanel directly into #root. -->
-    <script src="../chat-shell/renderer.js"></script>
     <!-- MB-F-CONSOLE-T03 console-panel renderer: keeps the standalone-window
          path (WB11 detached BrowserWindow loads console-panel.html with a
          ?session=<name> query param; the auto-mount block reads the URL).

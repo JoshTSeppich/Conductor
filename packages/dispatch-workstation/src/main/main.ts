@@ -75,23 +75,6 @@ import { registerTileTokenScraper } from './tile-token-scraper.js';
 // 'auto' | 'ask') operator-confirmed 2026-05-08 HALT 0.
 import { createDefaultDispatchModeIpcController } from './dispatch-mode-ipc.js';
 // === END: MB-T24 dispatch-mode IPC imports ===
-// === BEGIN: MB-T20 chat panel (do not modify outside this block) ===
-// Reserved zone for any future main-process wiring related to the
-// Conductor chat panel shell (src/chat-shell/). At WB4 the chat-shell
-// renderer mounts entirely renderer-side via workstation-shell.html
-// line 555 script-tag swap (Q-MBT20-4=a single renderer per region;
-// Q-MBT20-5=a coarchitectBridge reuse — preload.mts unchanged).
-// Zone reserved per Q-MBT20-8=a CLAUDE.md §3.3 sentinel discipline.
-// === END: MB-T20 chat panel ===
-// === BEGIN: MB-T22 commits-ipc imports (do not modify outside this block) ===
-// WB3 — registerCommitsIpc wires the renderer-side window.commitsBridge
-// .listCommits → main-process commits-reader.readCommits pipeline.
-// Q-MBT22-1=a (workstation child_process; no daemon route) +
-// Q-MBT22-7=a (static window.commitsBridge mirroring coarchitectBridge
-// shape; preload.mts additive `=== BEGIN: MB-T22 commits bridge ===`
-// zone). Decisions doc 2026-05-07.
-import { registerCommitsIpc } from './commits-ipc.js';
-// === END: MB-T22 commits-ipc imports ===
 // === BEGIN: Fix-A api-key bootstrap (do not modify outside this block) ===
 import { bootstrapApiKey } from './api-key-bootstrap.js';
 // === END: Fix-A ===
@@ -684,14 +667,6 @@ app.whenReady().then(async () => {
   // fetch + token reader.
   registerAuditModalIpcHandlers();
   // === end MB-T13 audit-modal-fetch IPC ===
-  // === BEGIN: MB-T22 commits-ipc registration ===
-  // WB3 — wires `commits:list` IPC handler. Reads BuildDocConfig.repoRoot
-  // via readBuildDocConfig() and delegates to commits-reader.readCommits
-  // (workstation-side execFile git log per Q-MBT22-1=a). No daemon
-  // round-trip; preserves WORKSTATION_CONTRACT.md §6 frozen surface.
-  // Default deps wire to production readBuildDocConfig + readCommits.
-  registerCommitsIpc();
-  // === END: MB-T22 commits-ipc registration ===
   // CONSOLE-T02 IPC layer; CONSOLE-T03 wires the open-trigger menu below.
   consoleController = registerConsoleIpcHandlers({
     getWebContents: () => mainWindow?.webContents ?? null,

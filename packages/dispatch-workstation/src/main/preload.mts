@@ -366,24 +366,6 @@ contextBridge.exposeInMainWorld('dispatchModeBridge', {
 });
 // === END: MB-T24 ===
 
-// === BEGIN: MB-T22 commits bridge ===
-// Q-MBT22-7=a operator-confirmed 2026-05-07: static window.commitsBridge
-// mirroring window.coarchitectBridge shape. Single method `listCommits`
-// invokes 'commits:list' main-process IPC handler (registered by
-// src/main/commits-ipc.ts at app.whenReady time per main.ts MB-T22
-// sentinel zone). Renderer-side consumer is src/chat-shell/commits-tab
-// .tsx (lands at WB4). Result envelope: { groups, error? } per
-// commits-ipc.ts CommitsListResponse.
-//
-// Additive surface — does NOT extend coarchitectBridge (which already
-// hosts the chat domain). Commits view has its own bridge to keep
-// concerns separate and to avoid extending the StreamingBridge contract
-// surface that ChatPanel + chat-shell depend on.
-contextBridge.exposeInMainWorld('commitsBridge', {
-  listCommits: (opts?: { limit?: number }) =>
-    ipcRenderer.invoke('commits:list', opts ?? {}),
-});
-// === END: MB-T22 commits bridge ===
 // === BEGIN: §C.1′ frame-mode bridge ===
 // Exposes getFrameMode / setFrameMode to the tile-grid renderer.
 // Main-process handlers registered in main.ts §C.1′ sentinel zone before
