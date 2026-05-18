@@ -1,3 +1,4 @@
 # W3 cross-session coordination log
 
 2026-05-17T19:42Z | gen-7-w3 | dd0dad5 | test/unit/conductor-chat/probe-mbt-mvp-w3-08-build-md-chip-rendering.spec.tsx (WB3 RED — probe-08 build-md-chip)
+2026-05-17T19:44Z | gen-7-w3 | 9357fd8 | src/conductor-chat/build-md-chip.tsx (WB3 GREEN — build-md-chip body; unblocks operator-CC composer integration)
