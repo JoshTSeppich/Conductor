@@ -262,6 +262,272 @@ This dimension is a **structural strengthening** of closure-path (β) (operator-
 - Operator commit `37d1f26` body — three pre-existing v4 gate-fire conditions enumerated; this §1.3 adds criterion (4)
 - §1.0 row: "Operator-induced staging contamination (NEW emergent class; actor-scope extension)" — registered at this commit
 
+### §1.4 — Tier-2 NEW EMERGENT CLASS: cross-session shared-file collision resolved via deferred-edit pattern (sequential atomic landing) — tsconfig.json
+
+**Window:** 2026-05-17 ~22:00 MDT → 2026-05-18 09:18 MDT. Part of the operator-fatigue cluster opened by §1.3.
+
+**Cite-anchor:** Sweep `aef0ac8` (`refactor(MB-T-MVP-W3-CHATSHELL-SWEEP): delete chat-shell tab-strip surface`) + EXPANSION-2 WB-final `0fa0876` (`green(MB-T-MVP-W1-EXPANSION-2-...): WB-final — closure docs + 7 followup rows + build doc`) + EXPANSION-2 findings doc `docs/coordination/mb-t-mvp-w1-expansion-2-findings-2026-05-18.md` §III "Cross-session findings + tsconfig coordination" + EXPANSION-2 impl-coord `mb-t-mvp-w1-expansion-2-impl-coord-2026-05-18.md` §2.1 "For W3 sweep session" + FOLLOWUPS row `MB-F-MVP-W1-EXP2-TSCONFIG-EXCLUDE-W3-COORDINATION` (Tier 1, filed at EXPANSION-2 WB-final).
+
+**Sequence reconstruction** [KNOWN per `git log --oneline 2026-05-17..2026-05-18` + commit body of `aef0ac8` + EXPANSION-2 findings §III verbatim + impl-coord §2.1]:
+
+1. **W3 conductor-chat ladder closed at `e7a5f65`** (gen-7-w3 lane WB-final, 2026-05-18 ~02:45 MDT) leaving `tsconfig.json` typecheck-blocked in-tree (pre-existing JSX-flag failure for `src/conductor-chat`; deferred to `MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED` Tier-1 followup item 3 per W3 findings §V). `tsconfig.json` was **READ-ONLY for the W3 ladder cycle**; no W3 modifications.
+2. **EXPANSION-2 ladder booted** (~01:00 MDT 2026-05-18, post-W3 closure) into a working tree containing **chat-shell sweep WIP** (uncommitted from a prior sweep-author session; 27 deletions + 6 modifications enumerated at impl-coord §2.1) — specifically including modified `tsconfig.json` + `package.json` + `src/main/{main.ts,preload.mts,workstation-shell.html}`.
+3. **EXPANSION-2 detected the shared-file collision pre-commit** at Phase-1 diagnose: EXPANSION-2 needed to append `"src/topbar"` + `"src/orchestrator-strip"` to `tsconfig.json` `exclude` array (mirrors existing chat-shell / frame-c / orchestrator-focus-pane / coarchitect / conductor-chat exclusion pattern per CLAUDE.md §3.4 mechanical-translation envelope). But `tsconfig.json` was already in WIP-modified state from another session's pre-staged sweep work — touching it would absorb the sweep's WIP into EXPANSION-2's commits (territorial violation per CLAUDE.md §2.7 + §2.9).
+4. **EXPANSION-2 chose deferred-edit pattern** (per Q-EXP2 auto-ack envelope + R3-like risk disposition): ship 7-WB ladder WITHOUT touching `tsconfig.json`; file Tier-1 followup `MB-F-MVP-W1-EXP2-TSCONFIG-EXCLUDE-W3-COORDINATION` enumerating the needed exclude additions; verify **joint-state** typecheck CLEAN (W3-WIP + EXPANSION-2 needed-excludes applied locally) at 08:55 MDT 2026-05-18 per findings §III "Verification" line.
+5. **EXPANSION-2 landed at `0fa0876`** (2026-05-18 ~09:00 MDT) — 13 commits across 7 WBs, ZERO tsconfig.json edits. Per-path `git add` discipline (§2.7) held; no sweep-WIP absorption.
+6. **W3 sweep CC then landed at `aef0ac8`** (2026-05-18 09:18 MDT) with its own `tsconfig.json` amendment (append `src/conductor-chat` to exclude + remove stale `src/chat-shell/commits-reader.ts` from `files` array). Sweep's amendment is **additive** to whatever exclude state EXPANSION-2 left behind — no edit-region collision because EXPANSION-2 chose not to write the file.
+7. **EXPANSION-2's tsconfig need remains OPEN** as Tier-1 followup `MB-F-MVP-W1-EXP2-TSCONFIG-EXCLUDE-W3-COORDINATION`; resolution path: dedicated cross-session sweep landing the `src/topbar` + `src/orchestrator-strip` excludes, OR rolled into EXPANSION-3 mount-wiring cycle.
+
+**Diagnostic** [KNOWN per `git show --stat aef0ac8` + EXPANSION-2 findings §III + cross-corpus comparison]:
+
+- **Class is distinct from `.git/index` race-class corpus** (Round 9 §1.1-§1.3, Round 11 §1.6 PREVENTED + §1.RC1 LANDED, Round 12 §1.3 operator-induced + §2.C `cairn-atomic-commit.sh` closure). The race-class corpus addresses **git-state contamination** at the `.git/index` layer where the shared resource is the staging area itself. §1.4's collision is at the **project-file content layer** where the shared resource is a tracked file with multiple sessions' overlapping edit needs.
+- **`.git/index` race-class is mitigated by `cairn-atomic-commit.sh` path-β (`173ead7`)** which structurally serializes stage-commit-push. **§1.4's file-content collision is NOT mitigated by path-β** — path-β prevents accidentally absorbing another session's pre-staged delta into your commit, but does not prevent two sessions needing legitimate edits to the same file region.
+- **The deferred-edit pattern is structurally distinct from the W3 testid contract FROZEN-surface pattern** (cross-session contract at `docs/coordination/w3-testid-contract-2026-05-17.md` per W3 decisions doc §IV). FROZEN-surface says "neither session modifies"; deferred-edit says "only one session modifies in this window; the other defers to a Tier-N followup". Both achieve the same outcome (zero same-file collision) via different discipline mechanisms.
+
+**Methodology insight** [KNOWN]:
+
+- **NEW Round-12 emergent class**: cross-session shared-file collision resolved via **sequential atomic landing** (one session edits in cycle-N; other session defers its needs to cycle-N+1 via Tier-N followup). Adds a third pattern alongside FROZEN-surface (no-edit-across-sessions) and path-disjoint-parallel (sessions modify different files in same package). Pattern selection: FROZEN-surface for cross-session contract artifacts; path-disjoint-parallel for default; deferred-edit when same-file edit needs collide in close temporal proximity.
+- **Deferred-edit pattern requires Tier-N followup as the closure-state carrier** — without the explicit followup row, the deferred edit becomes invisible technical debt. EXPANSION-2's discipline filed `MB-F-MVP-W1-EXP2-TSCONFIG-EXCLUDE-W3-COORDINATION` at WB-final per CLAUDE.md §2.12 (followups-over-absorption).
+- **Joint-state local verification** is load-bearing for the deferred-edit pattern — EXPANSION-2 applied both deltas (W3-WIP + its own needed-excludes) locally and ran `pnpm --filter dispatch-workstation typecheck` CLEAN at 08:55 MDT to verify the deferral is **mechanically safe** (the deferred edit composes cleanly with the other session's edit when both eventually land). Without joint-state verification, the followup row would be SPECULATIVE-on-composition rather than KNOWN-mechanical.
+
+**Closure-paths candidates:**
+
+- **(α) RECOMMENDED + KNOWN-operational** — EXPANSION-2's deferred-edit + Tier-1 followup pattern is the load-bearing closure. No further codification needed; pattern is self-documenting via the followup row body + impl-coord §2.1 "For W3 sweep session" instruction block.
+- **(β)** Optional CLAUDE.md §2.7 amendment — extend per-path discipline language to explicitly enumerate the deferred-edit pattern as a third option alongside FROZEN-surface and path-disjoint-parallel. Operator-arbitrated.
+- **(γ)** Joint-state local-verification convention — add `pnpm typecheck` (or equivalent invariant) under hypothetical-applied-WIP-state as a mandatory discipline step before filing a deferred-edit followup. Operator-arbitrated; aligns with `cairn-test-failure-triage` plugin agent dispatchability.
+
+**Tier classification:** **Tier 2 methodology incident** — new pattern surfaced and operationally validated; not a behavior regression (both ladders shipped; no contamination); clear forward-applicable discipline; structural mitigation already operational at `0fa0876` + Tier-1 followup row.
+
+**Cross-references:**
+
+- §1.3 — operator-fatigue cluster predecessor (same 2026-05-17/18 window; both incidents at shared-resource layer though different actors and different resource granularity: §1.3 is operator at `.git/index`, §1.4 is sub-session at project-file content)
+- Round 9 §1.1 + Round 11 §1.6/§1.RC1 — race-class corpus contrast (`.git/index` layer); §1.4 is project-file content layer
+- §2.C `173ead7` `cairn-atomic-commit.sh` — race-class structural closure; does NOT cover §1.4's file-content collision class
+- W3 testid contract `docs/coordination/w3-testid-contract-2026-05-17.md` — FROZEN-surface pattern (alternative resolution for same-file cross-session collision); cited in W3 decisions doc §IV
+- FOLLOWUPS.md — `MB-F-MVP-W1-EXP2-TSCONFIG-EXCLUDE-W3-COORDINATION` (Tier 1; pending W3-sweep or EXPANSION-3 cycle closure)
+- `MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED` item 3 — paired pre-existing tsconfig blocker (W3 ladder side; resolved at `aef0ac8` sweep amendment)
+- §1.0 row: register entry pending — "Cross-session same-file edit collision (deferred-edit pattern; NEW emergent class)"
+
+#### §1.4.codify — Codification proposal
+
+- Amend CLAUDE.md §2.7 ("Per-path git add (shared-working-tree contexts)") with a paragraph naming **three resolution patterns** for cross-session shared-resource contention: (i) FROZEN-surface (contract artifact, no edits), (ii) path-disjoint-parallel (default; different files), (iii) deferred-edit (same-file edit needs; one session ships, other defers to Tier-N followup with joint-state local verification). Cite §1.4 as the empirical anchor.
+- Add MEMORY.md feedback row: "When two sessions need same-file edits in close temporal proximity, prefer deferred-edit pattern over racing the file. Why: per-path discipline prevents `git add` absorption but cannot resolve legitimate same-file edit conflict; deferred-edit makes the conflict explicit + Tier-N-tracked. How to apply: file a Tier-N followup enumerating the deferred edit + run joint-state local verification (apply both deltas locally and verify invariants) before declaring deferred-edit safe."
+
+### §1.5 — Tier-1 NEW EMERGENT CLASS: bidirectional fence held against operator misdirection under fatigue (3-layer defense)
+
+**Window:** 2026-05-18 ~07:00–08:30 MDT (estimated; operator-paste timestamp not surfaced in commit log). Operator-fatigue cluster continuation (post-§1.3, post-§1.4 sequencing).
+
+**Cite-anchor:** CLAUDE.md §2.9 "Bidirectional territory fences protect the work from session mistakes AND the session from operator mistakes. A misdirected operator instruction that crosses session territory should be refused, not interpreted." (operator-authored discipline anchor) + dispatch §1.2 prompt text 2026-05-18 verbatim (operator-coarch arbitration text recording the 3-layer defense outcome). No commit anchor for the misdirected paste itself (no commit was authored under the misdirection; gen-7 refused) — the lack-of-commit IS the empirical evidence that the fence held.
+
+**Sequence reconstruction** [KNOWN per dispatch §1.2 text verbatim + cross-corroborated against absence of gen-7 sweep-attributed commit in `git log --since="2026-05-18 06:00" --until="2026-05-18 09:18"`]:
+
+1. **Sweep CC HALTed at HALT-2 pre-commit-push surface** with verification output (19 pre-existing FAILS; ZERO sweep-attribution per §1.7 below) and awaited operator ACK per dispatch §FAILURE-MODES.
+2. **Operator paste collision**: operator pasted "ACK (a) — PROCEED to commit + push" intended for `r12-mvp-w3-chatshell-sweep` CC into the `gen-7` orchestrator session (`orchestrator-2026-05-17-stress`) instead. Cross-session paste collision under operator-fatigue cluster.
+3. **Gen-7 layer-1 fence response**: gen-7 noticed the territory-history mismatch — its session had **no record of authoring sweep work** (the sweep ladder was in a different sub-session's territorial manifest), yet sweep-state was visible in the working tree from the sub-session's pre-staged work. Gen-7 **refused to commit** and surfaced **3 interpretations** to operator for arbitration (paste-misdirected / scope-expansion / cross-session-amendment).
+4. **Operator layer-2 misdirection**: operator's "interpretation 2" reply still threatened to route around the fence (i.e., interpretation 2's framing was structurally equivalent to "the fence is a false positive; gen-7 should ack on behalf of the sweep CC"). Cascading misdirection: layer-1 fence refusal triggered a second misdirected attempt rather than a course-correction.
+5. **Coarch layer-3 catch**: coarch (operator-side meta-layer) caught the cascading misdirection on the next turn — recognized that interpretation 2 was the same fence violation in different framing — and **instructed full stand-down**. Methodology-correct outcome: work attributed correctly to actual author CC (the sweep CC, which independently HALTed at its own HALT-2 awaiting its own ACK; landed at `aef0ac8` 09:18 MDT under its own session's authorship).
+
+**Diagnostic** [KNOWN per dispatch text + git-log absence of misattribution commit]:
+
+- **Fence held under fatigue-induced cascading error** — single-layer fence discipline (CLAUDE.md §2.9) is sufficient for first-order misdirection (paste collision) but **the second-order misdirection** (operator re-framing the paste as a valid interpretation) requires **multi-layer defense**.
+- **3-layer defense architecture**: (layer 1) sub-session refuses misdirected instruction + surfaces interpretations rather than acting on inference; (layer 2) operator gets opportunity to course-correct OR cascade-misdirect; (layer 3) operator-side meta-layer (coarch) catches cascading misdirection and forces stand-down. **All 3 layers fired in this incident**; absence of any one layer would have permitted misattribution.
+- **Empirical evidence is the LACK of a misattributed commit** — there is no `aef0ac8`-equivalent authored under gen-7's session attribution; sweep landed under its own session's auth at 09:18 MDT. This is **negative-evidence-as-validation**: the fence successfully prevented an event that would otherwise be detectable post-hoc via commit metadata.
+
+**Methodology insight** [KNOWN]:
+
+- **CLAUDE.md §2.9 bidirectional-fence discipline is operationally KNOWN-LOAD-BEARING under operator-fatigue cluster conditions** — Round 12 §1.3-§1.6 window demonstrates sustained operator-fatigue (per §1.3 operator-discipline-gap + §1.5 cascading misdirection + §1.6 coordination-accounting failure). Fence held in all three §1.5-traced layers.
+- **3-layer defense is the load-bearing architecture, NOT single-layer fence refusal alone**. Round 11 fence discipline was generally single-layer (sub-session refuses; operator immediately course-corrects). Round 12 §1.5 surfaces the FIRST documented incident where layer-2 (operator) ALSO erred and layer-3 (coarch) was load-bearing.
+- **"Coarch" as a recognized methodology entity at the meta-layer**: this incident operationally validates coarch as a distinct actor in the discipline architecture, not just an authoring/arbitration assistant. Round 11 corpus had no explicit coarch-layer references; Round 12 §1.5 establishes coarch as fence-catch-of-cascading-misdirection-class actor.
+- **Anti-fabrication discipline at fence-refusal**: gen-7 did NOT fabricate a session-history justification for the paste (would have been: "let me check, oh yes I see the sweep state, I must have done it"). Gen-7 surfaced 3 interpretations rather than picking one — anti-fabrication discipline applied at the dispatch-time decision boundary (mirrors MEMORY.md `feedback_stale_dispatch_detection` propagation pattern).
+
+**Closure-paths candidates:**
+
+- **(α) RECOMMENDED + KNOWN-operational** — 3-layer defense architecture (sub-session refusal + operator course-correction + coarch catch-of-cascading-misdirection) is operational. Codification: extend CLAUDE.md §2.9 with explicit 3-layer enumeration.
+- **(β)** Codify coarch role: add CLAUDE.md §X "coarch as fence-cascade-catch entity" — distinguishes coarch from sub-session role; documents the operator-side meta-layer's discipline expectations during operator-fatigue clusters.
+- **(γ)** Operator-fatigue cluster recognition + auto-cooldown convention — when consecutive incidents (e.g., §1.3 + §1.4 + §1.5 + §1.6 within 12-hour window) trace to operator-fatigue, coarch may declare an **operator-fatigue cluster** and recommend cooldown OR escalate fence sensitivity. Operator-arbitrated; high implementation cost.
+
+**Tier classification:** **Tier 1 methodology incident** — load-bearing for sustained autonomous cascade under operator-fatigue cluster conditions; demonstrates the methodology architecture's resilience extends beyond single-layer fence + into multi-layer cascading-misdirection defense.
+
+**Cross-references:**
+
+- CLAUDE.md §2.9 — bidirectional territory fence discipline anchor (operator-authored)
+- §1.3 — operator-fatigue cluster predecessor (same window; operator-discipline-gap at `.git/index` layer; §1.5 is cascading-misdirection at fence-refusal layer)
+- Round 11 §3.5 HALT-vocabulary precedent — `HALT-TERRITORY-ACK` + `HALT-TERRITORY-VIOLATION` registry; §1.5 could register `HALT-OPERATOR-MISDIRECTION-PASTE-COLLISION` as new HALT-vocabulary entry
+- MEMORY.md `feedback_stale_dispatch_detection` — anti-fabrication-at-dispatch-time precedent (applied here at paste-collision detection)
+- §1.0 row: register entry pending — "Bidirectional fence cascading-misdirection (NEW emergent class; multi-layer defense)"
+
+#### §1.5.codify — Codification proposal
+
+- Amend CLAUDE.md §2.9 with explicit 3-layer enumeration: (layer 1) sub-session refusal + surface-multiple-interpretations rather than picking one; (layer 2) operator course-correction OR cascade-misdirection; (layer 3) coarch catch + stand-down instruction. Cite §1.5 as the empirical anchor for the multi-layer requirement.
+- Codify "operator-fatigue cluster" as a recognized methodology condition: consecutive incidents (≥3 in 12-hour window) traceable to operator-side discipline gaps OR cascading-misdirection. Coarch responsibility: declare cluster + escalate fence sensitivity until incidents subside.
+- Optional MEMORY.md feedback row: "When sub-session receives an operator instruction that does not match session-history, surface 3+ interpretations rather than acting on inference. Why: cascading-misdirection is possible; operator's first response may re-frame the same error. How to apply: refuse + enumerate interpretations + await explicit operator OR coarch stand-down."
+
+### §1.6 — Tier-2 NEW EMERGENT CLASS: concurrent ladder completion without explicit coordination (descriptively-stale commit-body framing)
+
+**Window:** 2026-05-18 ~01:00 MDT → 09:18 MDT. Wall-clock-parallel cascade of EXPANSION-2 ladder (gen-7 lane, post-W3 closure) and chat-shell sweep (separate sub-session, Phase-1-3 in flight).
+
+**Cite-anchor:** EXPANSION-2 WB-final `0fa0876` (2026-05-18 ~09:00 MDT) + sweep `aef0ac8` (2026-05-18 09:18:29 MDT) + sweep commit body line "Cascade gate: this commit unblocks W1 EXPANSION-2 dispatch (topbar shell + orchestrator-strip + body styling + meter re-homing)." + dispatch §1.3 text 2026-05-18 verbatim ("Sweep CC's commit body framing ('this commit unblocks W1 EXPANSION-2 dispatch') was descriptively stale at landing — EXPANSION-2 had already shipped. Sweep CC surfaced this honestly in §IX of SITREP rather than papering over.") + EXPANSION-2 impl-coord §1 commit log table (13 commits 01:47 → ~09:00 MDT).
+
+**Sequence reconstruction** [KNOWN per `git log --oneline --since="2026-05-17 18:00" --until="2026-05-18 12:00"` + sweep commit body verbatim + EXPANSION-2 impl-coord §1 commit log]:
+
+1. **W3 conductor-chat ladder closed** at `e7a5f65` 2026-05-18 ~02:45 MDT (gen-7-w3 lane WB-final).
+2. **Chat-shell sweep dispatched by coarch** at some point post-W3-closure (Phase-1 diagnose authored; sweep authoring window estimated ~03:00-09:18 MDT based on sweep commit landing time + Phase-1+2+3 typical duration). The sweep CC's coarch-drafted dispatch presupposed EXPANSION-2 as unshipped (commit-body framing: "this commit unblocks W1 EXPANSION-2 dispatch").
+3. **EXPANSION-2 ladder ran in parallel** during sweep's Phase 1-3 work — 13 commits between 01:47 MDT (WB1 RED `e0b6aac`) and ~09:00 MDT (WB-final `0fa0876`) per impl-coord §1. EXPANSION-2 was not waiting for sweep; both cascades ran wall-clock-parallel.
+4. **EXPANSION-2 landed first at `0fa0876`** (~09:00 MDT) — fully shipped 7-WB ladder + WB-final closure docs + 7 followup rows + build doc.
+5. **Sweep landed at `aef0ac8`** (09:18 MDT) — ~18 minutes after EXPANSION-2 closure. Sweep CC's commit body framing **was authored under the assumption EXPANSION-2 was unshipped** but by the time it landed, EXPANSION-2 was already shipped. Body framing: **descriptively stale at landing**.
+6. **Sweep CC surfaced this honestly** in SITREP §IX rather than amending the body or papering over. Operator accepted commit-body framing as **historical-artifact stale** (the framing is true at authorship time, false at landing time, and the discrepancy is honest-framed).
+
+**Diagnostic** [KNOWN per timeline + sweep body §IX + dispatch §1.3 text]:
+
+- **Class is coordination-accounting failure, NOT contamination** — both ladders shipped cleanly; no per-path or per-`.git/index` contamination observed; sequential atomic landing held per §1.4.
+- **Operator-side coordination-accounting failure**: coarch was not informed (or did not surface) that EXPANSION-2 cascade was running parallel when authoring the sweep dispatch. The dispatch's framing "this commit unblocks W1 EXPANSION-2 dispatch" was structurally correct relative to the dispatch-time premise (sweep is a prerequisite for EXPANSION-2 to run) but factually overtaken by EXPANSION-2's actual concurrent execution.
+- **Honest-framing is the load-bearing closure** — sweep CC did NOT amend the commit body to retroactively claim "this commit lands additive after EXPANSION-2 ship". CLAUDE.md §7 "Surface findings honestly; don't optimize for 'looks-clean' output" applied at SITREP §IX.
+
+**Methodology insight** [KNOWN]:
+
+- **Coordination-accounting accuracy is bounded by orchestrator-side state freshness at dispatch-time**. When coarch dispatches multiple cascades in close temporal proximity, the dispatch text for cascade-N may presuppose cascade-(N-1)'s state, but cascade-(N-1) may have shipped or evolved during the gap between dispatches.
+- **Honest commit-body framing is the discipline-of-last-resort** when retrospective amendment would obscure the historical record. Sweep CC chose to ship with stale-but-true-at-authorship-time framing rather than retroactively rewrite the body.
+- **Distinct from Round 11 §1.RC2 envelope-creep class** — envelope-creep is dispatch-text-growing-beyond-original-scope; §1.6 is dispatch-text-stale-relative-to-evolved-state. Same root mechanism (orchestrator-side state freshness gap) but opposite manifestations.
+
+**Closure-paths candidates:**
+
+- **(α)** Coarch-side cascade-dispatch state-refresh discipline — before authoring dispatch-N, coarch checks `git log` + dispatch-queue + active sub-session status to verify state assumptions remain valid. Operator-arbitrated.
+- **(β) RECOMMENDED + KNOWN-operational** — honest SITREP §IX framing per CLAUDE.md §7 (honest surfacing). Already operational at this incident; no codification needed beyond existing CLAUDE.md §7.
+- **(γ)** Per-dispatch state-snapshot anchor — coarch includes a `git rev-parse HEAD` + active-session-list snapshot in dispatch text, so the dispatch's state assumptions are explicit and post-hoc-verifiable. Operator-arbitrated; aligns with Round 11 §3.9.G envelope-creep prevention discipline.
+
+**Tier classification:** **Tier 2 methodology incident** — coordination-accounting class; not a behavior regression (both ladders shipped); honest-framing discipline held; clear forward-applicable corrections at coarch-side.
+
+**Cross-references:**
+
+- §1.3 — operator-fatigue cluster predecessor (same window; same actor-class: operator/coarch-layer)
+- §1.4 — paired cross-session incident (same window; §1.4 is shared-resource collision class, §1.6 is coordination-accounting class)
+- Round 11 §1.RC2 envelope-creep class — same root mechanism (orchestrator-side state freshness gap) but opposite manifestation (growth vs staleness)
+- CLAUDE.md §7 "Communication style" — honest surfacing anchor (load-bearing for §1.6's closure-path-β)
+- Round 1 §6 cross-session methodology propagation (referenced via Round 2 preamble) — §1.6 is the converse: operator-side coordination-accounting GAP rather than session-side methodology-propagation SUCCESS
+- §1.0 row: register entry pending — "Concurrent-ladder coordination-accounting failure (NEW emergent class; orchestrator-side state freshness)"
+
+#### §1.6.codify — Codification proposal
+
+- Coarch-side state-refresh discipline before each cascade dispatch: enumerate currently-active sub-sessions + their phase + their expected ship time. Cite §1.6 as the empirical anchor.
+- Optional dispatch-template field: `[DISPATCH-TIME-STATE-SNAPSHOT]` with `git rev-parse HEAD` + active-session-list at authoring time. Forward-verifiable; cheap to author.
+- CLAUDE.md §7 amendment (optional): explicitly enumerate "descriptively-stale commit-body framing" as a recognized acceptable outcome IF surfaced honestly in SITREP/findings. Reduces ambiguity at honest-framing discipline boundaries.
+
+### §1.7 — Tier-2 NEW EMERGENT CLASS: §2.4 strict-reading vs §4.5 pre-existing-flake absorption tension (dispatch-template wording gap)
+
+**Window:** 2026-05-18 sweep CC HALT-2 surface (pre-commit-push verification, ~09:00 MDT pre-`aef0ac8`).
+
+**Cite-anchor:** Sweep `aef0ac8` body verbatim:
+
+> Verifies [KNOWN]:
+> - pnpm --filter dispatch-workstation test: 2034/2055 passing; 19 pre-existing failures, ZERO sweep-attribution. Pre-existing-failure absorption per CLAUDE.md §4.5 (do not re-diagnose pre-existing flakes per WB). Outcome classification per CLAUDE.md §2.11: "No regression; wiring verified; improvement case not exercised."
+
++ CLAUDE.md §4.5 "Pre-existing test failures (current state)" verbatim (`MB-F-COARCHITECT-IPC-LINE-485-...` Tier 2 + `MB-F-WORKSTATION-INTEGRATION-TEST-FLAKE-SUITE` Tier 3) + dispatch §1.4 prompt text 2026-05-18 verbatim ("operator authorized §2.11 absorption ... Lesson: dispatch prompt template wording 'must pass' needs revision to 'must produce no NEW failures attributable to this work; cite pre-existing per §4.5'") + sweep self-check Q2 + Q4 verbatim.
+
+**Sequence reconstruction** [KNOWN per sweep body + dispatch §1.4 text + CLAUDE.md §2.4/§4.5 verbatim]:
+
+1. **Sweep CC ran `pnpm --filter dispatch-workstation test`** at HALT-2 verification. Result: **2034/2055 passing; 19 pre-existing failures**.
+2. **Sweep CC performed FAIL-line scan** of each pre-existing failure against (i) deleted-path probe attribution (sweep deleted 19 chat-shell test probes; verify FAIL-set has ZERO references to deleted paths), (ii) sweep-attribution (verify each FAIL traces to a pre-sweep ticket, not the sweep itself). Result: **ZERO sweep-attribution** per body.
+3. **Sweep CC HALTed at HALT-2** with the tension surfaced explicitly: dispatch §2.4 strict-reading "pnpm test must pass" would block ship; CLAUDE.md §4.5 "pre-existing failures not re-diagnosed per WB" sanctions absorption. **Sweep CC did not unilaterally resolve** — surfaced to operator for arbitration.
+4. **Operator ACK §2.11 absorption** with classification verbatim "No regression; wiring verified; improvement case not exercised." Resolved the tension by **invoking the outcome-classification framework** (CLAUDE.md §2.11) rather than literal-strict-reading of §2.4.
+5. **Sweep landed at `aef0ac8`** with body §"Verifies [KNOWN]" citing both §4.5 (absorption) + §2.11 (outcome classification) — full transparency on the reconciliation path.
+
+**Diagnostic** [KNOWN per sweep body + CLAUDE.md cross-section reading]:
+
+- **§2.4 dispatch-template wording is strict-reading-fragile**. "pnpm test must pass" is unambiguous in a hypothetical-zero-pre-existing-failure world but Operationally-collides with §4.5 the moment pre-existing failures exist. The collision is not §2.4's failure; it is the dispatch-template's failure to encode the joint §2.4 ∧ §4.5 invariant.
+- **The actual joint invariant is**: "pnpm test must produce no NEW failures attributable to this work" + "pre-existing failures cited per §4.5". Dispatch-template "must pass" is a strict-strengthening that surfaces tension under any pre-existing-failure ground state.
+- **HALT-2 is the structurally-correct surface for the tension** — sweep CC did NOT silently absorb (would have been §2.4 violation); did NOT abort ship (would have been §4.5 violation); HALTed and surfaced both readings to operator for arbitration.
+
+**Methodology insight** [KNOWN]:
+
+- **Dispatch-template wording must encode joint invariants explicitly**, not implicit one-section-at-a-time strict-readings that collide with neighboring sections.
+- **HALT-N as a tension-resolution-surface** — Round 11 §3.5 HALT-vocabulary registry treated HALT-N as a discipline-state marker; §1.7 demonstrates HALT-N is ALSO a multi-section-invariant-resolution surface where the sub-session surfaces inter-section tensions for operator arbitration.
+- **Outcome classification (§2.11) as the load-bearing reconciliation primitive** — when strict-readings of §2.4 + §4.5 collide, §2.11 provides honest-framing classifications ("No regression; wiring verified; improvement case not exercised") that capture the actual outcome without forcing either strict reading.
+- **Topology similarity to §3.1 deferred-prod-wiring class**: both are "auto-ack envelope strict-reading appears correct, but operator-arbitrated absorption is the actual closure path". §1.7 (test-suite absorption) and §3.1 (tier-classification absorption) share the meta-pattern: strict-reading is the dispatch-template intent; operator absorption is the methodology-correct execution.
+
+**Closure-paths candidates:**
+
+- **(α) RECOMMENDED** — revise dispatch-prompt template wording from "pnpm test must pass" to "pnpm test must produce no NEW failures attributable to this work; cite pre-existing per CLAUDE.md §4.5; if tension persists, HALT-2 and surface for §2.11 outcome-classification arbitration". Tier-2 followup against the dispatch-prompt template generator (operator-side; not against any single commit). Tracked as forward-applicable to all future ladder dispatches.
+- **(β)** CLAUDE.md §4.5 amendment — append a paragraph cross-referencing §2.4 strict-reading conflict and naming HALT-2 as the resolution surface. Operator-arbitrated.
+- **(γ)** Sub-session discipline standardization — when verification surfaces pre-existing failures, sweep/ladder CC always cites §4.5 + §2.11 in HALT-2 surface text. Already operational at this incident; codification optional.
+
+**Tier classification:** **Tier 2 methodology incident** — dispatch-template wording gap; not a behavior regression (sweep shipped correctly); clear forward-applicable correction at coarch-side dispatch authoring; HALT-2 surface discipline held throughout.
+
+**Cross-references:**
+
+- CLAUDE.md §2.4 — pnpm test invariant (strict-reading source)
+- CLAUDE.md §4.5 — pre-existing test failures (absorption source); enumerates `MB-F-COARCHITECT-IPC-LINE-485-...` + `MB-F-WORKSTATION-INTEGRATION-TEST-FLAKE-SUITE`
+- CLAUDE.md §2.11 — outcome classifications (reconciliation primitive); "No regression; wiring verified; improvement case not exercised" cited verbatim in sweep body
+- §3.1 (this archive) — deferred-prod-wiring class; same meta-pattern (strict-reading vs operator-arbitrated absorption)
+- Round 11 §3.5 HALT-vocabulary registry — §1.7 extends HALT-N as inter-section-invariant-resolution surface
+- §1.0 row: register entry pending — "Dispatch-template strict-reading tension (NEW emergent class; multi-section invariant collision)"
+
+#### §1.7.codify — Codification proposal
+
+- Tier-2 followup against dispatch-prompt template generator (operator-side; coarch authoring discipline). Tracked as forward-applicable to future ladder dispatches: "pnpm test must produce no NEW failures attributable to this work; cite pre-existing per CLAUDE.md §4.5; if tension persists, HALT-2 and surface for §2.11 outcome-classification arbitration."
+- CLAUDE.md §4.5 amendment (optional): append paragraph cross-referencing §2.4 + naming HALT-2 as the canonical resolution surface for §2.4 ∧ §4.5 tension.
+- MEMORY.md feedback row (optional): "When verification surfaces pre-existing failures, do not silently absorb and do not abort ship — HALT-N and surface both readings (§2.4 strict + §4.5 absorption) with explicit §2.11 outcome-classification framing for operator arbitration."
+
+### §1.8 — Tier-1 NEW EMERGENT CLASS: Phase-1 diagnose catches dispatch authoring gaps even when dispatch appears complete
+
+**Window:** 2026-05-18 ~03:00–05:00 MDT (sweep Phase-1 read-only diagnose window; pre-Phase-2 sweep execution).
+
+**Cite-anchor:** Sweep `aef0ac8` body §"Expanded scope per operator-arbitrated Phase-1 diagnose recommendations (Decision-1 commits chain + Decision-2 tsconfig amendment)" + sweep body Q7 verbatim ("Pre-stage git status --short verified clean before staging (33 files: 27 D + 6 M, all within operator-acked Phase-1 territory)") + dispatch §1.5 prompt text 2026-05-18 verbatim ("Coarch-drafted sweep dispatch listed src/main/preload.ts (typo; actual file is preload.mts), missed commits-ipc.ts orphan chain (3 files + 4 sentinel zones), missed tsconfig.json typecheck blocker (pre-existing MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED), missed production-blank-chat-region consequence (UX-visible). Sweep CC's Phase 1 diagnose surfaced all 5 gaps before any rm fired."). Operator D1-D5 arbitration anchor: operator-acked the 5 gaps per sweep body framing "all recommendations".
+
+**The 5 dispatch authoring gaps caught at Phase-1 diagnose** [KNOWN per sweep body verbatim + dispatch §1.5 enumeration]:
+
+| # | Gap class | Coarch-drafted dispatch | Phase-1 diagnose finding | Operator arbitration |
+|---|-----------|--------------------------|---------------------------|----------------------|
+| 1 | File-path typo | listed `src/main/preload.ts` | actual file is `preload.mts` (TypeScript-module variant); dispatch's `.ts` path does not exist in repo | Decision-1: proceed with `preload.mts` sentinel-zone strip (MB-T22 commits bridge lines 369-386) |
+| 2 | Orphan-chain omission | did NOT enumerate `src/main/commits-ipc.ts` deletion | full orphan post-sweep: 3 files (commits-tab UI consumer + commits-reader + commits-ipc) + 4 sentinel zones (MB-T20 chat panel main.ts:78-85, MB-T22 commits-ipc imports main.ts:86-94, MB-T22 commits-ipc registration main.ts:687-694, MB-T22 commits bridge preload.mts:369-386) | Decision-1 (extended): delete commits-ipc.ts + strip all 4 sentinel zones |
+| 3 | Pre-existing typecheck blocker | did NOT mention `tsconfig.json` amendment | pre-existing JSX-flag typecheck failure for `src/conductor-chat` tracked in `MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED` item 3 (W3-deferred; per CLAUDE.md §3.4 mechanical-translation envelope) | Decision-2: append `src/conductor-chat` to `tsconfig.json` exclude array (closes followup item 3 mechanically) + remove stale `src/chat-shell/commits-reader.ts` from `files` array |
+| 4 | UX-visible deferred-wiring consequence | did NOT surface that production `#chat-region #root` renders BLANK post-sweep | the sweep removes `chat-shell` `<script>` tag at shell.html:785; conductor-chat is not yet wired into shell.html per `MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED` item 1; production chat region is BLANK between sweep ship and EXPANSION-2 wiring | Decision-3: file `MB-F-W3-FINAL-PRODUCTION-CHAT-REGION-BLANK-UNTIL-EXPANSION-2` Tier-1 followup; operator-acknowledged interim state per sweep body |
+| 5 | Preserved-meter probe re-authoring scope | did NOT enumerate that 16 preserved chat-shell meter probes will be orphaned-but-passing post-sweep (still execute against retained meter sources) | sweep preserves 11 chat-shell meter files (`cost-meter`, `bottom-rail-cost-meter`, `max-parallel-counter`, `plan-timer-text`, `plan-usage-ring`, `mix-indicator`, `bypass-perms-indicator`, `dispatch-mode-toggle`, `conductor-brand`, `max-parallel-source`, `ring-helpers`) for W1 EXPANSION-2 re-homing; their probes must be re-authored against the EXPANSION-2 topbar location post-re-homing | Decision-4 + Decision-5: file `MB-F-W3-FINAL-PRESERVED-METER-SLOT-PROBE-REAUTHORING-PENDING` Tier-2 followup; preserve probes as-is for now; mark for re-authoring at meter re-homing |
+
+**Sequence reconstruction** [KNOWN per sweep body + dispatch §1.5 text]:
+
+1. **Coarch authored sweep dispatch** (operator-side; pre-sweep-CC-spawn) with the 5 gaps enumerated above. Dispatch appeared complete: cited arbitration §2.2 + W3 closure gate at `e7a5f65` + explicit deletion scope (6 chat-shell tab-strip source files + 19 broken test probes).
+2. **Sweep CC spawned + ran Phase-1 read-only diagnose**. Per CLAUDE.md §2.1 anti-fabrication discipline + MEMORY.md `feedback_stale_dispatch_detection`, Phase-1 read each enumerated path + the surrounding code + the sentinel-zone topology in `main.ts` + `preload.mts`. Cross-referenced against `MB-F-CONDUCTOR-CHAT-PROD-WIRING-DEFERRED` row body for prerequisite/blocker enumeration.
+3. **Phase-1 surfaced all 5 gaps to operator** before any `rm` fired. Anti-fabrication held: sweep CC did NOT proceed under the assumption "dispatch is complete; coarch is authoritative; proceed".
+4. **Operator arbitrated 5 decisions (D1-D5)** authorizing the expanded scope per Phase-1 recommendations.
+5. **Sweep Phase-2+3 then executed the operator-arbitrated expanded scope** at `aef0ac8` — 27 deletions + 6 modifications + 2 followup rows filed.
+
+**Diagnostic** [KNOWN per sweep body + dispatch §1.5 + cross-corpus comparison]:
+
+- **Dispatch completeness ≠ dispatch correctness**. Coarch-authored dispatches can appear structurally complete (cite arbitration anchor, enumerate explicit scope, declare gates fired) yet contain authoring-time gaps that only surface at Phase-1 read-only diagnose against the actual repo state.
+- **Phase-1 read-only diagnose is load-bearing even when the dispatch appears complete**. The 5 gaps in §1.8 are not coarch-authorship-quality failures (they are normal authoring oversights); they are normal-scope authoring gaps that Phase-1 diagnose is designed to catch.
+- **The 5 gaps span 5 distinct gap-classes**: (1) file-path typo, (2) orphan-chain omission, (3) pre-existing-blocker omission, (4) UX-visible deferred-wiring consequence omission, (5) preserved-artifact probe re-authoring scope omission. Phase-1 diagnose surfaced all 5 — empirical evidence that Phase-1's catch-rate is broad-class rather than narrow-class.
+- **Token cost of Phase-1 diagnose is amortized by the gap-catch value**. Sweep Phase-1 ran ~50k-130k tokens (typical phase-1-diagnose plugin agent dispatch per §2.B). Catching 5 dispatch-gaps before Phase-2 executes prevents (a) partial-deletion-then-recover-cycle waste, (b) post-sweep orphan-chain discovery requiring amendment commit, (c) post-sweep blank-region UX surprise.
+
+**Methodology insight** [KNOWN]:
+
+- **Read-only Phase-1 diagnose discipline is KNOWN-LOAD-BEARING even when dispatch appears complete** — §1.8 supplies 5-data-point evidence that the diagnose catches normal authoring gaps that would otherwise execute as partial sweep + amendment cycles.
+- **Anti-fabrication discipline at dispatch-time decision boundary** (per MEMORY.md `feedback_stale_dispatch_detection`) extends to "do not proceed under the assumption coarch dispatch is complete; verify each enumerated path + each implicit prerequisite + each downstream consequence against actual repo state".
+- **Dispatch-completeness verification is a Phase-1 responsibility, not a coarch-authoring responsibility** — even if coarch dispatch authoring discipline improves, Phase-1 diagnose remains load-bearing because dispatch-time state can diverge from repo state in the interval between dispatch authorship and Phase-1 execution.
+- **Topology similarity to §1.2 stale-dispatch-detection class**: §1.2 caught dispatch-vs-already-merged-work staleness; §1.8 catches dispatch-vs-current-repo-state authoring gaps. Both are Phase-1-diagnose-as-load-bearing-gate.
+
+**Closure-paths candidates:**
+
+- **(α) RECOMMENDED + KNOWN-operational** — Phase-1 read-only diagnose discipline at every sweep/ladder boot. Already operational; no codification needed beyond existing CLAUDE.md §2.1 anti-fabrication + MEMORY.md `feedback_stale_dispatch_detection`.
+- **(β)** Coarch dispatch-authoring discipline amendment — coarch checks dispatch enumeration against `ls`/`git log`/`grep` of each cited path before authoring. Reduces gap rate at the authorship boundary; does NOT replace Phase-1 diagnose. Operator-arbitrated.
+- **(γ)** Plugin agent integration — `cairn-phase-1-diagnose` agent extended with a "dispatch-completeness verification" sub-step that compares dispatch enumeration against actual repo state and flags gaps before sub-session main-session even spawns. Forward-applicable codification.
+
+**Tier classification:** **Tier 1 methodology incident** — load-bearing for sustained autonomous cascade (Phase-1 diagnose catches gaps that would otherwise execute as partial-sweep-then-amendment cycles, multiplying token + commit cost); 5-data-point evidence corpus from a single incident strongly validates Phase-1 diagnose discipline.
+
+**Cross-references:**
+
+- CLAUDE.md §2.1 — anti-fabrication discipline (verify source before claiming what it does); §1.8 extends to dispatch-completeness verification
+- MEMORY.md `feedback_stale_dispatch_detection` — anti-fabrication-at-dispatch-time precedent; §1.8 extends from stale-vs-merged to stale-vs-current-repo
+- §1.2 — paired Phase-1-diagnose-as-load-bearing-gate class (stale-vs-already-merged); §1.8 is stale-vs-current-repo-state class
+- §2.B — plugin agent dispatch evidence; `cairn-phase-1-diagnose` agent operationally validated at multi-WB ladder boots
+- `aef0ac8` body — sweep CC's expanded scope per operator-arbitrated D1-D5 (citation source)
+- §1.0 row: register entry pending — "Dispatch authoring-gap surfaced at Phase-1 diagnose (NEW emergent class; coarch-vs-repo divergence)"
+
+#### §1.8.codify — Codification proposal
+
+- Codify dispatch-completeness verification as an explicit Phase-1 diagnose sub-step in CLAUDE.md §2.1 (or §4.x): "Phase-1 diagnose verifies each dispatch-enumerated path exists + each implicit prerequisite is current + each downstream consequence is operator-acknowledged before authorizing Phase-2 execution."
+- Plugin agent extension — `cairn-phase-1-diagnose` agent receives dispatch text + repo HEAD + returns enumerated gap list (path typos, orphan chains, pre-existing blockers, UX consequences, preserved-artifact scope). Forward-applicable to all future sweep/ladder dispatches.
+- MEMORY.md feedback row extension — extend `feedback_stale_dispatch_detection` with "stale-vs-current-repo-state authoring gap class": dispatch-completeness divergence from repo state surfaces normal authoring oversights at Phase-1 diagnose even when dispatch appears complete.
+
 ---
 
 ## §2 — Methodology propagation observed
@@ -543,6 +809,49 @@ Round 12-specific verdict targets populated as evidence accumulates below.
 | `r12-t1c-w1-parallel-cairn-atomic-commit` | `docs/coordination/territorial-manifests/r12-t1c-w1-parallel-cairn-atomic-commit.txt` (per `735703f`) | YES | T1-CLOSURE-W1 | Closes `MB-F-PARALLEL-CAIRN-SHARED-INDEX-RACE-WINDOW` (FOLLOWUPS.md:348) closure-path-β; **closes perennial Round 9 §1.1 + Round 11 §1.6/§1.RC1 race-class**; `173ead7` WB-final |
 
 (More sessions added as cascade ramps under Wave T1-CLOSURE-Wave-N per gen-6 dispatch.)
+
+### §6.3 — Round-12 W3+EXPANSION-2+sweep window inheritance (2026-05-17/18 operator-fatigue cluster)
+
+[KNOWN per §1.4-§1.8 corpus + cross-corpus archive grep + Round 2 preamble Round-1 reference; Round-1 file `docs/cairn-under-stress-round-1.md` not tracked in repo, corpus summarized via Round 2 §1 preamble citation chain]:
+
+Window: 2026-05-17 ~17:00 MDT → 2026-05-18 09:18 MDT (~16-hour operator wall-clock; cascade-velocity multi-day at LLM speed). Findings §1.4-§1.8 inherit from and extend the following prior-round corpus:
+
+#### Round 1 (referenced via Round 2 preamble — file not tracked locally)
+
+- **Round 1 §6 cross-session methodology propagation success** ⇒ **§1.6 is the converse class**: operator-side coordination-accounting GAP rather than session-side methodology-propagation SUCCESS. Round 1 validated that cross-session methodology propagates via coordination notes; §1.6 surfaces the failure mode when coarch-side state freshness at dispatch-time lags actual cascade execution. Empirical extension of Round 1 hypothesis 3.
+- **Round 1 H1 frozen-contract-prevents-drift across N sessions** ⇒ **§1.4 deferred-edit pattern is functional-equivalent** for shared project files. Round 1 validated frozen-contract for export signatures (immutable); §1.4 extends to mutable shared files where one session edits in cycle-N and other defers to cycle-N+1 via Tier-N followup. Same protective topology (zero same-file collision) via different mechanism.
+- **Round 1 H5 anti-fabrication at sub-contract level** ⇒ **§1.5 anti-fabrication at fence-refusal** + **§1.8 anti-fabrication at dispatch-completeness**. Round 1 validated sessions don't invent signatures for unspecified scope; Round 12 §1.5 extends to "don't invent session-history justification for misdirected paste"; §1.8 extends to "don't proceed under assumption coarch dispatch is complete".
+
+#### Round 2 (`docs/cairn-under-stress-round-2.md`)
+
+- **Round 2 hypothesis 4: per-path git add discipline at 3-session concurrency with overlapping subtrees disjoint files** ⇒ **§1.4 extends to overlapping subtrees overlapping files**: when files themselves are shared (not just subtrees), per-path discipline alone is insufficient — deferred-edit pattern is needed. Round 2 sample was per-package-disjoint; Round 12 §1.4 is intra-package file-overlap.
+- **Round 2 hypothesis 3: cross-session methodology propagation at 3-session scale** ⇒ **§1.5 + §1.6 are both extensions** — §1.5 validates propagation of CLAUDE.md §2.9 fence discipline at orchestrator-fatigue scale (3-layer defense); §1.6 surfaces propagation gap at coarch-side state freshness.
+
+#### Round 7, Round 9 (race-class corpus)
+
+- **Round 9 §1.1 (T6 sweep of T3) + Round 9 §1.2-§1.3** — first session-induced `.git/index` race-class instances; mitigation: commit-pathspec discipline (CLAUDE.md §2.7). **§1.4 is distinct class** — file-content collision at filesystem layer, not `.git/index` race at git-state layer. Commit-pathspec discipline does NOT prevent same-file edit need collisions.
+- **Round 7 corpus** — earlier methodology corpus; corpus details inherited via Round 9/11 references. No direct §1.4-§1.8 echo identified [MODELED — Round 7 corpus not exhaustively cross-referenced for this archive entry].
+
+#### Round 11 (`docs/cairn-under-stress-round-11.md`)
+
+- **Round 11 §1.6 PREVENTED + §1.RC1 LANDED at `c5/63eba0f`** — `.git/index` contamination class; mitigated via commit-pathspec discipline + Round 12 §2.C `cairn-atomic-commit.sh` path-β. **§1.4 is distinct class** — same-file-edit collision at file-content layer, not staging-area race at git-state layer.
+- **Round 11 §1.RC2 envelope-creep class** — dispatch-text-growing-beyond-original-scope under cascade pressure. **§1.6 shares root mechanism (orchestrator-side state freshness gap) but opposite manifestation** — §1.RC2 grows; §1.6 stales.
+- **Round 11 §3.5 HALT-vocabulary registry** (`HALT-TERRITORY-ACK`, `HALT-TERRITORY-VIOLATION`, `HALT-MANIFEST-TEST-DISCOVERY`, `HALT-AMBIGUOUS-MANIFEST`, `HALT-QUEUE-DRIFT`) ⇒ **§1.5 + §1.7 contribute new registry entries**: `HALT-OPERATOR-MISDIRECTION-PASTE-COLLISION` (§1.5) + `HALT-DISPATCH-TEMPLATE-TENSION` (§1.7, structurally a HALT-2 sub-variant for §2.4 ∧ §4.5 invariant collision).
+- **Round 11 fence discipline (general single-layer)** ⇒ **§1.5 first multi-layer (3-layer) defense instance** documented in cairn-under-stress corpus. Round 11 had no precedent for operator-cascading-misdirection requiring coarch catch.
+- **Round 11 §5.C.3 KNOWN-load-bearing commit-pathspec verdict** ⇒ sustained in §1.4 (the deferred-edit pattern preserves per-path discipline by NOT touching the shared file in the deferring session's commits; per-path discipline is necessary-but-not-sufficient and §1.4 is its complementary mechanism).
+
+#### Round 12 intra-archive (this round)
+
+- **§1.3 operator-induced `.git/index` contamination 2026-05-17 ~17:00 MDT** ⇒ **§1.4-§1.6 share the operator-fatigue cluster window**. §1.3 opens the cluster (operator-source contamination); §1.4 mid-cluster (cross-session file collision under operator-WIP-leakage state); §1.5 mid-cluster (operator paste-misdirection); §1.6 cluster-late (coordination-accounting failure). §1.7 + §1.8 are sub-session-side observations from the same window but distinct actor-class (sweep CC discipline, not operator/coarch discipline).
+- **§1.1 + §1.1.A deferred-prod-wiring class** ⇒ **§1.7 shares meta-pattern** — both are "auto-ack envelope strict-reading appears correct, but operator-arbitrated absorption is the methodology-correct execution" topology.
+- **§1.2 followups-stamp-lag SWEEP-DISCIPLINE class** ⇒ **§1.8 paired Phase-1-diagnose-as-load-bearing-gate class** — §1.2 is dispatch-vs-already-merged-work staleness; §1.8 is dispatch-vs-current-repo-state authoring gaps. Both validate Phase-1 read-only diagnose discipline as load-bearing.
+- **§2.B plugin agent dispatch evidence** ⇒ **§1.8 supplies forward-applicable extension** for `cairn-phase-1-diagnose` agent: dispatch-completeness verification sub-step.
+- **§3.1 auto-ack-correct-but-followup-tier-misclassified class** ⇒ **§1.7 dispatch-template strict-reading-fragile class** — sibling meta-pattern (both surface the "envelope appears correct in isolation; operator-arbitrated absorption is methodology-correct" topology).
+- **§3.4 self-correcting closure cycle meta-pattern** ⇒ **§1.5 + §1.8 partial-instances** — §1.5 self-correcting within 3-layer defense; §1.8 self-correcting via Phase-1 diagnose discipline applied at dispatch-time. Both extend the meta-pattern to operator-fatigue + dispatch-authoring contexts.
+
+**Cluster summary** [KNOWN]:
+
+The 2026-05-17/18 operator-fatigue cluster surfaces **5 new emergent classes within ~16 wall-clock hours** (§1.4-§1.8) — substantial methodology-incident density rivaling Round 11's Wave-2 corpus. The cluster's discipline-resilience is empirically validated: zero contamination across §1.4 (deferred-edit), §1.5 (3-layer fence), §1.6 (honest-framing), §1.7 (HALT-2 surface), §1.8 (Phase-1 diagnose). Cluster outcome: **§3.9.A commit-pathspec mandate + CLAUDE.md §2.9 bidirectional fence + CLAUDE.md §2.1 anti-fabrication + CLAUDE.md §7 honest surfacing all sustained operationally**. No single discipline primitive is load-bearing alone; the composition is what holds.
 
 ---
 
