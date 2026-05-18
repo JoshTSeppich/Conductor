@@ -493,7 +493,7 @@ export interface AttachedBuildMdState {
 export interface OrchestratorStateSnapshot {
   /** Monotonic counter; renderer may ignore out-of-order broadcasts. */
   readonly seq: number;
-  /** Wall-clock ISO of last successful poll; null until first poll completes. */
+  /** Wall-clock ISO of last successful poll that produced a state change (dedup-coupled per aggregator emission semantics; null until first state-change emission). */
   readonly polledAt: string | null;
   /** Live daemon-sessions snapshot per latest GET /v2/sessions. */
   readonly sessions: ReadonlyArray<OrchestratorSessionLite>;
