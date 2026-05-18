@@ -9,3 +9,4 @@
 2026-05-18T02:12Z | operator-CC | 6c0686d | src/conductor-chat/header.tsx (WB4 GREEN — header body: brand+filename-pill+pause/resume+cancel; 7/7 probe pass)
 2026-05-18T02:17Z | gen-7-w3 | fa5afbb | src/conductor-chat/mount.ts + index.ts + conductor-chat.tsx slot composition (WB4 GREEN — Path-B stub-only IPC; 45/45 cross-session suite pass)
 2026-05-18T02:20Z | gen-7-w3 | f4b6642 | test/unit/conductor-chat/probe-mbt-mvp-w3-06-screenshot-fidelity-acceptance.spec.tsx (WB5 RED — §5.5 NORMATIVE HARD GATE idle-only oracle; 5/7 structural pass + 2/7 intro-message RED)
+2026-05-18T02:24Z | gen-7-w3 | bdc50a8 | src/conductor-chat/mount.ts + probe-05 update (WB5 GREEN — DEFAULT_IDLE_STATE seeds canonical intro; 52/52 cross-session suite pass; §5.5 HARD GATE 7/7)
