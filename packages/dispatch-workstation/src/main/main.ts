@@ -186,6 +186,18 @@ import {
 } from './build-md-dispatch-trigger-ipc.js';
 // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH imports ===
 
+// === BEGIN: MB-T-MVP-W4 orchestrator-state imports (do not modify outside this block) ===
+// WB9 — unified orchestrator-state aggregator + IPC controller for
+// Channels #8 + #9 (WORKSTATION_CONTRACT.md §6.6 STAMPED 5a782f4).
+// Composes WB3 aggregator + WB4 poll source + WB5/WB6/WB7 persistence
+// stores + WB8 IPC controller. Production wire at app.whenReady below.
+import { createOrchestratorStateAggregator, createNullBuildMdSource, createNullPauseSource, createNullNarrationSource } from './orchestrator-state-aggregator.js';
+import { createOrchestratorSessionsSourcePoll } from './orchestrator-state-source-poll.js';
+import { createDefaultOrchestratorStateIpcController } from './orchestrator-state-ipc.js';
+import { readOrchestratorPauseState } from './orchestrator-pause-state-store.js';
+import { readOrchestratorNarration } from './orchestrator-narration-store.js';
+// === END: MB-T-MVP-W4 orchestrator-state imports ===
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PRELOAD_PATH = resolve(__dirname, 'preload.cjs');
 const SHELL_PATH = resolve(__dirname, 'workstation-shell.html');
@@ -645,6 +657,115 @@ app.whenReady().then(async () => {
     }),
   );
   // === END: MB-T-WIREFRAME-T5-BUILD-MD-DRIVEN-DISPATCH wiring ===
+  // === BEGIN: MB-T-MVP-W4 orchestrator-state wiring (do not modify outside this block) ===
+  // WB9 — Aggregator construction + IPC controller + broadcast fan-out
+  // for Channels #8 + #9 (WORKSTATION_CONTRACT.md §6.6 STAMPED 5a782f4).
+  //
+  // Production wiring composition (per dispatch §3 WB9 spec):
+  //   sessionsSource: createOrchestratorSessionsSourcePoll backed by
+  //     an inline daemon HTTP list-client (token via ~/.foxworks-
+  //     dispatch/token; fetch /v2/sessions). 3000ms cadence + 12000ms
+  //     backoff cap + source-level dedup (WB4 a59f83b).
+  //   buildMdSource:  createNullBuildMdSource — startup-async-load of
+  //     persisted attached path + attach/detach action wiring are
+  //     Ticket C territory. Initial attached state seeds as `null`;
+  //     Tier-3 followup `MB-F-MVP-W4-ATTACHED-BMD-STARTUP-ASYNC-LOAD-
+  //     PENDING` to be filed at WB-final.
+  //   pauseSource:    createNullPauseSource — togglePause action wiring
+  //     is Ticket C. `initialPaused` seeded synchronously from
+  //     readOrchestratorPauseState() (WB5).
+  //   narrationSource: createNullNarrationSource — narration appends
+  //     wire at Ticket C via orchestrator-action-handler. `initial-
+  //     Messages` seeded synchronously from readOrchestratorNarration()
+  //     (WB7).
+  //
+  // broadcast fan-out: BrowserWindow.getAllWindows() forEach
+  // webContents.send — mirrors coarchitect-ipc.ts:129-150 rate-limit-
+  // update precedent. Destroyed windows are skipped via isDestroyed
+  // check (non-fatal per Electron IPC semantics; matches §6.6 Channel
+  // #9 failure-modes disposition).
+  //
+  // Lifecycle: registerHandlers returns a dispose function tearing
+  // down the broadcast subscription; held by closure scope for
+  // process lifetime. aggregator.start() kicks off the initial poll.
+  //
+  // Smoke-harness sentinel: emit ORCHESTRATOR_STATE_IPC_READY when
+  // MB_TEST_HOOKS=1 so the runtime-launch smoke can assert the new
+  // sentinel zone was reached without ERR_MODULE_NOT_FOUND class
+  // bugs (mirrors MB-T-MVP-W1-ORCHESTRATOR-FOCUS-PANE FOCUS_PANE_IPC_
+  // READY pattern at main.ts:1152).
+  const orchestratorDaemonUrl = process.env['FOXWORKS_DAEMON_URL'] ?? 'http://localhost:7878';
+  const orchestratorListClient = {
+    async listSessions(): Promise<{
+      sessions: ReadonlyArray<{
+        name: string;
+        state?: string;
+        computed_status?: string;
+      }>;
+    }> {
+      let token: string | null = null;
+      try {
+        const { readFileSync } = await import('node:fs');
+        const { join } = await import('node:path');
+        const { homedir } = await import('node:os');
+        token = readFileSync(
+          join(homedir(), '.foxworks-dispatch', 'token'),
+          'utf8',
+        ).trim();
+      } catch {
+        token = null;
+      }
+      if (!token) {
+        throw new Error('daemon token unavailable for orchestrator-state poll');
+      }
+      const res = await fetch(`${orchestratorDaemonUrl}/v2/sessions`, {
+        headers: { 'X-Conductor-Token': token },
+      });
+      if (!res.ok) {
+        throw new Error(`/v2/sessions HTTP ${res.status}`);
+      }
+      const body = (await res.json()) as {
+        sessions?: ReadonlyArray<{
+          name?: string;
+          state?: string;
+          computed_status?: string;
+        }>;
+      };
+      const sessions = (body.sessions ?? []).filter(
+        (s): s is { name: string; state?: string; computed_status?: string } =>
+          typeof s.name === 'string',
+      );
+      return { sessions };
+    },
+  };
+  const orchestratorAggregator = createOrchestratorStateAggregator({
+    sessionsSource: createOrchestratorSessionsSourcePoll({
+      listClient: orchestratorListClient,
+    }),
+    buildMdSource: createNullBuildMdSource(),
+    pauseSource: createNullPauseSource(),
+    narrationSource: createNullNarrationSource(),
+    initialPaused: readOrchestratorPauseState().paused,
+    initialMessages: readOrchestratorNarration(),
+    initialAttached: null,
+  });
+  const orchestratorIpcController = createDefaultOrchestratorStateIpcController({
+    aggregator: orchestratorAggregator,
+    broadcast: (channel, snapshot) => {
+      BrowserWindow.getAllWindows().forEach((w) => {
+        if (!w.isDestroyed()) {
+          w.webContents.send(channel, snapshot);
+        }
+      });
+    },
+  });
+  // Returned dispose function held by closure for process lifetime.
+  orchestratorIpcController.registerHandlers(ipcMain);
+  orchestratorAggregator.start();
+  if (process.env['MB_TEST_HOOKS'] === '1') {
+    process.stdout.write('ORCHESTRATOR_STATE_IPC_READY\n');
+  }
+  // === END: MB-T-MVP-W4 orchestrator-state wiring ===
   // === MB-T09 session-send-prompt IPC ===
   // Per CONDUCTOR_V3_RESCOPE.md §3.4 + §4 — orchestrator (MB-T11) and
   // tile footer (MB-T12) consume this surface. Default deps wire to

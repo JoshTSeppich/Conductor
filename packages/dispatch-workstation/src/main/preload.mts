@@ -401,3 +401,42 @@ contextBridge.exposeInMainWorld('frameCBridge', {
     ipcRenderer.invoke('frame-c:focus', { sessionName }),
 });
 // === END: MB-T-WIREFRAME-C1P3-DETAIL-PANE-FOOTER-ACTIONS frameCBridge ===
+
+// === BEGIN: MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING orchestratorStateBridge ===
+// WB9 — additive per-IPC-family bridge per WORKSTATION_CONTRACT.md §6.6
+// STAMPED 5a782f4. Two methods:
+//
+//   - getSnapshot() — Channel #8: invokes 'orchestrator-state:get-snapshot'
+//     main-process IPC handler (registered in main.ts MB-T-MVP-W4 sentinel
+//     zone before createWindow). Returns the aggregator's cached
+//     OrchestratorStateSnapshot. Mirrors Channel #1 readSwarmState getter
+//     precedent + frameCBridge per-IPC-family-prefix convention.
+//
+//   - onUpdate(cb) — Channel #9: subscribes to main-process broadcasts
+//     of 'orchestrator-state:update' (fan-out via webContents.send from
+//     the IPC controller). Returns a dispose function via removeListener.
+//     Mirrors Channel #7 coarchitect:bypass-perms-update broadcast
+//     precedent and the onStream* / onSpawnResult / onTileTokenUpdate
+//     subscription pattern.
+//
+// Renderer-side consumers at WB10 + WB11:
+//   - src/topbar/mount.ts (Topbar slot composition)
+//   - src/orchestrator-strip/mount.ts (OrchestratorStrip slot composition)
+//   - src/conductor-chat/mount-entry.ts (ConductorChat real-bridge wiring)
+//
+// Channel-name strings used verbatim — match orchestrator-state-ipc.ts
+// CHANNEL_GET_SNAPSHOT + CHANNEL_UPDATE constants and the §6.6 frozen
+// names. preload.mts convention is string-literal channel names rather
+// than constant imports per all prior bridges in this file.
+contextBridge.exposeInMainWorld('orchestratorStateBridge', {
+  getSnapshot: () => ipcRenderer.invoke('orchestrator-state:get-snapshot'),
+  onUpdate: (cb: (snapshot: unknown) => void) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const h = (_: unknown, snapshot: unknown) => cb(snapshot);
+    ipcRenderer.on('orchestrator-state:update', h as any);
+    return () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ipcRenderer.removeListener('orchestrator-state:update', h as any);
+  },
+});
+// === END: MB-T-MVP-W4-ORCHESTRATOR-STATE-PROD-WIRING orchestratorStateBridge ===
