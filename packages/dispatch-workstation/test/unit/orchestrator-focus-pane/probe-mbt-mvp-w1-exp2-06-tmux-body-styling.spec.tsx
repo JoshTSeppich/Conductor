@@ -123,11 +123,13 @@ describe('MB-T-MVP-W1-EXPANSION-2 WB6 — TmuxPaneBody styling', () => {
       const warnLine = screen.getByTestId('tmux-line-2');
       const errLine = screen.getByTestId('tmux-line-3');
       const bannerLine = screen.getByTestId('tmux-line-4');
-      expect((sysLine as HTMLElement).style.color).toBe('rgb(200, 200, 204)');
-      expect((okLine as HTMLElement).style.color).toBe('rgb(106, 212, 184)');
-      expect((warnLine as HTMLElement).style.color).toBe('rgb(240, 160, 98)');
-      expect((errLine as HTMLElement).style.color).toBe('rgb(224, 116, 114)');
-      expect((bannerLine as HTMLElement).style.color).toBe('rgb(240, 160, 98)');
+      // happy-dom preserves raw style string (vs jsdom/browser rgb() form).
+      // Assert against TMUX_COLORS literals directly to be DOM-engine-agnostic.
+      expect((sysLine as HTMLElement).style.color).toBe(TMUX_COLORS.sys);
+      expect((okLine as HTMLElement).style.color).toBe(TMUX_COLORS.ok);
+      expect((warnLine as HTMLElement).style.color).toBe(TMUX_COLORS.warn);
+      expect((errLine as HTMLElement).style.color).toBe(TMUX_COLORS.err);
+      expect((bannerLine as HTMLElement).style.color).toBe(TMUX_COLORS.banner);
     });
 
     it('renders blinking cwd cursor line when status="running"', () => {
