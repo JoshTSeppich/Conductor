@@ -26,6 +26,25 @@ export interface FocusPaneHeaderProps {
    * passes Date.now() at render time (caller's job).
    */
   nowMs?: number;
+  /**
+   * Build.md filename (operator vision §Component 1 "build.md filename").
+   * Production sources this from the workstation:read-build-md IPC
+   * BuildMdLoadSuccess.path (last path component); empty string treated as
+   * "no data" and renders em-dash. Per Q-MVP-W1-4=(a) ack.
+   */
+  buildMdFilename?: string;
+  /**
+   * Build.md total task count (operator vision "total"). Sourced from
+   * BuildMdStatus.taskCount (src/build-md/types.ts:26-35). 0 is a meaningful
+   * "all-tasks-completed" value rendered verbatim; undefined renders em-dash.
+   */
+  buildMdTotal?: number;
+  /**
+   * Build.md queued task count (operator vision "queued"). Mapped from
+   * BuildMdStatus.readyCount per Q-MVP-W1-4=(a) ack mapping. 0 renders
+   * verbatim; undefined renders em-dash.
+   */
+  buildMdQueued?: number;
 }
 
 function formatUptimeLabel(spawnedAtMs: number | undefined, nowMs: number): string | null {
@@ -39,9 +58,22 @@ function formatUptimeLabel(spawnedAtMs: number | undefined, nowMs: number): stri
   return `${hours}h${minutes}m`;
 }
 
+function renderNumericOrDash(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return EM_DASH;
+  return String(value);
+}
+
+function renderFilenameOrDash(value: string | undefined): string {
+  if (typeof value !== 'string' || value.length === 0) return EM_DASH;
+  return value;
+}
+
 export function FocusPaneHeader({
   spawnedAtMs,
   nowMs,
+  buildMdFilename,
+  buildMdTotal,
+  buildMdQueued,
 }: FocusPaneHeaderProps): React.ReactElement {
   const resolvedNow = typeof nowMs === 'number' ? nowMs : Date.now();
   const uptimeLabel = formatUptimeLabel(spawnedAtMs, resolvedNow);
@@ -51,6 +83,17 @@ export function FocusPaneHeader({
       <span data-testid="orchestrator-focus-pane-header-uptime">{uptimeLabel ?? EM_DASH}</span>
       <span data-testid="orchestrator-focus-pane-header-cpu">{EM_DASH}</span>
       <span data-testid="orchestrator-focus-pane-header-budget">{EM_DASH}</span>
+      <span data-testid="orchestrator-focus-pane-header-filename">
+        {renderFilenameOrDash(buildMdFilename)}
+      </span>
+      <span data-testid="orchestrator-focus-pane-header-total">
+        {renderNumericOrDash(buildMdTotal)}
+      </span>
+      <span data-testid="orchestrator-focus-pane-header-queued">
+        {renderNumericOrDash(buildMdQueued)}
+      </span>
+      <span data-testid="orchestrator-focus-pane-header-running">{EM_DASH}</span>
+      <span data-testid="orchestrator-focus-pane-header-done">{EM_DASH}</span>
     </div>
   );
 }
