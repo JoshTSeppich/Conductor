@@ -26,7 +26,7 @@
 // renderer-side wiring is correct.
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, act } from '@testing-library/react';
 import {
   tryAutoMountConductorChat,
   type ConductorChatBridge,
@@ -153,11 +153,15 @@ describe('MB-T-MVP-W3 WB4 (gen-7 lane) — mount integration + IPC wiring', () =
       expect(result.mounted).toBe(true);
       // Initially no messages → no user message testid.
       expect(screen.queryByTestId('conductor-message-user')).toBeNull();
-      // Emit a new state with a user message.
+      // Emit a new state with a user message. React 18 auto-batches
+      // setState calls fired outside event handlers, so wrap in act()
+      // to flush the re-render synchronously before the assertion.
       expect(emit).not.toBeNull();
-      emit!({
-        ...EMPTY_STATE,
-        messages: [{ role: 'user', text: 'after emit' }],
+      act(() => {
+        emit!({
+          ...EMPTY_STATE,
+          messages: [{ role: 'user', text: 'after emit' }],
+        });
       });
       // Now the user message is rendered.
       expect(screen.getByTestId('conductor-message-user')).toBeInTheDocument();
