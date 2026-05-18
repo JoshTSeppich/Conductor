@@ -5,3 +5,4 @@
 2026-05-18T01:47Z | operator-CC | 605fd7c | test/unit/conductor-chat/probe-mbt-mvp-w3-03-composer-paperclip-textarea-send.spec.tsx (WB3 RED — composer probe-03 paperclip+textarea+send+chip-placeholder+dispatch-next)
 2026-05-18T01:51Z | operator-CC | f46649d | src/conductor-chat/composer.tsx (WB3 GREEN — composer body: paperclip+textarea+send+chip-stub+dispatch-next; 8/8 probe pass)
 2026-05-18T01:57Z | operator-CC | 84e7c67 | test/unit/conductor-chat/probe-mbt-mvp-w3-04-header-pause-resume-cancel.spec.tsx (WB4 RED — header probe-04 brand+filename-pill+pause/resume+cancel)
+2026-05-18T02:09Z | gen-7-w3 | fe54756 | test/unit/conductor-chat/probe-mbt-mvp-w3-05-mount-integration-ipc-wiring.spec.tsx (WB4 RED — probe-05 mount+bridge subscription Path-B stub-only)
