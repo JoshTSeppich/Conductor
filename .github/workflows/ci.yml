@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      # CI=true is set by GitHub Actions. Six process- or timing-bound
+      # integration tests skip under it; each carries its reason inline.
+      #
+      # dispatch-workstation is typechecked but its tests are not run here:
+      # as of this commit 34 of its tests fail on a clean checkout for reasons
+      # unrelated to CI (they need Electron, need built dist/ artifacts, or
+      # import source files that are not in the repo). They stay local until
+      # that is fixed, and this comment should go when they are.
+      - run: pnpm --filter dispatch-core --filter dispatch-cli --filter dispatch-daemon --filter dispatch-web test

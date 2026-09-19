@@ -332,7 +332,8 @@ end tell
   return { source: 'ERROR', items: [], raw: stdout, err: stderr };
 }
 
-const itDarwin = process.platform === 'darwin' ? it : it.skip;
+// Skipped on CI: needs Electron and a real window; darwin-only and local-only.
+const itDarwin = process.platform === 'darwin' && process.env.CI !== 'true' ? it : it.skip;
 
 describe('T1 cold-launch composite / Probe 1 — single-spawn assertion of the full T1 dogfood path', () => {
   itDarwin(
