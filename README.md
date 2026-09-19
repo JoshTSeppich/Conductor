@@ -2,6 +2,10 @@
 
 Conductor was previously named Foxworks Dispatch; runtime identifiers keep the old name so existing installs don't break.
 
+Conductor v2 runs several Claude Code sessions from one place. It ships as four parts: the `fd` CLI that drives tmux panes, a local daemon that coordinates sessions over HTTP and WebSocket, a web dashboard that shows them live, and an Electron workstation that adds an orchestrator chat panel on top. The CLI works on its own without the daemon, and everything else builds on the daemon.
+
+## The CLI
+
 A single-purpose CLI that eliminates mechanical copy-paste between an
 architect chat (Opus in Claude.ai) and Claude Code sessions running in
 tmux panes. You name each CC session once with `fd init`, then drive it
@@ -31,8 +35,8 @@ Requirements:
 Clone and build:
 
 ```bash
-git clone <this-repo> foxworks-dispatch
-cd foxworks-dispatch
+git clone https://github.com/JoshTSeppich/Conductor.git conductor
+cd conductor
 pnpm install
 pnpm build
 # Either symlink the binary onto your PATH…
@@ -42,7 +46,8 @@ ln -s "$PWD/dist/bin/fd.js" ~/.local/bin/fd
 ```
 
 Registry and archive live under `~/.foxworks-dispatch/` (created on
-first write).
+first write). The runtime directory keeps the pre-rename name; only
+the repo is called Conductor.
 
 ## The one-sentence workflow
 
