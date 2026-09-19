@@ -85,8 +85,9 @@ describe('CONSOLE-T01 cluster 1 — cc_console_buffer migration', () => {
     )
       .map((t) => t.name)
       .filter((n) => !n.startsWith('sqlite_'));
-    // Three orchestrator tables + cc_console_buffer = 4
-    expect(userTables.length).toBe(4);
+    // Migrations are additive (db.ts §8.1), so later migrations add tables.
+    // Assert the floor this test cares about, as migration-orchestrator.test.ts does.
+    expect(userTables.length).toBeGreaterThanOrEqual(4);
     expect(userTables).toContain('cc_console_buffer');
     db.close();
   });
