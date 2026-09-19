@@ -53,8 +53,8 @@ pnpm --version   # any modern version is fine
 ## Part 1 — Clone + install (5 min)
 
 ```bash
-git clone <this-repo> foxworks-dispatch
-cd foxworks-dispatch
+git clone https://github.com/JoshTSeppich/Conductor.git conductor
+cd conductor
 pnpm install
 ```
 
