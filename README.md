@@ -1,4 +1,6 @@
-# foxworks-dispatch (`fd`)
+# Conductor (`fd`)
+
+Conductor was previously named Foxworks Dispatch; runtime identifiers keep the old name so existing installs don't break.
 
 A single-purpose CLI that eliminates mechanical copy-paste between an
 architect chat (Opus in Claude.ai) and Claude Code sessions running in

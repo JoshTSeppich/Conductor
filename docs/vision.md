@@ -1,4 +1,4 @@
-# Foxworks Workstation — Vision Document
+# Conductor Workstation — Vision Document
 
 **Status:** v3.0 vision sections §7 and §8 ratified 2026-04-28. §1–§6 deferred to future drafts.
 

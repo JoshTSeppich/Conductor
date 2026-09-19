@@ -9,7 +9,7 @@
 - **`[MODELED]`** — reasoned from observed source (often: "the doc says X" is KNOWN; "X reflects current operator intent" is MODELED).
 - **`[SPECULATIVE]`** — forward-looking estimate or hypothesis without direct evidence.
 
-**Audience:** future Foxworks sessions (Claude + operator) reading at varying context-retention. Assumes CLAUDE.md + project instructions as priming context; does NOT assume today's audit/plan/spike are fresh in reader memory. Anchors citations to commit SHAs for archaeological recovery.
+**Audience:** future Conductor sessions (Claude + operator) reading at varying context-retention. Assumes CLAUDE.md + project instructions as priming context; does NOT assume today's audit/plan/spike are fresh in reader memory. Anchors citations to commit SHAs for archaeological recovery.
 
 ---
 

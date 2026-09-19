@@ -1,4 +1,4 @@
-# Foxworks Workstation Contract
+# Conductor Workstation Contract
 
 **Status:** DRAFT under operator-explicit Path B scope-narrowing per P-0.3 multi-choice arbitration walkthrough (2026-04-28). Pending operator authorship and commit ("P-0.3 authored at <SHA>") to freeze as authority for v3.0 ticket execution.
 
@@ -18,7 +18,7 @@
 
 ### §1.1 What Workstation is
 
-Foxworks Workstation is a desktop Electron application that wraps Conductor v2's existing dispatch-web kanban UI and adds an embedded Claude Sonnet 4.6 orchestrator chat panel for managing multiple Claude Code sessions through a build cycle. It ships as `packages/dispatch-workstation/` (originally scaffolded as `dispatch-menubar`; renamed at MB-T01 chore commit `a32ece8`) within the foxworks-dispatch monorepo at version 3.0.0.
+Conductor Workstation is a desktop Electron application that wraps Conductor v2's existing dispatch-web kanban UI and adds an embedded Claude Sonnet 4.6 orchestrator chat panel for managing multiple Claude Code sessions through a build cycle. It ships as `packages/dispatch-workstation/` (originally scaffolded as `dispatch-menubar`; renamed at MB-T01 chore commit `a32ece8`) within the foxworks-dispatch monorepo at version 3.0.0.
 
 Workstation does not replace the daemon, the dispatch-web UI, or the fd CLI. It embeds dispatch-web in a BrowserWindow, talks to the daemon over the existing `/v2/*` API surface plus new `/v3/*` orchestrator-specific endpoints, and provides operators a single integrated surface for spawn, monitor, approve, and dogfood.
 

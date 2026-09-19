@@ -278,7 +278,7 @@ WB2 RED count: 5 fail / 1 pass. WB3 GREEN count: 6 pass.
   `stale: 10_000` ms; WB1 S5 spike pinned recovery semantics;
   atomic-write-lock P5 pinned helper-layer recovery.
 - **G-5 [LOW]** proper-lockfile cross-platform. SPECULATIVE —
-  Foxworks is darwin-primary; if Windows ever ships, retest.
+  Conductor is darwin-primary; if Windows ever ships, retest.
 - **G-6 [LOW]** Default-on may break pre-existing atomic-write
   tests. RESOLVED — WB5 sweep verified all sess-a batch-4 +
   sess-f WB2 + sess-a WB4 tests pass. No breakage observed.

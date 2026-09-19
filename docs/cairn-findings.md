@@ -1415,7 +1415,7 @@ once prompt/model emit a card variant.
 **Origin:** Deferred from finding #83 Fix-B diagnose-phase arbitration — operator pre-authorized the inline-spawn-result-banner fallback during Fix-B with explicit instruction to file a separate finding for proper toast UX
 **Resolution status:** OPEN — UX follow-on.
 
-**Symptom (KNOWN — observed during Fix-B diagnose phase).** The Foxworks Workstation shell (`packages/dispatch-workstation/src/main/workstation-shell.html`) has no general-purpose toast/notification surface. The existing UX patterns are limited to:
+**Symptom (KNOWN — observed during Fix-B diagnose phase).** The Conductor Workstation shell (`packages/dispatch-workstation/src/main/workstation-shell.html`) has no general-purpose toast/notification surface. The existing UX patterns are limited to:
 1. **Modal show/hide** — used for the spawn modal and onboarding modal. Heavy-weight; blocks operator interaction.
 2. **Region display flip** — used for the console-tile region. Single-instance (one panel visible at a time).
 3. **`console.log` / `console.error`** — invisible in production (only forwarded via `MB_TEST_HOOKS=1`).

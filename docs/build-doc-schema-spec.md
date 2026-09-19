@@ -42,7 +42,7 @@ Every `.build.md` file begins with YAML frontmatter delimited by `---` lines. Pe
 ---
 schema_version: "1.0"
 doc_id: "v3-tickets-2026-04-28"
-title: "Foxworks Workstation v3 Build Plan"
+title: "Conductor Workstation v3 Build Plan"
 target_repo: "/Users/josh/Desktop/Automata/foxworks-dispatch"
 author: "Joshua Seppich"
 created_at: "2026-04-28T17:42:00-06:00"

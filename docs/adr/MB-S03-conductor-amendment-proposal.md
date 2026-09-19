@@ -28,7 +28,7 @@ The amendment does NOT:
 
 After the existing two paragraphs of §1, append:
 
-> **Coordinated `/v3/*` surface (additive, governed by `WORKSTATION_CONTRACT.md`):** The daemon also serves `/v3/*` endpoints introduced by Foxworks Workstation v3.0 per `WORKSTATION_CONTRACT.md` §6. The `/v3/*` shape definitions, persistence model, and authority chain live in that contract; this contract remains authoritative for `/v2/*` and for the daemon's HTTP/auth/error-handler infrastructure (§3, §10) which both surfaces share. Where the two contracts coordinate (auth header, error envelope, route-registration order), this contract's primitives govern.
+> **Coordinated `/v3/*` surface (additive, governed by `WORKSTATION_CONTRACT.md`):** The daemon also serves `/v3/*` endpoints introduced by Conductor Workstation v3.0 per `WORKSTATION_CONTRACT.md` §6. The `/v3/*` shape definitions, persistence model, and authority chain live in that contract; this contract remains authoritative for `/v2/*` and for the daemon's HTTP/auth/error-handler infrastructure (§3, §10) which both surfaces share. Where the two contracts coordinate (auth header, error envelope, route-registration order), this contract's primitives govern.
 
 ### §2.2 New §4.6 — Coordinated `/v3/*` surface
 
@@ -36,7 +36,7 @@ Insert a new §4.6 after the existing §4.5 (Events history):
 
 > ### §4.6 Coordinated `/v3/*` surface
 >
-> Per `WORKSTATION_CONTRACT.md` §1.2 + §6, the daemon hosts a coordinated `/v3/*` endpoint surface for Foxworks Workstation. `/v3/*` shape definitions live in `WORKSTATION_CONTRACT.md`; this contract enumerates the cross-cutting expectations:
+> Per `WORKSTATION_CONTRACT.md` §1.2 + §6, the daemon hosts a coordinated `/v3/*` endpoint surface for Conductor Workstation. `/v3/*` shape definitions live in `WORKSTATION_CONTRACT.md`; this contract enumerates the cross-cutting expectations:
 >
 > - **Auth (§3.1).** All `/v3/*` requests require the same `X-Conductor-Token` header as `/v2/*`. There is no `/v3/*` equivalent of the `/v2/health` exemption.
 > - **Error envelope (§4 + §10.4).** `/v3/*` error responses share the JSON `{"error": "..."}` shape used by `/v2/*` for HTTP-level errors. `WORKSTATION_CONTRACT.md` §6.5 specifies a richer typed `WorkstationError` discriminated-union body for application-level errors; the two coexist (HTTP-level errors stay as `{"error": "..."}`, application errors carry the typed shape with appropriate status codes).

@@ -82,7 +82,7 @@ relevant bullets into existing §4.6 manually.
 >
 > Per `WORKSTATION_CONTRACT.md` §6 + `docs/vision/SECTION_10_CC_CONSOLE.md`
 > §10.6, the daemon hosts a coordinated `/v3/sessions/:name/console/*`
-> endpoint surface for the Foxworks Workstation CC-console panel.
+> endpoint surface for the Conductor Workstation CC-console panel.
 > Endpoint shape definitions live in `WORKSTATION_CONTRACT.md` §6 and
 > in `packages/dispatch-core/src/v3/schema.ts` (the freeze-anchor
 > schema, frozen at `232fbaa`). This contract enumerates the
@@ -194,7 +194,7 @@ paragraph (added by 952f857) to reference the new
 existing paragraph:
 
 > The daemon also hosts /v3/sessions/:name/console/* endpoints
-> introduced by Foxworks Workstation v3.0 per `SECTION_10_CC_CONSOLE.md`
+> introduced by Conductor Workstation v3.0 per `SECTION_10_CC_CONSOLE.md`
 > §10.6 + `WORKSTATION_CONTRACT.md` §6; cross-cutting daemon
 > expectations for that surface live in `<<<§N>>>` of this contract.
 

@@ -1,6 +1,6 @@
 # Releasing
 
-Release-process and migration notes for foxworks-dispatch.
+Release-process and migration notes for Conductor.
 
 ## Installing fd globally
 

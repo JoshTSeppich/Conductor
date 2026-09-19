@@ -1,4 +1,4 @@
-# Foxworks Dispatch — Build Contract
+# Conductor — Build Contract
 
 Claude Opus 4.7 in Claude Code, 1M context. You are building **`foxworks-dispatch`** (binary name: `fd`), a single-purpose CLI that eliminates mechanical copy-paste between Opus-in-chat (architect role) and Claude Code sessions (builder role) across multiple concurrent projects.
 

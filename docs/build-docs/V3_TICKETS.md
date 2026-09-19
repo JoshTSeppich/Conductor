@@ -1,4 +1,4 @@
-# Foxworks Dispatch v3 — Ticket List
+# Conductor v3 — Ticket List
 
 **Status:** Draft authoring artifact under operator best-judgment authorization. Ticket scope locks at Phase 1 spike outcomes per cairn discipline.
 **Repo state at draft:** v2.0.1 shipped clean at HEAD `7a800a9`, working tree clean, synced with origin.

@@ -1,4 +1,4 @@
-# Foxworks Workstation — Vision §10 Draft: CC-Console Surface
+# Conductor Workstation — Vision §10 Draft: CC-Console Surface
 
 **Status:** DRAFT for operator review. Authored by Claude (Opus) under best-judgment authorization for Decision 1 = (b) CC-direct-chat in v3.0 scope.
 **Authority:** Operator-arbitrated under §3.4. This draft awaits operator ratification ("§10 ratified") before becoming v3.0 build authority.

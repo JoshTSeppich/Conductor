@@ -1,4 +1,4 @@
-# foxworks-dispatch — Conductor / Cairn methodology
+# Conductor — Cairn methodology
 
 This file is auto-loaded by Claude Code for every session in this repo. It encodes the methodology, conventions, and frozen-contract surfaces that govern all forward work. Read fully before any task.
 

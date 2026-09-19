@@ -218,7 +218,7 @@ From Phase 1 (`/tmp/sess-g-concurrent-race-fix-diagnose.md` §6):
 - **G-4 [MED]** Stale lock cleanup behavior. RESOLVED — default
   `stale: 10_000` ms; WB1 S5 + atomic-write-lock P5 pinned.
 - **G-5 [LOW]** proper-lockfile cross-platform. SPECULATIVE —
-  Foxworks darwin-primary; deferred to followup #2.
+  Conductor darwin-primary; deferred to followup #2.
 - **G-6 [LOW]** Default-on may break pre-existing atomic-write tests.
   RESOLVED — WB5 sweep verified all sess-a batch-4 + sess-f WB2 +
   sess-a WB4 tests pass.

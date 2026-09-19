@@ -2,7 +2,7 @@
   "name": "foxworks-dispatch",
   "version": "2.0.1",
   "private": true,
-  "description": "Foxworks Dispatch monorepo: dispatch-core (shared lib), dispatch-cli (fd CLI), dispatch-daemon (Conductor daemon).",
+  "description": "Conductor monorepo: dispatch-core (shared lib), dispatch-cli (fd CLI), dispatch-daemon (Conductor daemon).",
   "type": "module",
   "scripts": {
     "test": "pnpm -r test",
