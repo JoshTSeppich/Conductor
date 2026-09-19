@@ -4,6 +4,17 @@ Conductor was previously named Foxworks Dispatch; runtime identifiers keep the o
 
 Conductor v2 runs several Claude Code sessions from one place. It ships as four parts: the `fd` CLI that drives tmux panes, a local daemon that coordinates sessions over HTTP and WebSocket, a web dashboard that shows them live, and an Electron workstation that adds an orchestrator chat panel on top. The CLI works on its own without the daemon, and everything else builds on the daemon.
 
+## Quick start
+
+```bash
+git clone https://github.com/JoshTSeppich/Conductor.git conductor && cd conductor
+pnpm install
+pnpm build
+pnpm --filter dispatch-daemon install:daemon   # starts the daemon under launchd
+open http://127.0.0.1:7878/                    # dashboard; token is in ~/.foxworks-dispatch/token
+ln -s "$PWD/packages/dispatch-cli/dist/bin/fd.js" ~/.local/bin/fd && fd status
+```
+
 ## The CLI
 
 A single-purpose CLI that eliminates mechanical copy-paste between an
