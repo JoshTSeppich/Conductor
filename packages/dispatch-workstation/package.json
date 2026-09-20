@@ -38,7 +38,7 @@
     "@anthropic-ai/sdk": "^0.92.0",
     "@xterm/xterm": "^5.5.0",
     "dispatch-core": "workspace:*",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }
