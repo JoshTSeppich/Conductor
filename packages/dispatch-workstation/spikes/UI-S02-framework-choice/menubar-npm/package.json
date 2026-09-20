@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "electron": "^41.3.0",
+    "electron": "^41.10.7",
     "menubar": "^9.5.1",
     "typescript": "^5.6.3",
     "@types/node": "^20.17.6",
